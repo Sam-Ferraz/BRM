@@ -1,23 +1,144 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Filter, Search, MoreHorizontal, ArrowLeft, Clock, User } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Plus, Search, MoreHorizontal, ArrowLeft, Clock, User, Edit, Trash2, ArrowUpDown } from "lucide-react"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import Link from "next/link"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { api, type Atendimento } from "@/lib/api"
+import { AtendimentoForm } from "@/components/forms/atendimento-form"
+import { useToast } from "@/hooks/use-toast"
 
 export default function AtendimentosPage() {
+  const [atendimentos, setAtendimentos] = useState<Atendimento[]>([])
+  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
+  const [statusFilter, setStatusFilter] = useState("Todos")
+  const [tipoFilter, setTipoFilter] = useState("Todos")
+  const [sortBy, setSortBy] = useState<string>("")
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc")
+  const [formOpen, setFormOpen] = useState(false)
+  const [editingAtendimento, setEditingAtendimento] = useState<Atendimento | undefined>()
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [deletingId, setDeletingId] = useState<number | null>(null)
+  const [formLoading, setFormLoading] = useState(false)
+  const { toast } = useToast()
 
-  const atendimentos = [
-    { id: 1, cliente: "João Silva", tipo: "Suporte", status: "Em Andamento", data: "15/01/2024", hora: "14:30" },
-    { id: 2, cliente: "Maria Santos", tipo: "Vendas", status: "Concluído", data: "15/01/2024", hora: "10:15" },
-    { id: 3, cliente: "Pedro Costa", tipo: "Suporte", status: "Pendente", data: "14/01/2024", hora: "16:45" },
-    { id: 4, cliente: "Ana Oliveira", tipo: "Consultoria", status: "Em Andamento", data: "14/01/2024", hora: "09:00" },
-  ]
+  const loadAtendimentos = async () => {
+    try {
+      setLoading(true)
+      const response = await api.atendimentos.getAll({
+        search: searchTerm,
+        status: statusFilter,
+        tipo: tipoFilter,
+        sortBy,
+        sortOrder,
+      })
+      setAtendimentos(response.data)
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao carregar atendimentos",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadAtendimentos()
+  }, [searchTerm, statusFilter, tipoFilter, sortBy, sortOrder])
+
+  const handleSort = (field: string) => {
+    if (sortBy === field) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc")
+    } else {
+      setSortBy(field)
+      setSortOrder("asc")
+    }
+  }
+
+  const handleCreate = () => {
+    setEditingAtendimento(undefined)
+    setFormOpen(true)
+  }
+
+  const handleEdit = (atendimento: Atendimento) => {
+    setEditingAtendimento(atendimento)
+    setFormOpen(true)
+  }
+
+  const handleDelete = (id: number) => {
+    setDeletingId(id)
+    setDeleteDialogOpen(true)
+  }
+
+  const confirmDelete = async () => {
+    if (!deletingId) return
+
+    try {
+      await api.atendimentos.delete(deletingId)
+      toast({
+        title: "Sucesso",
+        description: "Atendimento excluído com sucesso",
+      })
+      loadAtendimentos()
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao excluir atendimento",
+        variant: "destructive",
+      })
+    } finally {
+      setDeleteDialogOpen(false)
+      setDeletingId(null)
+    }
+  }
+
+  const handleFormSubmit = async (data: any) => {
+    try {
+      setFormLoading(true)
+      if (editingAtendimento) {
+        await api.atendimentos.update(editingAtendimento.id, data)
+        toast({
+          title: "Sucesso",
+          description: "Atendimento atualizado com sucesso",
+        })
+      } else {
+        await api.atendimentos.create(data)
+        toast({
+          title: "Sucesso",
+          description: "Atendimento criado com sucesso",
+        })
+      }
+      setFormOpen(false)
+      loadAtendimentos()
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao salvar atendimento",
+        variant: "destructive",
+      })
+    } finally {
+      setFormLoading(false)
+    }
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -74,36 +195,34 @@ export default function AtendimentosPage() {
                 <CardTitle className="text-lg">Ações</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <Button className="w-full">
+                <Button className="w-full" onClick={handleCreate}>
                   <Plus className="w-4 h-4 mr-2" />
                   Novo Atendimento
                 </Button>
                 <div className="space-y-2">
-                  <h4 className="font-medium text-sm text-gray-700">Filtros Rápidos</h4>
-                  <Button variant="outline" size="sm" className="w-full justify-start bg-transparent">
-                    Todos
-                  </Button>
-                  <Button variant="outline" size="sm" className="w-full justify-start bg-transparent">
-                    Em Andamento
-                  </Button>
-                  <Button variant="outline" size="sm" className="w-full justify-start bg-transparent">
-                    Pendentes
-                  </Button>
-                  <Button variant="outline" size="sm" className="w-full justify-start bg-transparent">
-                    Concluídos
-                  </Button>
-                </div>
-                <div className="space-y-2">
-                  <h4 className="font-medium text-sm text-gray-700">Por Tipo</h4>
-                  <Button variant="outline" size="sm" className="w-full justify-start bg-transparent">
-                    Suporte
-                  </Button>
-                  <Button variant="outline" size="sm" className="w-full justify-start bg-transparent">
-                    Vendas
-                  </Button>
-                  <Button variant="outline" size="sm" className="w-full justify-start bg-transparent">
-                    Consultoria
-                  </Button>
+                  <h4 className="font-medium text-sm text-gray-700">Filtros</h4>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Todos">Todos</SelectItem>
+                      <SelectItem value="Em Andamento">Em Andamento</SelectItem>
+                      <SelectItem value="Pendente">Pendentes</SelectItem>
+                      <SelectItem value="Concluído">Concluídos</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select value={tipoFilter} onValueChange={setTipoFilter}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Todos">Todos</SelectItem>
+                      <SelectItem value="Suporte">Suporte</SelectItem>
+                      <SelectItem value="Vendas">Vendas</SelectItem>
+                      <SelectItem value="Consultoria">Consultoria</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </CardContent>
             </Card>
@@ -125,10 +244,6 @@ export default function AtendimentosPage() {
                         className="pl-10 w-full sm:w-64"
                       />
                     </div>
-                    <Button variant="outline">
-                      <Filter className="w-4 h-4 mr-2" />
-                      Filtros
-                    </Button>
                   </div>
                 </div>
               </CardHeader>
@@ -137,45 +252,104 @@ export default function AtendimentosPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>ID</TableHead>
-                        <TableHead>Cliente</TableHead>
-                        <TableHead>Tipo</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Data</TableHead>
+                        <TableHead>
+                          <Button variant="ghost" onClick={() => handleSort("id")} className="h-auto p-0 font-medium">
+                            ID <ArrowUpDown className="ml-2 h-4 w-4" />
+                          </Button>
+                        </TableHead>
+                        <TableHead>
+                          <Button
+                            variant="ghost"
+                            onClick={() => handleSort("cliente")}
+                            className="h-auto p-0 font-medium"
+                          >
+                            Cliente <ArrowUpDown className="ml-2 h-4 w-4" />
+                          </Button>
+                        </TableHead>
+                        <TableHead>
+                          <Button variant="ghost" onClick={() => handleSort("tipo")} className="h-auto p-0 font-medium">
+                            Tipo <ArrowUpDown className="ml-2 h-4 w-4" />
+                          </Button>
+                        </TableHead>
+                        <TableHead>
+                          <Button
+                            variant="ghost"
+                            onClick={() => handleSort("status")}
+                            className="h-auto p-0 font-medium"
+                          >
+                            Status <ArrowUpDown className="ml-2 h-4 w-4" />
+                          </Button>
+                        </TableHead>
+                        <TableHead>
+                          <Button variant="ghost" onClick={() => handleSort("data")} className="h-auto p-0 font-medium">
+                            Data <ArrowUpDown className="ml-2 h-4 w-4" />
+                          </Button>
+                        </TableHead>
                         <TableHead>Hora</TableHead>
                         <TableHead className="w-12"></TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {atendimentos.map((atendimento) => (
-                        <TableRow key={atendimento.id}>
-                          <TableCell className="font-medium">#{atendimento.id}</TableCell>
-                          <TableCell>
-                            <div className="flex items-center">
-                              <User className="w-4 h-4 mr-2 text-gray-400" />
-                              {atendimento.cliente}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge className={getTipoColor(atendimento.tipo)}>{atendimento.tipo}</Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge className={getStatusColor(atendimento.status)}>{atendimento.status}</Badge>
-                          </TableCell>
-                          <TableCell>{atendimento.data}</TableCell>
-                          <TableCell>
-                            <div className="flex items-center">
-                              <Clock className="w-4 h-4 mr-2 text-gray-400" />
-                              {atendimento.hora}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Button variant="ghost" size="sm">
-                              <MoreHorizontal className="w-4 h-4" />
-                            </Button>
+                      {loading ? (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center py-8">
+                            Carregando...
                           </TableCell>
                         </TableRow>
-                      ))}
+                      ) : atendimentos.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center py-8">
+                            Nenhum atendimento encontrado
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        atendimentos.map((atendimento) => (
+                          <TableRow key={atendimento.id}>
+                            <TableCell className="font-medium">#{atendimento.id}</TableCell>
+                            <TableCell>
+                              <div className="flex items-center">
+                                <User className="w-4 h-4 mr-2 text-gray-400" />
+                                {atendimento.cliente}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge className={getTipoColor(atendimento.tipo)}>{atendimento.tipo}</Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge className={getStatusColor(atendimento.status)}>{atendimento.status}</Badge>
+                            </TableCell>
+                            <TableCell>{atendimento.data}</TableCell>
+                            <TableCell>
+                              <div className="flex items-center">
+                                <Clock className="w-4 h-4 mr-2 text-gray-400" />
+                                {atendimento.hora}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="sm">
+                                    <MoreHorizontal className="w-4 h-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => handleEdit(atendimento)}>
+                                    <Edit className="w-4 h-4 mr-2" />
+                                    Editar
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => handleDelete(atendimento.id)}
+                                    className="text-red-600"
+                                  >
+                                    <Trash2 className="w-4 h-4 mr-2" />
+                                    Excluir
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
                     </TableBody>
                   </Table>
                 </div>
@@ -184,6 +358,31 @@ export default function AtendimentosPage() {
           </div>
         </div>
       </div>
+
+      <AtendimentoForm
+        atendimento={editingAtendimento}
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        onSubmit={handleFormSubmit}
+        loading={formLoading}
+      />
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir este atendimento? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

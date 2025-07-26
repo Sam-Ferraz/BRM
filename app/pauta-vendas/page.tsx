@@ -20,38 +20,38 @@ import {
 } from "@/components/ui/alert-dialog"
 import Link from "next/link"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { api, type Negocio } from "@/lib/api"
-import { NegocioForm } from "@/components/forms/negocio-form"
+import { api, type PautaVenda } from "@/lib/api"
+import { PautaVendaForm } from "@/components/forms/pauta-venda-form"
 import { useToast } from "@/hooks/use-toast"
 
-export default function NegociosPage() {
-  const [negocios, setNegocios] = useState<Negocio[]>([])
+export default function PautaVendasPage() {
+  const [pautaVendas, setPautaVendas] = useState<PautaVenda[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("Todos")
   const [sortBy, setSortBy] = useState<string>("")
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc")
   const [formOpen, setFormOpen] = useState(false)
-  const [editingNegocio, setEditingNegocio] = useState<Negocio | undefined>()
+  const [editingPauta, setEditingPauta] = useState<PautaVenda | undefined>()
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deletingId, setDeletingId] = useState<number | null>(null)
   const [formLoading, setFormLoading] = useState(false)
   const { toast } = useToast()
 
-  const loadNegocios = async () => {
+  const loadPautaVendas = async () => {
     try {
       setLoading(true)
-      const response = await api.negocios.getAll({
+      const response = await api.pautaVendas.getAll({
         search: searchTerm,
         status: statusFilter,
         sortBy,
         sortOrder,
       })
-      setNegocios(response.data)
+      setPautaVendas(response.data)
     } catch (error) {
       toast({
         title: "Erro",
-        description: "Erro ao carregar negócios",
+        description: "Erro ao carregar pauta de vendas",
         variant: "destructive",
       })
     } finally {
@@ -60,7 +60,7 @@ export default function NegociosPage() {
   }
 
   useEffect(() => {
-    loadNegocios()
+    loadPautaVendas()
   }, [searchTerm, statusFilter, sortBy, sortOrder])
 
   const handleSort = (field: string) => {
@@ -73,12 +73,12 @@ export default function NegociosPage() {
   }
 
   const handleCreate = () => {
-    setEditingNegocio(undefined)
+    setEditingPauta(undefined)
     setFormOpen(true)
   }
 
-  const handleEdit = (negocio: Negocio) => {
-    setEditingNegocio(negocio)
+  const handleEdit = (pauta: PautaVenda) => {
+    setEditingPauta(pauta)
     setFormOpen(true)
   }
 
@@ -91,16 +91,16 @@ export default function NegociosPage() {
     if (!deletingId) return
 
     try {
-      await api.negocios.delete(deletingId)
+      await api.pautaVendas.delete(deletingId)
       toast({
         title: "Sucesso",
-        description: "Negócio excluído com sucesso",
+        description: "Pauta excluída com sucesso",
       })
-      loadNegocios()
+      loadPautaVendas()
     } catch (error) {
       toast({
         title: "Erro",
-        description: "Erro ao excluir negócio",
+        description: "Erro ao excluir pauta",
         variant: "destructive",
       })
     } finally {
@@ -112,25 +112,25 @@ export default function NegociosPage() {
   const handleFormSubmit = async (data: any) => {
     try {
       setFormLoading(true)
-      if (editingNegocio) {
-        await api.negocios.update(editingNegocio.id, data)
+      if (editingPauta) {
+        await api.pautaVendas.update(editingPauta.id, data)
         toast({
           title: "Sucesso",
-          description: "Negócio atualizado com sucesso",
+          description: "Pauta atualizada com sucesso",
         })
       } else {
-        await api.negocios.create(data)
+        await api.pautaVendas.create(data)
         toast({
           title: "Sucesso",
-          description: "Negócio criado com sucesso",
+          description: "Pauta criada com sucesso",
         })
       }
       setFormOpen(false)
-      loadNegocios()
+      loadPautaVendas()
     } catch (error) {
       toast({
         title: "Erro",
-        description: "Erro ao salvar negócio",
+        description: "Erro ao salvar pauta",
         variant: "destructive",
       })
     } finally {
@@ -140,12 +140,12 @@ export default function NegociosPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "Fechado":
+      case "Concluída":
         return "bg-green-100 text-green-800"
-      case "Em Andamento":
+      case "Ativa":
         return "bg-blue-100 text-blue-800"
-      case "Proposta":
-        return "bg-yellow-100 text-yellow-800"
+      case "Cancelada":
+        return "bg-red-100 text-red-800"
       default:
         return "bg-gray-100 text-gray-800"
     }
@@ -164,9 +164,9 @@ export default function NegociosPage() {
                   Voltar
                 </Button>
               </Link>
-              <span className="ml-4 font-semibold text-gray-900">Gestão de Negócios</span>
+              <span className="ml-4 font-semibold text-gray-900">Pauta de Vendas</span>
             </div>
-            <Badge variant="outline">a</Badge>
+            <Badge variant="outline">e</Badge>
           </div>
         </div>
       </header>
@@ -182,7 +182,7 @@ export default function NegociosPage() {
               <CardContent className="space-y-4">
                 <Button className="w-full" onClick={handleCreate}>
                   <Plus className="w-4 h-4 mr-2" />
-                  Novo Negócio
+                  Nova Pauta
                 </Button>
                 <div className="space-y-2">
                   <h4 className="font-medium text-sm text-gray-700">Filtros</h4>
@@ -192,9 +192,9 @@ export default function NegociosPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Todos">Todos</SelectItem>
-                      <SelectItem value="Em Andamento">Em Andamento</SelectItem>
-                      <SelectItem value="Proposta">Propostas</SelectItem>
-                      <SelectItem value="Fechado">Fechados</SelectItem>
+                      <SelectItem value="Ativa">Ativas</SelectItem>
+                      <SelectItem value="Concluída">Concluídas</SelectItem>
+                      <SelectItem value="Cancelada">Canceladas</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -207,12 +207,12 @@ export default function NegociosPage() {
             <Card>
               <CardHeader>
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                  <CardTitle className="text-xl">Tabela de Negócios</CardTitle>
+                  <CardTitle className="text-xl">Pauta de Vendas</CardTitle>
                   <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                       <Input
-                        placeholder="Buscar negócios..."
+                        placeholder="Buscar pautas..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="pl-10 w-full sm:w-64"
@@ -229,6 +229,15 @@ export default function NegociosPage() {
                         <TableHead>
                           <Button variant="ghost" onClick={() => handleSort("id")} className="h-auto p-0 font-medium">
                             ID <ArrowUpDown className="ml-2 h-4 w-4" />
+                          </Button>
+                        </TableHead>
+                        <TableHead>
+                          <Button
+                            variant="ghost"
+                            onClick={() => handleSort("titulo")}
+                            className="h-auto p-0 font-medium"
+                          >
+                            Título <ArrowUpDown className="ml-2 h-4 w-4" />
                           </Button>
                         </TableHead>
                         <TableHead>
@@ -269,26 +278,27 @@ export default function NegociosPage() {
                     <TableBody>
                       {loading ? (
                         <TableRow>
-                          <TableCell colSpan={6} className="text-center py-8">
+                          <TableCell colSpan={7} className="text-center py-8">
                             Carregando...
                           </TableCell>
                         </TableRow>
-                      ) : negocios.length === 0 ? (
+                      ) : pautaVendas.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={6} className="text-center py-8">
-                            Nenhum negócio encontrado
+                          <TableCell colSpan={7} className="text-center py-8">
+                            Nenhuma pauta encontrada
                           </TableCell>
                         </TableRow>
                       ) : (
-                        negocios.map((negocio) => (
-                          <TableRow key={negocio.id}>
-                            <TableCell className="font-medium">#{negocio.id}</TableCell>
-                            <TableCell>{negocio.cliente}</TableCell>
-                            <TableCell className="font-semibold">{negocio.valor}</TableCell>
+                        pautaVendas.map((pauta) => (
+                          <TableRow key={pauta.id}>
+                            <TableCell className="font-medium">#{pauta.id}</TableCell>
+                            <TableCell className="font-semibold">{pauta.titulo}</TableCell>
+                            <TableCell>{pauta.cliente}</TableCell>
+                            <TableCell className="font-semibold text-green-600">{pauta.valor}</TableCell>
                             <TableCell>
-                              <Badge className={getStatusColor(negocio.status)}>{negocio.status}</Badge>
+                              <Badge className={getStatusColor(pauta.status)}>{pauta.status}</Badge>
                             </TableCell>
-                            <TableCell>{negocio.data}</TableCell>
+                            <TableCell>{pauta.data}</TableCell>
                             <TableCell>
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
@@ -297,11 +307,11 @@ export default function NegociosPage() {
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onClick={() => handleEdit(negocio)}>
+                                  <DropdownMenuItem onClick={() => handleEdit(pauta)}>
                                     <Edit className="w-4 h-4 mr-2" />
                                     Editar
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => handleDelete(negocio.id)} className="text-red-600">
+                                  <DropdownMenuItem onClick={() => handleDelete(pauta.id)} className="text-red-600">
                                     <Trash2 className="w-4 h-4 mr-2" />
                                     Excluir
                                   </DropdownMenuItem>
@@ -320,8 +330,8 @@ export default function NegociosPage() {
         </div>
       </div>
 
-      <NegocioForm
-        negocio={editingNegocio}
+      <PautaVendaForm
+        pautaVenda={editingPauta}
         open={formOpen}
         onOpenChange={setFormOpen}
         onSubmit={handleFormSubmit}
@@ -333,7 +343,7 @@ export default function NegociosPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir este negócio? Esta ação não pode ser desfeita.
+              Tem certeza que deseja excluir esta pauta? Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
