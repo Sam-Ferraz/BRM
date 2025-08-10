@@ -168,6 +168,14 @@ jobs:
     needs: [detect-changes, deploy-infrastructure, deploy-application]
     if: always()
     steps:
+      - name: Configure AWS credentials
+        if: needs.deploy-application.result == 'success'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
       - name: Deployment Summary
         run: |
           echo "## Deployment Summary" >> $GITHUB_STEP_SUMMARY
@@ -177,10 +185,17 @@ jobs:
           echo "| Application | ${{ needs.deploy-application.result || 'skipped' }} | ${{ needs.detect-changes.outputs.application == 'true' && 'Deployed' || 'No changes' }} |" >> $GITHUB_STEP_SUMMARY
           
           if [[ "${{ needs.deploy-application.result }}" == "success" ]]; then
+            URL=$(aws cloudformation describe-stacks \
+              --stack-name ${{ env.APP_NAME }}-${{ env.ENVIRONMENT }} \
+              --query 'Stacks[0].Outputs[?OutputKey==`LoadBalancerURL`].OutputValue' \
+              --output text \
+              --region ${{ env.AWS_REGION }})
+            
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "✅ **Application successfully deployed!**" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "🔗 **Quick Links:**" >> $GITHUB_STEP_SUMMARY
-            echo "- 🌐 Application: http://brm-app-production-alb-1432108016.us-east-1.elb.amazonaws.com" >> $GITHUB_STEP_SUMMARY
-            echo "- 🏥 Health Check: http://brm-app-production-alb-1432108016.us-east-1.elb.amazonaws.com/health" >> $GITHUB_STEP_SUMMARY
+            echo "- 🌐 Application: $URL" >> $GITHUB_STEP_SUMMARY
+            echo "- 🏥 Health Check: $URL/health" >> $GITHUB_STEP_SUMMARY
+            echo "- 📊 Region: sa-east-1 (São Paulo)" >> $GITHUB_STEP_SUMMARY
           fi

@@ -115,8 +115,8 @@ After deployment, workflows automatically test:
 - 🔍 ECS service stability
 
 ### Quick Links (Post-Deployment)
-- 🌐 Application: http://brm-app-production-alb-1432108016.us-east-1.elb.amazonaws.com
-- 🏥 Health Check: http://brm-app-production-alb-1432108016.us-east-1.elb.amazonaws.com/health
+- 🌐 Application: http://brm-app-production-alb-146543119.sa-east-1.elb.amazonaws.com
+- 🏥 Health Check: http://brm-app-production-alb-146543119.sa-east-1.elb.amazonaws.com/health
 
 ## Troubleshooting
 

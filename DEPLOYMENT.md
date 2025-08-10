@@ -1,4 +1,11 @@
-# BRM Application - AWS Deployment Guide
+# 🚀 BRM Deployment Guide
+
+## Current Deployment Status
+
+✅ **Production Environment**  
+🌍 **Region:** sa-east-1 (São Paulo, Brazil)  
+🔗 **URL:** http://brm-app-production-alb-146543119.sa-east-1.elb.amazonaws.com  
+💚 **Health:** http://brm-app-production-alb-146543119.sa-east-1.elb.amazonaws.com/health  
 
 This guide explains how to deploy the BRM application to AWS using ECS Fargate with CloudFormation.
 
@@ -109,14 +116,14 @@ make test-build          # Test Docker build
 5. **No Container Insights**: Disabled to save costs
 6. **Lifecycle Policies**: ECR keeps only 5 recent images
 
-## Estimated Monthly Costs (us-east-1)
+## Estimated Monthly Costs (sa-east-1)
 
-- **ECS Fargate (Spot)**: ~$3-5/month
-- **Application Load Balancer**: ~$16/month
+- **ECS Fargate (Spot)**: ~$8-12/month
+- **Application Load Balancer**: ~$22/month
 - **ECR Storage**: ~$1/month
-- **CloudWatch Logs**: ~$1/month
-- **Data Transfer**: Minimal
-- **Total**: ~$20-25/month
+- **CloudWatch Logs**: ~$1-2/month
+- **Data Transfer**: ~$1-3/month
+- **Total**: ~$32-39/month
 
 ## Security
 
