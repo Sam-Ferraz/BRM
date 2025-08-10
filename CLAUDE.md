@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a **Business Relationship Management (BRM)** system - a comprehensive CRM application built with Next.js 15. It manages customers, deals, products, service tickets, and sales agendas with a modern React/TypeScript stack.
+This is a **Business Relationship Management (BRM)** system - a comprehensive CRM application built with **Vite + React**. It manages customers, deals, products, service tickets, and sales agendas with a modern React/TypeScript stack.
 
-**Architecture**: Next.js App Router with client-side components, mock backend API, shadcn/ui components, TailwindCSS styling.
+**Architecture**: Vite + React Router with client-side components, mock backend API, shadcn/ui components, TailwindCSS styling.
 
 ## Development Commands
 
@@ -17,8 +17,8 @@ npm run dev
 # Build for production  
 npm run build
 
-# Start production server
-npm start
+# Preview production build
+npm run preview
 
 # Lint code
 npm run lint
@@ -27,28 +27,29 @@ npm run lint
 ## Key Architecture Patterns
 
 ### Data Layer
-- **Mock API**: All data operations go through `lib/api.ts` which provides CRUD operations for all entities
+- **Mock API**: All data operations go through `src/lib/api.ts` which provides CRUD operations for all entities
 - **Entities**: Negocio (deals), Cliente (customers), Atendimento (service tickets), Produto (products), PautaVenda (sales agenda)
 - **API Pattern**: Each entity has `getAll()`, `create()`, `update()`, `delete()` methods with filtering/sorting support
 
 ### UI Architecture  
-- **App Router**: Pages in `app/` directory with route-based organization
-- **Forms**: Reusable form components in `components/forms/` using Dialog pattern
-- **UI Components**: shadcn/ui components in `components/ui/`
+- **React Router**: Pages in `src/pages/` directory with React Router navigation
+- **Forms**: Reusable form components in `src/components/forms/` using Dialog pattern
+- **UI Components**: shadcn/ui components in `src/components/ui/`
 - **Styling**: TailwindCSS with responsive design patterns
 
 ### Component Patterns
 - **Page Structure**: Login → Dashboard → Entity pages (with CRUD operations)
 - **Form Pattern**: Dialog-based forms with loading states and validation
 - **Table Pattern**: Data tables with search, filtering, sorting, and pagination
-- **Navigation**: Dashboard-centric with module navigation
+- **Navigation**: Dashboard-centric with module navigation using React Router Link
 
 ## Key Files
 
-- `lib/api.ts` - Mock backend API with all business logic
-- `app/dashboard/page.tsx` - Main dashboard with navigation and charts
-- `components/forms/` - Reusable CRUD form components
-- `app/layout.tsx` - Root layout with theme provider
+- `src/lib/api.ts` - Mock backend API with all business logic
+- `src/pages/DashboardPage.tsx` - Main dashboard with navigation and charts
+- `src/components/forms/` - Reusable CRUD form components
+- `src/App.tsx` - Main App component with React Router setup
+- `vite.config.ts` - Vite configuration with path aliases
 
 ## Entity Schemas
 
@@ -64,4 +65,10 @@ npm run lint
 - **Theme**: Light theme with blue/indigo gradient accents  
 - **Charts**: Recharts integration for dashboard analytics
 - **Forms**: Dialog modals with proper validation and loading states
-- **Navigation**: Badge-based shortcuts (a-e keys) for modules
+- **Navigation**: Badge-based shortcuts (a-e keys) for modules, React Router navigation
+
+## Technical Notes
+
+- **TypeScript**: Configured with relaxed settings for faster development
+- **Path Aliases**: `@/` maps to `src/` for clean imports
+- **Build**: Uses Vite for fast builds and HMR development
