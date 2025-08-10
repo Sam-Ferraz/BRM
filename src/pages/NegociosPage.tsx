@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { ArrowLeft, Plus, Pencil, Trash2, Search } from "lucide-react"
-import { api, type Negocio } from "@/lib/api"
+import { api, type Negocio } from "@/lib/api-client"
 import { NegocioForm } from "@/components/forms/negocio-form"
 import { useToast } from "@/hooks/use-toast"
 

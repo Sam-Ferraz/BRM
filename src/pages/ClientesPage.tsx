@@ -13,7 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { ArrowLeft, Plus, Pencil, Trash2, Search, Mail, Phone, MapPin, Building } from "lucide-react"
-import { api, type Cliente } from "@/lib/api"
+import { api, type Cliente } from "@/lib/api-client"
 import { ClienteForm } from "@/components/forms/cliente-form"
 import { useToast } from "@/hooks/use-toast"
 

@@ -179,22 +179,93 @@ export const api = {
 
   // Produtos
   produtos: {
-    getAll: async (): Promise<ApiResponse<Produto>> => {
-      return apiClient.get<ApiResponse<Produto>>('/produtos')
+    getAll: async (filters?: {
+      search?: string
+      categoria?: string
+      estoque?: string
+      sortBy?: string
+      sortOrder?: "asc" | "desc"
+    }): Promise<ApiResponse<Produto>> => {
+      const params = new URLSearchParams()
+      if (filters?.search) params.append('search', filters.search)
+      if (filters?.categoria) params.append('categoria', filters.categoria)
+      if (filters?.estoque) params.append('estoque', filters.estoque)
+      if (filters?.sortBy) params.append('sortBy', filters.sortBy)
+      if (filters?.sortOrder) params.append('sortOrder', filters.sortOrder)
+      
+      const query = params.toString()
+      return apiClient.get<ApiResponse<Produto>>(`/produtos${query ? `?${query}` : ''}`)
+    },
+
+    create: async (data: Omit<Produto, "id">): Promise<Produto> => {
+      return apiClient.post<Produto>('/produtos', data)
+    },
+
+    update: async (id: number, data: Partial<Produto>): Promise<Produto> => {
+      return apiClient.put<Produto>(`/produtos/${id}`, data)
+    },
+
+    delete: async (id: number): Promise<{ success: boolean }> => {
+      return apiClient.delete<{ success: boolean }>(`/produtos/${id}`)
     },
   },
 
   // Atendimentos
   atendimentos: {
-    getAll: async (): Promise<ApiResponse<Atendimento>> => {
-      return apiClient.get<ApiResponse<Atendimento>>('/atendimentos')
+    getAll: async (filters?: {
+      search?: string
+      status?: string
+      tipo?: string
+      sortBy?: string
+      sortOrder?: "asc" | "desc"
+    }): Promise<ApiResponse<Atendimento>> => {
+      const params = new URLSearchParams()
+      if (filters?.search) params.append('search', filters.search)
+      if (filters?.status) params.append('status', filters.status)
+      if (filters?.tipo) params.append('tipo', filters.tipo)
+      if (filters?.sortBy) params.append('sortBy', filters.sortBy)
+      if (filters?.sortOrder) params.append('sortOrder', filters.sortOrder)
+      
+      const query = params.toString()
+      return apiClient.get<ApiResponse<Atendimento>>(`/atendimentos${query ? `?${query}` : ''}`)
+    },
+
+    create: async (data: Omit<Atendimento, "id">): Promise<Atendimento> => {
+      return apiClient.post<Atendimento>('/atendimentos', data)
+    },
+
+    update: async (id: number, data: Partial<Atendimento>): Promise<Atendimento> => {
+      return apiClient.put<Atendimento>(`/atendimentos/${id}`, data)
+    },
+
+    delete: async (id: number): Promise<{ success: boolean }> => {
+      return apiClient.delete<{ success: boolean }>(`/atendimentos/${id}`)
     },
   },
 
   // Pauta de Vendas
   pautaVendas: {
-    getAll: async (): Promise<ApiResponse<PautaVenda>> => {
-      return apiClient.get<ApiResponse<PautaVenda>>('/pauta-vendas')
+    getAll: async (filters?: { search?: string; status?: string; sortBy?: string; sortOrder?: "asc" | "desc" }): Promise<ApiResponse<PautaVenda>> => {
+      const params = new URLSearchParams()
+      if (filters?.search) params.append('search', filters.search)
+      if (filters?.status) params.append('status', filters.status)
+      if (filters?.sortBy) params.append('sortBy', filters.sortBy)
+      if (filters?.sortOrder) params.append('sortOrder', filters.sortOrder)
+      
+      const query = params.toString()
+      return apiClient.get<ApiResponse<PautaVenda>>(`/pauta-vendas${query ? `?${query}` : ''}`)
+    },
+
+    create: async (data: Omit<PautaVenda, "id">): Promise<PautaVenda> => {
+      return apiClient.post<PautaVenda>('/pauta-vendas', data)
+    },
+
+    update: async (id: number, data: Partial<PautaVenda>): Promise<PautaVenda> => {
+      return apiClient.put<PautaVenda>(`/pauta-vendas/${id}`, data)
+    },
+
+    delete: async (id: number): Promise<{ success: boolean }> => {
+      return apiClient.delete<{ success: boolean }>(`/pauta-vendas/${id}`)
     },
   },
 }

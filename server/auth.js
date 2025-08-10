@@ -47,7 +47,7 @@ export async function loginUser(email, password) {
   
   try {
     const result = await client.query(
-      'SELECT id, username, nome, email, password_hash FROM users WHERE email = $1',
+      'SELECT id, name, email, password_hash, role FROM users WHERE email = $1',
       [email]
     )
     
@@ -62,17 +62,16 @@ export async function loginUser(email, password) {
       return { success: false, error: 'Senha incorreta' }
     }
     
-    const role = user.username === 'admin' ? 'admin' : 'user' // Determine role based on username
-    const token = generateToken(user.id, user.email, role)
+    const token = generateToken(user.id, user.email, user.role)
     
     return {
       success: true,
       token,
       user: {
         id: user.id,
-        name: user.nome || user.username,
+        name: user.name,
         email: user.email,
-        role: role
+        role: user.role
       }
     }
   } catch (error) {
@@ -101,28 +100,25 @@ export async function registerUser(name, email, password, role = 'user') {
     // Hash password
     const passwordHash = await bcrypt.hash(password, 10)
     
-    // Generate username from email
-    const username = email.split('@')[0]
-    
     // Insert new user
     const result = await client.query(
-      `INSERT INTO users (username, nome, email, password_hash) 
+      `INSERT INTO users (name, email, password_hash, role) 
        VALUES ($1, $2, $3, $4) 
-       RETURNING id, username, nome, email`,
-      [username, name, email, passwordHash]
+       RETURNING id, name, email, role`,
+      [name, email, passwordHash, role]
     )
     
     const user = result.rows[0]
-    const token = generateToken(user.id, user.email, role)
+    const token = generateToken(user.id, user.email, user.role)
     
     return {
       success: true,
       token,
       user: {
         id: user.id,
-        name: user.nome || user.username,
+        name: user.name,
         email: user.email,
-        role: role
+        role: user.role
       }
     }
   } catch (error) {

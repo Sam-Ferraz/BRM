@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { ArrowLeft, Plus, Pencil, Trash2, Search, DollarSign, Calendar, User } from "lucide-react"
-import { api, type PautaVenda } from "@/lib/api"
+import { api, type PautaVenda } from "@/lib/api-client"
 import { PautaVendaForm } from "@/components/forms/pauta-venda-form"
 import { useToast } from "@/hooks/use-toast"
 

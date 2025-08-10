@@ -7,6 +7,14 @@ async function setupDatabase() {
   try {
     console.log('Creating database tables...')
     
+    // Drop existing tables if they exist (for clean setup)
+    await client.query('DROP TABLE IF EXISTS pauta_vendas CASCADE')
+    await client.query('DROP TABLE IF EXISTS atendimentos CASCADE')
+    await client.query('DROP TABLE IF EXISTS produtos CASCADE')
+    await client.query('DROP TABLE IF EXISTS negocios CASCADE')
+    await client.query('DROP TABLE IF EXISTS clientes CASCADE')
+    await client.query('DROP TABLE IF EXISTS users CASCADE')
+    
     // Create users table
     await client.query(`
       CREATE TABLE IF NOT EXISTS users (
