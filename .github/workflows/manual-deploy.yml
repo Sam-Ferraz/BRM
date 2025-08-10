@@ -1,0 +1,134 @@
+name: Manual Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy_infrastructure:
+        description: 'Deploy infrastructure (CloudFormation)'
+        required: false
+        default: false
+        type: boolean
+      deploy_application:
+        description: 'Deploy application (Docker image + ECS)'
+        required: false
+        default: true
+        type: boolean
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+
+env:
+  AWS_REGION: us-east-1
+  APP_NAME: brm-app
+  ECR_REPOSITORY: 062721086100.dkr.ecr.us-east-1.amazonaws.com/brm-app-production
+
+jobs:
+  deploy-infrastructure:
+    name: Deploy Infrastructure
+    runs-on: ubuntu-latest
+    if: inputs.deploy_infrastructure
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy CloudFormation stack
+        run: |
+          aws cloudformation deploy \
+            --template-file cloudformation/infrastructure.yaml \
+            --stack-name ${{ env.APP_NAME }}-${{ inputs.environment }} \
+            --parameter-overrides \
+              AppName=${{ env.APP_NAME }} \
+              Environment=${{ inputs.environment }} \
+              ImageTag=latest \
+              ECRRepositoryURI=${{ env.ECR_REPOSITORY }} \
+            --capabilities CAPABILITY_NAMED_IAM \
+            --region ${{ env.AWS_REGION }} \
+            --no-fail-on-empty-changeset
+
+  deploy-application:
+    name: Deploy Application
+    runs-on: ubuntu-latest
+    needs: [deploy-infrastructure]
+    if: always() && inputs.deploy_application && (needs.deploy-infrastructure.result == 'success' || needs.deploy-infrastructure.result == 'skipped')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push Docker image
+        run: |
+          # Build image
+          docker build -t ${{ env.APP_NAME }}:latest .
+          
+          # Tag for ECR
+          docker tag ${{ env.APP_NAME }}:latest ${{ env.ECR_REPOSITORY }}:latest
+          docker tag ${{ env.APP_NAME }}:latest ${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+          
+          # Push both tags
+          docker push ${{ env.ECR_REPOSITORY }}:latest
+          docker push ${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+
+      - name: Update ECS service
+        run: |
+          aws ecs update-service \
+            --cluster ${{ env.APP_NAME }}-${{ inputs.environment }}-cluster \
+            --service ${{ env.APP_NAME }}-${{ inputs.environment }}-service \
+            --force-new-deployment \
+            --region ${{ env.AWS_REGION }}
+
+      - name: Wait for deployment
+        run: |
+          echo "⏳ Waiting for ECS deployment to complete..."
+          aws ecs wait services-stable \
+            --cluster ${{ env.APP_NAME }}-${{ inputs.environment }}-cluster \
+            --services ${{ env.APP_NAME }}-${{ inputs.environment }}-service \
+            --region ${{ env.AWS_REGION }}
+
+      - name: Get application URL and health check
+        run: |
+          URL=$(aws cloudformation describe-stacks \
+            --stack-name ${{ env.APP_NAME }}-${{ inputs.environment }} \
+            --query 'Stacks[0].Outputs[?OutputKey==`LoadBalancerURL`].OutputValue' \
+            --output text \
+            --region ${{ env.AWS_REGION }})
+          
+          echo "🚀 Application deployed successfully!"
+          echo "📱 URL: $URL"
+          echo "🔍 Health: $URL/health"
+          
+          # Test health endpoint
+          echo "🏥 Testing health endpoint..."
+          for i in {1..5}; do
+            if curl -f -s "$URL/health" > /dev/null; then
+              echo "✅ Health check passed!"
+              curl -s "$URL/health" | jq .
+              break
+            else
+              echo "⏳ Attempt $i/5 - Health check failed, retrying in 10s..."
+              sleep 10
+            fi
+          done

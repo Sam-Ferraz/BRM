@@ -1,20 +1,62 @@
-# Responsive web application
+# BRM - Business Relationship Management
 
-*Automatically synced with your [v0.dev](https://v0.dev) deployments*
+[![Deploy to AWS](https://github.com/swordmaster/brm/actions/workflows/deploy.yml/badge.svg?branch=trunk)](https://github.com/swordmaster/brm/actions/workflows/deploy.yml)
+[![AWS ECS](https://img.shields.io/badge/Deployed%20on-AWS%20ECS-orange?style=flat&logo=amazonaws)](http://brm-app-production-alb-1432108016.us-east-1.elb.amazonaws.com)
+[![Health Check](https://img.shields.io/badge/Health-Check-brightgreen?style=flat)](http://brm-app-production-alb-1432108016.us-east-1.elb.amazonaws.com/health)
 
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/eduardohmgs-projects/v0-responsive-web-application)
-[![Built with v0](https://img.shields.io/badge/Built%20with-v0.dev-black?style=for-the-badge)](https://v0.dev/chat/projects/CKueJQGAnjG)
+A comprehensive Business Relationship Management (CRM) system built with **Vite + React** and deployed on **AWS ECS Fargate**.
 
-## Overview
+## 🚀 Live Application
 
-This repository will stay in sync with your deployed chats on [v0.dev](https://v0.dev).
-Any changes you make to your deployed app will be automatically pushed to this repository from [v0.dev](https://v0.dev).
+**Production:** http://brm-app-production-alb-1432108016.us-east-1.elb.amazonaws.com
 
-## Deployment
+## 📋 Overview
 
-Your project is live at:
+This is a comprehensive CRM application that manages customers, deals, products, service tickets, and sales agendas with a modern React/TypeScript stack running on AWS.
 
-**[https://vercel.com/eduardohmgs-projects/v0-responsive-web-application](https://vercel.com/eduardohmgs-projects/v0-responsive-web-application)**
+**Features:**
+- 👥 Customer Management (Clientes)
+- 💼 Deal Tracking (Negócios) 
+- 📦 Product Catalog (Produtos)
+- 🎧 Service Tickets (Atendimentos)
+- 📅 Sales Agenda (Pauta de Vendas)
+- 🔐 Authentication & Authorization
+- 📊 Dashboard with Analytics
+
+## 🛠 Technology Stack
+
+**Frontend:**
+- ⚛️ React 18 with TypeScript
+- ⚡ Vite for build tooling
+- 🎨 TailwindCSS + shadcn/ui components
+- 📊 Recharts for data visualization
+- 🧭 React Router for navigation
+
+**Backend:**
+- 🟢 Node.js + Express
+- 🗄️ SQLite database
+- 🔐 JWT authentication
+- 🐳 Docker containerization
+
+**Infrastructure:**
+- ☁️ AWS ECS Fargate
+- 🔄 Application Load Balancer
+- 🗂️ ECR for Docker images
+- ☁️ CloudFormation for IaC
+- 🤖 GitHub Actions for CI/CD
+
+## 🚀 Deployment
+
+### Automated Deployment
+Every push to the `trunk` branch automatically triggers deployment via GitHub Actions.
+
+### Manual Deployment
+1. Go to **Actions** tab
+2. Select **Manual Deployment** 
+3. Choose components to deploy
+4. Select environment
+
+See [GitHub Actions Documentation](.github/README.md) for detailed workflow information.
 
 ## Build your app
 
