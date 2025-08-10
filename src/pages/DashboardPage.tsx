@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge"
 import { Users, Briefcase, Package, HeadphonesIcon, Settings, LogOut, FileText } from "lucide-react"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart-simple"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, PieChart, Pie, Cell } from "recharts"
+import { useAuth } from "@/contexts/AuthContext"
+import { toast } from "sonner"
 
 // Mock data for charts
 const salesData = [
@@ -30,6 +32,7 @@ export default function DashboardPage() {
     totalProdutos: 0,
     totalAtendimentos: 0,
   })
+  const { user, logout } = useAuth()
 
   useEffect(() => {
     // Mock stats - in real app, fetch from API
@@ -40,6 +43,15 @@ export default function DashboardPage() {
       totalAtendimentos: 42,
     })
   }, [])
+
+  const handleLogout = async () => {
+    try {
+      await logout()
+      toast.success("Logout realizado com sucesso")
+    } catch (error) {
+      toast.error("Erro ao fazer logout")
+    }
+  }
 
   const menuItems = [
     {
@@ -95,12 +107,6 @@ export default function DashboardPage() {
       icon: HeadphonesIcon,
       href: "/suporte",
     },
-    {
-      title: "Sair",
-      icon: LogOut,
-      href: "/",
-      className: "text-red-600 hover:text-red-700",
-    },
   ]
 
   return (
@@ -116,12 +122,12 @@ export default function DashboardPage() {
               <span className="font-semibold text-gray-900">Sistema de Gestão</span>
             </div>
             <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-600">Bem-vindo, Usuário</span>
-              <Button variant="outline" size="sm" asChild>
-                <Link to="/">
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Sair
-                </Link>
+              <span className="text-sm text-gray-600">
+                Bem-vindo, {user?.name || "Usuário"}
+              </span>
+              <Button variant="outline" size="sm" onClick={handleLogout}>
+                <LogOut className="w-4 h-4 mr-2" />
+                Sair
               </Button>
             </div>
           </div>
@@ -307,12 +313,20 @@ export default function DashboardPage() {
               <CardContent className="space-y-2">
                 {settingsItems.map((item) => (
                   <Link key={item.href} to={item.href}>
-                    <Button variant="ghost" className={`w-full justify-start ${item.className || ""}`}>
+                    <Button variant="ghost" className="w-full justify-start">
                       <item.icon className="w-4 h-4 mr-2" />
                       {item.title}
                     </Button>
                   </Link>
                 ))}
+                <Button 
+                  variant="ghost" 
+                  className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
+                  onClick={handleLogout}
+                >
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Sair
+                </Button>
               </CardContent>
             </Card>
 

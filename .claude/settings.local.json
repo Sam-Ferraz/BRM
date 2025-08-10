@@ -10,7 +10,12 @@
       "Bash(npm install)",
       "Bash(npm run build:*)",
       "Bash(rm:*)",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "Bash(npm run setup-db:*)",
+      "Bash(node:*)",
+      "Bash(npm run server:*)",
+      "Bash(curl:*)",
+      "Bash(npm run dev:*)"
     ],
     "deny": []
   }
