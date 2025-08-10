@@ -1,13 +1,18 @@
 import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
+import path from 'path'
+import { fileURLToPath } from 'url'
 import { loginUser, registerUser, authenticateToken } from './auth.js'
 import { createApiRoutes } from './api-routes.js'
 
 dotenv.config()
 
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+
 const app = express()
-const PORT = process.env.PORT || 3001
+const PORT = process.env.PORT || 3002
 
 // Middleware
 app.use(cors({
@@ -15,6 +20,9 @@ app.use(cors({
   credentials: true
 }))
 app.use(express.json())
+
+// Serve static files from the Vite build
+app.use(express.static(path.join(__dirname, '../dist')))
 
 // Health check
 app.get('/health', (req, res) => {
@@ -87,15 +95,20 @@ app.post('/api/auth/logout', (req, res) => {
 // API routes for business entities
 createApiRoutes(app)
 
+// Serve React app for all non-API routes (client-side routing)
+app.get('*', (req, res) => {
+  // Don't serve index.html for API routes
+  if (req.path.startsWith('/api/')) {
+    return res.status(404).json({ error: 'Endpoint não encontrado' })
+  }
+  
+  res.sendFile(path.join(__dirname, '../dist/index.html'))
+})
+
 // Error handling middleware
 app.use((error, req, res, next) => {
   console.error('Unhandled error:', error)
   res.status(500).json({ error: 'Erro interno do servidor' })
-})
-
-// 404 handler
-app.use('*', (req, res) => {
-  res.status(404).json({ error: 'Endpoint não encontrado' })
 })
 
 app.listen(PORT, () => {

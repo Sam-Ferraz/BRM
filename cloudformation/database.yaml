@@ -1,0 +1,148 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'BRM Application - RDS PostgreSQL Database (Optional - Cost-optimized)'
+
+Parameters:
+  AppName:
+    Type: String
+    Default: brm-app
+    Description: Name of the application
+  
+  Environment:
+    Type: String
+    Default: production
+    AllowedValues: [production, staging, development]
+    Description: Environment name
+  
+  VPCStackName:
+    Type: String
+    Default: brm-app-production
+    Description: Name of the VPC CloudFormation stack
+  
+  DBMasterUsername:
+    Type: String
+    Default: postgres
+    Description: Database master username
+  
+  DBMasterPassword:
+    Type: String
+    NoEcho: true
+    MinLength: 8
+    Description: Database master password (minimum 8 characters)
+  
+  DBInstanceClass:
+    Type: String
+    Default: db.t3.micro
+    AllowedValues:
+      - db.t3.micro
+      - db.t3.small
+      - db.t3.medium
+    Description: RDS instance class (t3.micro for cost optimization)
+
+Resources:
+  # Database Subnet Group
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Subnet group for RDS database
+      DBSubnetGroupName: !Sub ${AppName}-${Environment}-db-subnet-group
+      SubnetIds:
+        - Fn::ImportValue: !Sub ${VPCStackName}-PublicSubnet1
+        - Fn::ImportValue: !Sub ${VPCStackName}-PublicSubnet2
+      Tags:
+        - Key: Name
+          Value: !Sub ${AppName}-${Environment}-db-subnet-group
+
+  # Database Security Group
+  DatabaseSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for RDS database
+      VpcId:
+        Fn::ImportValue: !Sub ${VPCStackName}-VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId:
+            Fn::ImportValue: !Sub ${VPCStackName}-ECSSecurityGroup
+          Description: Allow ECS tasks to connect to database
+      Tags:
+        - Key: Name
+          Value: !Sub ${AppName}-${Environment}-db-sg
+
+  # RDS Database Instance
+  DatabaseInstance:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Delete  # Change to Snapshot for production
+    Properties:
+      DBInstanceIdentifier: !Sub ${AppName}-${Environment}-db
+      DBName: brm_db
+      DBInstanceClass: !Ref DBInstanceClass
+      Engine: postgres
+      EngineVersion: '15.4'
+      MasterUsername: !Ref DBMasterUsername
+      MasterUserPassword: !Ref DBMasterPassword
+      AllocatedStorage: '20'  # Minimum for cost optimization
+      StorageType: gp2
+      StorageEncrypted: true
+      VPCSecurityGroups:
+        - !Ref DatabaseSecurityGroup
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      PubliclyAccessible: false
+      BackupRetentionPeriod: 1  # Minimum for cost savings
+      DeleteAutomatedBackups: true
+      MultiAZ: false  # Single AZ for cost optimization
+      MonitoringInterval: 0  # Disable enhanced monitoring for cost savings
+      PerformanceInsightsEnabled: false
+      DeletionProtection: false  # Set to true for production
+      Tags:
+        - Key: Name
+          Value: !Sub ${AppName}-${Environment}-db
+
+  # Database Secret in Secrets Manager (recommended for production)
+  DatabaseSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub ${AppName}-${Environment}-db-credentials
+      Description: Database credentials for BRM application
+      GenerateSecretString:
+        SecretStringTemplate: !Sub '{"username": "${DBMasterUsername}"}'
+        GenerateStringKey: 'password'
+        PasswordLength: 16
+        ExcludeCharacters: '"@/\'
+      Tags:
+        - Key: Name
+          Value: !Sub ${AppName}-${Environment}-db-secret
+
+  # Attach secret to database
+  SecretTargetAttachment:
+    Type: AWS::SecretsManager::SecretTargetAttachment
+    Properties:
+      SecretId: !Ref DatabaseSecret
+      TargetId: !Ref DatabaseInstance
+      TargetType: AWS::RDS::DBInstance
+
+Outputs:
+  DatabaseEndpoint:
+    Description: RDS database endpoint
+    Value: !GetAtt DatabaseInstance.Endpoint.Address
+    Export:
+      Name: !Sub ${AppName}-${Environment}-DatabaseEndpoint
+
+  DatabasePort:
+    Description: RDS database port
+    Value: !GetAtt DatabaseInstance.Endpoint.Port
+    Export:
+      Name: !Sub ${AppName}-${Environment}-DatabasePort
+
+  DatabaseName:
+    Description: RDS database name
+    Value: brm_db
+    Export:
+      Name: !Sub ${AppName}-${Environment}-DatabaseName
+
+  DatabaseSecretArn:
+    Description: ARN of the database secret
+    Value: !Ref DatabaseSecret
+    Export:
+      Name: !Sub ${AppName}-${Environment}-DatabaseSecretArn

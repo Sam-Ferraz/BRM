@@ -18,7 +18,10 @@
       "Bash(npm run dev:*)",
       "Bash(npm run lint)",
       "Bash(npm run lint:*)",
-      "Bash(npx eslint:*)"
+      "Bash(npx eslint:*)",
+      "Bash(docker:*)",
+      "Bash(make:*)",
+      "Bash(aws:*)"
     ],
     "deny": []
   }
