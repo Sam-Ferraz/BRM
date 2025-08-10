@@ -1,34 +1,311 @@
+import { useState, useEffect, useCallback } from "react"
 import { Link } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowLeft } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { ArrowLeft, Plus, Pencil, Trash2, Search } from "lucide-react"
+import { api, type Produto } from "@/lib/api"
+import { ProdutoForm } from "@/components/forms/produto-form"
+import { useToast } from "@/hooks/use-toast"
 
 export default function ProdutosPage() {
+  const [produtos, setProdutos] = useState<Produto[]>([])
+  const [loading, setLoading] = useState(true)
+  const [formLoading, setFormLoading] = useState(false)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [categoriaFilter, setCategoriaFilter] = useState("Todos")
+  const [estoqueFilter, setEstoqueFilter] = useState("Todos")
+  const [sortBy, setSortBy] = useState("")
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc")
+  
+  const [isFormOpen, setIsFormOpen] = useState(false)
+  const [editingProduto, setEditingProduto] = useState<Produto | undefined>()
+  
+  const { toast } = useToast()
+
+  const fetchProdutos = useCallback(async () => {
+    try {
+      setLoading(true)
+      const filters: any = {}
+      
+      if (searchTerm) filters.search = searchTerm
+      if (categoriaFilter !== "Todos") filters.categoria = categoriaFilter
+      if (estoqueFilter !== "Todos") filters.estoque = estoqueFilter
+      if (sortBy) {
+        filters.sortBy = sortBy
+        filters.sortOrder = sortOrder
+      }
+      
+      const result = await api.produtos.getAll(filters)
+      setProdutos(result.data)
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Falha ao carregar produtos",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
+  }, [searchTerm, categoriaFilter, estoqueFilter, sortBy, sortOrder, toast])
+
+  useEffect(() => {
+    fetchProdutos()
+  }, [fetchProdutos])
+
+  const handleCreate = async (data: Omit<Produto, "id">) => {
+    try {
+      setFormLoading(true)
+      await api.produtos.create(data)
+      toast({
+        title: "Sucesso",
+        description: "Produto criado com sucesso",
+      })
+      setIsFormOpen(false)
+      fetchProdutos()
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Falha ao criar produto",
+        variant: "destructive",
+      })
+    } finally {
+      setFormLoading(false)
+    }
+  }
+
+  const handleUpdate = async (data: Partial<Produto>) => {
+    if (!editingProduto) return
+
+    try {
+      setFormLoading(true)
+      await api.produtos.update(editingProduto.id, data)
+      toast({
+        title: "Sucesso",
+        description: "Produto atualizado com sucesso",
+      })
+      setIsFormOpen(false)
+      setEditingProduto(undefined)
+      fetchProdutos()
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Falha ao atualizar produto",
+        variant: "destructive",
+      })
+    } finally {
+      setFormLoading(false)
+    }
+  }
+
+  const handleDelete = async (id: number) => {
+    if (!confirm("Tem certeza que deseja excluir este produto?")) return
+
+    try {
+      await api.produtos.delete(id)
+      toast({
+        title: "Sucesso",
+        description: "Produto excluído com sucesso",
+      })
+      fetchProdutos()
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Falha ao excluir produto",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleSort = (field: string) => {
+    if (sortBy === field) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc")
+    } else {
+      setSortBy(field)
+      setSortOrder("asc")
+    }
+  }
+
+  const getEstoqueStatus = (estoque: number) => {
+    if (estoque === 0) {
+      return <Badge variant="destructive">Sem Estoque</Badge>
+    } else if (estoque <= 10) {
+      return <Badge variant="secondary">Baixo Estoque</Badge>
+    }
+    return <Badge variant="default">Em Estoque</Badge>
+  }
+
+  const categorias = ["Todos", "Eletrônicos", "Casa", "Esportes", "Livros"]
+
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center h-16">
-            <Button variant="outline" size="sm" asChild className="mr-4">
-              <Link to="/dashboard">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Voltar
-              </Link>
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center">
+              <Button variant="outline" size="sm" asChild className="mr-4">
+                <Link to="/dashboard">
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Voltar
+                </Link>
+              </Button>
+              <h1 className="text-xl font-semibold text-gray-900">Produtos</h1>
+            </div>
+            <Button onClick={() => setIsFormOpen(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              Novo Produto
             </Button>
-            <h1 className="text-xl font-semibold text-gray-900">Produtos</h1>
           </div>
         </div>
       </header>
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Card>
           <CardHeader>
             <CardTitle>Gestão de Produtos</CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-gray-600">Esta página está em desenvolvimento. Em breve você poderá gerenciar todos os seus produtos aqui.</p>
+          <CardContent className="space-y-4">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Buscar produtos..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <Select value={categoriaFilter} onValueChange={setCategoriaFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Categoria" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categorias.map((categoria) => (
+                    <SelectItem key={categoria} value={categoria}>
+                      {categoria}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={estoqueFilter} onValueChange={setEstoqueFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Estoque" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Todos">Todos</SelectItem>
+                  <SelectItem value="Em Estoque">Em Estoque</SelectItem>
+                  <SelectItem value="Baixo Estoque">Baixo Estoque</SelectItem>
+                  <SelectItem value="Sem Estoque">Sem Estoque</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {loading ? (
+              <div className="text-center py-8">Carregando produtos...</div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead 
+                      className="cursor-pointer" 
+                      onClick={() => handleSort("nome")}
+                    >
+                      Nome {sortBy === "nome" && (sortOrder === "asc" ? "↑" : "↓")}
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer" 
+                      onClick={() => handleSort("preco")}
+                    >
+                      Preço {sortBy === "preco" && (sortOrder === "asc" ? "↑" : "↓")}
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer" 
+                      onClick={() => handleSort("categoria")}
+                    >
+                      Categoria {sortBy === "categoria" && (sortOrder === "asc" ? "↑" : "↓")}
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer" 
+                      onClick={() => handleSort("estoque")}
+                    >
+                      Estoque {sortBy === "estoque" && (sortOrder === "asc" ? "↑" : "↓")}
+                    </TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {produtos.map((produto) => (
+                    <TableRow key={produto.id}>
+                      <TableCell className="font-medium">{produto.nome}</TableCell>
+                      <TableCell>{produto.preco}</TableCell>
+                      <TableCell>{produto.categoria}</TableCell>
+                      <TableCell>{produto.estoque}</TableCell>
+                      <TableCell>{getEstoqueStatus(produto.estoque)}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setEditingProduto(produto)
+                              setIsFormOpen(true)
+                            }}
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDelete(produto.id)}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {produtos.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                        Nenhum produto encontrado
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
       </div>
+
+      <ProdutoForm
+        produto={editingProduto}
+        open={isFormOpen}
+        onOpenChange={(open) => {
+          setIsFormOpen(open)
+          if (!open) setEditingProduto(undefined)
+        }}
+        onSubmit={editingProduto ? handleUpdate : handleCreate}
+        loading={formLoading}
+      />
     </div>
   )
 }
