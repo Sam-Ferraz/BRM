@@ -2,14 +2,14 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import type { Atendimento } from "@/lib/api"
+import type { Atendimento } from "@/lib/api-client"
 
 interface AtendimentoFormProps {
   atendimento?: Atendimento
@@ -21,13 +21,35 @@ interface AtendimentoFormProps {
 
 export function AtendimentoForm({ atendimento, open, onOpenChange, onSubmit, loading }: AtendimentoFormProps) {
   const [formData, setFormData] = useState({
-    cliente: atendimento?.cliente || "",
-    tipo: atendimento?.tipo || ("Suporte" as const),
-    status: atendimento?.status || ("Pendente" as const),
-    data: atendimento?.data || new Date().toLocaleDateString("pt-BR"),
-    hora: atendimento?.hora || new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
-    descricao: atendimento?.descricao || "",
+    cliente: "",
+    tipo: "Suporte" as const,
+    status: "Pendente" as const,
+    data: new Date().toLocaleDateString("pt-BR"),
+    hora: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
+    descricao: "",
   })
+
+  useEffect(() => {
+    if (atendimento) {
+      setFormData({
+        cliente: atendimento.cliente || "",
+        tipo: atendimento.tipo || "Suporte",
+        status: atendimento.status || "Pendente",
+        data: atendimento.data || new Date().toLocaleDateString("pt-BR"),
+        hora: atendimento.hora || new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
+        descricao: atendimento.descricao || "",
+      })
+    } else {
+      setFormData({
+        cliente: "",
+        tipo: "Suporte" as const,
+        status: "Pendente" as const,
+        data: new Date().toLocaleDateString("pt-BR"),
+        hora: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
+        descricao: "",
+      })
+    }
+  }, [atendimento])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()

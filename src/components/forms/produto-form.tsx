@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -20,12 +20,32 @@ interface ProdutoFormProps {
 
 export function ProdutoForm({ produto, open, onOpenChange, onSubmit, loading }: ProdutoFormProps) {
   const [formData, setFormData] = useState({
-    nome: produto?.nome || "",
-    preco: produto?.preco || "",
-    categoria: produto?.categoria || "",
-    estoque: produto?.estoque || 0,
-    descricao: produto?.descricao || "",
+    nome: "",
+    preco: "",
+    categoria: "",
+    estoque: 0,
+    descricao: "",
   })
+
+  useEffect(() => {
+    if (produto) {
+      setFormData({
+        nome: produto.nome || "",
+        preco: produto.preco || "",
+        categoria: produto.categoria || "",
+        estoque: produto.estoque || 0,
+        descricao: produto.descricao || "",
+      })
+    } else {
+      setFormData({
+        nome: "",
+        preco: "",
+        categoria: "",
+        estoque: 0,
+        descricao: "",
+      })
+    }
+  }, [produto])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()

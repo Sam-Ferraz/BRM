@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -19,13 +19,35 @@ interface ClienteFormProps {
 
 export function ClienteForm({ cliente, open, onOpenChange, onSubmit, loading }: ClienteFormProps) {
   const [formData, setFormData] = useState({
-    nome: cliente?.nome || "",
-    email: cliente?.email || "",
-    telefone: cliente?.telefone || "",
-    cidade: cliente?.cidade || "",
-    endereco: cliente?.endereco || "",
-    empresa: cliente?.empresa || "",
+    nome: "",
+    email: "",
+    telefone: "",
+    cidade: "",
+    endereco: "",
+    empresa: "",
   })
+
+  useEffect(() => {
+    if (cliente) {
+      setFormData({
+        nome: cliente.nome || "",
+        email: cliente.email || "",
+        telefone: cliente.telefone || "",
+        cidade: cliente.cidade || "",
+        endereco: cliente.endereco || "",
+        empresa: cliente.empresa || "",
+      })
+    } else {
+      setFormData({
+        nome: "",
+        email: "",
+        telefone: "",
+        cidade: "",
+        endereco: "",
+        empresa: "",
+      })
+    }
+  }, [cliente])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()

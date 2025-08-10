@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -21,12 +21,32 @@ interface NegocioFormProps {
 
 export function NegocioForm({ negocio, open, onOpenChange, onSubmit, loading }: NegocioFormProps) {
   const [formData, setFormData] = useState({
-    cliente: negocio?.cliente || "",
-    valor: negocio?.valor || "",
-    status: negocio?.status || ("Proposta" as const),
-    data: negocio?.data || new Date().toLocaleDateString("pt-BR"),
-    descricao: negocio?.descricao || "",
+    cliente: "",
+    valor: "",
+    status: "Proposta" as const,
+    data: new Date().toLocaleDateString("pt-BR"),
+    descricao: "",
   })
+
+  useEffect(() => {
+    if (negocio) {
+      setFormData({
+        cliente: negocio.cliente || "",
+        valor: negocio.valor || "",
+        status: negocio.status || "Proposta",
+        data: negocio.data || new Date().toLocaleDateString("pt-BR"),
+        descricao: negocio.descricao || "",
+      })
+    } else {
+      setFormData({
+        cliente: "",
+        valor: "",
+        status: "Proposta" as const,
+        data: new Date().toLocaleDateString("pt-BR"),
+        descricao: "",
+      })
+    }
+  }, [negocio])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()

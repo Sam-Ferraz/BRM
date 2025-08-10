@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -20,12 +20,32 @@ interface PautaVendaFormProps {
 
 export function PautaVendaForm({ pautaVenda, open, onOpenChange, onSubmit, loading }: PautaVendaFormProps) {
   const [formData, setFormData] = useState({
-    titulo: pautaVenda?.titulo || "",
-    cliente: pautaVenda?.cliente || "",
-    valor: pautaVenda?.valor || "",
-    data: pautaVenda?.data || new Date().toLocaleDateString("pt-BR"),
-    status: pautaVenda?.status || ("Ativa" as const),
+    titulo: "",
+    cliente: "",
+    valor: "",
+    data: new Date().toLocaleDateString("pt-BR"),
+    status: "Ativa" as const,
   })
+
+  useEffect(() => {
+    if (pautaVenda) {
+      setFormData({
+        titulo: pautaVenda.titulo || "",
+        cliente: pautaVenda.cliente || "",
+        valor: pautaVenda.valor || "",
+        data: pautaVenda.data || new Date().toLocaleDateString("pt-BR"),
+        status: pautaVenda.status || "Ativa",
+      })
+    } else {
+      setFormData({
+        titulo: "",
+        cliente: "",
+        valor: "",
+        data: new Date().toLocaleDateString("pt-BR"),
+        status: "Ativa" as const,
+      })
+    }
+  }, [pautaVenda])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
