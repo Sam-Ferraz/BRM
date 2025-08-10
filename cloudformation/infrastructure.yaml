@@ -20,8 +20,19 @@ Parameters:
   
   ECRRepositoryURI:
     Type: String
-    Default: 062721086100.dkr.ecr.us-east-1.amazonaws.com/brm-app-production
+    Default: 062721086100.dkr.ecr.sa-east-1.amazonaws.com/brm-app-production
     Description: ECR repository URI (created manually)
+  
+  JWTSecret:
+    Type: String
+    NoEcho: true
+    Default: changeme-jwt-secret
+    Description: JWT secret for authentication
+  
+  JWTExpiresIn:
+    Type: String
+    Default: 7d
+    Description: JWT expiration time
   
   DBHost:
     Type: String
@@ -297,7 +308,9 @@ Resources:
             - Name: DB_PASSWORD
               Value: !Ref DBPassword
             - Name: JWT_SECRET
-              Value: !Sub ${AppName}-jwt-secret-${Environment}
+              Value: !Ref JWTSecret
+            - Name: JWT_EXPIRES_IN
+              Value: !Ref JWTExpiresIn
             - Name: CLIENT_URL
               Value: !Sub http://${ApplicationLoadBalancer.DNSName}
           LogConfiguration:

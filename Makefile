@@ -4,13 +4,13 @@
 # Default values
 APP_NAME ?= brm-app
 ENVIRONMENT ?= production
-AWS_REGION ?= us-east-1
+AWS_REGION ?= sa-east-1
 AWS_PROFILE ?= default
 
 # Derived values
 STACK_NAME = $(APP_NAME)-$(ENVIRONMENT)
 ECR_REPO_NAME = $(APP_NAME)-$(ENVIRONMENT)
-ECR_URI = 062721086100.dkr.ecr.us-east-1.amazonaws.com/brm-app-production
+ECR_URI = 062721086100.dkr.ecr.sa-east-1.amazonaws.com/brm-app-production
 IMAGE_TAG ?= latest
 
 # Colors for output

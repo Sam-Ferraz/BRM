@@ -1,14 +1,16 @@
 # BRM - Business Relationship Management
 
 [![Deploy to AWS](https://github.com/swordmaster/brm/actions/workflows/deploy.yml/badge.svg?branch=trunk)](https://github.com/swordmaster/brm/actions/workflows/deploy.yml)
-[![AWS ECS](https://img.shields.io/badge/Deployed%20on-AWS%20ECS-orange?style=flat&logo=amazonaws)](http://brm-app-production-alb-1432108016.us-east-1.elb.amazonaws.com)
-[![Health Check](https://img.shields.io/badge/Health-Check-brightgreen?style=flat)](http://brm-app-production-alb-1432108016.us-east-1.elb.amazonaws.com/health)
+[![AWS ECS](https://img.shields.io/badge/Deployed%20on-AWS%20ECS-orange?style=flat&logo=amazonaws)](https://console.aws.amazon.com/ecs/)
+[![Region](https://img.shields.io/badge/Region-sa--east--1-blue?style=flat&logo=amazonaws)](https://sa-east-1.console.aws.amazon.com/)
+[![Health Check](https://img.shields.io/badge/Health-Check-brightgreen?style=flat)](https://github.com/swordmaster/brm/actions)
 
-A comprehensive Business Relationship Management (CRM) system built with **Vite + React** and deployed on **AWS ECS Fargate**.
+A comprehensive Business Relationship Management (CRM) system built with **Vite + React** and deployed on **AWS ECS Fargate** in **São Paulo (sa-east-1)**.
 
-## 🚀 Live Application
+## 🚀 Deployment Status
 
-**Production:** http://brm-app-production-alb-1432108016.us-east-1.elb.amazonaws.com
+**Region:** sa-east-1 (São Paulo)  
+**Status:** Ready for deployment via GitHub Actions
 
 ## 📋 Overview
 

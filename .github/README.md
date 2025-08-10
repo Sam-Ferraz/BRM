@@ -32,13 +32,25 @@ This repository includes automated CI/CD workflows for deploying the BRM applica
 - ☑️ Deploy Application (Docker + ECS) 
 - 🎯 Environment (production/staging)
 
-## Required Secrets
+## Required Secrets & Variables
 
-Configure these secrets in your GitHub repository settings:
+Configure these in your GitHub repository settings:
 
+**Secrets:**
 ```
 AWS_ACCESS_KEY_ID     - AWS access key for deployment
-AWS_SECRET_ACCESS_KEY - AWS secret key for deployment
+AWS_SECRET_ACCESS_KEY - AWS secret key for deployment  
+DB_PASSWORD           - Database password
+JWT_SECRET            - JWT secret for authentication
+```
+
+**Variables:**
+```
+DB_HOST               - Database host (RDS endpoint)
+DB_PORT               - Database port (5432)
+DB_NAME               - Database name
+DB_USER               - Database username
+JWT_EXPIRES_IN        - JWT expiration time (7d)
 ```
 
 **IAM Permissions Required:**
@@ -51,10 +63,10 @@ AWS_SECRET_ACCESS_KEY - AWS secret key for deployment
 
 ### Environment Variables (in workflows)
 ```yaml
-AWS_REGION: us-east-1
+AWS_REGION: sa-east-1
 APP_NAME: brm-app  
 ENVIRONMENT: production
-ECR_REPOSITORY: 062721086100.dkr.ecr.us-east-1.amazonaws.com/brm-app-production
+ECR_REPOSITORY: 062721086100.dkr.ecr.sa-east-1.amazonaws.com/brm-app-production
 ```
 
 ### Deployment Flow
