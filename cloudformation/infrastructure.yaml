@@ -18,6 +18,11 @@ Parameters:
     Default: latest
     Description: Docker image tag to deploy
   
+  ECRRepositoryURI:
+    Type: String
+    Default: 062721086100.dkr.ecr.us-east-1.amazonaws.com/brm-app-production
+    Description: ECR repository URI (created manually)
+  
   DBHost:
     Type: String
     Default: localhost
@@ -152,34 +157,6 @@ Resources:
         - Key: Name
           Value: !Sub ${AppName}-${Environment}-ecs-sg
 
-  # ECR Repository
-  ECRRepository:
-    Type: AWS::ECR::Repository
-    Properties:
-      RepositoryName: !Sub ${AppName}-${Environment}
-      ImageScanningConfiguration:
-        ScanOnPush: true
-      LifecyclePolicy:
-        LifecyclePolicyText: |
-          {
-            "rules": [
-              {
-                "rulePriority": 1,
-                "description": "Keep last 5 images",
-                "selection": {
-                  "tagStatus": "tagged",
-                  "countType": "imageCountMoreThan",
-                  "countNumber": 5
-                },
-                "action": {
-                  "type": "expire"
-                }
-              }
-            ]
-          }
-      Tags:
-        - Key: Name
-          Value: !Sub ${AppName}-${Environment}-ecr
 
   # Application Load Balancer
   ApplicationLoadBalancer:
@@ -210,7 +187,10 @@ Resources:
       HealthCheckIntervalSeconds: 30
       HealthCheckTimeoutSeconds: 5
       HealthyThresholdCount: 2
-      UnhealthyThresholdCount: 3
+      UnhealthyThresholdCount: 5
+      HealthCheckPort: 3002
+      Matcher:
+        HttpCode: 200
       Tags:
         - Key: Name
           Value: !Sub ${AppName}-${Environment}-tg
@@ -297,7 +277,7 @@ Resources:
       TaskRoleArn: !GetAtt ECSTaskRole.Arn
       ContainerDefinitions:
         - Name: !Sub ${AppName}-container
-          Image: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${ECRRepository}:${ImageTag}
+          Image: !Sub ${ECRRepositoryURI}:${ImageTag}
           PortMappings:
             - ContainerPort: 3002
               Protocol: tcp
@@ -362,7 +342,7 @@ Resources:
         - ContainerName: !Sub ${AppName}-container
           ContainerPort: 3002
           TargetGroupArn: !Ref TargetGroup
-      HealthCheckGracePeriodSeconds: 120
+      HealthCheckGracePeriodSeconds: 180
       DeploymentConfiguration:
         MaximumPercent: 100  # Cost-optimized deployment
         MinimumHealthyPercent: 0
@@ -379,7 +359,7 @@ Outputs:
 
   ECRRepositoryURI:
     Description: URI of the ECR repository
-    Value: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${ECRRepository}
+    Value: !Sub ${ECRRepositoryURI}:${ImageTag}
     Export:
       Name: !Sub ${AppName}-${Environment}-ECRRepositoryURI
 

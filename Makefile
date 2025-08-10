@@ -10,6 +10,7 @@ AWS_PROFILE ?= default
 # Derived values
 STACK_NAME = $(APP_NAME)-$(ENVIRONMENT)
 ECR_REPO_NAME = $(APP_NAME)-$(ENVIRONMENT)
+ECR_URI = 062721086100.dkr.ecr.us-east-1.amazonaws.com/brm-app-production
 IMAGE_TAG ?= latest
 
 # Colors for output
@@ -75,13 +76,8 @@ deploy-infrastructure: check-aws-cli ## Deploy the CloudFormation infrastructure
 	@echo "$(GREEN)Infrastructure deployed successfully$(NC)"
 
 .PHONY: get-ecr-uri
-get-ecr-uri: check-aws-cli ## Get the ECR repository URI
-	@aws cloudformation describe-stacks \
-		--stack-name $(STACK_NAME) \
-		--query 'Stacks[0].Outputs[?OutputKey==`ECRRepositoryURI`].OutputValue' \
-		--output text \
-		--region $(AWS_REGION) \
-		--profile $(AWS_PROFILE)
+get-ecr-uri: ## Get the ECR repository URI (manually created)
+	@echo $(ECR_URI)
 
 .PHONY: docker-login
 docker-login: check-aws-cli check-docker ## Login to AWS ECR
@@ -92,7 +88,6 @@ docker-login: check-aws-cli check-docker ## Login to AWS ECR
 .PHONY: push-image
 push-image: check-aws-cli check-docker build docker-login ## Build and push Docker image to ECR
 	@echo "$(YELLOW)Pushing image to ECR...$(NC)"
-	$(eval ECR_URI := $(shell make get-ecr-uri))
 	docker tag $(APP_NAME):$(IMAGE_TAG) $(ECR_URI):$(IMAGE_TAG)
 	docker push $(ECR_URI):$(IMAGE_TAG)
 	@echo "$(GREEN)Image pushed successfully$(NC)"
@@ -172,13 +167,13 @@ cleanup: check-aws-cli ## Delete the CloudFormation stack and ECR images
 	@echo "$(YELLOW)Warning: This will delete all resources and cannot be undone!$(NC)"
 	@read -p "Are you sure you want to cleanup? (y/N): " confirm && [ "$$confirm" = "y" ]
 	@echo "$(YELLOW)Cleaning up ECR images...$(NC)"
-	-@aws ecr list-images --repository-name $(ECR_REPO_NAME) \
+	-@aws ecr list-images --repository-name brm-app-production \
 		--query 'imageIds[?type(imageTag) == `string`]' \
 		--region $(AWS_REGION) \
 		--profile $(AWS_PROFILE) | \
 	jq -r '.[] | "--image-ids imageTag=" + .imageTag' | \
 	xargs -r aws ecr batch-delete-image \
-		--repository-name $(ECR_REPO_NAME) \
+		--repository-name brm-app-production \
 		--region $(AWS_REGION) \
 		--profile $(AWS_PROFILE)
 	@echo "$(YELLOW)Deleting CloudFormation stack...$(NC)"

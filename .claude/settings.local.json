@@ -21,7 +21,10 @@
       "Bash(npx eslint:*)",
       "Bash(docker:*)",
       "Bash(make:*)",
-      "Bash(aws:*)"
+      "Bash(aws:*)",
+      "Bash(./deploy.sh)",
+      "Bash(sudo systemctl start:*)",
+      "Bash(sudo systemctl:*)"
     ],
     "deny": []
   }
