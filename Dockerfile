@@ -10,8 +10,16 @@ COPY package*.json ./
 # Install dependencies
 RUN npm ci --silent
 
-# Copy source code
+# Copy source code (excluding node_modules and dist via .dockerignore)
 COPY . .
+
+# Verify no node_modules copied and reinstall if needed
+RUN if [ -d "node_modules" ] && [ ! -f "node_modules/.fresh-install" ]; then \
+      echo "Removing potentially stale node_modules..." && \
+      rm -rf node_modules && \
+      npm ci --silent; \
+    fi && \
+    touch node_modules/.fresh-install 2>/dev/null || true
 
 # Build the Vite application
 RUN npm run build
