@@ -24,7 +24,8 @@
       "Bash(aws:*)",
       "Bash(./deploy.sh)",
       "Bash(sudo systemctl start:*)",
-      "Bash(sudo systemctl:*)"
+      "Bash(sudo systemctl:*)",
+      "Bash(npm install:*)"
     ],
     "deny": []
   }

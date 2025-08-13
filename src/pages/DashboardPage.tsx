@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react"
 import { Link } from "react-router-dom"
+import { useTranslation } from "react-i18next"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -13,6 +14,7 @@ import { ClienteForm } from "@/components/forms/cliente-form"
 import { ProdutoForm } from "@/components/forms/produto-form"
 import { AtendimentoForm } from "@/components/forms/atendimento-form"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { LanguageSelector } from "@/components/language-selector"
 import { api } from "@/lib/api-client"
 
 // Mock data for charts
@@ -25,13 +27,14 @@ const salesData = [
   { month: "Jun", vendas: 28000, propostas: 22000 },
 ]
 
-const statusData = [
-  { name: "Fechados", value: 35, color: "#10b981" },
-  { name: "Em Andamento", value: 45, color: "#3b82f6" },
-  { name: "Propostas", value: 20, color: "#f59e0b" },
+const getStatusData = (t: any) => [
+  { name: t('closed'), value: 35, color: "#10b981" },
+  { name: t('inProgress'), value: 45, color: "#3b82f6" },
+  { name: t('proposals'), value: 20, color: "#f59e0b" },
 ]
 
 export default function DashboardPage() {
+  const { t } = useTranslation()
   const [stats, setStats] = useState({
     totalNegocios: 0,
     totalClientes: 0,
@@ -82,13 +85,13 @@ export default function DashboardPage() {
     try {
       await logout()
       toast({
-        title: "Sucesso",
-        description: "Logout realizado com sucesso",
+        title: t('successMessages.logoutSuccess'),
+        description: t('successMessages.logoutSuccess'),
       })
     } catch (error) {
       toast({
-        title: "Erro",
-        description: "Erro ao fazer logout",
+        title: t('errorMessages.logoutError'),
+        description: t('errorMessages.logoutError'),
         variant: "destructive",
       })
     }
@@ -112,16 +115,16 @@ export default function DashboardPage() {
     try {
       await api.negocios.create(data)
       toast({
-        title: "Sucesso",
-        description: "Negócio criado com sucesso",
+        title: t('successMessages.dealCreated'),
+        description: t('successMessages.dealCreated'),
       })
       closeForm('negocio')
       // Update stats
       setStats(prev => ({ ...prev, totalNegocios: prev.totalNegocios + 1 }))
     } catch (error) {
       toast({
-        title: "Erro",
-        description: "Erro ao criar negócio",
+        title: t('errorMessages.dealCreationError'),
+        description: t('errorMessages.dealCreationError'),
         variant: "destructive",
       })
     } finally {
@@ -134,16 +137,16 @@ export default function DashboardPage() {
     try {
       await api.clientes.create(data)
       toast({
-        title: "Sucesso",
-        description: "Cliente criado com sucesso",
+        title: t('successMessages.clientCreated'),
+        description: t('successMessages.clientCreated'),
       })
       closeForm('cliente')
       // Update stats
       setStats(prev => ({ ...prev, totalClientes: prev.totalClientes + 1 }))
     } catch (error) {
       toast({
-        title: "Erro",
-        description: "Erro ao criar cliente",
+        title: t('errorMessages.clientCreationError'),
+        description: t('errorMessages.clientCreationError'),
         variant: "destructive",
       })
     } finally {
@@ -156,16 +159,16 @@ export default function DashboardPage() {
     try {
       await api.produtos.create(data)
       toast({
-        title: "Sucesso",
-        description: "Produto criado com sucesso",
+        title: t('successMessages.productCreated'),
+        description: t('successMessages.productCreated'),
       })
       closeForm('produto')
       // Update stats
       setStats(prev => ({ ...prev, totalProdutos: prev.totalProdutos + 1 }))
     } catch (error) {
       toast({
-        title: "Erro",
-        description: "Erro ao criar produto",
+        title: t('errorMessages.productCreationError'),
+        description: t('errorMessages.productCreationError'),
         variant: "destructive",
       })
     } finally {
@@ -178,16 +181,16 @@ export default function DashboardPage() {
     try {
       await api.atendimentos.create(data)
       toast({
-        title: "Sucesso",
-        description: "Atendimento criado com sucesso",
+        title: t('successMessages.serviceCreated'),
+        description: t('successMessages.serviceCreated'),
       })
       closeForm('atendimento')
       // Update stats
       setStats(prev => ({ ...prev, totalAtendimentos: prev.totalAtendimentos + 1 }))
     } catch (error) {
       toast({
-        title: "Erro",
-        description: "Erro ao criar atendimento",
+        title: t('errorMessages.serviceCreationError'),
+        description: t('errorMessages.serviceCreationError'),
         variant: "destructive",
       })
     } finally {
@@ -197,36 +200,36 @@ export default function DashboardPage() {
 
   const menuItems = [
     {
-      title: "Negócios",
-      description: "Gerencie seus negócios e oportunidades",
+      title: t('deals'),
+      description: t('dealsModule'),
       icon: Briefcase,
       href: "/negocios",
       color: "bg-blue-500",
     },
     {
-      title: "Clientes",
-      description: "Cadastro e gestão de clientes",
+      title: t('clients'),
+      description: t('clientsModule'),
       icon: Users,
       href: "/clientes",
       color: "bg-green-500",
     },
     {
-      title: "Atendimentos",
-      description: "Controle de atendimentos e suporte",
+      title: t('services'),
+      description: t('servicesModule'),
       icon: HeadphonesIcon,
       href: "/atendimentos",
       color: "bg-purple-500",
     },
     {
-      title: "Produtos",
-      description: "Catálogo e estoque de produtos",
+      title: t('products'),
+      description: t('productsModule'),
       icon: Package,
       href: "/produtos",
       color: "bg-orange-500",
     },
     {
-      title: "Pauta de Vendas",
-      description: "Planejamento e acompanhamento de vendas",
+      title: t('salesAgenda'),
+      description: t('salesAgendaModule'),
       icon: FileText,
       href: "/pauta-vendas",
       color: "bg-indigo-500",
@@ -235,12 +238,12 @@ export default function DashboardPage() {
 
   const settingsItems = [
     {
-      title: "Configurações",
+      title: t('settings'),
       icon: Settings,
       href: "/configuracoes",
     },
     {
-      title: "Suporte",
+      title: t('support'),
       icon: HeadphonesIcon,
       href: "/suporte",
     },
@@ -256,16 +259,17 @@ export default function DashboardPage() {
               <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center mr-3">
                 <span className="text-white font-bold text-sm">LOGO</span>
               </div>
-              <span className="font-semibold text-foreground">Sistema de Gestão</span>
+              <span className="font-semibold text-foreground">{t('managementSystem')}</span>
             </div>
             <div className="flex items-center space-x-4">
               <span className="text-sm text-muted-foreground">
-                Bem-vindo, {user?.name || "Usuário"}
+                {t('welcome')}, {user?.name || t('user')}
               </span>
+              <LanguageSelector />
               <ThemeToggle />
               <Button variant="outline" size="sm" onClick={handleLogout}>
                 <LogOut className="w-4 h-4 mr-2" />
-                Sair
+                {t('logout')}
               </Button>
             </div>
           </div>
@@ -278,7 +282,7 @@ export default function DashboardPage() {
           <Card>
             <CardContent className="p-6">
               <div>
-                <p className="text-sm font-medium text-gray-600 mb-3 text-center">Negócios</p>
+                <p className="text-sm font-medium text-gray-600 mb-3 text-center">{t('deals')}</p>
                 <div className="flex items-center justify-center">
                   <div className="p-2 bg-blue-100 rounded-lg">
                     <Briefcase className="w-6 h-6 text-blue-600" />
@@ -292,7 +296,7 @@ export default function DashboardPage() {
           <Card>
             <CardContent className="p-6">
               <div>
-                <p className="text-sm font-medium text-gray-600 mb-3 text-center">Clientes</p>
+                <p className="text-sm font-medium text-gray-600 mb-3 text-center">{t('clients')}</p>
                 <div className="flex items-center justify-center">
                   <div className="p-2 bg-green-100 rounded-lg">
                     <Users className="w-6 h-6 text-green-600" />
@@ -306,7 +310,7 @@ export default function DashboardPage() {
           <Card>
             <CardContent className="p-6">
               <div>
-                <p className="text-sm font-medium text-gray-600 mb-3 text-center">Produtos</p>
+                <p className="text-sm font-medium text-gray-600 mb-3 text-center">{t('products')}</p>
                 <div className="flex items-center justify-center">
                   <div className="p-2 bg-orange-100 rounded-lg">
                     <Package className="w-6 h-6 text-orange-600" />
@@ -320,7 +324,7 @@ export default function DashboardPage() {
           <Card>
             <CardContent className="p-6">
               <div>
-                <p className="text-sm font-medium text-gray-600 mb-3 text-center">Atendimentos</p>
+                <p className="text-sm font-medium text-gray-600 mb-3 text-center">{t('services')}</p>
                 <div className="flex items-center justify-center">
                   <div className="p-2 bg-purple-100 rounded-lg">
                     <HeadphonesIcon className="w-6 h-6 text-purple-600" />
@@ -337,7 +341,7 @@ export default function DashboardPage() {
           <div className="lg:col-span-2">
             <Card>
               <CardHeader>
-                <CardTitle className="text-xl">Menu Principal</CardTitle>
+                <CardTitle className="text-xl">{t('mainMenu')}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -364,7 +368,7 @@ export default function DashboardPage() {
             <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Vendas vs Propostas</CardTitle>
+                  <CardTitle className="text-lg">{t('salesVsProposals')}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <ChartContainer
@@ -396,7 +400,7 @@ export default function DashboardPage() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Status dos Negócios</CardTitle>
+                  <CardTitle className="text-lg">{t('dealStatus')}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <ChartContainer
@@ -419,7 +423,7 @@ export default function DashboardPage() {
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
-                          data={statusData}
+                          data={getStatusData(t)}
                           cx="50%"
                           cy="50%"
                           outerRadius={80}
@@ -427,7 +431,7 @@ export default function DashboardPage() {
                           dataKey="value"
                           label={({ name, value }) => `${name}: ${value}%`}
                         >
-                          {statusData.map((entry, index) => (
+                          {getStatusData(t).map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={entry.color} />
                           ))}
                         </Pie>
@@ -445,7 +449,7 @@ export default function DashboardPage() {
             {/* Settings */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Configurações</CardTitle>
+                <CardTitle className="text-lg">{t('settings')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
                 {settingsItems.map((item) => (
@@ -462,7 +466,7 @@ export default function DashboardPage() {
                   onClick={handleLogout}
                 >
                   <LogOut className="w-4 h-4 mr-2" />
-                  Sair
+                  {t('logout')}
                 </Button>
               </CardContent>
             </Card>
@@ -470,23 +474,23 @@ export default function DashboardPage() {
             {/* Performance Indicators */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Painel de Indicadores</CardTitle>
+                <CardTitle className="text-lg">{t('performanceIndicators')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Taxa de Conversão</span>
+                  <span className="text-sm text-gray-600">{t('conversionRate')}</span>
                   <span className="font-semibold text-green-600">68%</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Ticket Médio</span>
+                  <span className="text-sm text-gray-600">{t('averageTicket')}</span>
                   <span className="font-semibold">R$ 15.240</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Meta Mensal</span>
+                  <span className="text-sm text-gray-600">{t('monthlyGoal')}</span>
                   <span className="font-semibold text-blue-600">85%</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Satisfação</span>
+                  <span className="text-sm text-gray-600">{t('satisfaction')}</span>
                   <span className="font-semibold text-yellow-600">4.8/5</span>
                 </div>
               </CardContent>
@@ -507,7 +511,7 @@ export default function DashboardPage() {
               onClick={() => openFormFromFab('negocio')}
             >
               <Briefcase className="w-4 h-4 mr-2" />
-              Negócio
+              {t('deal')}
             </Button>
             <Button
               size="sm"
@@ -516,7 +520,7 @@ export default function DashboardPage() {
               onClick={() => openFormFromFab('cliente')}
             >
               <Users className="w-4 h-4 mr-2" />
-              Cliente
+              {t('client')}
             </Button>
             <Button
               size="sm"
@@ -525,7 +529,7 @@ export default function DashboardPage() {
               onClick={() => openFormFromFab('produto')}
             >
               <Package className="w-4 h-4 mr-2" />
-              Produto
+              {t('product')}
             </Button>
             <Button
               size="sm"
@@ -534,7 +538,7 @@ export default function DashboardPage() {
               onClick={() => openFormFromFab('atendimento')}
             >
               <HeadphonesIcon className="w-4 h-4 mr-2" />
-              Atendimento
+              {t('service')}
             </Button>
           </div>
         )}

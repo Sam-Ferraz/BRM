@@ -10,6 +10,7 @@ import ClientesPage from './pages/ClientesPage'
 import AtendimentosPage from './pages/AtendimentosPage'
 import ProdutosPage from './pages/ProdutosPage'
 import PautaVendasPage from './pages/PautaVendasPage'
+import './lib/i18n'
 import './index.css'
 
 function App() {
