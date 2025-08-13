@@ -1,28 +1,42 @@
 # Multi-stage build for production deployment
-FROM node:18-alpine AS builder
+FROM node:18-alpine AS deps
 
 # Set working directory
+WORKDIR /app
+
+# Copy package files for dependency installation
+COPY package*.json ./
+
+# Install all dependencies with cache mount
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --silent
+
+# Builder stage
+FROM node:18-alpine AS builder
+
+WORKDIR /app
+
+# Copy dependencies from deps stage
+COPY --from=deps /app/node_modules ./node_modules
+COPY package*.json ./
+
+# Copy source code
+COPY . .
+
+# Build the application
+RUN npm run build
+
+# Production dependencies stage
+FROM node:18-alpine AS prod-deps
+
 WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --silent
-
-# Copy source code (excluding node_modules and dist via .dockerignore)
-COPY . .
-
-# Verify no node_modules copied and reinstall if needed
-RUN if [ -d "node_modules" ] && [ ! -f "node_modules/.fresh-install" ]; then \
-      echo "Removing potentially stale node_modules..." && \
-      rm -rf node_modules && \
-      npm ci --silent; \
-    fi && \
-    touch node_modules/.fresh-install 2>/dev/null || true
-
-# Build the Vite application
-RUN npm run build
+# Install only production dependencies with cache mount
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --only=production --silent
 
 # Production stage
 FROM node:18-alpine AS production
@@ -34,11 +48,9 @@ RUN apk add --no-cache dumb-init curl
 WORKDIR /app
 RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
 
-# Copy package files
+# Copy production dependencies
+COPY --from=prod-deps /app/node_modules ./node_modules
 COPY package*.json ./
-
-# Install only production dependencies
-RUN npm ci --only=production --silent && npm cache clean --force
 
 # Copy built application from builder stage
 COPY --from=builder /app/dist ./dist
