@@ -13,6 +13,11 @@ on:
         required: false
         default: true
         type: boolean
+      force_stack_update:
+        description: 'Force infrastructure update (even without changes)'
+        required: false
+        default: false
+        type: boolean
       environment:
         description: 'Environment to deploy to'
         required: true
@@ -31,7 +36,7 @@ jobs:
   deploy-infrastructure:
     name: Deploy Infrastructure
     runs-on: ubuntu-latest
-    if: inputs.deploy_infrastructure
+    if: inputs.deploy_infrastructure || inputs.force_stack_update
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -55,8 +60,7 @@ jobs:
 
       - name: Deploy CloudFormation stack
         run: |
-          aws cloudformation deploy \
-            --template-file cloudformation/infrastructure.yaml \
+          DEPLOY_ARGS="--template-file cloudformation/infrastructure.yaml \
             --stack-name ${{ env.APP_NAME }}-${{ inputs.environment }} \
             --parameter-overrides \
               AppName=${{ env.APP_NAME }} \
@@ -71,8 +75,15 @@ jobs:
               JWTSecret=${{ secrets.JWT_SECRET }} \
               JWTExpiresIn=${{ vars.JWT_EXPIRES_IN }} \
             --capabilities CAPABILITY_NAMED_IAM \
-            --region ${{ env.AWS_REGION }} \
-            --no-fail-on-empty-changeset
+            --region ${{ env.AWS_REGION }}"
+          
+          if [[ "${{ inputs.force_stack_update }}" == "true" ]]; then
+            echo "🔄 Force updating stack (ignoring no-changes)"
+            aws cloudformation deploy $DEPLOY_ARGS
+          else
+            echo "📦 Normal deployment (skip if no changes)"
+            aws cloudformation deploy $DEPLOY_ARGS --no-fail-on-empty-changeset
+          fi
 
   deploy-application:
     name: Deploy Application
