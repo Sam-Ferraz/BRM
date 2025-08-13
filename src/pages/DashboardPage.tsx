@@ -239,27 +239,13 @@ export default function DashboardPage() {
         <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card>
             <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Briefcase className="w-6 h-6 text-blue-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Negócios</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.totalNegocios}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <Users className="w-6 h-6 text-green-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Clientes</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.totalClientes}</p>
+              <div>
+                <p className="text-sm font-medium text-gray-600 mb-3 text-center">Negócios</p>
+                <div className="flex items-center justify-center">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <Briefcase className="w-6 h-6 text-blue-600" />
+                  </div>
+                  <p className="text-2xl font-bold text-gray-900 ml-3">{stats.totalNegocios}</p>
                 </div>
               </div>
             </CardContent>
@@ -267,13 +253,13 @@ export default function DashboardPage() {
 
           <Card>
             <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-2 bg-orange-100 rounded-lg">
-                  <Package className="w-6 h-6 text-orange-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Produtos</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.totalProdutos}</p>
+              <div>
+                <p className="text-sm font-medium text-gray-600 mb-3 text-center">Clientes</p>
+                <div className="flex items-center justify-center">
+                  <div className="p-2 bg-green-100 rounded-lg">
+                    <Users className="w-6 h-6 text-green-600" />
+                  </div>
+                  <p className="text-2xl font-bold text-gray-900 ml-3">{stats.totalClientes}</p>
                 </div>
               </div>
             </CardContent>
@@ -281,13 +267,27 @@ export default function DashboardPage() {
 
           <Card>
             <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-2 bg-purple-100 rounded-lg">
-                  <HeadphonesIcon className="w-6 h-6 text-purple-600" />
+              <div>
+                <p className="text-sm font-medium text-gray-600 mb-3 text-center">Produtos</p>
+                <div className="flex items-center justify-center">
+                  <div className="p-2 bg-orange-100 rounded-lg">
+                    <Package className="w-6 h-6 text-orange-600" />
+                  </div>
+                  <p className="text-2xl font-bold text-gray-900 ml-3">{stats.totalProdutos}</p>
                 </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Atendimentos</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.totalAtendimentos}</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div>
+                <p className="text-sm font-medium text-gray-600 mb-3 text-center">Atendimentos</p>
+                <div className="flex items-center justify-center">
+                  <div className="p-2 bg-purple-100 rounded-lg">
+                    <HeadphonesIcon className="w-6 h-6 text-purple-600" />
+                  </div>
+                  <p className="text-2xl font-bold text-gray-900 ml-3">{stats.totalAtendimentos}</p>
                 </div>
               </div>
             </CardContent>
