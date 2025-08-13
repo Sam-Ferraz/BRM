@@ -78,7 +78,6 @@ export function ClienteForm({ cliente, open, onOpenChange, onSubmit, loading }: 
               type="email"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              required
               tabIndex={2}
             />
           </div>
@@ -88,7 +87,6 @@ export function ClienteForm({ cliente, open, onOpenChange, onSubmit, loading }: 
               id="telefone"
               value={formData.telefone}
               onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
-              required
               tabIndex={3}
             />
           </div>
@@ -98,7 +96,6 @@ export function ClienteForm({ cliente, open, onOpenChange, onSubmit, loading }: 
               id="cidade"
               value={formData.cidade}
               onChange={(e) => setFormData({ ...formData, cidade: e.target.value })}
-              required
               tabIndex={4}
             />
           </div>
