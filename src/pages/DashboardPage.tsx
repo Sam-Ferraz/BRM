@@ -13,7 +13,7 @@ import { ClienteForm } from "@/components/forms/cliente-form"
 import { ProdutoForm } from "@/components/forms/produto-form"
 import { AtendimentoForm } from "@/components/forms/atendimento-form"
 import { ThemeToggle } from "@/components/theme-toggle"
-import { api } from "@/lib/api"
+import { api } from "@/lib/api-client"
 
 // Mock data for charts
 const salesData = [
