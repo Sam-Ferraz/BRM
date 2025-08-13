@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react'
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
 
 interface User {
   id: number
@@ -33,22 +33,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const isAuthenticated = !!user && !!token
 
-  useEffect(() => {
-    // Check for stored token on app start
-    const storedToken = localStorage.getItem('auth-token')
-    const storedUser = localStorage.getItem('auth-user')
-    
-    if (storedToken && storedUser) {
-      setToken(storedToken)
-      setUser(JSON.parse(storedUser))
-      // Verify token is still valid
-      verifyToken(storedToken)
+  const logout = useCallback(async () => {
+    try {
+      // Call logout endpoint to invalidate token on server if needed
+      if (token) {
+        await fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        })
+      }
+    } catch (error) {
+      console.error('Logout API error:', error)
+    } finally {
+      // Clear local state regardless of API call success
+      setUser(null)
+      setToken(null)
+      localStorage.removeItem('auth-token')
+      localStorage.removeItem('auth-user')
     }
-    
-    setIsLoading(false)
-  }, [])
+  }, [token])
 
-  const verifyToken = async (tokenToVerify: string) => {
+  const verifyToken = useCallback(async (tokenToVerify: string) => {
     try {
       const response = await fetch('/api/auth/verify', {
         headers: {
@@ -69,9 +76,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (error) {
       console.error('Token verification failed:', error)
-      logout()
+      // Don't call logout on verification failure - just clear invalid token
+      setUser(null)
+      setToken(null)
+      localStorage.removeItem('auth-token')
+      localStorage.removeItem('auth-user')
     }
-  }
+  }, [logout])
 
   const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     try {
@@ -100,27 +111,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const logout = async () => {
-    try {
-      // Call logout endpoint to invalidate token on server if needed
-      if (token) {
-        await fetch('/api/auth/logout', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        })
+  useEffect(() => {
+    const initializeAuth = async () => {
+      try {
+        // Check for stored token on app start
+        const storedToken = localStorage.getItem('auth-token')
+        const storedUser = localStorage.getItem('auth-user')
+        
+        if (storedToken && storedUser) {
+          setToken(storedToken)
+          setUser(JSON.parse(storedUser))
+          // Verify token is still valid
+          await verifyToken(storedToken)
+        }
+      } catch (error) {
+        console.error('Auth initialization error:', error)
+      } finally {
+        setIsLoading(false)
       }
-    } catch (error) {
-      console.error('Logout API error:', error)
-    } finally {
-      // Clear local state regardless of API call success
-      setUser(null)
-      setToken(null)
-      localStorage.removeItem('auth-token')
-      localStorage.removeItem('auth-user')
     }
-  }
+    
+    initializeAuth()
+  }, [verifyToken])
 
   const value: AuthContextType = {
     user,

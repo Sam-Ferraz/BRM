@@ -24,7 +24,7 @@ export function PautaVendaForm({ pautaVenda, open, onOpenChange, onSubmit, loadi
     cliente: "",
     valor: "",
     data: new Date().toLocaleDateString("pt-BR"),
-    status: "Ativa" as const,
+    status: "Ativa" as "Ativa" | "Concluída" | "Cancelada",
   })
 
   useEffect(() => {
@@ -34,7 +34,7 @@ export function PautaVendaForm({ pautaVenda, open, onOpenChange, onSubmit, loadi
         cliente: pautaVenda.cliente || "",
         valor: pautaVenda.valor || "",
         data: pautaVenda.data || new Date().toLocaleDateString("pt-BR"),
-        status: pautaVenda.status || "Ativa",
+        status: (pautaVenda.status || "Ativa") as "Ativa" | "Concluída" | "Cancelada",
       })
     } else {
       setFormData({
@@ -42,7 +42,7 @@ export function PautaVendaForm({ pautaVenda, open, onOpenChange, onSubmit, loadi
         cliente: "",
         valor: "",
         data: new Date().toLocaleDateString("pt-BR"),
-        status: "Ativa" as const,
+        status: "Ativa" as "Ativa" | "Concluída" | "Cancelada",
       })
     }
   }, [pautaVenda])

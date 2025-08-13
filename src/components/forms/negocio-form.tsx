@@ -23,7 +23,7 @@ export function NegocioForm({ negocio, open, onOpenChange, onSubmit, loading }: 
   const [formData, setFormData] = useState({
     cliente: "",
     valor: "",
-    status: "Proposta" as const,
+    status: "Proposta" as "Em Andamento" | "Proposta" | "Fechado",
     data: new Date().toLocaleDateString("pt-BR"),
     descricao: "",
   })
@@ -33,7 +33,7 @@ export function NegocioForm({ negocio, open, onOpenChange, onSubmit, loading }: 
       setFormData({
         cliente: negocio.cliente || "",
         valor: negocio.valor || "",
-        status: negocio.status || "Proposta",
+        status: (negocio.status || "Proposta") as "Em Andamento" | "Proposta" | "Fechado",
         data: negocio.data || new Date().toLocaleDateString("pt-BR"),
         descricao: negocio.descricao || "",
       })
@@ -41,7 +41,7 @@ export function NegocioForm({ negocio, open, onOpenChange, onSubmit, loading }: 
       setFormData({
         cliente: "",
         valor: "",
-        status: "Proposta" as const,
+        status: "Proposta" as "Em Andamento" | "Proposta" | "Fechado",
         data: new Date().toLocaleDateString("pt-BR"),
         descricao: "",
       })

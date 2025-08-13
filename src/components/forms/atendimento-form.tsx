@@ -22,8 +22,8 @@ interface AtendimentoFormProps {
 export function AtendimentoForm({ atendimento, open, onOpenChange, onSubmit, loading }: AtendimentoFormProps) {
   const [formData, setFormData] = useState({
     cliente: "",
-    tipo: "Suporte" as const,
-    status: "Pendente" as const,
+    tipo: "Suporte" as "Suporte" | "Vendas" | "Consultoria",
+    status: "Pendente" as "Em Andamento" | "Concluído" | "Pendente",
     data: new Date().toLocaleDateString("pt-BR"),
     hora: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
     descricao: "",
@@ -33,8 +33,8 @@ export function AtendimentoForm({ atendimento, open, onOpenChange, onSubmit, loa
     if (atendimento) {
       setFormData({
         cliente: atendimento.cliente || "",
-        tipo: atendimento.tipo || "Suporte",
-        status: atendimento.status || "Pendente",
+        tipo: (atendimento.tipo || "Suporte") as "Suporte" | "Vendas" | "Consultoria",
+        status: (atendimento.status || "Pendente") as "Em Andamento" | "Concluído" | "Pendente",
         data: atendimento.data || new Date().toLocaleDateString("pt-BR"),
         hora: atendimento.hora || new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
         descricao: atendimento.descricao || "",
@@ -42,8 +42,8 @@ export function AtendimentoForm({ atendimento, open, onOpenChange, onSubmit, loa
     } else {
       setFormData({
         cliente: "",
-        tipo: "Suporte" as const,
-        status: "Pendente" as const,
+        tipo: "Suporte" as "Suporte" | "Vendas" | "Consultoria",
+        status: "Pendente" as "Em Andamento" | "Concluído" | "Pendente",
         data: new Date().toLocaleDateString("pt-BR"),
         hora: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
         descricao: "",

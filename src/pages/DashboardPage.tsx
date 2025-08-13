@@ -349,7 +349,7 @@ export default function DashboardPage() {
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="month" />
                         <YAxis />
-                        <ChartTooltip content={<ChartTooltipContent />} />
+                        <ChartTooltip content={ChartTooltipContent as any} />
                         <Bar dataKey="vendas" fill="var(--color-vendas)" />
                         <Bar dataKey="propostas" fill="var(--color-propostas)" />
                       </BarChart>
@@ -395,7 +395,7 @@ export default function DashboardPage() {
                             <Cell key={`cell-${index}`} fill={entry.color} />
                           ))}
                         </Pie>
-                        <ChartTooltip content={<ChartTooltipContent />} />
+                        <ChartTooltip content={ChartTooltipContent as any} />
                       </PieChart>
                     </ResponsiveContainer>
                   </ChartContainer>
