@@ -304,6 +304,9 @@ export function createApiRoutes(app) {
   app.get('/api/atendimentos', authenticateToken, async (req, res) => {
     const client = await pool.connect()
     try {
+      // Ensure UTC timezone for this session
+      await client.query('SET TIMEZONE = \'UTC\'')
+      
       const { search, status, tipo, sortBy, sortOrder } = req.query
       let query = 'SELECT * FROM atendimentos WHERE 1=1'
       let params = []
@@ -347,13 +350,35 @@ export function createApiRoutes(app) {
     }
   })
   
+  // Helper function to convert Brazilian date format (DD/MM/YYYY) to PostgreSQL format (YYYY-MM-DD)
+  function convertBrazilianDate(dateStr) {
+    if (!dateStr) return null
+    // Check if it's already in YYYY-MM-DD format
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      return dateStr
+    }
+    // Convert DD/MM/YYYY to YYYY-MM-DD
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
+      const [day, month, year] = dateStr.split('/')
+      // Ensure we have a valid date string that PostgreSQL will interpret correctly
+      const paddedDay = day.padStart(2, '0')
+      const paddedMonth = month.padStart(2, '0')
+      return `${year}-${paddedMonth}-${paddedDay}`
+    }
+    return dateStr
+  }
+
   app.post('/api/atendimentos', authenticateToken, async (req, res) => {
     const client = await pool.connect()
     try {
       const { cliente, tipo, status, data, hora, descricao } = req.body
+      const convertedDate = convertBrazilianDate(data)
+      
+      // Ensure UTC timezone for this session
+      await client.query('SET TIMEZONE = \'UTC\'')
       const result = await client.query(
-        'INSERT INTO atendimentos (cliente, tipo, status, data, hora, descricao) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-        [cliente, tipo, status, data, hora, descricao]
+        'INSERT INTO atendimentos (cliente, tipo, status, data, hora, descricao) VALUES ($1, $2, $3, $4::date, $5, $6) RETURNING *',
+        [cliente, tipo, status, convertedDate, hora, descricao]
       )
       res.json(result.rows[0])
     } catch (error) {
@@ -369,9 +394,13 @@ export function createApiRoutes(app) {
     try {
       const { id } = req.params
       const { cliente, tipo, status, data, hora, descricao } = req.body
+      const convertedDate = convertBrazilianDate(data)
+      
+      // Ensure UTC timezone for this session
+      await client.query('SET TIMEZONE = \'UTC\'')
       const result = await client.query(
-        'UPDATE atendimentos SET cliente = $1, tipo = $2, status = $3, data = $4, hora = $5, descricao = $6, updated_at = CURRENT_TIMESTAMP WHERE id = $7 RETURNING *',
-        [cliente, tipo, status, data, hora, descricao, id]
+        'UPDATE atendimentos SET cliente = $1, tipo = $2, status = $3, data = $4::date, hora = $5, descricao = $6, updated_at = CURRENT_TIMESTAMP WHERE id = $7 RETURNING *',
+        [cliente, tipo, status, convertedDate, hora, descricao, id]
       )
       if (result.rows.length === 0) {
         return res.status(404).json({ error: 'Atendimento não encontrado' })

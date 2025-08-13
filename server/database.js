@@ -13,7 +13,9 @@ const pool = new Pool({
   password: process.env.DB_PASSWORD,
   ssl: {
     rejectUnauthorized: false // Required for AWS RDS
-  }
+  },
+  // Force all connections to use UTC timezone
+  options: '--timezone=UTC'
 })
 
 // Test connection

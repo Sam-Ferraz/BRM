@@ -19,6 +19,22 @@ import { api, type Atendimento } from "@/lib/api-client"
 import { AtendimentoForm } from "@/components/forms/atendimento-form"
 import { useToast } from "@/hooks/use-toast"
 
+// Helper function to convert UTC dates to São Paulo timezone for display
+function formatDateForSaoPauloDisplay(dateStr: string): string {
+  if (!dateStr) return ""
+  
+  // Handle both "YYYY-MM-DD" and ISO format dates from the database
+  let date: Date
+  if (dateStr.includes('T')) {
+    date = new Date(dateStr)
+  } else {
+    // For "YYYY-MM-DD" format, create date in UTC
+    date = new Date(dateStr + 'T00:00:00.000Z')
+  }
+  
+  return date.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+}
+
 export default function AtendimentosPage() {
   const { t } = useTranslation()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -291,7 +307,7 @@ export default function AtendimentosPage() {
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Clock className="h-4 w-4 text-gray-400" />
-                          {atendimento.data}
+                          {formatDateForSaoPauloDisplay(atendimento.data)}
                         </div>
                       </TableCell>
                       <TableCell>{atendimento.hora}</TableCell>

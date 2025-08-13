@@ -12,6 +12,29 @@ import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import type { Atendimento } from "@/lib/api-client"
 
+// Helper functions for São Paulo timezone conversion
+function formatDateForSaoPaulo(date: Date): string {
+  return date.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+}
+
+function formatTimeForSaoPaulo(date: Date): string {
+  return date.toLocaleTimeString('pt-BR', { 
+    timeZone: 'America/Sao_Paulo',
+    hour: '2-digit', 
+    minute: '2-digit' 
+  })
+}
+
+function parseUTCDate(dateStr: string): Date {
+  // Handle both "YYYY-MM-DD" and ISO format dates from the database
+  if (dateStr.includes('T')) {
+    return new Date(dateStr)
+  } else {
+    // For "YYYY-MM-DD" format, create date in UTC
+    return new Date(dateStr + 'T00:00:00.000Z')
+  }
+}
+
 interface AtendimentoFormProps {
   atendimento?: Atendimento
   open: boolean
@@ -26,19 +49,22 @@ export function AtendimentoForm({ atendimento, open, onOpenChange, onSubmit, loa
     cliente: "",
     tipo: "Suporte" as "Suporte" | "Vendas" | "Consultoria",
     status: "Pendente" as "Em Andamento" | "Concluído" | "Pendente",
-    data: new Date().toLocaleDateString("pt-BR"),
-    hora: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
+    data: formatDateForSaoPaulo(new Date()),
+    hora: formatTimeForSaoPaulo(new Date()),
     descricao: "",
   })
 
   useEffect(() => {
     if (atendimento) {
+      // Convert UTC date from database to São Paulo timezone
+      const utcDate = atendimento.data ? parseUTCDate(atendimento.data) : new Date()
+      
       setFormData({
         cliente: atendimento.cliente || "",
         tipo: (atendimento.tipo || "Suporte") as "Suporte" | "Vendas" | "Consultoria",
         status: (atendimento.status || "Pendente") as "Em Andamento" | "Concluído" | "Pendente",
-        data: atendimento.data || new Date().toLocaleDateString("pt-BR"),
-        hora: atendimento.hora || new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
+        data: formatDateForSaoPaulo(utcDate),
+        hora: atendimento.hora || formatTimeForSaoPaulo(new Date()),
         descricao: atendimento.descricao || "",
       })
     } else {
@@ -46,8 +72,8 @@ export function AtendimentoForm({ atendimento, open, onOpenChange, onSubmit, loa
         cliente: "",
         tipo: "Suporte" as "Suporte" | "Vendas" | "Consultoria",
         status: "Pendente" as "Em Andamento" | "Concluído" | "Pendente",
-        data: new Date().toLocaleDateString("pt-BR"),
-        hora: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
+        data: formatDateForSaoPaulo(new Date()),
+        hora: formatTimeForSaoPaulo(new Date()),
         descricao: "",
       })
     }
