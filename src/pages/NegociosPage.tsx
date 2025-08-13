@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react"
-import { Link } from "react-router-dom"
+import { Link, useSearchParams } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -25,6 +25,7 @@ import { NegocioForm } from "@/components/forms/negocio-form"
 import { useToast } from "@/hooks/use-toast"
 
 export default function NegociosPage() {
+  const [searchParams, setSearchParams] = useSearchParams()
   const [negocios, setNegocios] = useState<Negocio[]>([])
   const [loading, setLoading] = useState(true)
   const [formLoading, setFormLoading] = useState(false)
@@ -37,6 +38,18 @@ export default function NegociosPage() {
   const [editingNegocio, setEditingNegocio] = useState<Negocio | undefined>()
   
   const { toast } = useToast()
+
+  // Check for auto-open dialog from FAB
+  useEffect(() => {
+    if (searchParams.get('new') === 'true') {
+      setIsFormOpen(true)
+      setEditingNegocio(undefined)
+      // Remove the query parameter after opening
+      const newParams = new URLSearchParams(searchParams)
+      newParams.delete('new')
+      setSearchParams(newParams, { replace: true })
+    }
+  }, [searchParams, setSearchParams])
 
   const fetchNegocios = useCallback(async () => {
     try {

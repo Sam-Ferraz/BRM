@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react"
-import { Link } from "react-router-dom"
+import { Link, useSearchParams } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -19,6 +19,7 @@ import { AtendimentoForm } from "@/components/forms/atendimento-form"
 import { useToast } from "@/hooks/use-toast"
 
 export default function AtendimentosPage() {
+  const [searchParams, setSearchParams] = useSearchParams()
   const [atendimentos, setAtendimentos] = useState<Atendimento[]>([])
   const [loading, setLoading] = useState(true)
   const [formLoading, setFormLoading] = useState(false)
@@ -32,6 +33,18 @@ export default function AtendimentosPage() {
   const [editingAtendimento, setEditingAtendimento] = useState<Atendimento | undefined>()
   
   const { toast } = useToast()
+
+  // Check for auto-open dialog from FAB
+  useEffect(() => {
+    if (searchParams.get('new') === 'true') {
+      setIsFormOpen(true)
+      setEditingAtendimento(undefined)
+      // Remove the query parameter after opening
+      const newParams = new URLSearchParams(searchParams)
+      newParams.delete('new')
+      setSearchParams(newParams, { replace: true })
+    }
+  }, [searchParams, setSearchParams])
 
   const fetchAtendimentos = useCallback(async () => {
     try {

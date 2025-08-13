@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react"
-import { Link } from "react-router-dom"
+import { Link, useSearchParams } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -25,6 +25,7 @@ import { ProdutoForm } from "@/components/forms/produto-form"
 import { useToast } from "@/hooks/use-toast"
 
 export default function ProdutosPage() {
+  const [searchParams, setSearchParams] = useSearchParams()
   const [produtos, setProdutos] = useState<Produto[]>([])
   const [loading, setLoading] = useState(true)
   const [formLoading, setFormLoading] = useState(false)
@@ -38,6 +39,18 @@ export default function ProdutosPage() {
   const [editingProduto, setEditingProduto] = useState<Produto | undefined>()
   
   const { toast } = useToast()
+
+  // Check for auto-open dialog from FAB
+  useEffect(() => {
+    if (searchParams.get('new') === 'true') {
+      setIsFormOpen(true)
+      setEditingProduto(undefined)
+      // Remove the query parameter after opening
+      const newParams = new URLSearchParams(searchParams)
+      newParams.delete('new')
+      setSearchParams(newParams, { replace: true })
+    }
+  }, [searchParams, setSearchParams])
 
   const fetchProdutos = useCallback(async () => {
     try {
