@@ -7,7 +7,7 @@ import { Users, Briefcase, Package, HeadphonesIcon, Settings, LogOut, FileText, 
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart-simple"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, PieChart, Pie, Cell } from "recharts"
 import { useAuth } from "@/contexts/AuthContext"
-import { toast } from "sonner"
+import { useToast } from "@/hooks/use-toast"
 import { NegocioForm } from "@/components/forms/negocio-form"
 import { ClienteForm } from "@/components/forms/cliente-form"
 import { ProdutoForm } from "@/components/forms/produto-form"
@@ -48,6 +48,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(false)
   const fabRef = useRef<HTMLDivElement>(null)
   const { user, logout } = useAuth()
+  const { toast } = useToast()
 
   useEffect(() => {
     // Mock stats - in real app, fetch from API
@@ -80,9 +81,16 @@ export default function DashboardPage() {
   const handleLogout = async () => {
     try {
       await logout()
-      toast.success("Logout realizado com sucesso")
+      toast({
+        title: "Sucesso",
+        description: "Logout realizado com sucesso",
+      })
     } catch (error) {
-      toast.error("Erro ao fazer logout")
+      toast({
+        title: "Erro",
+        description: "Erro ao fazer logout",
+        variant: "destructive",
+      })
     }
   }
 
@@ -103,12 +111,19 @@ export default function DashboardPage() {
     setLoading(true)
     try {
       await api.negocios.create(data)
-      toast.success("Negócio criado com sucesso!")
+      toast({
+        title: "Sucesso",
+        description: "Negócio criado com sucesso",
+      })
       closeForm('negocio')
       // Update stats
       setStats(prev => ({ ...prev, totalNegocios: prev.totalNegocios + 1 }))
     } catch (error) {
-      toast.error("Erro ao criar negócio")
+      toast({
+        title: "Erro",
+        description: "Erro ao criar negócio",
+        variant: "destructive",
+      })
     } finally {
       setLoading(false)
     }
@@ -118,12 +133,19 @@ export default function DashboardPage() {
     setLoading(true)
     try {
       await api.clientes.create(data)
-      toast.success("Cliente criado com sucesso!")
+      toast({
+        title: "Sucesso",
+        description: "Cliente criado com sucesso",
+      })
       closeForm('cliente')
       // Update stats
       setStats(prev => ({ ...prev, totalClientes: prev.totalClientes + 1 }))
     } catch (error) {
-      toast.error("Erro ao criar cliente")
+      toast({
+        title: "Erro",
+        description: "Erro ao criar cliente",
+        variant: "destructive",
+      })
     } finally {
       setLoading(false)
     }
@@ -133,12 +155,19 @@ export default function DashboardPage() {
     setLoading(true)
     try {
       await api.produtos.create(data)
-      toast.success("Produto criado com sucesso!")
+      toast({
+        title: "Sucesso",
+        description: "Produto criado com sucesso",
+      })
       closeForm('produto')
       // Update stats
       setStats(prev => ({ ...prev, totalProdutos: prev.totalProdutos + 1 }))
     } catch (error) {
-      toast.error("Erro ao criar produto")
+      toast({
+        title: "Erro",
+        description: "Erro ao criar produto",
+        variant: "destructive",
+      })
     } finally {
       setLoading(false)
     }
@@ -148,12 +177,19 @@ export default function DashboardPage() {
     setLoading(true)
     try {
       await api.atendimentos.create(data)
-      toast.success("Atendimento criado com sucesso!")
+      toast({
+        title: "Sucesso",
+        description: "Atendimento criado com sucesso",
+      })
       closeForm('atendimento')
       // Update stats
       setStats(prev => ({ ...prev, totalAtendimentos: prev.totalAtendimentos + 1 }))
     } catch (error) {
-      toast.error("Erro ao criar atendimento")
+      toast({
+        title: "Erro",
+        description: "Erro ao criar atendimento",
+        variant: "destructive",
+      })
     } finally {
       setLoading(false)
     }
