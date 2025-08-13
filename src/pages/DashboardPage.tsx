@@ -3,11 +3,15 @@ import { Link } from "react-router-dom"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Users, Briefcase, Package, HeadphonesIcon, Settings, LogOut, FileText } from "lucide-react"
+import { Users, Briefcase, Package, HeadphonesIcon, Settings, LogOut, FileText, Plus } from "lucide-react"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart-simple"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, PieChart, Pie, Cell } from "recharts"
 import { useAuth } from "@/contexts/AuthContext"
 import { toast } from "sonner"
+import { NegocioForm } from "@/components/forms/negocio-form"
+import { ClienteForm } from "@/components/forms/cliente-form"
+import { ProdutoForm } from "@/components/forms/produto-form"
+import { api } from "@/lib/api"
 
 // Mock data for charts
 const salesData = [
@@ -32,6 +36,13 @@ export default function DashboardPage() {
     totalProdutos: 0,
     totalAtendimentos: 0,
   })
+  const [formStates, setFormStates] = useState({
+    negocio: false,
+    cliente: false,
+    produto: false,
+  })
+  const [fabMenuOpen, setFabMenuOpen] = useState(false)
+  const [loading, setLoading] = useState(false)
   const { user, logout } = useAuth()
 
   useEffect(() => {
@@ -50,6 +61,64 @@ export default function DashboardPage() {
       toast.success("Logout realizado com sucesso")
     } catch (error) {
       toast.error("Erro ao fazer logout")
+    }
+  }
+
+  const openForm = (formType: keyof typeof formStates) => {
+    setFormStates(prev => ({ ...prev, [formType]: true }))
+  }
+
+  const closeForm = (formType: keyof typeof formStates) => {
+    setFormStates(prev => ({ ...prev, [formType]: false }))
+  }
+
+  const openFormFromFab = (formType: keyof typeof formStates) => {
+    openForm(formType)
+    setFabMenuOpen(false)
+  }
+
+  const handleCreateNegocio = async (data: any) => {
+    setLoading(true)
+    try {
+      await api.negocios.create(data)
+      toast.success("Negócio criado com sucesso!")
+      closeForm('negocio')
+      // Update stats
+      setStats(prev => ({ ...prev, totalNegocios: prev.totalNegocios + 1 }))
+    } catch (error) {
+      toast.error("Erro ao criar negócio")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleCreateCliente = async (data: any) => {
+    setLoading(true)
+    try {
+      await api.clientes.create(data)
+      toast.success("Cliente criado com sucesso!")
+      closeForm('cliente')
+      // Update stats
+      setStats(prev => ({ ...prev, totalClientes: prev.totalClientes + 1 }))
+    } catch (error) {
+      toast.error("Erro ao criar cliente")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleCreateProduto = async (data: any) => {
+    setLoading(true)
+    try {
+      await api.produtos.create(data)
+      toast.success("Produto criado com sucesso!")
+      closeForm('produto')
+      // Update stats
+      setStats(prev => ({ ...prev, totalProdutos: prev.totalProdutos + 1 }))
+    } catch (error) {
+      toast.error("Erro ao criar produto")
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -349,35 +418,75 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
 
-            {/* Quick Actions */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Ações Rápidas</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <Button className="w-full" asChild>
-                  <Link to="/negocios">
-                    <Briefcase className="w-4 h-4 mr-2" />
-                    Novo Negócio
-                  </Link>
-                </Button>
-                <Button variant="outline" className="w-full bg-transparent" asChild>
-                  <Link to="/clientes">
-                    <Users className="w-4 h-4 mr-2" />
-                    Novo Cliente
-                  </Link>
-                </Button>
-                <Button variant="outline" className="w-full bg-transparent" asChild>
-                  <Link to="/produtos">
-                    <Package className="w-4 h-4 mr-2" />
-                    Novo Produto
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
           </div>
         </div>
       </div>
+
+      {/* Floating Action Button - Mobile Only */}
+      <div className="fixed bottom-6 right-6 z-50">
+        {/* FAB Menu Items */}
+        {fabMenuOpen && (
+          <div className="absolute bottom-16 right-0 flex flex-col space-y-3 mb-2">
+            <Button
+              size="sm"
+              className="rounded-full shadow-lg bg-blue-600 hover:bg-blue-700 text-white"
+              onClick={() => openFormFromFab('negocio')}
+            >
+              <Briefcase className="w-4 h-4 mr-2" />
+              Negócio
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="rounded-full shadow-lg bg-white border-gray-300"
+              onClick={() => openFormFromFab('cliente')}
+            >
+              <Users className="w-4 h-4 mr-2" />
+              Cliente
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="rounded-full shadow-lg bg-white border-gray-300"
+              onClick={() => openFormFromFab('produto')}
+            >
+              <Package className="w-4 h-4 mr-2" />
+              Produto
+            </Button>
+          </div>
+        )}
+        
+        {/* Main FAB */}
+        <Button
+          size="lg"
+          className={`rounded-full w-14 h-14 shadow-lg transition-transform ${
+            fabMenuOpen ? 'rotate-45 bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'
+          } text-white`}
+          onClick={() => setFabMenuOpen(!fabMenuOpen)}
+        >
+          <Plus className="w-6 h-6" />
+        </Button>
+      </div>
+
+      {/* Forms */}
+      <NegocioForm
+        open={formStates.negocio}
+        onOpenChange={() => closeForm('negocio')}
+        onSubmit={handleCreateNegocio}
+        loading={loading}
+      />
+      <ClienteForm
+        open={formStates.cliente}
+        onOpenChange={() => closeForm('cliente')}
+        onSubmit={handleCreateCliente}
+        loading={loading}
+      />
+      <ProdutoForm
+        open={formStates.produto}
+        onOpenChange={() => closeForm('produto')}
+        onSubmit={handleCreateProduto}
+        loading={loading}
+      />
     </div>
   )
 }
