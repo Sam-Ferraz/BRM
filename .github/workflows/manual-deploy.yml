@@ -27,6 +27,10 @@ on:
           - production
           - staging
 
+concurrency:
+  group: manual-deploy-${{ inputs.environment }}
+  cancel-in-progress: true
+
 env:
   AWS_REGION: sa-east-1
   APP_NAME: brm-app
