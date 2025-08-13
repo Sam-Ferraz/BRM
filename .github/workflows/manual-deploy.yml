@@ -60,10 +60,7 @@ jobs:
 
       - name: Deploy CloudFormation stack
         run: |
-          DEPLOY_ARGS="--template-file cloudformation/infrastructure.yaml \
-            --stack-name ${{ env.APP_NAME }}-${{ inputs.environment }} \
-            --parameter-overrides \
-              AppName=${{ env.APP_NAME }} \
+          BASE_PARAMS="AppName=${{ env.APP_NAME }} \
               Environment=${{ inputs.environment }} \
               ImageTag=latest \
               ECRRepositoryURI=${{ env.ECR_REPOSITORY }} \
@@ -73,16 +70,27 @@ jobs:
               DBUser=${{ vars.DB_USER }} \
               DBPassword=${{ secrets.DB_PASSWORD }} \
               JWTSecret=${{ secrets.JWT_SECRET }} \
-              JWTExpiresIn=${{ vars.JWT_EXPIRES_IN }} \
-            --capabilities CAPABILITY_NAMED_IAM \
-            --region ${{ env.AWS_REGION }}"
+              JWTExpiresIn=${{ vars.JWT_EXPIRES_IN }}"
           
           if [[ "${{ inputs.force_stack_update }}" == "true" ]]; then
-            echo "🔄 Force updating stack (ignoring no-changes)"
-            aws cloudformation deploy $DEPLOY_ARGS --force-upload
+            FORCE_UPDATE_TAG="ForceUpdate-$(date +%Y%m%d%H%M%S)"
+            echo "🔄 Force updating stack (adding timestamp tag: $FORCE_UPDATE_TAG)"
+            aws cloudformation deploy \
+              --template-file cloudformation/infrastructure.yaml \
+              --stack-name ${{ env.APP_NAME }}-${{ inputs.environment }} \
+              --parameter-overrides $BASE_PARAMS \
+              --tags ForceUpdate=$FORCE_UPDATE_TAG \
+              --capabilities CAPABILITY_NAMED_IAM \
+              --region ${{ env.AWS_REGION }}
           else
             echo "📦 Normal deployment (skip if no changes)"
-            aws cloudformation deploy $DEPLOY_ARGS --no-fail-on-empty-changeset
+            aws cloudformation deploy \
+              --template-file cloudformation/infrastructure.yaml \
+              --stack-name ${{ env.APP_NAME }}-${{ inputs.environment }} \
+              --parameter-overrides $BASE_PARAMS \
+              --capabilities CAPABILITY_NAMED_IAM \
+              --region ${{ env.AWS_REGION }} \
+              --no-fail-on-empty-changeset
           fi
 
   deploy-application:
