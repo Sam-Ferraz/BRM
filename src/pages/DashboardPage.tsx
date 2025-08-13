@@ -12,6 +12,7 @@ import { NegocioForm } from "@/components/forms/negocio-form"
 import { ClienteForm } from "@/components/forms/cliente-form"
 import { ProdutoForm } from "@/components/forms/produto-form"
 import { AtendimentoForm } from "@/components/forms/atendimento-form"
+import { ThemeToggle } from "@/components/theme-toggle"
 import { api } from "@/lib/api"
 
 // Mock data for charts
@@ -210,21 +211,22 @@ export default function DashboardPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b">
+      <header className="bg-card shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
               <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center mr-3">
                 <span className="text-white font-bold text-sm">LOGO</span>
               </div>
-              <span className="font-semibold text-gray-900">Sistema de Gestão</span>
+              <span className="font-semibold text-foreground">Sistema de Gestão</span>
             </div>
             <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-600">
+              <span className="text-sm text-muted-foreground">
                 Bem-vindo, {user?.name || "Usuário"}
               </span>
+              <ThemeToggle />
               <Button variant="outline" size="sm" onClick={handleLogout}>
                 <LogOut className="w-4 h-4 mr-2" />
                 Sair
