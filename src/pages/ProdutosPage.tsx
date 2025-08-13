@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react"
 import { Link, useSearchParams } from "react-router-dom"
+import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -25,6 +26,7 @@ import { ProdutoForm } from "@/components/forms/produto-form"
 import { useToast } from "@/hooks/use-toast"
 
 export default function ProdutosPage() {
+  const { t } = useTranslation()
   const [searchParams, setSearchParams] = useSearchParams()
   const [produtos, setProdutos] = useState<Produto[]>([])
   const [loading, setLoading] = useState(true)
@@ -69,14 +71,14 @@ export default function ProdutosPage() {
       setProdutos(result.data)
     } catch (error) {
       toast({
-        title: "Erro",
-        description: "Falha ao carregar produtos",
+        title: t('error'),
+        description: t('productLoadError'),
         variant: "destructive",
       })
     } finally {
       setLoading(false)
     }
-  }, [searchTerm, categoriaFilter, estoqueFilter, sortBy, sortOrder, toast])
+  }, [searchTerm, categoriaFilter, estoqueFilter, sortBy, sortOrder, toast, t])
 
   useEffect(() => {
     fetchProdutos()
@@ -87,15 +89,15 @@ export default function ProdutosPage() {
       setFormLoading(true)
       await api.produtos.create(data)
       toast({
-        title: "Sucesso",
-        description: "Produto criado com sucesso",
+        title: t('success'),
+        description: t('productCreatedSuccess'),
       })
       setIsFormOpen(false)
       fetchProdutos()
     } catch (error) {
       toast({
-        title: "Erro",
-        description: "Falha ao criar produto",
+        title: t('error'),
+        description: t('productCreateError'),
         variant: "destructive",
       })
     } finally {
@@ -110,16 +112,16 @@ export default function ProdutosPage() {
       setFormLoading(true)
       await api.produtos.update(editingProduto.id, data)
       toast({
-        title: "Sucesso",
-        description: "Produto atualizado com sucesso",
+        title: t('success'),
+        description: t('productUpdatedSuccess'),
       })
       setIsFormOpen(false)
       setEditingProduto(undefined)
       fetchProdutos()
     } catch (error) {
       toast({
-        title: "Erro",
-        description: "Falha ao atualizar produto",
+        title: t('error'),
+        description: t('productUpdateError'),
         variant: "destructive",
       })
     } finally {
@@ -128,19 +130,19 @@ export default function ProdutosPage() {
   }
 
   const handleDelete = async (id: number) => {
-    if (!confirm("Tem certeza que deseja excluir este produto?")) return
+    if (!confirm(t('confirmDeleteProduct'))) return
 
     try {
       await api.produtos.delete(id)
       toast({
-        title: "Sucesso",
-        description: "Produto excluído com sucesso",
+        title: t('success'),
+        description: t('productDeletedSuccess'),
       })
       fetchProdutos()
     } catch (error) {
       toast({
-        title: "Erro",
-        description: "Falha ao excluir produto",
+        title: t('error'),
+        description: t('productDeleteError'),
         variant: "destructive",
       })
     }
@@ -157,14 +159,20 @@ export default function ProdutosPage() {
 
   const getEstoqueStatus = (estoque: number) => {
     if (estoque === 0) {
-      return <Badge variant="destructive">Sem Estoque</Badge>
+      return <Badge variant="destructive">{t('outOfStock')}</Badge>
     } else if (estoque <= 10) {
-      return <Badge variant="secondary">Baixo Estoque</Badge>
+      return <Badge variant="secondary">{t('lowStock')}</Badge>
     }
-    return <Badge variant="default">Em Estoque</Badge>
+    return <Badge variant="default">{t('inStock')}</Badge>
   }
 
-  const categorias = ["Todos", "Eletrônicos", "Casa", "Esportes", "Livros"]
+  const categorias = [
+    { value: "Todos", label: t('allCategories') },
+    { value: "Eletrônicos", label: "Eletrônicos" },
+    { value: "Casa", label: "Casa" },
+    { value: "Esportes", label: "Esportes" },
+    { value: "Livros", label: "Livros" }
+  ]
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -175,14 +183,14 @@ export default function ProdutosPage() {
               <Button variant="outline" size="sm" asChild className="mr-4">
                 <Link to="/dashboard">
                   <ArrowLeft className="w-4 h-4 mr-2" />
-                  Voltar
+                  {t('backButton')}
                 </Link>
               </Button>
-              <h1 className="text-xl font-semibold text-gray-900">Produtos</h1>
+              <h1 className="text-xl font-semibold text-gray-900">{t('productsTitle')}</h1>
             </div>
             <Button onClick={() => setIsFormOpen(true)}>
               <Plus className="w-4 h-4 mr-2" />
-              Novo Produto
+              {t('newProduct')}
             </Button>
           </div>
         </div>
@@ -191,14 +199,14 @@ export default function ProdutosPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Card>
           <CardHeader>
-            <CardTitle>Gestão de Produtos</CardTitle>
+            <CardTitle>{t('productsManagement')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                 <Input
-                  placeholder="Buscar produtos..."
+                  placeholder={t('searchProducts')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-9"
@@ -206,31 +214,31 @@ export default function ProdutosPage() {
               </div>
               <Select value={categoriaFilter} onValueChange={setCategoriaFilter}>
                 <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Categoria" />
+                  <SelectValue placeholder={t('category')} />
                 </SelectTrigger>
                 <SelectContent>
                   {categorias.map((categoria) => (
-                    <SelectItem key={categoria} value={categoria}>
-                      {categoria}
+                    <SelectItem key={categoria.value} value={categoria.value}>
+                      {categoria.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               <Select value={estoqueFilter} onValueChange={setEstoqueFilter}>
                 <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Estoque" />
+                  <SelectValue placeholder={t('stock')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Todos">Todos</SelectItem>
-                  <SelectItem value="Em Estoque">Em Estoque</SelectItem>
-                  <SelectItem value="Baixo Estoque">Baixo Estoque</SelectItem>
-                  <SelectItem value="Sem Estoque">Sem Estoque</SelectItem>
+                  <SelectItem value="Todos">{t('allCategories')}</SelectItem>
+                  <SelectItem value="Em Estoque">{t('inStock')}</SelectItem>
+                  <SelectItem value="Baixo Estoque">{t('lowStock')}</SelectItem>
+                  <SelectItem value="Sem Estoque">{t('outOfStock')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             {loading ? (
-              <div className="text-center py-8">Carregando produtos...</div>
+              <div className="text-center py-8">{t('loadingProducts')}</div>
             ) : (
               <Table>
                 <TableHeader>
@@ -239,28 +247,28 @@ export default function ProdutosPage() {
                       className="cursor-pointer" 
                       onClick={() => handleSort("nome")}
                     >
-                      Nome {sortBy === "nome" && (sortOrder === "asc" ? "↑" : "↓")}
+                      {t('name')} {sortBy === "nome" && (sortOrder === "asc" ? "↑" : "↓")}
                     </TableHead>
                     <TableHead 
                       className="cursor-pointer" 
                       onClick={() => handleSort("preco")}
                     >
-                      Preço {sortBy === "preco" && (sortOrder === "asc" ? "↑" : "↓")}
+                      {t('price')} {sortBy === "preco" && (sortOrder === "asc" ? "↑" : "↓")}
                     </TableHead>
                     <TableHead 
                       className="cursor-pointer" 
                       onClick={() => handleSort("categoria")}
                     >
-                      Categoria {sortBy === "categoria" && (sortOrder === "asc" ? "↑" : "↓")}
+                      {t('category')} {sortBy === "categoria" && (sortOrder === "asc" ? "↑" : "↓")}
                     </TableHead>
                     <TableHead 
                       className="cursor-pointer" 
                       onClick={() => handleSort("estoque")}
                     >
-                      Estoque {sortBy === "estoque" && (sortOrder === "asc" ? "↑" : "↓")}
+                      {t('stock')} {sortBy === "estoque" && (sortOrder === "asc" ? "↑" : "↓")}
                     </TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
+                    <TableHead>{t('status')}</TableHead>
+                    <TableHead className="text-right">{t('actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -298,7 +306,7 @@ export default function ProdutosPage() {
                   {produtos.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center py-8 text-gray-500">
-                        Nenhum produto encontrado
+                        {t('noProductsFound')}
                       </TableCell>
                     </TableRow>
                   )}

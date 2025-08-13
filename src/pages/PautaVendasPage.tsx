@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react"
 import { Link, useSearchParams } from "react-router-dom"
+import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -25,6 +26,7 @@ import { PautaVendaForm } from "@/components/forms/pauta-venda-form"
 import { useToast } from "@/hooks/use-toast"
 
 export default function PautaVendasPage() {
+  const { t } = useTranslation()
   const [searchParams, setSearchParams] = useSearchParams()
   const [pautaVendas, setPautaVendas] = useState<PautaVenda[]>([])
   const [loading, setLoading] = useState(true)
@@ -67,14 +69,14 @@ export default function PautaVendasPage() {
       setPautaVendas(result.data)
     } catch (error) {
       toast({
-        title: "Erro",
-        description: "Falha ao carregar pauta de vendas",
+        title: t('error'),
+        description: t('salesAgendaLoadError'),
         variant: "destructive",
       })
     } finally {
       setLoading(false)
     }
-  }, [searchTerm, statusFilter, sortBy, sortOrder, toast])
+  }, [searchTerm, statusFilter, sortBy, sortOrder, toast, t])
 
   useEffect(() => {
     fetchPautaVendas()
@@ -85,15 +87,15 @@ export default function PautaVendasPage() {
       setFormLoading(true)
       await api.pautaVendas.create(data)
       toast({
-        title: "Sucesso",
-        description: "Pauta criada com sucesso",
+        title: t('success'),
+        description: t('salesAgendaCreatedSuccess'),
       })
       setIsFormOpen(false)
       fetchPautaVendas()
     } catch (error) {
       toast({
-        title: "Erro",
-        description: "Falha ao criar pauta",
+        title: t('error'),
+        description: t('salesAgendaCreateError'),
         variant: "destructive",
       })
     } finally {
@@ -108,16 +110,16 @@ export default function PautaVendasPage() {
       setFormLoading(true)
       await api.pautaVendas.update(editingPautaVenda.id, data)
       toast({
-        title: "Sucesso",
-        description: "Pauta atualizada com sucesso",
+        title: t('success'),
+        description: t('salesAgendaUpdatedSuccess'),
       })
       setIsFormOpen(false)
       setEditingPautaVenda(undefined)
       fetchPautaVendas()
     } catch (error) {
       toast({
-        title: "Erro",
-        description: "Falha ao atualizar pauta",
+        title: t('error'),
+        description: t('salesAgendaUpdateError'),
         variant: "destructive",
       })
     } finally {
@@ -126,19 +128,19 @@ export default function PautaVendasPage() {
   }
 
   const handleDelete = async (id: number) => {
-    if (!confirm("Tem certeza que deseja excluir esta pauta?")) return
+    if (!confirm(t('confirmDeleteSalesAgenda'))) return
 
     try {
       await api.pautaVendas.delete(id)
       toast({
-        title: "Sucesso",
-        description: "Pauta excluída com sucesso",
+        title: t('success'),
+        description: t('salesAgendaDeletedSuccess'),
       })
       fetchPautaVendas()
     } catch (error) {
       toast({
-        title: "Erro",
-        description: "Falha ao excluir pauta",
+        title: t('error'),
+        description: t('salesAgendaDeleteError'),
         variant: "destructive",
       })
     }
@@ -156,17 +158,22 @@ export default function PautaVendasPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "Ativa":
-        return <Badge variant="default">Ativa</Badge>
+        return <Badge variant="default">{t('active')}</Badge>
       case "Concluída":
-        return <Badge variant="outline">Concluída</Badge>
+        return <Badge variant="outline">{t('completed')}</Badge>
       case "Cancelada":
-        return <Badge variant="destructive">Cancelada</Badge>
+        return <Badge variant="destructive">{t('cancelled')}</Badge>
       default:
         return <Badge>{status}</Badge>
     }
   }
 
-  const statusOptions = ["Todos", "Ativa", "Concluída", "Cancelada"]
+  const statusOptions = [
+    { value: "Todos", label: t('allStatuses') },
+    { value: "Ativa", label: t('active') },
+    { value: "Concluída", label: t('completed') },
+    { value: "Cancelada", label: t('cancelled') }
+  ]
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -177,14 +184,14 @@ export default function PautaVendasPage() {
               <Button variant="outline" size="sm" asChild className="mr-4">
                 <Link to="/dashboard">
                   <ArrowLeft className="w-4 h-4 mr-2" />
-                  Voltar
+                  {t('backButton')}
                 </Link>
               </Button>
-              <h1 className="text-xl font-semibold text-gray-900">Pauta de Vendas</h1>
+              <h1 className="text-xl font-semibold text-gray-900">{t('salesAgendaTitle')}</h1>
             </div>
             <Button onClick={() => setIsFormOpen(true)}>
               <Plus className="w-4 h-4 mr-2" />
-              Nova Pauta
+              {t('newSalesAgenda')}
             </Button>
           </div>
         </div>
@@ -193,14 +200,14 @@ export default function PautaVendasPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Card>
           <CardHeader>
-            <CardTitle>Gestão de Pauta de Vendas</CardTitle>
+            <CardTitle>{t('salesAgendaManagement')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                 <Input
-                  placeholder="Buscar pautas..."
+                  placeholder={t('searchSalesAgenda')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-9"
@@ -208,12 +215,12 @@ export default function PautaVendasPage() {
               </div>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Status" />
+                  <SelectValue placeholder={t('status')} />
                 </SelectTrigger>
                 <SelectContent>
-                  {statusOptions.map((status) => (
-                    <SelectItem key={status} value={status}>
-                      {status}
+                  {statusOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -221,7 +228,7 @@ export default function PautaVendasPage() {
             </div>
 
             {loading ? (
-              <div className="text-center py-8">Carregando pauta de vendas...</div>
+              <div className="text-center py-8">{t('loadingSalesAgenda')}</div>
             ) : (
               <Table>
                 <TableHeader>
@@ -230,33 +237,33 @@ export default function PautaVendasPage() {
                       className="cursor-pointer" 
                       onClick={() => handleSort("titulo")}
                     >
-                      Título {sortBy === "titulo" && (sortOrder === "asc" ? "↑" : "↓")}
+                      {t('title')} {sortBy === "titulo" && (sortOrder === "asc" ? "↑" : "↓")}
                     </TableHead>
                     <TableHead 
                       className="cursor-pointer" 
                       onClick={() => handleSort("cliente")}
                     >
-                      Cliente {sortBy === "cliente" && (sortOrder === "asc" ? "↑" : "↓")}
+                      {t('client')} {sortBy === "cliente" && (sortOrder === "asc" ? "↑" : "↓")}
                     </TableHead>
                     <TableHead 
                       className="cursor-pointer" 
                       onClick={() => handleSort("valor")}
                     >
-                      Valor {sortBy === "valor" && (sortOrder === "asc" ? "↑" : "↓")}
+                      {t('value')} {sortBy === "valor" && (sortOrder === "asc" ? "↑" : "↓")}
                     </TableHead>
                     <TableHead 
                       className="cursor-pointer" 
                       onClick={() => handleSort("data")}
                     >
-                      Data {sortBy === "data" && (sortOrder === "asc" ? "↑" : "↓")}
+                      {t('date')} {sortBy === "data" && (sortOrder === "asc" ? "↑" : "↓")}
                     </TableHead>
                     <TableHead 
                       className="cursor-pointer" 
                       onClick={() => handleSort("status")}
                     >
-                      Status {sortBy === "status" && (sortOrder === "asc" ? "↑" : "↓")}
+                      {t('status')} {sortBy === "status" && (sortOrder === "asc" ? "↑" : "↓")}
                     </TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
+                    <TableHead className="text-right">{t('actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -309,7 +316,7 @@ export default function PautaVendasPage() {
                   {pautaVendas.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center py-8 text-gray-500">
-                        Nenhuma pauta encontrada
+                        {t('noSalesAgendaFound')}
                       </TableCell>
                     </TableRow>
                   )}

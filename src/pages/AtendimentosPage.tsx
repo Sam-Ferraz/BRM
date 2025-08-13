@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react"
 import { Link, useSearchParams } from "react-router-dom"
+import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -19,6 +20,7 @@ import { AtendimentoForm } from "@/components/forms/atendimento-form"
 import { useToast } from "@/hooks/use-toast"
 
 export default function AtendimentosPage() {
+  const { t } = useTranslation()
   const [searchParams, setSearchParams] = useSearchParams()
   const [atendimentos, setAtendimentos] = useState<Atendimento[]>([])
   const [loading, setLoading] = useState(true)
@@ -63,14 +65,14 @@ export default function AtendimentosPage() {
       setAtendimentos(result.data)
     } catch (error) {
       toast({
-        title: "Erro",
-        description: "Falha ao carregar atendimentos",
+        title: t('error'),
+        description: t('serviceLoadError'),
         variant: "destructive",
       })
     } finally {
       setLoading(false)
     }
-  }, [searchTerm, statusFilter, tipoFilter, sortBy, sortOrder, toast])
+  }, [searchTerm, statusFilter, tipoFilter, sortBy, sortOrder, toast, t])
 
   useEffect(() => {
     fetchAtendimentos()
@@ -81,15 +83,15 @@ export default function AtendimentosPage() {
       setFormLoading(true)
       await api.atendimentos.create(data)
       toast({
-        title: "Sucesso",
-        description: "Atendimento criado com sucesso",
+        title: t('success'),
+        description: t('serviceCreatedSuccess'),
       })
       setIsFormOpen(false)
       fetchAtendimentos()
     } catch (error) {
       toast({
-        title: "Erro",
-        description: "Falha ao criar atendimento",
+        title: t('error'),
+        description: t('serviceCreateError'),
         variant: "destructive",
       })
     } finally {
@@ -104,16 +106,16 @@ export default function AtendimentosPage() {
       setFormLoading(true)
       await api.atendimentos.update(editingAtendimento.id, data)
       toast({
-        title: "Sucesso",
-        description: "Atendimento atualizado com sucesso",
+        title: t('success'),
+        description: t('serviceUpdatedSuccess'),
       })
       setIsFormOpen(false)
       setEditingAtendimento(undefined)
       fetchAtendimentos()
     } catch (error) {
       toast({
-        title: "Erro",
-        description: "Falha ao atualizar atendimento",
+        title: t('error'),
+        description: t('serviceUpdateError'),
         variant: "destructive",
       })
     } finally {
@@ -122,19 +124,19 @@ export default function AtendimentosPage() {
   }
 
   const handleDelete = async (id: number) => {
-    if (!confirm("Tem certeza que deseja excluir este atendimento?")) return
+    if (!confirm(t('confirmDeleteService'))) return
 
     try {
       await api.atendimentos.delete(id)
       toast({
-        title: "Sucesso",
-        description: "Atendimento excluído com sucesso",
+        title: t('success'),
+        description: t('serviceDeletedSuccess'),
       })
       fetchAtendimentos()
     } catch (error) {
       toast({
-        title: "Erro",
-        description: "Falha ao excluir atendimento",
+        title: t('error'),
+        description: t('serviceDeleteError'),
         variant: "destructive",
       })
     }
@@ -184,14 +186,14 @@ export default function AtendimentosPage() {
               <Button variant="outline" size="sm" asChild className="mr-4">
                 <Link to="/dashboard">
                   <ArrowLeft className="w-4 h-4 mr-2" />
-                  Voltar
+                  {t('backButton')}
                 </Link>
               </Button>
-              <h1 className="text-xl font-semibold text-gray-900">Atendimentos</h1>
+              <h1 className="text-xl font-semibold text-gray-900">{t('servicesTitle')}</h1>
             </div>
             <Button onClick={() => setIsFormOpen(true)}>
               <Plus className="w-4 h-4 mr-2" />
-              Novo Atendimento
+              {t('newService')}
             </Button>
           </div>
         </div>
@@ -200,14 +202,14 @@ export default function AtendimentosPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Card>
           <CardHeader>
-            <CardTitle>Gestão de Atendimentos</CardTitle>
+            <CardTitle>{t('servicesManagement')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                 <Input
-                  placeholder="Buscar atendimentos..."
+                  placeholder={t('searchServices')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-9"
@@ -215,30 +217,30 @@ export default function AtendimentosPage() {
               </div>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-full sm:w-40">
-                  <SelectValue placeholder="Status" />
+                  <SelectValue placeholder={t('status')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Todos">Todos os Status</SelectItem>
+                  <SelectItem value="Todos">{t('allStatuses')}</SelectItem>
                   <SelectItem value="Pendente">Pendente</SelectItem>
-                  <SelectItem value="Em Andamento">Em Andamento</SelectItem>
-                  <SelectItem value="Concluído">Concluído</SelectItem>
+                  <SelectItem value="Em Andamento">{t('inProgress')}</SelectItem>
+                  <SelectItem value="Concluído">{t('completed')}</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={tipoFilter} onValueChange={setTipoFilter}>
                 <SelectTrigger className="w-full sm:w-40">
-                  <SelectValue placeholder="Tipo" />
+                  <SelectValue placeholder={t('type')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Todos">Todos os Tipos</SelectItem>
-                  <SelectItem value="Suporte">Suporte</SelectItem>
-                  <SelectItem value="Vendas">Vendas</SelectItem>
-                  <SelectItem value="Consultoria">Consultoria</SelectItem>
+                  <SelectItem value="Todos">{t('allTypes')}</SelectItem>
+                  <SelectItem value="Suporte">{t('supportType')}</SelectItem>
+                  <SelectItem value="Vendas">{t('salesType')}</SelectItem>
+                  <SelectItem value="Consultoria">{t('consultingType')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             {loading ? (
-              <div className="text-center py-8">Carregando atendimentos...</div>
+              <div className="text-center py-8">{t('loadingServices')}</div>
             ) : (
               <Table>
                 <TableHeader>
@@ -247,24 +249,24 @@ export default function AtendimentosPage() {
                       className="cursor-pointer" 
                       onClick={() => handleSort("cliente")}
                     >
-                      Cliente {sortBy === "cliente" && (sortOrder === "asc" ? "↑" : "↓")}
+                      {t('client')} {sortBy === "cliente" && (sortOrder === "asc" ? "↑" : "↓")}
                     </TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead>{t('type')}</TableHead>
+                    <TableHead>{t('status')}</TableHead>
                     <TableHead 
                       className="cursor-pointer" 
                       onClick={() => handleSort("data")}
                     >
-                      Data {sortBy === "data" && (sortOrder === "asc" ? "↑" : "↓")}
+                      {t('date')} {sortBy === "data" && (sortOrder === "asc" ? "↑" : "↓")}
                     </TableHead>
                     <TableHead 
                       className="cursor-pointer" 
                       onClick={() => handleSort("hora")}
                     >
-                      Hora {sortBy === "hora" && (sortOrder === "asc" ? "↑" : "↓")}
+                      {t('time')} {sortBy === "hora" && (sortOrder === "asc" ? "↑" : "↓")}
                     </TableHead>
-                    <TableHead>Descrição</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
+                    <TableHead>{t('description')}</TableHead>
+                    <TableHead className="text-right">{t('actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -329,7 +331,7 @@ export default function AtendimentosPage() {
                   {atendimentos.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={7} className="text-center py-8 text-gray-500">
-                        Nenhum atendimento encontrado
+                        {t('noServicesFound')}
                       </TableCell>
                     </TableRow>
                   )}

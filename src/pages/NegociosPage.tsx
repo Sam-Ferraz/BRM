@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react"
 import { Link, useSearchParams } from "react-router-dom"
+import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -25,6 +26,7 @@ import { NegocioForm } from "@/components/forms/negocio-form"
 import { useToast } from "@/hooks/use-toast"
 
 export default function NegociosPage() {
+  const { t } = useTranslation()
   const [searchParams, setSearchParams] = useSearchParams()
   const [negocios, setNegocios] = useState<Negocio[]>([])
   const [loading, setLoading] = useState(true)
@@ -67,14 +69,14 @@ export default function NegociosPage() {
       setNegocios(result.data)
     } catch (error) {
       toast({
-        title: "Erro",
-        description: "Falha ao carregar negócios",
+        title: t('error'),
+        description: t('dealLoadError'),
         variant: "destructive",
       })
     } finally {
       setLoading(false)
     }
-  }, [searchTerm, statusFilter, sortBy, sortOrder, toast])
+  }, [searchTerm, statusFilter, sortBy, sortOrder, toast, t])
 
   useEffect(() => {
     fetchNegocios()
@@ -85,15 +87,15 @@ export default function NegociosPage() {
       setFormLoading(true)
       await api.negocios.create(data)
       toast({
-        title: "Sucesso",
-        description: "Negócio criado com sucesso",
+        title: t('success'),
+        description: t('dealCreatedSuccess'),
       })
       setIsFormOpen(false)
       fetchNegocios()
     } catch (error) {
       toast({
-        title: "Erro",
-        description: "Falha ao criar negócio",
+        title: t('error'),
+        description: t('dealCreateError'),
         variant: "destructive",
       })
     } finally {
@@ -108,16 +110,16 @@ export default function NegociosPage() {
       setFormLoading(true)
       await api.negocios.update(editingNegocio.id, data)
       toast({
-        title: "Sucesso",
-        description: "Negócio atualizado com sucesso",
+        title: t('success'),
+        description: t('dealUpdatedSuccess'),
       })
       setIsFormOpen(false)
       setEditingNegocio(undefined)
       fetchNegocios()
     } catch (error) {
       toast({
-        title: "Erro",
-        description: "Falha ao atualizar negócio",
+        title: t('error'),
+        description: t('dealUpdateError'),
         variant: "destructive",
       })
     } finally {
@@ -126,19 +128,19 @@ export default function NegociosPage() {
   }
 
   const handleDelete = async (id: number) => {
-    if (!confirm("Tem certeza que deseja excluir este negócio?")) return
+    if (!confirm(t('confirmDeleteDeal'))) return
 
     try {
       await api.negocios.delete(id)
       toast({
-        title: "Sucesso",
-        description: "Negócio excluído com sucesso",
+        title: t('success'),
+        description: t('dealDeletedSuccess'),
       })
       fetchNegocios()
     } catch (error) {
       toast({
-        title: "Erro",
-        description: "Falha ao excluir negócio",
+        title: t('error'),
+        description: t('dealDeleteError'),
         variant: "destructive",
       })
     }
@@ -156,17 +158,22 @@ export default function NegociosPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "Proposta":
-        return <Badge variant="secondary">Proposta</Badge>
+        return <Badge variant="secondary">{t('proposal')}</Badge>
       case "Em Andamento":
-        return <Badge variant="default">Em Andamento</Badge>
+        return <Badge variant="default">{t('inProgress')}</Badge>
       case "Fechado":
-        return <Badge variant="outline">Fechado</Badge>
+        return <Badge variant="outline">{t('closed')}</Badge>
       default:
         return <Badge>{status}</Badge>
     }
   }
 
-  const statusOptions = ["Todos", "Proposta", "Em Andamento", "Fechado"]
+  const statusOptions = [
+    { value: "Todos", label: t('allStatuses') },
+    { value: "Proposta", label: t('proposal') },
+    { value: "Em Andamento", label: t('inProgress') },
+    { value: "Fechado", label: t('closed') }
+  ]
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -177,14 +184,14 @@ export default function NegociosPage() {
               <Button variant="outline" size="sm" asChild className="mr-4">
                 <Link to="/dashboard">
                   <ArrowLeft className="w-4 h-4 mr-2" />
-                  Voltar
+                  {t('backButton')}
                 </Link>
               </Button>
-              <h1 className="text-xl font-semibold text-gray-900">Negócios</h1>
+              <h1 className="text-xl font-semibold text-gray-900">{t('dealsTitle')}</h1>
             </div>
             <Button onClick={() => setIsFormOpen(true)}>
               <Plus className="w-4 h-4 mr-2" />
-              Novo Negócio
+              {t('newDeal')}
             </Button>
           </div>
         </div>
@@ -193,14 +200,14 @@ export default function NegociosPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Card>
           <CardHeader>
-            <CardTitle>Gestão de Negócios</CardTitle>
+            <CardTitle>{t('dealsManagement')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                 <Input
-                  placeholder="Buscar negócios..."
+                  placeholder={t('searchDeals')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-9"
@@ -208,12 +215,12 @@ export default function NegociosPage() {
               </div>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Status" />
+                  <SelectValue placeholder={t('status')} />
                 </SelectTrigger>
                 <SelectContent>
-                  {statusOptions.map((status) => (
-                    <SelectItem key={status} value={status}>
-                      {status}
+                  {statusOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -221,7 +228,7 @@ export default function NegociosPage() {
             </div>
 
             {loading ? (
-              <div className="text-center py-8">Carregando negócios...</div>
+              <div className="text-center py-8">{t('loadingDeals')}</div>
             ) : (
               <Table>
                 <TableHeader>
@@ -230,28 +237,28 @@ export default function NegociosPage() {
                       className="cursor-pointer" 
                       onClick={() => handleSort("cliente")}
                     >
-                      Cliente {sortBy === "cliente" && (sortOrder === "asc" ? "↑" : "↓")}
+                      {t('client')} {sortBy === "cliente" && (sortOrder === "asc" ? "↑" : "↓")}
                     </TableHead>
                     <TableHead 
                       className="cursor-pointer" 
                       onClick={() => handleSort("valor")}
                     >
-                      Valor {sortBy === "valor" && (sortOrder === "asc" ? "↑" : "↓")}
+                      {t('value')} {sortBy === "valor" && (sortOrder === "asc" ? "↑" : "↓")}
                     </TableHead>
                     <TableHead 
                       className="cursor-pointer" 
                       onClick={() => handleSort("status")}
                     >
-                      Status {sortBy === "status" && (sortOrder === "asc" ? "↑" : "↓")}
+                      {t('status')} {sortBy === "status" && (sortOrder === "asc" ? "↑" : "↓")}
                     </TableHead>
                     <TableHead 
                       className="cursor-pointer" 
                       onClick={() => handleSort("data")}
                     >
-                      Data {sortBy === "data" && (sortOrder === "asc" ? "↑" : "↓")}
+                      {t('date')} {sortBy === "data" && (sortOrder === "asc" ? "↑" : "↓")}
                     </TableHead>
-                    <TableHead>Descrição</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
+                    <TableHead>{t('description')}</TableHead>
+                    <TableHead className="text-right">{t('actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -291,7 +298,7 @@ export default function NegociosPage() {
                   {negocios.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center py-8 text-gray-500">
-                        Nenhum negócio encontrado
+                        {t('noDealsFound')}
                       </TableCell>
                     </TableRow>
                   )}

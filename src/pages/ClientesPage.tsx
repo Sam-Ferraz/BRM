@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react"
 import { Link, useSearchParams } from "react-router-dom"
+import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -18,6 +19,7 @@ import { ClienteForm } from "@/components/forms/cliente-form"
 import { useToast } from "@/hooks/use-toast"
 
 export default function ClientesPage() {
+  const { t } = useTranslation()
   const [searchParams, setSearchParams] = useSearchParams()
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [loading, setLoading] = useState(true)
@@ -58,14 +60,14 @@ export default function ClientesPage() {
       setClientes(result.data)
     } catch (error) {
       toast({
-        title: "Erro",
-        description: "Falha ao carregar clientes",
+        title: t('error'),
+        description: t('clientLoadError'),
         variant: "destructive",
       })
     } finally {
       setLoading(false)
     }
-  }, [searchTerm, sortBy, sortOrder, toast])
+  }, [searchTerm, sortBy, sortOrder, toast, t])
 
   useEffect(() => {
     fetchClientes()
@@ -76,15 +78,15 @@ export default function ClientesPage() {
       setFormLoading(true)
       await api.clientes.create(data)
       toast({
-        title: "Sucesso",
-        description: "Cliente criado com sucesso",
+        title: t('success'),
+        description: t('clientCreatedSuccess'),
       })
       setIsFormOpen(false)
       fetchClientes()
     } catch (error) {
       toast({
-        title: "Erro",
-        description: "Falha ao criar cliente",
+        title: t('error'),
+        description: t('clientCreateError'),
         variant: "destructive",
       })
     } finally {
@@ -99,16 +101,16 @@ export default function ClientesPage() {
       setFormLoading(true)
       await api.clientes.update(editingCliente.id, data)
       toast({
-        title: "Sucesso",
-        description: "Cliente atualizado com sucesso",
+        title: t('success'),
+        description: t('clientUpdatedSuccess'),
       })
       setIsFormOpen(false)
       setEditingCliente(undefined)
       fetchClientes()
     } catch (error) {
       toast({
-        title: "Erro",
-        description: "Falha ao atualizar cliente",
+        title: t('error'),
+        description: t('clientUpdateError'),
         variant: "destructive",
       })
     } finally {
@@ -117,19 +119,19 @@ export default function ClientesPage() {
   }
 
   const handleDelete = async (id: number) => {
-    if (!confirm("Tem certeza que deseja excluir este cliente?")) return
+    if (!confirm(t('confirmDeleteClient'))) return
 
     try {
       await api.clientes.delete(id)
       toast({
-        title: "Sucesso",
-        description: "Cliente excluído com sucesso",
+        title: t('success'),
+        description: t('clientDeletedSuccess'),
       })
       fetchClientes()
     } catch (error) {
       toast({
-        title: "Erro",
-        description: "Falha ao excluir cliente",
+        title: t('error'),
+        description: t('clientDeleteError'),
         variant: "destructive",
       })
     }
@@ -153,14 +155,14 @@ export default function ClientesPage() {
               <Button variant="outline" size="sm" asChild className="mr-4">
                 <Link to="/dashboard">
                   <ArrowLeft className="w-4 h-4 mr-2" />
-                  Voltar
+                  {t('backButton')}
                 </Link>
               </Button>
-              <h1 className="text-xl font-semibold text-gray-900">Clientes</h1>
+              <h1 className="text-xl font-semibold text-gray-900">{t('clientsTitle')}</h1>
             </div>
             <Button onClick={() => setIsFormOpen(true)}>
               <Plus className="w-4 h-4 mr-2" />
-              Novo Cliente
+              {t('newClient')}
             </Button>
           </div>
         </div>
@@ -169,14 +171,14 @@ export default function ClientesPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Card>
           <CardHeader>
-            <CardTitle>Gestão de Clientes</CardTitle>
+            <CardTitle>{t('clientsManagement')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                 <Input
-                  placeholder="Buscar clientes..."
+                  placeholder={t('searchClients')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-9"
@@ -185,7 +187,7 @@ export default function ClientesPage() {
             </div>
 
             {loading ? (
-              <div className="text-center py-8">Carregando clientes...</div>
+              <div className="text-center py-8">{t('loadingClients')}</div>
             ) : (
               <Table>
                 <TableHeader>
@@ -194,28 +196,28 @@ export default function ClientesPage() {
                       className="cursor-pointer" 
                       onClick={() => handleSort("nome")}
                     >
-                      Nome {sortBy === "nome" && (sortOrder === "asc" ? "↑" : "↓")}
+                      {t('name')} {sortBy === "nome" && (sortOrder === "asc" ? "↑" : "↓")}
                     </TableHead>
                     <TableHead 
                       className="cursor-pointer" 
                       onClick={() => handleSort("email")}
                     >
-                      Email {sortBy === "email" && (sortOrder === "asc" ? "↑" : "↓")}
+                      {t('email')} {sortBy === "email" && (sortOrder === "asc" ? "↑" : "↓")}
                     </TableHead>
                     <TableHead 
                       className="cursor-pointer" 
                       onClick={() => handleSort("telefone")}
                     >
-                      Telefone {sortBy === "telefone" && (sortOrder === "asc" ? "↑" : "↓")}
+                      {t('phone')} {sortBy === "telefone" && (sortOrder === "asc" ? "↑" : "↓")}
                     </TableHead>
                     <TableHead 
                       className="cursor-pointer" 
                       onClick={() => handleSort("cidade")}
                     >
-                      Cidade {sortBy === "cidade" && (sortOrder === "asc" ? "↑" : "↓")}
+                      {t('city')} {sortBy === "cidade" && (sortOrder === "asc" ? "↑" : "↓")}
                     </TableHead>
-                    <TableHead>Empresa</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
+                    <TableHead>{t('company')}</TableHead>
+                    <TableHead className="text-right">{t('actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -277,7 +279,7 @@ export default function ClientesPage() {
                   {clientes.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center py-8 text-gray-500">
-                        Nenhum cliente encontrado
+                        {t('noClientsFound')}
                       </TableCell>
                     </TableRow>
                   )}
