@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Link } from "react-router-dom"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -45,6 +45,7 @@ export default function DashboardPage() {
   })
   const [fabMenuOpen, setFabMenuOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  const fabRef = useRef<HTMLDivElement>(null)
   const { user, logout } = useAuth()
 
   useEffect(() => {
@@ -56,6 +57,24 @@ export default function DashboardPage() {
       totalAtendimentos: 42,
     })
   }, [])
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      if (fabRef.current && !fabRef.current.contains(event.target as Node) && fabMenuOpen) {
+        setFabMenuOpen(false)
+      }
+    }
+
+    if (fabMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+      document.addEventListener('touchstart', handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('touchstart', handleClickOutside)
+    }
+  }, [fabMenuOpen])
 
   const handleLogout = async () => {
     try {
@@ -440,7 +459,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Floating Action Button - Mobile Only */}
-      <div className="fixed bottom-6 right-6 z-50">
+      <div className="fixed bottom-6 right-6 z-50" ref={fabRef}>
         {/* FAB Menu Items */}
         {fabMenuOpen && (
           <div className="absolute bottom-16 right-0 flex flex-col space-y-3 mb-2">
