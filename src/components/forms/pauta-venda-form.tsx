@@ -3,6 +3,7 @@
 import type React from "react"
 
 import { useState, useEffect } from "react"
+import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -19,6 +20,7 @@ interface PautaVendaFormProps {
 }
 
 export function PautaVendaForm({ pautaVenda, open, onOpenChange, onSubmit, loading }: PautaVendaFormProps) {
+  const { t } = useTranslation()
   const [formData, setFormData] = useState({
     titulo: "",
     cliente: "",
@@ -56,11 +58,11 @@ export function PautaVendaForm({ pautaVenda, open, onOpenChange, onSubmit, loadi
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>{pautaVenda ? "Editar Pauta" : "Nova Pauta"}</DialogTitle>
+          <DialogTitle>{pautaVenda ? t('editSalesAgenda') : t('newSalesAgenda')}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="titulo">Título</Label>
+            <Label htmlFor="titulo">{t('title')}</Label>
             <Input
               id="titulo"
               value={formData.titulo}
@@ -69,7 +71,7 @@ export function PautaVendaForm({ pautaVenda, open, onOpenChange, onSubmit, loadi
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="cliente">Cliente</Label>
+            <Label htmlFor="cliente">{t('client')}</Label>
             <Input
               id="cliente"
               value={formData.cliente}
@@ -78,17 +80,17 @@ export function PautaVendaForm({ pautaVenda, open, onOpenChange, onSubmit, loadi
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="valor">Valor</Label>
+            <Label htmlFor="valor">{t('value')}</Label>
             <Input
               id="valor"
               value={formData.valor}
               onChange={(e) => setFormData({ ...formData, valor: e.target.value })}
-              placeholder="R$ 0,00"
+              placeholder={t('currencyPlaceholder')}
               required
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="status">Status</Label>
+            <Label htmlFor="status">{t('status')}</Label>
             <Select
               value={formData.status}
               onValueChange={(value) => setFormData({ ...formData, status: value as any })}
@@ -97,14 +99,14 @@ export function PautaVendaForm({ pautaVenda, open, onOpenChange, onSubmit, loadi
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Ativa">Ativa</SelectItem>
-                <SelectItem value="Concluída">Concluída</SelectItem>
-                <SelectItem value="Cancelada">Cancelada</SelectItem>
+                <SelectItem value="Ativa">{t('active')}</SelectItem>
+                <SelectItem value="Concluída">{t('completed')}</SelectItem>
+                <SelectItem value="Cancelada">{t('cancelled')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="data">Data</Label>
+            <Label htmlFor="data">{t('date')}</Label>
             <Input
               id="data"
               value={formData.data}
@@ -114,10 +116,10 @@ export function PautaVendaForm({ pautaVenda, open, onOpenChange, onSubmit, loadi
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancelar
+              {t('cancel')}
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? "Salvando..." : "Salvar"}
+              {loading ? t('saving') : t('save')}
             </Button>
           </DialogFooter>
         </form>

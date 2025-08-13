@@ -3,6 +3,7 @@
 import type React from "react"
 
 import { useState, useEffect } from "react"
+import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -20,6 +21,7 @@ interface NegocioFormProps {
 }
 
 export function NegocioForm({ negocio, open, onOpenChange, onSubmit, loading }: NegocioFormProps) {
+  const { t } = useTranslation()
   const [formData, setFormData] = useState({
     cliente: "",
     valor: "",
@@ -57,11 +59,11 @@ export function NegocioForm({ negocio, open, onOpenChange, onSubmit, loading }: 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>{negocio ? "Editar Negócio" : "Novo Negócio"}</DialogTitle>
+          <DialogTitle>{negocio ? t('editDeal') : t('newDeal')}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="cliente">Cliente</Label>
+            <Label htmlFor="cliente">{t('client')}</Label>
             <Input
               id="cliente"
               value={formData.cliente}
@@ -71,18 +73,18 @@ export function NegocioForm({ negocio, open, onOpenChange, onSubmit, loading }: 
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="valor">Valor</Label>
+            <Label htmlFor="valor">{t('value')}</Label>
             <Input
               id="valor"
               value={formData.valor}
               onChange={(e) => setFormData({ ...formData, valor: e.target.value })}
-              placeholder="R$ 0,00"
+              placeholder={t('currencyPlaceholder')}
               required
               tabIndex={2}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="status">Status</Label>
+            <Label htmlFor="status">{t('status')}</Label>
             <Select
               value={formData.status}
               onValueChange={(value) => setFormData({ ...formData, status: value as any })}
@@ -91,14 +93,14 @@ export function NegocioForm({ negocio, open, onOpenChange, onSubmit, loading }: 
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Proposta">Proposta</SelectItem>
-                <SelectItem value="Em Andamento">Em Andamento</SelectItem>
-                <SelectItem value="Fechado">Fechado</SelectItem>
+                <SelectItem value="Proposta">{t('proposal')}</SelectItem>
+                <SelectItem value="Em Andamento">{t('inProgress')}</SelectItem>
+                <SelectItem value="Fechado">{t('closed')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="data">Data</Label>
+            <Label htmlFor="data">{t('date')}</Label>
             <Input
               id="data"
               value={formData.data}
@@ -108,7 +110,7 @@ export function NegocioForm({ negocio, open, onOpenChange, onSubmit, loading }: 
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="descricao">Descrição</Label>
+            <Label htmlFor="descricao">{t('description')}</Label>
             <Textarea
               id="descricao"
               value={formData.descricao}
@@ -119,10 +121,10 @@ export function NegocioForm({ negocio, open, onOpenChange, onSubmit, loading }: 
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} tabIndex={6}>
-              Cancelar
+              {t('cancel')}
             </Button>
             <Button type="submit" disabled={loading} tabIndex={7}>
-              {loading ? "Salvando..." : "Salvar"}
+              {loading ? t('saving') : t('save')}
             </Button>
           </DialogFooter>
         </form>

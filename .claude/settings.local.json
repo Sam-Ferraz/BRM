@@ -25,7 +25,8 @@
       "Bash(./deploy.sh)",
       "Bash(sudo systemctl start:*)",
       "Bash(sudo systemctl:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(npx tsc:*)"
     ],
     "deny": []
   }

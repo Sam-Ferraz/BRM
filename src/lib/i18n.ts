@@ -104,7 +104,6 @@ const resources = {
       dealsManagement: 'Gestão de Negócios',
       newDeal: 'Novo Negócio',
       searchDeals: 'Buscar negócios...',
-      client: 'Cliente',
       allStatuses: 'Todos',
       proposal: 'Proposta',
       loadingDeals: 'Carregando negócios...',
@@ -200,6 +199,22 @@ const resources = {
       success: 'Sucesso',
       error: 'Erro',
       
+      // Form Labels and Fields
+      address: 'Endereço',
+      hour: 'Hora',
+      saving: 'Salvando...',
+      pending: 'Pendente',
+      
+      // Form Dialog Titles
+      editDeal: 'Editar Negócio',
+      editClient: 'Editar Cliente',
+      editService: 'Editar Atendimento',
+      editProduct: 'Editar Produto',
+      editSalesAgenda: 'Editar Pauta',
+      
+      // Form Placeholders
+      currencyPlaceholder: 'R$ 0,00',
+      
       // Languages
       portuguese: 'Português',
       english: 'Inglês',
@@ -211,7 +226,6 @@ const resources = {
       pleaseFillAllFields: 'Por favor, preencha todos os campos',
       emailOrPasswordIncorrect: 'Email ou senha incorretos',
       loginError: 'Erro ao fazer login',
-      welcome: 'Bem-vindo',
       businessManagement: 'Sistema de Gestão Empresarial',
       accessYourAccount: 'Acesse sua conta para continuar',
     }
@@ -316,7 +330,6 @@ const resources = {
       dealsManagement: 'Deals Management',
       newDeal: 'New Deal',
       searchDeals: 'Search deals...',
-      client: 'Client',
       allStatuses: 'All',
       proposal: 'Proposal',
       loadingDeals: 'Loading deals...',
@@ -412,6 +425,22 @@ const resources = {
       success: 'Success',
       error: 'Error',
       
+      // Form Labels and Fields
+      address: 'Address',
+      hour: 'Hour',
+      saving: 'Saving...',
+      pending: 'Pending',
+      
+      // Form Dialog Titles
+      editDeal: 'Edit Deal',
+      editClient: 'Edit Client',
+      editService: 'Edit Service',
+      editProduct: 'Edit Product',
+      editSalesAgenda: 'Edit Sales Agenda',
+      
+      // Form Placeholders
+      currencyPlaceholder: '$ 0.00',
+      
       // Languages
       portuguese: 'Portuguese',
       english: 'English',
@@ -423,7 +452,6 @@ const resources = {
       pleaseFillAllFields: 'Please fill all fields',
       emailOrPasswordIncorrect: 'Email or password incorrect',
       loginError: 'Login error',
-      welcome: 'Welcome',
       businessManagement: 'Business Management System',
       accessYourAccount: 'Access your account to continue',
     }
@@ -528,7 +556,6 @@ const resources = {
       dealsManagement: 'Gestión de Negocios',
       newDeal: 'Nuevo Negocio',
       searchDeals: 'Buscar negocios...',
-      client: 'Cliente',
       allStatuses: 'Todos',
       proposal: 'Propuesta',
       loadingDeals: 'Cargando negocios...',
@@ -624,6 +651,22 @@ const resources = {
       success: 'Éxito',
       error: 'Error',
       
+      // Form Labels and Fields
+      address: 'Dirección',
+      hour: 'Hora',
+      saving: 'Guardando...',
+      pending: 'Pendiente',
+      
+      // Form Dialog Titles
+      editDeal: 'Editar Negocio',
+      editClient: 'Editar Cliente',
+      editService: 'Editar Servicio',
+      editProduct: 'Editar Producto',
+      editSalesAgenda: 'Editar Agenda de Ventas',
+      
+      // Form Placeholders
+      currencyPlaceholder: '$ 0,00',
+      
       // Languages
       portuguese: 'Portugués',
       english: 'Inglés',
@@ -635,7 +678,6 @@ const resources = {
       pleaseFillAllFields: 'Por favor, complete todos los campos',
       emailOrPasswordIncorrect: 'Email o contraseña incorrectos',
       loginError: 'Error al iniciar sesión',
-      welcome: 'Bienvenido',
       businessManagement: 'Sistema de Gestión Empresarial',
       accessYourAccount: 'Accede a tu cuenta para continuar',
     }

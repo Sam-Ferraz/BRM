@@ -3,6 +3,7 @@
 import type React from "react"
 
 import { useState, useEffect } from "react"
+import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -19,6 +20,7 @@ interface ProdutoFormProps {
 }
 
 export function ProdutoForm({ produto, open, onOpenChange, onSubmit, loading }: ProdutoFormProps) {
+  const { t } = useTranslation()
   const [formData, setFormData] = useState({
     nome: "",
     preco: "",
@@ -56,11 +58,11 @@ export function ProdutoForm({ produto, open, onOpenChange, onSubmit, loading }: 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>{produto ? "Editar Produto" : "Novo Produto"}</DialogTitle>
+          <DialogTitle>{produto ? t('editProduct') : t('newProduct')}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="nome">Nome</Label>
+            <Label htmlFor="nome">{t('name')}</Label>
             <Input
               id="nome"
               value={formData.nome}
@@ -70,18 +72,18 @@ export function ProdutoForm({ produto, open, onOpenChange, onSubmit, loading }: 
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="preco">Preço</Label>
+            <Label htmlFor="preco">{t('price')}</Label>
             <Input
               id="preco"
               value={formData.preco}
               onChange={(e) => setFormData({ ...formData, preco: e.target.value })}
-              placeholder="R$ 0,00"
+              placeholder={t('currencyPlaceholder')}
               required
               tabIndex={2}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="categoria">Categoria</Label>
+            <Label htmlFor="categoria">{t('category')}</Label>
             <Input
               id="categoria"
               value={formData.categoria}
@@ -91,7 +93,7 @@ export function ProdutoForm({ produto, open, onOpenChange, onSubmit, loading }: 
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="estoque">Estoque</Label>
+            <Label htmlFor="estoque">{t('stock')}</Label>
             <Input
               id="estoque"
               type="number"
@@ -102,7 +104,7 @@ export function ProdutoForm({ produto, open, onOpenChange, onSubmit, loading }: 
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="descricao">Descrição</Label>
+            <Label htmlFor="descricao">{t('description')}</Label>
             <Textarea
               id="descricao"
               value={formData.descricao}
@@ -113,10 +115,10 @@ export function ProdutoForm({ produto, open, onOpenChange, onSubmit, loading }: 
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} tabIndex={6}>
-              Cancelar
+              {t('cancel')}
             </Button>
             <Button type="submit" disabled={loading} tabIndex={7}>
-              {loading ? "Salvando..." : "Salvar"}
+              {loading ? t('saving') : t('save')}
             </Button>
           </DialogFooter>
         </form>

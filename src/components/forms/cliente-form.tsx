@@ -3,6 +3,7 @@
 import type React from "react"
 
 import { useState, useEffect } from "react"
+import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -18,6 +19,7 @@ interface ClienteFormProps {
 }
 
 export function ClienteForm({ cliente, open, onOpenChange, onSubmit, loading }: ClienteFormProps) {
+  const { t } = useTranslation()
   const [formData, setFormData] = useState({
     nome: "",
     email: "",
@@ -58,11 +60,11 @@ export function ClienteForm({ cliente, open, onOpenChange, onSubmit, loading }: 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>{cliente ? "Editar Cliente" : "Novo Cliente"}</DialogTitle>
+          <DialogTitle>{cliente ? t('editClient') : t('newClient')}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="nome">Nome</Label>
+            <Label htmlFor="nome">{t('name')}</Label>
             <Input
               id="nome"
               value={formData.nome}
@@ -72,7 +74,7 @@ export function ClienteForm({ cliente, open, onOpenChange, onSubmit, loading }: 
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">{t('email')}</Label>
             <Input
               id="email"
               type="email"
@@ -82,7 +84,7 @@ export function ClienteForm({ cliente, open, onOpenChange, onSubmit, loading }: 
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="telefone">Telefone</Label>
+            <Label htmlFor="telefone">{t('phone')}</Label>
             <Input
               id="telefone"
               value={formData.telefone}
@@ -91,7 +93,7 @@ export function ClienteForm({ cliente, open, onOpenChange, onSubmit, loading }: 
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="cidade">Cidade</Label>
+            <Label htmlFor="cidade">{t('city')}</Label>
             <Input
               id="cidade"
               value={formData.cidade}
@@ -100,7 +102,7 @@ export function ClienteForm({ cliente, open, onOpenChange, onSubmit, loading }: 
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="endereco">Endereço</Label>
+            <Label htmlFor="endereco">{t('address')}</Label>
             <Input
               id="endereco"
               value={formData.endereco}
@@ -109,7 +111,7 @@ export function ClienteForm({ cliente, open, onOpenChange, onSubmit, loading }: 
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="empresa">Empresa</Label>
+            <Label htmlFor="empresa">{t('company')}</Label>
             <Input
               id="empresa"
               value={formData.empresa}
@@ -119,10 +121,10 @@ export function ClienteForm({ cliente, open, onOpenChange, onSubmit, loading }: 
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} tabIndex={7}>
-              Cancelar
+              {t('cancel')}
             </Button>
             <Button type="submit" disabled={loading} tabIndex={8}>
-              {loading ? "Salvando..." : "Salvar"}
+              {loading ? t('saving') : t('save')}
             </Button>
           </DialogFooter>
         </form>

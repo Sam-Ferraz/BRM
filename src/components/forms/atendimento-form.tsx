@@ -3,6 +3,7 @@
 import type React from "react"
 
 import { useState, useEffect } from "react"
+import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -20,6 +21,7 @@ interface AtendimentoFormProps {
 }
 
 export function AtendimentoForm({ atendimento, open, onOpenChange, onSubmit, loading }: AtendimentoFormProps) {
+  const { t } = useTranslation()
   const [formData, setFormData] = useState({
     cliente: "",
     tipo: "Suporte" as "Suporte" | "Vendas" | "Consultoria",
@@ -60,11 +62,11 @@ export function AtendimentoForm({ atendimento, open, onOpenChange, onSubmit, loa
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>{atendimento ? "Editar Atendimento" : "Novo Atendimento"}</DialogTitle>
+          <DialogTitle>{atendimento ? t('editService') : t('newService')}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="cliente">Cliente</Label>
+            <Label htmlFor="cliente">{t('client')}</Label>
             <Input
               id="cliente"
               value={formData.cliente}
@@ -74,20 +76,20 @@ export function AtendimentoForm({ atendimento, open, onOpenChange, onSubmit, loa
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="tipo">Tipo</Label>
+            <Label htmlFor="tipo">{t('type')}</Label>
             <Select value={formData.tipo} onValueChange={(value) => setFormData({ ...formData, tipo: value as any })}>
               <SelectTrigger tabIndex={2}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Suporte">Suporte</SelectItem>
-                <SelectItem value="Vendas">Vendas</SelectItem>
-                <SelectItem value="Consultoria">Consultoria</SelectItem>
+                <SelectItem value="Suporte">{t('supportType')}</SelectItem>
+                <SelectItem value="Vendas">{t('salesType')}</SelectItem>
+                <SelectItem value="Consultoria">{t('consultingType')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="status">Status</Label>
+            <Label htmlFor="status">{t('status')}</Label>
             <Select
               value={formData.status}
               onValueChange={(value) => setFormData({ ...formData, status: value as any })}
@@ -96,15 +98,15 @@ export function AtendimentoForm({ atendimento, open, onOpenChange, onSubmit, loa
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Pendente">Pendente</SelectItem>
-                <SelectItem value="Em Andamento">Em Andamento</SelectItem>
-                <SelectItem value="Concluído">Concluído</SelectItem>
+                <SelectItem value="Pendente">{t('pending')}</SelectItem>
+                <SelectItem value="Em Andamento">{t('inProgress')}</SelectItem>
+                <SelectItem value="Concluído">{t('completed')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="data">Data</Label>
+              <Label htmlFor="data">{t('date')}</Label>
               <Input
                 id="data"
                 value={formData.data}
@@ -114,7 +116,7 @@ export function AtendimentoForm({ atendimento, open, onOpenChange, onSubmit, loa
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="hora">Hora</Label>
+              <Label htmlFor="hora">{t('hour')}</Label>
               <Input
                 id="hora"
                 value={formData.hora}
@@ -125,7 +127,7 @@ export function AtendimentoForm({ atendimento, open, onOpenChange, onSubmit, loa
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="descricao">Descrição</Label>
+            <Label htmlFor="descricao">{t('description')}</Label>
             <Textarea
               id="descricao"
               value={formData.descricao}
@@ -136,10 +138,10 @@ export function AtendimentoForm({ atendimento, open, onOpenChange, onSubmit, loa
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} tabIndex={7}>
-              Cancelar
+              {t('cancel')}
             </Button>
             <Button type="submit" disabled={loading} tabIndex={8}>
-              {loading ? "Salvando..." : "Salvar"}
+              {loading ? t('saving') : t('save')}
             </Button>
           </DialogFooter>
         </form>
