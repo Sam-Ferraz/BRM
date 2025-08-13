@@ -11,6 +11,7 @@ import { toast } from "sonner"
 import { NegocioForm } from "@/components/forms/negocio-form"
 import { ClienteForm } from "@/components/forms/cliente-form"
 import { ProdutoForm } from "@/components/forms/produto-form"
+import { AtendimentoForm } from "@/components/forms/atendimento-form"
 import { api } from "@/lib/api"
 
 // Mock data for charts
@@ -40,6 +41,7 @@ export default function DashboardPage() {
     negocio: false,
     cliente: false,
     produto: false,
+    atendimento: false,
   })
   const [fabMenuOpen, setFabMenuOpen] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -117,6 +119,21 @@ export default function DashboardPage() {
       setStats(prev => ({ ...prev, totalProdutos: prev.totalProdutos + 1 }))
     } catch (error) {
       toast.error("Erro ao criar produto")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleCreateAtendimento = async (data: any) => {
+    setLoading(true)
+    try {
+      await api.atendimentos.create(data)
+      toast.success("Atendimento criado com sucesso!")
+      closeForm('atendimento')
+      // Update stats
+      setStats(prev => ({ ...prev, totalAtendimentos: prev.totalAtendimentos + 1 }))
+    } catch (error) {
+      toast.error("Erro ao criar atendimento")
     } finally {
       setLoading(false)
     }
@@ -453,6 +470,15 @@ export default function DashboardPage() {
               <Package className="w-4 h-4 mr-2" />
               Produto
             </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="rounded-full shadow-lg bg-white border-gray-300"
+              onClick={() => openFormFromFab('atendimento')}
+            >
+              <HeadphonesIcon className="w-4 h-4 mr-2" />
+              Atendimento
+            </Button>
           </div>
         )}
         
@@ -485,6 +511,12 @@ export default function DashboardPage() {
         open={formStates.produto}
         onOpenChange={() => closeForm('produto')}
         onSubmit={handleCreateProduto}
+        loading={loading}
+      />
+      <AtendimentoForm
+        open={formStates.atendimento}
+        onOpenChange={() => closeForm('atendimento')}
+        onSubmit={handleCreateAtendimento}
         loading={loading}
       />
     </div>
