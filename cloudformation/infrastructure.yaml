@@ -71,6 +71,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AppName}-${Environment}-vpc
+        - Key: Environment
+          Value: !Ref Environment
 
   InternetGateway:
     Type: AWS::EC2::InternetGateway
@@ -78,6 +80,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AppName}-${Environment}-igw
+        - Key: Environment
+          Value: !Ref Environment
 
   InternetGatewayAttachment:
     Type: AWS::EC2::VPCGatewayAttachment
@@ -95,6 +99,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AppName}-${Environment}-public-subnet-1
+        - Key: Environment
+          Value: !Ref Environment
 
   PublicSubnet2:
     Type: AWS::EC2::Subnet
@@ -106,6 +112,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AppName}-${Environment}-public-subnet-2
+        - Key: Environment
+          Value: !Ref Environment
 
   PublicRouteTable:
     Type: AWS::EC2::RouteTable
@@ -114,6 +122,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AppName}-${Environment}-public-routes
+        - Key: Environment
+          Value: !Ref Environment
 
   DefaultPublicRoute:
     Type: AWS::EC2::Route
@@ -153,6 +163,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AppName}-${Environment}-alb-sg
+        - Key: Environment
+          Value: !Ref Environment
 
   ECSSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -167,6 +179,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AppName}-${Environment}-ecs-sg
+        - Key: Environment
+          Value: !Ref Environment
 
 
   # Application Load Balancer
@@ -184,6 +198,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AppName}-${Environment}-alb
+        - Key: Environment
+          Value: !Ref Environment
 
   TargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
@@ -205,6 +221,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AppName}-${Environment}-tg
+        - Key: Environment
+          Value: !Ref Environment
 
   LoadBalancerListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
@@ -233,6 +251,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AppName}-${Environment}-cluster
+        - Key: Environment
+          Value: !Ref Environment
 
   # IAM Roles
   ECSTaskExecutionRole:
@@ -251,6 +271,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AppName}-${Environment}-task-execution-role
+        - Key: Environment
+          Value: !Ref Environment
 
   ECSTaskRole:
     Type: AWS::IAM::Role
@@ -266,6 +288,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AppName}-${Environment}-task-role
+        - Key: Environment
+          Value: !Ref Environment
 
   # CloudWatch Log Group
   LogGroup:
@@ -273,6 +297,11 @@ Resources:
     Properties:
       LogGroupName: !Sub /ecs/${AppName}-${Environment}
       RetentionInDays: 7  # Short retention for cost savings
+      Tags:
+        - Key: Name
+          Value: !Sub ${AppName}-${Environment}-logs
+        - Key: Environment
+          Value: !Ref Environment
 
   # ECS Task Definition
   TaskDefinition:
@@ -331,6 +360,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AppName}-${Environment}-task-definition
+        - Key: Environment
+          Value: !Ref Environment
 
   # ECS Service
   ECSService:
@@ -362,6 +393,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AppName}-${Environment}-service
+        - Key: Environment
+          Value: !Ref Environment
 
 Outputs:
   LoadBalancerURL:

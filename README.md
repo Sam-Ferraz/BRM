@@ -82,7 +82,8 @@ See [Setup Guide](.github/SETUP.md) for detailed configuration steps.
 - ⚙️ [Environment Setup Guide](.github/SETUP.md)  
 - 🏗️ [CloudFormation Template](cloudformation/infrastructure.yaml)  
 - 🐳 [Dockerfile](Dockerfile)  
-- 📋 [Project Instructions](CLAUDE.md)
+- 📋 [Project Instructions](CLAUDE.md)  
+- 📝 [Changelog](.github/CHANGELOG.md)
 
 ## 🏃 Quick Start
 
