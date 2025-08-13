@@ -79,7 +79,7 @@ jobs:
           
           if [[ "${{ inputs.force_stack_update }}" == "true" ]]; then
             echo "🔄 Force updating stack (ignoring no-changes)"
-            aws cloudformation deploy $DEPLOY_ARGS
+            aws cloudformation deploy $DEPLOY_ARGS --force-upload
           else
             echo "📦 Normal deployment (skip if no changes)"
             aws cloudformation deploy $DEPLOY_ARGS --no-fail-on-empty-changeset
