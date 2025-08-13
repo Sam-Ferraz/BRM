@@ -353,10 +353,10 @@ Resources:
             Command:
               - CMD-SHELL
               - 'curl -f http://localhost:3002/health || exit 1'
-            Interval: 30
-            Timeout: 5
-            Retries: 3
-            StartPeriod: 60
+            Interval: 10
+            Timeout: 3
+            Retries: 2
+            StartPeriod: 30
       Tags:
         - Key: Name
           Value: !Sub ${AppName}-${Environment}-task-definition
@@ -386,10 +386,10 @@ Resources:
         - ContainerName: !Sub ${AppName}-container
           ContainerPort: 3002
           TargetGroupArn: !Ref TargetGroup
-      HealthCheckGracePeriodSeconds: 180
+      HealthCheckGracePeriodSeconds: 60
       DeploymentConfiguration:
-        MaximumPercent: 100  # Cost-optimized deployment
-        MinimumHealthyPercent: 0
+        MaximumPercent: 200  # Allow 2 containers during deployment
+        MinimumHealthyPercent: 50
       Tags:
         - Key: Name
           Value: !Sub ${AppName}-${Environment}-service
