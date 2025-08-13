@@ -59,7 +59,6 @@ export default function DashboardPage() {
       description: "Gerencie seus negócios e oportunidades",
       icon: Briefcase,
       href: "/negocios",
-      badge: "a",
       color: "bg-blue-500",
     },
     {
@@ -67,7 +66,6 @@ export default function DashboardPage() {
       description: "Cadastro e gestão de clientes",
       icon: Users,
       href: "/clientes",
-      badge: "b",
       color: "bg-green-500",
     },
     {
@@ -75,7 +73,6 @@ export default function DashboardPage() {
       description: "Controle de atendimentos e suporte",
       icon: HeadphonesIcon,
       href: "/atendimentos",
-      badge: "c",
       color: "bg-purple-500",
     },
     {
@@ -83,7 +80,6 @@ export default function DashboardPage() {
       description: "Catálogo e estoque de produtos",
       icon: Package,
       href: "/produtos",
-      badge: "d",
       color: "bg-orange-500",
     },
     {
@@ -91,7 +87,6 @@ export default function DashboardPage() {
       description: "Planejamento e acompanhamento de vendas",
       icon: FileText,
       href: "/pauta-vendas",
-      badge: "e",
       color: "bg-indigo-500",
     },
   ]
@@ -207,11 +202,10 @@ export default function DashboardPage() {
                     <Link key={item.href} to={item.href}>
                       <Card className="hover:shadow-md transition-shadow cursor-pointer">
                         <CardContent className="p-6">
-                          <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center mb-4">
                             <div className={`p-3 ${item.color} rounded-lg`}>
                               <item.icon className="w-6 h-6 text-white" />
                             </div>
-                            <Badge variant="outline">{item.badge}</Badge>
                           </div>
                           <h3 className="font-semibold text-lg mb-2">{item.title}</h3>
                           <p className="text-sm text-gray-600">{item.description}</p>
