@@ -67,6 +67,7 @@ export function NegocioForm({ negocio, open, onOpenChange, onSubmit, loading }: 
               value={formData.cliente}
               onChange={(e) => setFormData({ ...formData, cliente: e.target.value })}
               required
+              tabIndex={1}
             />
           </div>
           <div className="space-y-2">
@@ -77,6 +78,7 @@ export function NegocioForm({ negocio, open, onOpenChange, onSubmit, loading }: 
               onChange={(e) => setFormData({ ...formData, valor: e.target.value })}
               placeholder="R$ 0,00"
               required
+              tabIndex={2}
             />
           </div>
           <div className="space-y-2">
@@ -85,7 +87,7 @@ export function NegocioForm({ negocio, open, onOpenChange, onSubmit, loading }: 
               value={formData.status}
               onValueChange={(value) => setFormData({ ...formData, status: value as any })}
             >
-              <SelectTrigger>
+              <SelectTrigger tabIndex={3}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -102,6 +104,7 @@ export function NegocioForm({ negocio, open, onOpenChange, onSubmit, loading }: 
               value={formData.data}
               onChange={(e) => setFormData({ ...formData, data: e.target.value })}
               required
+              tabIndex={4}
             />
           </div>
           <div className="space-y-2">
@@ -111,13 +114,14 @@ export function NegocioForm({ negocio, open, onOpenChange, onSubmit, loading }: 
               value={formData.descricao}
               onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
               rows={3}
+              tabIndex={5}
             />
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} tabIndex={6}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading} tabIndex={7}>
               {loading ? "Salvando..." : "Salvar"}
             </Button>
           </DialogFooter>

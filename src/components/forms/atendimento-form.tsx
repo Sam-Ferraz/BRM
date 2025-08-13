@@ -70,12 +70,13 @@ export function AtendimentoForm({ atendimento, open, onOpenChange, onSubmit, loa
               value={formData.cliente}
               onChange={(e) => setFormData({ ...formData, cliente: e.target.value })}
               required
+              tabIndex={1}
             />
           </div>
           <div className="space-y-2">
             <Label htmlFor="tipo">Tipo</Label>
             <Select value={formData.tipo} onValueChange={(value) => setFormData({ ...formData, tipo: value as any })}>
-              <SelectTrigger>
+              <SelectTrigger tabIndex={2}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -91,7 +92,7 @@ export function AtendimentoForm({ atendimento, open, onOpenChange, onSubmit, loa
               value={formData.status}
               onValueChange={(value) => setFormData({ ...formData, status: value as any })}
             >
-              <SelectTrigger>
+              <SelectTrigger tabIndex={3}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -109,6 +110,7 @@ export function AtendimentoForm({ atendimento, open, onOpenChange, onSubmit, loa
                 value={formData.data}
                 onChange={(e) => setFormData({ ...formData, data: e.target.value })}
                 required
+                tabIndex={4}
               />
             </div>
             <div className="space-y-2">
@@ -118,6 +120,7 @@ export function AtendimentoForm({ atendimento, open, onOpenChange, onSubmit, loa
                 value={formData.hora}
                 onChange={(e) => setFormData({ ...formData, hora: e.target.value })}
                 required
+                tabIndex={5}
               />
             </div>
           </div>
@@ -128,13 +131,14 @@ export function AtendimentoForm({ atendimento, open, onOpenChange, onSubmit, loa
               value={formData.descricao}
               onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
               rows={3}
+              tabIndex={6}
             />
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} tabIndex={7}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading} tabIndex={8}>
               {loading ? "Salvando..." : "Salvar"}
             </Button>
           </DialogFooter>

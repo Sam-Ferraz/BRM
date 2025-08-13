@@ -66,6 +66,7 @@ export function ProdutoForm({ produto, open, onOpenChange, onSubmit, loading }: 
               value={formData.nome}
               onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
               required
+              tabIndex={1}
             />
           </div>
           <div className="space-y-2">
@@ -76,6 +77,7 @@ export function ProdutoForm({ produto, open, onOpenChange, onSubmit, loading }: 
               onChange={(e) => setFormData({ ...formData, preco: e.target.value })}
               placeholder="R$ 0,00"
               required
+              tabIndex={2}
             />
           </div>
           <div className="space-y-2">
@@ -85,6 +87,7 @@ export function ProdutoForm({ produto, open, onOpenChange, onSubmit, loading }: 
               value={formData.categoria}
               onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
               required
+              tabIndex={3}
             />
           </div>
           <div className="space-y-2">
@@ -95,6 +98,7 @@ export function ProdutoForm({ produto, open, onOpenChange, onSubmit, loading }: 
               value={formData.estoque}
               onChange={(e) => setFormData({ ...formData, estoque: Number.parseInt(e.target.value) || 0 })}
               required
+              tabIndex={4}
             />
           </div>
           <div className="space-y-2">
@@ -104,13 +108,14 @@ export function ProdutoForm({ produto, open, onOpenChange, onSubmit, loading }: 
               value={formData.descricao}
               onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
               rows={3}
+              tabIndex={5}
             />
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} tabIndex={6}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading} tabIndex={7}>
               {loading ? "Salvando..." : "Salvar"}
             </Button>
           </DialogFooter>

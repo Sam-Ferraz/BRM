@@ -68,6 +68,7 @@ export function ClienteForm({ cliente, open, onOpenChange, onSubmit, loading }: 
               value={formData.nome}
               onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
               required
+              tabIndex={1}
             />
           </div>
           <div className="space-y-2">
@@ -78,6 +79,7 @@ export function ClienteForm({ cliente, open, onOpenChange, onSubmit, loading }: 
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               required
+              tabIndex={2}
             />
           </div>
           <div className="space-y-2">
@@ -87,6 +89,7 @@ export function ClienteForm({ cliente, open, onOpenChange, onSubmit, loading }: 
               value={formData.telefone}
               onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
               required
+              tabIndex={3}
             />
           </div>
           <div className="space-y-2">
@@ -96,6 +99,7 @@ export function ClienteForm({ cliente, open, onOpenChange, onSubmit, loading }: 
               value={formData.cidade}
               onChange={(e) => setFormData({ ...formData, cidade: e.target.value })}
               required
+              tabIndex={4}
             />
           </div>
           <div className="space-y-2">
@@ -104,6 +108,7 @@ export function ClienteForm({ cliente, open, onOpenChange, onSubmit, loading }: 
               id="endereco"
               value={formData.endereco}
               onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
+              tabIndex={5}
             />
           </div>
           <div className="space-y-2">
@@ -112,13 +117,14 @@ export function ClienteForm({ cliente, open, onOpenChange, onSubmit, loading }: 
               id="empresa"
               value={formData.empresa}
               onChange={(e) => setFormData({ ...formData, empresa: e.target.value })}
+              tabIndex={6}
             />
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} tabIndex={7}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading} tabIndex={8}>
               {loading ? "Salvando..." : "Salvar"}
             </Button>
           </DialogFooter>
