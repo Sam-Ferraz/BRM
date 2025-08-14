@@ -26,10 +26,19 @@ export function formatDateTime(dateTimeStr: string, timezone?: string): string {
     
     if (!isValid(date)) return dateTimeStr
     
-    return format(date, "dd/MM/yyyy HH:mm", { 
-      locale: ptBR,
-      timeZone: timezone || getUserTimezone()
+    // Use Intl.DateTimeFormat for timezone conversion
+    const userTimezone = timezone || getUserTimezone()
+    const formatter = new Intl.DateTimeFormat('pt-BR', {
+      timeZone: userTimezone,
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
     })
+    
+    return formatter.format(date)
   } catch {
     return dateTimeStr
   }
@@ -50,10 +59,16 @@ export function formatDate(dateStr: string, timezone?: string): string {
     
     if (!isValid(date)) return dateStr
     
-    return format(date, "dd/MM/yyyy", { 
-      locale: ptBR,
-      timeZone: timezone || getUserTimezone()
+    // Use Intl.DateTimeFormat for timezone conversion
+    const userTimezone = timezone || getUserTimezone()
+    const formatter = new Intl.DateTimeFormat('pt-BR', {
+      timeZone: userTimezone,
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
     })
+    
+    return formatter.format(date)
   } catch {
     return dateStr
   }
