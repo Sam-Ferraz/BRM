@@ -180,8 +180,8 @@ export default function AtendimentosPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm border-b">
+    <div className="min-h-screen bg-background">
+      <header className="bg-card shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center">
@@ -191,7 +191,7 @@ export default function AtendimentosPage() {
                   {t('backButton')}
                 </Link>
               </Button>
-              <h1 className="text-xl font-semibold text-gray-900">{t('servicesTitle')}</h1>
+              <h1 className="text-xl font-semibold text-foreground">{t('servicesTitle')}</h1>
             </div>
             <Button onClick={() => setIsFormOpen(true)}>
               <Plus className="w-4 h-4 mr-2" />
@@ -209,7 +209,7 @@ export default function AtendimentosPage() {
           <CardContent className="space-y-4">
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder={t('searchServices')}
                   value={searchTerm}
@@ -270,7 +270,7 @@ export default function AtendimentosPage() {
                     <TableRow key={atendimento.id}>
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
-                          <User className="h-4 w-4 text-gray-400" />
+                          <User className="h-4 w-4 text-muted-foreground" />
                           {atendimento.cliente}
                         </div>
                       </TableCell>
@@ -286,7 +286,7 @@ export default function AtendimentosPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4 text-gray-400" />
+                          <Clock className="h-4 w-4 text-muted-foreground" />
                           <ReactiveDateTime 
                             value={combineDateAndTime(atendimento.data, atendimento.hora)}
                             type="datetime"
@@ -295,7 +295,7 @@ export default function AtendimentosPage() {
                       </TableCell>
                       <TableCell>
                         {atendimento.descricao ? (
-                          <span className="text-sm text-gray-600 truncate max-w-32 block">
+                          <span className="text-sm text-muted-foreground truncate max-w-32 block">
                             {atendimento.descricao}
                           </span>
                         ) : (
@@ -328,7 +328,7 @@ export default function AtendimentosPage() {
                   ))}
                   {atendimentos.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                         {t('noServicesFound')}
                       </TableCell>
                     </TableRow>

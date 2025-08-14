@@ -147,8 +147,8 @@ export default function ClientesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm border-b">
+    <div className="min-h-screen bg-background">
+      <header className="bg-card shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center">
@@ -158,7 +158,7 @@ export default function ClientesPage() {
                   {t('backButton')}
                 </Link>
               </Button>
-              <h1 className="text-xl font-semibold text-gray-900">{t('clientsTitle')}</h1>
+              <h1 className="text-xl font-semibold text-foreground">{t('clientsTitle')}</h1>
             </div>
             <Button onClick={() => setIsFormOpen(true)}>
               <Plus className="w-4 h-4 mr-2" />
@@ -176,7 +176,7 @@ export default function ClientesPage() {
           <CardContent className="space-y-4">
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder={t('searchClients')}
                   value={searchTerm}
@@ -226,26 +226,26 @@ export default function ClientesPage() {
                       <TableCell className="font-medium">{cliente.nome}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <Mail className="h-4 w-4 text-gray-400" />
+                          <Mail className="h-4 w-4 text-muted-foreground" />
                           {cliente.email}
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <Phone className="h-4 w-4 text-gray-400" />
+                          <Phone className="h-4 w-4 text-muted-foreground" />
                           {cliente.telefone}
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4 text-gray-400" />
+                          <MapPin className="h-4 w-4 text-muted-foreground" />
                           {cliente.cidade}
                         </div>
                       </TableCell>
                       <TableCell>
                         {cliente.empresa ? (
                           <div className="flex items-center gap-2">
-                            <Building className="h-4 w-4 text-gray-400" />
+                            <Building className="h-4 w-4 text-muted-foreground" />
                             <Badge variant="outline">{cliente.empresa}</Badge>
                           </div>
                         ) : (
@@ -278,7 +278,7 @@ export default function ClientesPage() {
                   ))}
                   {clientes.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                         {t('noClientsFound')}
                       </TableCell>
                     </TableRow>

@@ -124,8 +124,8 @@ export default function LoginPage() {
           <div className="mx-auto mb-6 w-24 h-24 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
             <span className="text-white font-bold text-xl">BRM</span>
           </div>
-          <CardTitle className="text-2xl font-bold text-gray-800">{t('businessManagement')}</CardTitle>
-          <p className="text-sm text-gray-600 mt-2">{t('accessYourAccount')}</p>
+          <CardTitle className="text-2xl font-bold text-foreground">{t('businessManagement')}</CardTitle>
+          <p className="text-sm text-muted-foreground mt-2">{t('accessYourAccount')}</p>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-6">
@@ -167,9 +167,9 @@ export default function LoginPage() {
                   disabled={isLoading}
                 >
                   {showPassword ? (
-                    <EyeOff className="h-4 w-4 text-gray-500" />
+                    <EyeOff className="h-4 w-4 text-muted-foreground" />
                   ) : (
-                    <Eye className="h-4 w-4 text-gray-500" />
+                    <Eye className="h-4 w-4 text-muted-foreground" />
                   )}
                 </Button>
               </div>
@@ -197,7 +197,7 @@ export default function LoginPage() {
           
           <div className="mt-6 pt-6 border-t border-gray-200">
             <div className="text-center">
-              <p className="text-sm text-gray-600 mb-2">{t('dontHaveAccount')}</p>
+              <p className="text-sm text-muted-foreground mb-2">{t('dontHaveAccount')}</p>
               <Link to="/register">
                 <Button variant="outline" className="w-full">
                   {t('createAccount')}
