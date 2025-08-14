@@ -40,23 +40,32 @@ app.post('/api/auth/login', async (req, res) => {
     const { email, password } = req.body
     
     if (!email || !password) {
-      return res.status(400).json({ error: 'Email e senha são obrigatórios' })
+      return res.status(200).json({ 
+        success: false, 
+        error: 'Email e senha são obrigatórios' 
+      })
     }
     
     const result = await loginUser(email, password)
     
     if (!result.success) {
-      return res.status(401).json({ error: result.error })
+      return res.status(200).json({ 
+        success: false, 
+        error: result.error 
+      })
     }
     
-    res.json({
+    res.status(200).json({
       success: true,
       token: result.token,
       user: result.user
     })
   } catch (error) {
     console.error('Login endpoint error:', error)
-    res.status(500).json({ error: 'Erro interno do servidor' })
+    res.status(200).json({ 
+      success: false, 
+      error: 'Erro interno do servidor' 
+    })
   }
 })
 

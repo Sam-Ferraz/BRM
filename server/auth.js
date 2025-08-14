@@ -52,14 +52,14 @@ export async function loginUser(email, password) {
     )
     
     if (result.rows.length === 0) {
-      return { success: false, error: 'Usuário não encontrado' }
+      return { success: false, error: 'Credenciais inválidas' }
     }
     
     const user = result.rows[0]
     const isPasswordValid = await bcrypt.compare(password, user.password_hash)
     
     if (!isPasswordValid) {
-      return { success: false, error: 'Senha incorreta' }
+      return { success: false, error: 'Credenciais inválidas' }
     }
     
     const token = generateToken(user.id, user.email, user.role)

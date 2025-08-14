@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { ThemeProvider } from '@/components/theme-provider'
 import { Toaster } from '@/components/ui/toaster'
+import { Toaster as SonnerToaster } from '@/components/ui/sonner'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import LoginPage from './pages/LoginPage'
@@ -61,6 +62,7 @@ function App() {
             </Routes>
           </div>
           <Toaster />
+          <SonnerToaster />
         </Router>
       </AuthProvider>
     </ThemeProvider>

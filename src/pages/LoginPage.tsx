@@ -1,6 +1,6 @@
 import type React from "react"
-import { useState, useEffect } from "react"
-import { useNavigate, useLocation } from "react-router-dom"
+import { useState, useEffect, useRef } from "react"
+import { useNavigate, useLocation, Link } from "react-router-dom"
 import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,14 +9,17 @@ import { Label } from "@/components/ui/label"
 import { useAuth } from "@/contexts/AuthContext"
 import { LanguageSelector } from "@/components/language-selector"
 import { toast } from "sonner"
+import { Eye, EyeOff } from "lucide-react"
 
 export default function LoginPage() {
   const { t } = useTranslation()
   const [credentials, setCredentials] = useState({ email: "", password: "" })
   const [isLoading, setIsLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
   const { login, isAuthenticated } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+  const emailRef = useRef<HTMLInputElement>(null)
 
   const from = location.state?.from?.pathname || "/dashboard"
 
@@ -26,11 +29,41 @@ export default function LoginPage() {
     }
   }, [isAuthenticated, navigate, from])
 
+  useEffect(() => {
+    // Auto-focus email field when component mounts
+    if (emailRef.current) {
+      emailRef.current.focus()
+    }
+  }, [])
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     
     if (!credentials.email || !credentials.password) {
-      toast.error(t('pleaseFillAllFields'))
+      toast.error(t('pleaseFillAllFields'), {
+        style: {
+          background: '#dc2626',
+          color: 'white',
+          fontSize: '16px',
+          padding: '16px',
+          borderRadius: '8px'
+        }
+      })
+      return
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(credentials.email)) {
+      toast.error(t('invalidEmailFormat'), {
+        style: {
+          background: '#dc2626',
+          color: 'white',
+          fontSize: '16px',
+          padding: '16px',
+          borderRadius: '8px'
+        }
+      })
       return
     }
 
@@ -43,10 +76,39 @@ export default function LoginPage() {
         toast.success(t('successMessages.loginSuccess'))
         navigate(from, { replace: true })
       } else {
-        toast.error(result.error || t('loginError'))
+        // Generic error message for security - don't reveal if user exists or not
+        if (result.error?.includes('conexão') || result.error?.includes('connection')) {
+          toast.error(t('connectionError'), {
+            style: {
+              background: '#dc2626',
+              color: 'white',
+              fontSize: '16px',
+              padding: '16px',
+              borderRadius: '8px'
+            }
+          })
+        } else {
+          toast.error(t('invalidCredentials'), {
+            style: {
+              background: '#dc2626',
+              color: 'white',
+              fontSize: '16px',
+              padding: '16px',
+              borderRadius: '8px'
+            }
+          })
+        }
       }
     } catch (error) {
-      toast.error(t('loginError'))
+      toast.error(t('connectionError'), {
+        style: {
+          background: '#dc2626',
+          color: 'white',
+          fontSize: '16px',
+          padding: '16px',
+          borderRadius: '8px'
+        }
+      })
     } finally {
       setIsLoading(false)
     }
@@ -70,6 +132,7 @@ export default function LoginPage() {
             <div className="space-y-2">
               <Label htmlFor="email">{t('email')}</Label>
               <Input
+                ref={emailRef}
                 id="email"
                 type="email"
                 placeholder={t('email')}
@@ -78,20 +141,38 @@ export default function LoginPage() {
                 className="h-12"
                 disabled={isLoading}
                 required
+                autoComplete="email"
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">{t('password')}</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder={t('password')}
-                value={credentials.password}
-                onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
-                className="h-12"
-                disabled={isLoading}
-                required
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder={t('password')}
+                  value={credentials.password}
+                  onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
+                  className="h-12 pr-12"
+                  disabled={isLoading}
+                  required
+                  autoComplete="current-password"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-12 px-3 py-2 hover:bg-transparent"
+                  onClick={() => setShowPassword(!showPassword)}
+                  disabled={isLoading}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4 text-gray-500" />
+                  ) : (
+                    <Eye className="h-4 w-4 text-gray-500" />
+                  )}
+                </Button>
+              </div>
             </div>
             <Button type="submit" className="w-full h-12 text-lg" disabled={isLoading}>
               {isLoading ? (
@@ -103,7 +184,27 @@ export default function LoginPage() {
                 t('login')
               )}
             </Button>
+            
+            <div className="flex items-center justify-center">
+              <Link 
+                to="/forgot-password" 
+                className="text-sm text-blue-600 hover:text-blue-800 hover:underline"
+              >
+                {t('forgotPassword')}
+              </Link>
+            </div>
           </form>
+          
+          <div className="mt-6 pt-6 border-t border-gray-200">
+            <div className="text-center">
+              <p className="text-sm text-gray-600 mb-2">{t('dontHaveAccount')}</p>
+              <Link to="/register">
+                <Button variant="outline" className="w-full">
+                  {t('createAccount')}
+                </Button>
+              </Link>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>

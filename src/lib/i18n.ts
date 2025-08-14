@@ -236,6 +236,12 @@ const resources = {
       loginError: 'Erro ao fazer login',
       businessManagement: 'BRM',
       accessYourAccount: 'Acesse sua conta para continuar',
+      invalidEmailFormat: 'Formato de email inválido',
+      invalidCredentials: 'Credenciais inválidas',
+      connectionError: 'Erro de conexão com o servidor',
+      forgotPassword: 'Esqueceu sua senha?',
+      dontHaveAccount: 'Não tem uma conta?',
+      createAccount: 'Criar conta',
     }
   },
   'en-US': {
@@ -470,6 +476,12 @@ const resources = {
       loginError: 'Login error',
       businessManagement: 'Business Management System',
       accessYourAccount: 'Access your account to continue',
+      invalidEmailFormat: 'Invalid email format',
+      invalidCredentials: 'Invalid credentials',
+      connectionError: 'Server connection error',
+      forgotPassword: 'Forgot your password?',
+      dontHaveAccount: "Don't have an account?",
+      createAccount: 'Create account',
     }
   },
   'es-ES': {
@@ -704,6 +716,12 @@ const resources = {
       loginError: 'Error al iniciar sesión',
       businessManagement: 'Sistema de Gestión Empresarial',
       accessYourAccount: 'Accede a tu cuenta para continuar',
+      invalidEmailFormat: 'Formato de email inválido',
+      invalidCredentials: 'Credenciales inválidas',
+      connectionError: 'Error de conexión con el servidor',
+      forgotPassword: '¿Olvidaste tu contraseña?',
+      dontHaveAccount: '¿No tienes una cuenta?',
+      createAccount: 'Crear cuenta',
     }
   }
 }

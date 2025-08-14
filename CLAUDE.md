@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a **Business Relationship Management (BRM)** system - a comprehensive CRM application built with **Vite + React**. It manages customers, deals, products, service tickets, and sales agendas with a modern React/TypeScript stack.
 
-**Architecture**: Vite + React Router with client-side components, mock backend API, shadcn/ui components, TailwindCSS styling.
+**Architecture**: Vite + React frontend with Node.js/Express backend, PostgreSQL database, JWT authentication, shadcn/ui components, TailwindCSS styling.
 
 ## Development Commands
 
@@ -27,9 +27,12 @@ npm run lint
 ## Key Architecture Patterns
 
 ### Data Layer
-- **Mock API**: All data operations go through `src/lib/api.ts` which provides CRUD operations for all entities
-- **Entities**: Negocio (deals), Cliente (customers), Atendimento (service tickets), Produto (products), PautaVenda (sales agenda)
-- **API Pattern**: Each entity has `getAll()`, `create()`, `update()`, `delete()` methods with filtering/sorting support
+- **Backend API**: Express.js server with PostgreSQL database (`server/` directory)
+- **Authentication**: JWT-based auth with bcrypt password hashing (`server/auth.js`)
+- **Database**: PostgreSQL with connection pooling (`server/database.js`)
+- **API Endpoints**: RESTful APIs for all entities (`server/api-routes.js`)
+- **Frontend API**: Client-side API wrapper in `src/lib/api.ts` (if exists) for frontend data operations
+- **Entities**: Negocio (deals), Cliente (customers), Atendimento (service tickets), Produto (products), PautaVenda (sales agenda), Users
 
 ### UI Architecture  
 - **React Router**: Pages in `src/pages/` directory with React Router navigation
@@ -46,24 +49,43 @@ npm run lint
 - **Settings**: Config page (`/configuracoes`) with theme toggle and language selector
 
 ### Available Routes
-- `/` - Login page (with language selector)
-- `/dashboard` - Main dashboard
-- `/negocios` - Deals management
-- `/clientes` - Clients management
-- `/atendimentos` - Services management
-- `/produtos` - Products management
-- `/pauta-vendas` - Sales agenda management
-- `/configuracoes` - Settings/config page
+**Frontend Routes:**
+- `/` - Login page (with language selector, password visibility toggle, auto-focus)
+- `/register` - User registration page
+- `/forgot-password` - Password reset page
+- `/dashboard` - Main dashboard (protected)
+- `/negocios` - Deals management (protected)
+- `/clientes` - Clients management (protected)
+- `/atendimentos` - Services management (protected)
+- `/produtos` - Products management (protected)
+- `/pauta-vendas` - Sales agenda management (protected)
+- `/configuracoes` - Settings/config page (protected)
+
+**Backend API Routes:**
+- `POST /api/auth/login` - User authentication
+- `POST /api/auth/register` - User registration
+- `GET /api/auth/verify` - Token verification
+- `POST /api/auth/logout` - User logout
+- RESTful endpoints for all entities (protected by JWT)
 
 ## Key Files
 
-- `src/lib/api.ts` - Mock backend API with all business logic
+**Frontend:**
 - `src/lib/i18n.ts` - Internationalization configuration and translations
+- `src/pages/LoginPage.tsx` - Login page with improved UX (password toggle, auto-focus, validation)
 - `src/pages/DashboardPage.tsx` - Main dashboard with navigation and charts
 - `src/pages/ConfigPage.tsx` - Settings page with theme and language selection
+- `src/contexts/AuthContext.tsx` - Authentication context with JWT handling
 - `src/components/forms/` - Reusable CRUD form components
-- `src/App.tsx` - Main App component with React Router setup
+- `src/components/language-selector.tsx` - Language switching component
+- `src/App.tsx` - Main App component with React Router setup and protected routes
 - `vite.config.ts` - Vite configuration with path aliases
+
+**Backend:**
+- `server/index.js` - Express server setup and route definitions
+- `server/auth.js` - JWT authentication logic with bcrypt
+- `server/database.js` - PostgreSQL connection and database utilities
+- `server/api-routes.js` - RESTful API endpoints for business entities
 
 ## Entity Schemas
 
@@ -83,6 +105,27 @@ npm run lint
 
 ## Technical Notes
 
+**Frontend:**
 - **TypeScript**: Configured with relaxed settings for faster development
 - **Path Aliases**: `@/` maps to `src/` for clean imports
 - **Build**: Uses Vite for fast builds and HMR development
+- **Authentication**: Context-based with localStorage persistence and automatic token verification
+- **Routing**: Protected routes with automatic redirect to login
+
+**Backend:**
+- **Database**: PostgreSQL with connection pooling
+- **Authentication**: JWT tokens with configurable expiration
+- **Security**: bcrypt password hashing, CORS configuration
+- **Environment**: Configurable via environment variables
+- **API**: RESTful design with proper error handling
+
+## Authentication Flow
+
+1. User enters credentials on `/` (login page)
+2. Frontend validates email format and required fields
+3. POST request to `/api/auth/login` with credentials
+4. Backend verifies credentials against PostgreSQL users table
+5. On success: JWT token generated and returned with user data
+6. Frontend stores token in localStorage and sets auth context
+7. Protected routes check authentication status via context
+8. Token verification happens on app initialization and API calls
