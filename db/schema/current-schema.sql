@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict cL554uozBgL3gRNcKMMsrUbvAqaEgaAcbHQlzXpMTX2A3qls0a8TEimN8fkMSXh
+\restrict qjc7rMBuVfiq1vFaL4suJSZaoQ5BF7IK98OhKW7ST4Di8rbTeyOdH5NQlf94gdS
 
 -- Dumped from database version 17.4
 -- Dumped by pg_dump version 17.6 (Debian 17.6-1.pgdg13+1)
@@ -316,7 +316,8 @@ CREATE TABLE public.users (
     password_hash character varying(255) NOT NULL,
     role character varying(50) DEFAULT 'user'::character varying,
     created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    preferences jsonb DEFAULT '{"theme": "light", "language": "pt", "timezone": "America/Sao_Paulo"}'::jsonb
 );
 
 
@@ -454,8 +455,15 @@ CREATE INDEX flyway_schema_history_s_idx ON public.flyway_schema_history USING b
 
 
 --
+-- Name: idx_users_preferences; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_users_preferences ON public.users USING gin (preferences);
+
+
+--
 -- PostgreSQL database dump complete
 --
 
-\unrestrict cL554uozBgL3gRNcKMMsrUbvAqaEgaAcbHQlzXpMTX2A3qls0a8TEimN8fkMSXh
+\unrestrict qjc7rMBuVfiq1vFaL4suJSZaoQ5BF7IK98OhKW7ST4Di8rbTeyOdH5NQlf94gdS
 
