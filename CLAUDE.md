@@ -23,7 +23,8 @@ npm run preview
 # Lint code
 npm run lint
 
-# Database migrations (Flyway)
+# Database operations
+npm run schema:dump          # Generate current database schema
 npm run migrate              # Run pending migrations
 npm run migrate:info         # Show migration status
 npm run migrate:validate     # Validate migration files  
@@ -167,6 +168,17 @@ Do not commit those credentials anywhere. Just use it on dev testing.
 6. Frontend stores token in localStorage and sets auth context
 7. Protected routes check authentication status via context
 8. Token verification happens on app initialization and API calls
+
+## Database Schema
+
+The current database schema is available at `db/schema/current-schema.sql`. This file contains the complete PostgreSQL schema including all tables, indexes, and constraints.
+
+### Generating Current Schema
+To generate the latest database schema:
+```bash
+npm run schema:dump
+```
+This command creates/updates `db/schema/current-schema.sql` with the current database structure.
 
 ## Database Migrations
 
