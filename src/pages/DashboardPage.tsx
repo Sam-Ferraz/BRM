@@ -242,12 +242,12 @@ export default function DashboardPage() {
             <Card className="hover:shadow-md transition-shadow cursor-pointer">
               <CardContent className="p-6">
                 <div>
-                  <p className="text-sm font-medium text-gray-600 mb-3 text-center">{t('deals')}</p>
+                  <p className="text-sm font-medium text-muted-foreground mb-3 text-center">{t('deals')}</p>
                   <div className="flex items-center justify-center">
                     <div className="p-2 bg-blue-100 rounded-lg">
                       <Briefcase className="w-6 h-6 text-blue-600" />
                     </div>
-                    <p className="text-2xl font-bold text-gray-900 ml-3">{stats.totalNegocios}</p>
+                    <p className="text-2xl font-bold text-foreground ml-3">{stats.totalNegocios}</p>
                   </div>
                 </div>
               </CardContent>
@@ -258,12 +258,12 @@ export default function DashboardPage() {
             <Card className="hover:shadow-md transition-shadow cursor-pointer">
               <CardContent className="p-6">
                 <div>
-                  <p className="text-sm font-medium text-gray-600 mb-3 text-center">{t('clients')}</p>
+                  <p className="text-sm font-medium text-muted-foreground mb-3 text-center">{t('clients')}</p>
                   <div className="flex items-center justify-center">
                     <div className="p-2 bg-green-100 rounded-lg">
                       <Users className="w-6 h-6 text-green-600" />
                     </div>
-                    <p className="text-2xl font-bold text-gray-900 ml-3">{stats.totalClientes}</p>
+                    <p className="text-2xl font-bold text-foreground ml-3">{stats.totalClientes}</p>
                   </div>
                 </div>
               </CardContent>
@@ -274,12 +274,12 @@ export default function DashboardPage() {
             <Card className="hover:shadow-md transition-shadow cursor-pointer">
               <CardContent className="p-6">
                 <div>
-                  <p className="text-sm font-medium text-gray-600 mb-3 text-center">{t('products')}</p>
+                  <p className="text-sm font-medium text-muted-foreground mb-3 text-center">{t('products')}</p>
                   <div className="flex items-center justify-center">
                     <div className="p-2 bg-orange-100 rounded-lg">
                       <Package className="w-6 h-6 text-orange-600" />
                     </div>
-                    <p className="text-2xl font-bold text-gray-900 ml-3">{stats.totalProdutos}</p>
+                    <p className="text-2xl font-bold text-foreground ml-3">{stats.totalProdutos}</p>
                   </div>
                 </div>
               </CardContent>
@@ -290,12 +290,12 @@ export default function DashboardPage() {
             <Card className="hover:shadow-md transition-shadow cursor-pointer">
               <CardContent className="p-6">
                 <div>
-                  <p className="text-sm font-medium text-gray-600 mb-3 text-center">{t('services')}</p>
+                  <p className="text-sm font-medium text-muted-foreground mb-3 text-center">{t('services')}</p>
                   <div className="flex items-center justify-center">
                     <div className="p-2 bg-purple-100 rounded-lg">
                       <HeadphonesIcon className="w-6 h-6 text-purple-600" />
                     </div>
-                    <p className="text-2xl font-bold text-gray-900 ml-3">{stats.totalAtendimentos}</p>
+                    <p className="text-2xl font-bold text-foreground ml-3">{stats.totalAtendimentos}</p>
                   </div>
                 </div>
               </CardContent>
@@ -306,12 +306,12 @@ export default function DashboardPage() {
             <Card className="hover:shadow-md transition-shadow cursor-pointer">
               <CardContent className="p-6">
                 <div>
-                  <p className="text-sm font-medium text-gray-600 mb-3 text-center">{t('salesAgenda')}</p>
+                  <p className="text-sm font-medium text-muted-foreground mb-3 text-center">{t('salesAgenda')}</p>
                   <div className="flex items-center justify-center">
                     <div className="p-2 bg-indigo-100 rounded-lg">
                       <FileText className="w-6 h-6 text-indigo-600" />
                     </div>
-                    <p className="text-2xl font-bold text-gray-900 ml-3">8</p>
+                    <p className="text-2xl font-bold text-foreground ml-3">8</p>
                   </div>
                 </div>
               </CardContent>
@@ -435,19 +435,19 @@ export default function DashboardPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">{t('conversionRate')}</span>
+                  <span className="text-sm text-muted-foreground">{t('conversionRate')}</span>
                   <span className="font-semibold text-green-600">68%</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">{t('averageTicket')}</span>
+                  <span className="text-sm text-muted-foreground">{t('averageTicket')}</span>
                   <span className="font-semibold">R$ 15.240</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">{t('monthlyGoal')}</span>
+                  <span className="text-sm text-muted-foreground">{t('monthlyGoal')}</span>
                   <span className="font-semibold text-blue-600">85%</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">{t('satisfaction')}</span>
+                  <span className="text-sm text-muted-foreground">{t('satisfaction')}</span>
                   <span className="font-semibold text-yellow-600">4.8/5</span>
                 </div>
               </CardContent>
