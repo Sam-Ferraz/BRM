@@ -196,43 +196,6 @@ export default function DashboardPage() {
     }
   }
 
-  const menuItems = [
-    {
-      title: t('deals'),
-      description: t('dealsModule'),
-      icon: Briefcase,
-      href: "/negocios",
-      color: "bg-blue-500",
-    },
-    {
-      title: t('clients'),
-      description: t('clientsModule'),
-      icon: Users,
-      href: "/clientes",
-      color: "bg-green-500",
-    },
-    {
-      title: t('services'),
-      description: t('servicesModule'),
-      icon: HeadphonesIcon,
-      href: "/atendimentos",
-      color: "bg-purple-500",
-    },
-    {
-      title: t('products'),
-      description: t('productsModule'),
-      icon: Package,
-      href: "/produtos",
-      color: "bg-orange-500",
-    },
-    {
-      title: t('salesAgenda'),
-      description: t('salesAgendaModule'),
-      icon: FileText,
-      href: "/pauta-vendas",
-      color: "bg-indigo-500",
-    },
-  ]
 
   const settingsItems = [
     {
@@ -274,94 +237,92 @@ export default function DashboardPage() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardContent className="p-6">
-              <div>
-                <p className="text-sm font-medium text-gray-600 mb-3 text-center">{t('deals')}</p>
-                <div className="flex items-center justify-center">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <Briefcase className="w-6 h-6 text-blue-600" />
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 mb-8">
+          <Link to="/negocios">
+            <Card className="hover:shadow-md transition-shadow cursor-pointer">
+              <CardContent className="p-6">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 mb-3 text-center">{t('deals')}</p>
+                  <div className="flex items-center justify-center">
+                    <div className="p-2 bg-blue-100 rounded-lg">
+                      <Briefcase className="w-6 h-6 text-blue-600" />
+                    </div>
+                    <p className="text-2xl font-bold text-gray-900 ml-3">{stats.totalNegocios}</p>
                   </div>
-                  <p className="text-2xl font-bold text-gray-900 ml-3">{stats.totalNegocios}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div>
-                <p className="text-sm font-medium text-gray-600 mb-3 text-center">{t('clients')}</p>
-                <div className="flex items-center justify-center">
-                  <div className="p-2 bg-green-100 rounded-lg">
-                    <Users className="w-6 h-6 text-green-600" />
-                  </div>
-                  <p className="text-2xl font-bold text-gray-900 ml-3">{stats.totalClientes}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div>
-                <p className="text-sm font-medium text-gray-600 mb-3 text-center">{t('products')}</p>
-                <div className="flex items-center justify-center">
-                  <div className="p-2 bg-orange-100 rounded-lg">
-                    <Package className="w-6 h-6 text-orange-600" />
-                  </div>
-                  <p className="text-2xl font-bold text-gray-900 ml-3">{stats.totalProdutos}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div>
-                <p className="text-sm font-medium text-gray-600 mb-3 text-center">{t('services')}</p>
-                <div className="flex items-center justify-center">
-                  <div className="p-2 bg-purple-100 rounded-lg">
-                    <HeadphonesIcon className="w-6 h-6 text-purple-600" />
-                  </div>
-                  <p className="text-2xl font-bold text-gray-900 ml-3">{stats.totalAtendimentos}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Navigation */}
-          <div className="lg:col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-xl">{t('mainMenu')}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {menuItems.map((item) => (
-                    <Link key={item.href} to={item.href}>
-                      <Card className="hover:shadow-md transition-shadow cursor-pointer">
-                        <CardContent className="p-6">
-                          <div className="flex items-center mb-4">
-                            <div className={`p-3 ${item.color} rounded-lg`}>
-                              <item.icon className="w-6 h-6 text-white" />
-                            </div>
-                          </div>
-                          <h3 className="font-semibold text-lg mb-2">{item.title}</h3>
-                          <p className="text-sm text-gray-600">{item.description}</p>
-                        </CardContent>
-                      </Card>
-                    </Link>
-                  ))}
                 </div>
               </CardContent>
             </Card>
+          </Link>
 
-            {/* Charts */}
-            <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Link to="/clientes">
+            <Card className="hover:shadow-md transition-shadow cursor-pointer">
+              <CardContent className="p-6">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 mb-3 text-center">{t('clients')}</p>
+                  <div className="flex items-center justify-center">
+                    <div className="p-2 bg-green-100 rounded-lg">
+                      <Users className="w-6 h-6 text-green-600" />
+                    </div>
+                    <p className="text-2xl font-bold text-gray-900 ml-3">{stats.totalClientes}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link to="/produtos">
+            <Card className="hover:shadow-md transition-shadow cursor-pointer">
+              <CardContent className="p-6">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 mb-3 text-center">{t('products')}</p>
+                  <div className="flex items-center justify-center">
+                    <div className="p-2 bg-orange-100 rounded-lg">
+                      <Package className="w-6 h-6 text-orange-600" />
+                    </div>
+                    <p className="text-2xl font-bold text-gray-900 ml-3">{stats.totalProdutos}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link to="/atendimentos">
+            <Card className="hover:shadow-md transition-shadow cursor-pointer">
+              <CardContent className="p-6">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 mb-3 text-center">{t('services')}</p>
+                  <div className="flex items-center justify-center">
+                    <div className="p-2 bg-purple-100 rounded-lg">
+                      <HeadphonesIcon className="w-6 h-6 text-purple-600" />
+                    </div>
+                    <p className="text-2xl font-bold text-gray-900 ml-3">{stats.totalAtendimentos}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link to="/pauta-vendas">
+            <Card className="hover:shadow-md transition-shadow cursor-pointer">
+              <CardContent className="p-6">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 mb-3 text-center">{t('salesAgenda')}</p>
+                  <div className="flex items-center justify-center">
+                    <div className="p-2 bg-indigo-100 rounded-lg">
+                      <FileText className="w-6 h-6 text-indigo-600" />
+                    </div>
+                    <p className="text-2xl font-bold text-gray-900 ml-3">8</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Charts */}
+          <div className="lg:col-span-2">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg">{t('salesVsProposals')}</CardTitle>
