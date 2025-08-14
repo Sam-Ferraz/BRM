@@ -31,7 +31,7 @@ const resources = {
       support: 'Suporte',
       
       // Dashboard
-      managementSystem: 'Sistema de Gestão',
+      managementSystem: 'BRM',
       mainMenu: 'Menu Principal',
       performanceIndicators: 'Painel de Indicadores',
       conversionRate: 'Taxa de Conversão',
@@ -234,7 +234,7 @@ const resources = {
       pleaseFillAllFields: 'Por favor, preencha todos os campos',
       emailOrPasswordIncorrect: 'Email ou senha incorretos',
       loginError: 'Erro ao fazer login',
-      businessManagement: 'Sistema de Gestão Empresarial',
+      businessManagement: 'BRM',
       accessYourAccount: 'Acesse sua conta para continuar',
     }
   },
