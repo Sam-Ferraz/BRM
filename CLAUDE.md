@@ -36,17 +36,31 @@ npm run lint
 - **Forms**: Reusable form components in `src/components/forms/` using Dialog pattern
 - **UI Components**: shadcn/ui components in `src/components/ui/`
 - **Styling**: TailwindCSS with responsive design patterns
+- **I18n**: React i18next for internationalization (Portuguese, English, Spanish)
 
 ### Component Patterns
 - **Page Structure**: Login → Dashboard → Entity pages (with CRUD operations)
 - **Form Pattern**: Dialog-based forms with loading states and validation
 - **Table Pattern**: Data tables with search, filtering, sorting, and pagination
 - **Navigation**: Dashboard-centric with module navigation using React Router Link
+- **Settings**: Config page (`/configuracoes`) with theme toggle and language selector
+
+### Available Routes
+- `/` - Login page (with language selector)
+- `/dashboard` - Main dashboard
+- `/negocios` - Deals management
+- `/clientes` - Clients management
+- `/atendimentos` - Services management
+- `/produtos` - Products management
+- `/pauta-vendas` - Sales agenda management
+- `/configuracoes` - Settings/config page
 
 ## Key Files
 
 - `src/lib/api.ts` - Mock backend API with all business logic
+- `src/lib/i18n.ts` - Internationalization configuration and translations
 - `src/pages/DashboardPage.tsx` - Main dashboard with navigation and charts
+- `src/pages/ConfigPage.tsx` - Settings page with theme and language selection
 - `src/components/forms/` - Reusable CRUD form components
 - `src/App.tsx` - Main App component with React Router setup
 - `vite.config.ts` - Vite configuration with path aliases

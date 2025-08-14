@@ -220,6 +220,14 @@ const resources = {
       english: 'Inglês',
       spanish: 'Espanhol',
       
+      // Config page
+      theme: 'Tema',
+      language: 'Idioma',
+      selectTheme: 'Selecione o tema',
+      chooseAppearance: 'Escolha a aparência do sistema',
+      selectLanguage: 'Selecione o idioma',
+      chooseLanguage: 'Escolha o idioma do sistema',
+      
       // Login page
       email: 'Email',
       password: 'Senha',
@@ -446,6 +454,14 @@ const resources = {
       english: 'English',
       spanish: 'Spanish',
       
+      // Config page
+      theme: 'Theme',
+      language: 'Language',
+      selectTheme: 'Select theme',
+      chooseAppearance: 'Choose system appearance',
+      selectLanguage: 'Select language',
+      chooseLanguage: 'Choose system language',
+      
       // Login page
       email: 'Email',
       password: 'Password',
@@ -671,6 +687,14 @@ const resources = {
       portuguese: 'Portugués',
       english: 'Inglés',
       spanish: 'Español',
+      
+      // Config page
+      theme: 'Tema',
+      language: 'Idioma',
+      selectTheme: 'Seleccionar tema',
+      chooseAppearance: 'Elegir apariencia del sistema',
+      selectLanguage: 'Seleccionar idioma',
+      chooseLanguage: 'Elegir idioma del sistema',
       
       // Login page
       email: 'Email',

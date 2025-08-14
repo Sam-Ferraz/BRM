@@ -13,8 +13,6 @@ import { NegocioForm } from "@/components/forms/negocio-form"
 import { ClienteForm } from "@/components/forms/cliente-form"
 import { ProdutoForm } from "@/components/forms/produto-form"
 import { AtendimentoForm } from "@/components/forms/atendimento-form"
-import { ThemeToggle } from "@/components/theme-toggle"
-import { LanguageSelector } from "@/components/language-selector"
 import { api } from "@/lib/api-client"
 
 // Mock data for charts
@@ -265,8 +263,6 @@ export default function DashboardPage() {
               <span className="text-sm text-muted-foreground">
                 {t('welcome')}, {user?.name || t('user')}
               </span>
-              <LanguageSelector />
-              <ThemeToggle />
               <Button variant="outline" size="sm" onClick={handleLogout}>
                 <LogOut className="w-4 h-4 mr-2" />
                 {t('logout')}

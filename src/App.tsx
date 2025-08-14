@@ -10,6 +10,7 @@ import ClientesPage from './pages/ClientesPage'
 import AtendimentosPage from './pages/AtendimentosPage'
 import ProdutosPage from './pages/ProdutosPage'
 import PautaVendasPage from './pages/PautaVendasPage'
+import ConfigPage from './pages/ConfigPage'
 import './lib/i18n'
 import './index.css'
 
@@ -49,6 +50,11 @@ function App() {
               <Route path="/pauta-vendas" element={
                 <ProtectedRoute>
                   <PautaVendasPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/configuracoes" element={
+                <ProtectedRoute>
+                  <ConfigPage />
                 </ProtectedRoute>
               } />
               <Route path="*" element={<Navigate to="/" replace />} />
