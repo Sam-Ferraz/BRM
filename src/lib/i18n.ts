@@ -224,10 +224,13 @@ const resources = {
       // Config page
       theme: 'Tema',
       language: 'Idioma',
+      timezone: 'Fuso Horário',
       selectTheme: 'Selecione o tema',
       chooseAppearance: 'Escolha a aparência do sistema',
       selectLanguage: 'Selecione o idioma',
       chooseLanguage: 'Escolha o idioma do sistema',
+      selectTimezone: 'Selecione o fuso horário',
+      chooseTimezone: 'Escolha o fuso horário para exibição de datas',
       
       // Login page
       email: 'Email',
@@ -465,10 +468,13 @@ const resources = {
       // Config page
       theme: 'Theme',
       language: 'Language',
+      timezone: 'Timezone',
       selectTheme: 'Select theme',
       chooseAppearance: 'Choose system appearance',
       selectLanguage: 'Select language',
       chooseLanguage: 'Choose system language',
+      selectTimezone: 'Select timezone',
+      chooseTimezone: 'Choose timezone for date display',
       
       // Login page
       email: 'Email',
@@ -706,10 +712,13 @@ const resources = {
       // Config page
       theme: 'Tema',
       language: 'Idioma',
+      timezone: 'Zona Horaria',
       selectTheme: 'Seleccionar tema',
       chooseAppearance: 'Elegir apariencia del sistema',
       selectLanguage: 'Seleccionar idioma',
       chooseLanguage: 'Elegir idioma del sistema',
+      selectTimezone: 'Seleccionar zona horaria',
+      chooseTimezone: 'Elegir zona horaria para mostrar fechas',
       
       // Login page
       email: 'Email',

@@ -1,7 +1,11 @@
 import { format, parseISO, isValid } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
-export function formatDateTime(dateTimeStr: string): string {
+function getUserTimezone(): string {
+  return localStorage.getItem('userTimezone') || 'America/Sao_Paulo'
+}
+
+export function formatDateTime(dateTimeStr: string, timezone?: string): string {
   if (!dateTimeStr) return ""
   
   try {
@@ -24,14 +28,14 @@ export function formatDateTime(dateTimeStr: string): string {
     
     return format(date, "dd/MM/yyyy HH:mm", { 
       locale: ptBR,
-      timeZone: 'America/Sao_Paulo'
+      timeZone: timezone || getUserTimezone()
     })
   } catch {
     return dateTimeStr
   }
 }
 
-export function formatDate(dateStr: string): string {
+export function formatDate(dateStr: string, timezone?: string): string {
   if (!dateStr) return ""
   
   try {
@@ -48,7 +52,7 @@ export function formatDate(dateStr: string): string {
     
     return format(date, "dd/MM/yyyy", { 
       locale: ptBR,
-      timeZone: 'America/Sao_Paulo'
+      timeZone: timezone || getUserTimezone()
     })
   } catch {
     return dateStr

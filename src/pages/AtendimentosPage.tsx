@@ -18,7 +18,8 @@ import { ArrowLeft, Plus, Pencil, Trash2, Search, Clock, User, HeadphonesIcon } 
 import { api, type Atendimento } from "@/lib/api-client"
 import { AtendimentoForm } from "@/components/forms/atendimento-form"
 import { useToast } from "@/hooks/use-toast"
-import { formatDateTime, combineDateAndTime } from "@/lib/datetime"
+import { combineDateAndTime } from "@/lib/datetime"
+import { ReactiveDateTime } from "@/components/reactive-datetime"
 
 export default function AtendimentosPage() {
   const { t } = useTranslation()
@@ -286,7 +287,10 @@ export default function AtendimentosPage() {
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Clock className="h-4 w-4 text-gray-400" />
-                          {formatDateTime(combineDateAndTime(atendimento.data, atendimento.hora))}
+                          <ReactiveDateTime 
+                            value={combineDateAndTime(atendimento.data, atendimento.hora)}
+                            type="datetime"
+                          />
                         </div>
                       </TableCell>
                       <TableCell>

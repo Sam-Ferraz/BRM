@@ -24,7 +24,7 @@ import { ArrowLeft, Plus, Pencil, Trash2, Search } from "lucide-react"
 import { api, type Negocio } from "@/lib/api-client"
 import { NegocioForm } from "@/components/forms/negocio-form"
 import { useToast } from "@/hooks/use-toast"
-import { formatDate } from "@/lib/datetime"
+import { ReactiveDateTime } from "@/components/reactive-datetime"
 
 export default function NegociosPage() {
   const { t } = useTranslation()
@@ -268,7 +268,12 @@ export default function NegociosPage() {
                       <TableCell className="font-medium">{negocio.cliente}</TableCell>
                       <TableCell>{negocio.valor}</TableCell>
                       <TableCell>{getStatusBadge(negocio.status)}</TableCell>
-                      <TableCell>{formatDate(negocio.data)}</TableCell>
+                      <TableCell>
+                        <ReactiveDateTime 
+                          value={negocio.data}
+                          type="date"
+                        />
+                      </TableCell>
                       <TableCell className="max-w-xs truncate">
                         {negocio.descricao || "-"}
                       </TableCell>

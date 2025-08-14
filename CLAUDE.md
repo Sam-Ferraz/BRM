@@ -30,6 +30,12 @@ node dev-tools/test-browser.js
 node dev-tools/puppeteer-mcp/server.js
 ```
 
+## Development Credentials
+
+For local development and testing, use the credentials configured in `.env`.
+These credentials are defined in the `.env` file as `DEV_USER` and `DEV_PASSWORD`.
+Do not commit those credentials anywhere. Just use it on dev testing.
+
 ## Key Architecture Patterns
 
 ### Data Layer
@@ -78,13 +84,16 @@ node dev-tools/puppeteer-mcp/server.js
 
 **Frontend:**
 - `src/lib/i18n.ts` - Internationalization configuration and translations
-- `src/lib/datetime.ts` - Date/time formatting utilities with Sao Paulo timezone support
+- `src/lib/datetime.ts` - Date/time formatting utilities with user-selectable timezone support
 - `src/pages/LoginPage.tsx` - Login page with improved UX (password toggle, auto-focus, validation)
 - `src/pages/DashboardPage.tsx` - Main dashboard with navigation and charts
-- `src/pages/ConfigPage.tsx` - Settings page with theme and language selection
+- `src/pages/ConfigPage.tsx` - Settings page with theme, language, and timezone selection
 - `src/contexts/AuthContext.tsx` - Authentication context with JWT handling
 - `src/components/forms/` - Reusable CRUD form components
 - `src/components/language-selector.tsx` - Language switching component
+- `src/components/timezone-selector.tsx` - Timezone selection component
+- `src/components/reactive-datetime.tsx` - Reactive datetime component that updates with timezone changes
+- `src/hooks/use-timezone.ts` - React hook for timezone state management
 - `src/App.tsx` - Main App component with React Router setup and protected routes
 - `vite.config.ts` - Vite configuration with path aliases
 
@@ -123,7 +132,8 @@ node dev-tools/puppeteer-mcp/server.js
 - **Build**: Uses Vite for fast builds and HMR development
 - **Authentication**: Context-based with localStorage persistence and automatic token verification
 - **Routing**: Protected routes with automatic redirect to login
-- **Date Formatting**: Uses date-fns with Brazil locale and Sao Paulo timezone (dd/MM/yyyy format)
+- **Date Formatting**: Uses date-fns with Brazil locale (dd/MM/yyyy format)
+- **Timezone Support**: User-selectable timezone in configuration page, defaults to São Paulo, persisted in localStorage
 
 **Backend:**
 - **Database**: PostgreSQL with connection pooling

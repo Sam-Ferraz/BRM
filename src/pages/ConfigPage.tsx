@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext"
 import { useToast } from "@/hooks/use-toast"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { LanguageSelector } from "@/components/language-selector"
+import { TimezoneSelector } from "@/components/timezone-selector"
 
 export default function ConfigPage() {
   const { t } = useTranslation()
@@ -87,7 +88,7 @@ export default function ConfigPage() {
           </Card>
 
           {/* Language Settings */}
-          <Card>
+          <Card className="mb-6">
             <CardHeader>
               <CardTitle>{t('language')}</CardTitle>
             </CardHeader>
@@ -102,6 +103,26 @@ export default function ConfigPage() {
                   </p>
                 </div>
                 <LanguageSelector />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Timezone Settings */}
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('timezone')}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">
+                    {t('selectTimezone')}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {t('chooseTimezone')}
+                  </p>
+                </div>
+                <TimezoneSelector />
               </div>
             </CardContent>
           </Card>
