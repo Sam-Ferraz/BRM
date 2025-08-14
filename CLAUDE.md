@@ -220,3 +220,5 @@ The project uses **Flyway** for database schema management with Docker integrati
 - **Use date-based versioning** for team environments: `V2025_08_14_01__description.sql`
 - **Test migrations locally** before committing using `npm run migrate:validate`
 - **Baseline is set at version 1** - existing schema is preserved
+- **Avoid breaking migrations**: When removing a used column, first add the new column, update the code, then plan a future migration to remove the old column
+- **Update this documentation**: When learning about new patterns, tools, or implementation details that will speed up future work or reduce token usage, update this CLAUDE.md file immediately to preserve the knowledge
