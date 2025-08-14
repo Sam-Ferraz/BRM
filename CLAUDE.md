@@ -22,6 +22,12 @@ npm run preview
 
 # Lint code
 npm run lint
+
+# Testing with Puppeteer (development only)
+node dev-tools/test-browser.js
+
+# Start Puppeteer MCP server (for Claude Code integration)
+node dev-tools/puppeteer-mcp/server.js
 ```
 
 ## Key Architecture Patterns
@@ -72,6 +78,7 @@ npm run lint
 
 **Frontend:**
 - `src/lib/i18n.ts` - Internationalization configuration and translations
+- `src/lib/datetime.ts` - Date/time formatting utilities with Sao Paulo timezone support
 - `src/pages/LoginPage.tsx` - Login page with improved UX (password toggle, auto-focus, validation)
 - `src/pages/DashboardPage.tsx` - Main dashboard with navigation and charts
 - `src/pages/ConfigPage.tsx` - Settings page with theme and language selection
@@ -86,6 +93,11 @@ npm run lint
 - `server/auth.js` - JWT authentication logic with bcrypt
 - `server/database.js` - PostgreSQL connection and database utilities
 - `server/api-routes.js` - RESTful API endpoints for business entities
+
+**Development Tools:**
+- `dev-tools/test-browser.js` - Puppeteer browser automation test script
+- `dev-tools/puppeteer-mcp/server.js` - MCP server for headless browser integration
+- `dev-tools/screenshots/` - Generated browser test screenshots
 
 ## Entity Schemas
 
@@ -111,6 +123,7 @@ npm run lint
 - **Build**: Uses Vite for fast builds and HMR development
 - **Authentication**: Context-based with localStorage persistence and automatic token verification
 - **Routing**: Protected routes with automatic redirect to login
+- **Date Formatting**: Uses date-fns with Brazil locale and Sao Paulo timezone (dd/MM/yyyy format)
 
 **Backend:**
 - **Database**: PostgreSQL with connection pooling
@@ -118,6 +131,12 @@ npm run lint
 - **Security**: bcrypt password hashing, CORS configuration
 - **Environment**: Configurable via environment variables
 - **API**: RESTful design with proper error handling
+
+**Development & Testing:**
+- **Puppeteer**: Headless browser automation for UI testing (devDependencies only)
+- **MCP Integration**: Model Context Protocol server for browser automation
+- **Browser Testing**: Automated login, form, and responsive design tests
+- **Screenshots**: Automated visual testing with desktop/mobile viewports
 
 ## Authentication Flow
 

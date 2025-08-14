@@ -1,0 +1,14 @@
+{
+  "name": "puppeteer-mcp-server",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Puppeteer MCP server for BRM testing",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.17.3",
+    "puppeteer": "^24.16.2"
+  }
+}
