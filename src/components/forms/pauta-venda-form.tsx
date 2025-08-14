@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import type { PautaVenda } from "@/lib/api-client"
+import { getCurrentDateForForm } from "@/lib/datetime"
 
 interface PautaVendaFormProps {
   pautaVenda?: PautaVenda
@@ -25,17 +26,33 @@ export function PautaVendaForm({ pautaVenda, open, onOpenChange, onSubmit, loadi
     titulo: "",
     cliente: "",
     valor: "",
-    data: new Date().toLocaleDateString("pt-BR"),
+    data: getCurrentDateForForm(),
     status: "Ativa" as "Ativa" | "Concluída" | "Cancelada",
   })
 
   useEffect(() => {
     if (pautaVenda) {
+      // Convert date from database to form format (YYYY-MM-DD)
+      let formattedDate = getCurrentDateForForm()
+      
+      if (pautaVenda.data) {
+        // If the date is in YYYY-MM-DD format, use it directly
+        if (/^\d{4}-\d{2}-\d{2}$/.test(pautaVenda.data)) {
+          formattedDate = pautaVenda.data
+        } else {
+          // Parse other formats (like dd/MM/yyyy)
+          const date = new Date(pautaVenda.data)
+          if (!isNaN(date.getTime())) {
+            formattedDate = date.toISOString().split('T')[0]
+          }
+        }
+      }
+      
       setFormData({
         titulo: pautaVenda.titulo || "",
         cliente: pautaVenda.cliente || "",
         valor: pautaVenda.valor || "",
-        data: pautaVenda.data || new Date().toLocaleDateString("pt-BR"),
+        data: formattedDate,
         status: (pautaVenda.status || "Ativa") as "Ativa" | "Concluída" | "Cancelada",
       })
     } else {
@@ -43,7 +60,7 @@ export function PautaVendaForm({ pautaVenda, open, onOpenChange, onSubmit, loadi
         titulo: "",
         cliente: "",
         valor: "",
-        data: new Date().toLocaleDateString("pt-BR"),
+        data: getCurrentDateForForm(),
         status: "Ativa" as "Ativa" | "Concluída" | "Cancelada",
       })
     }
@@ -109,6 +126,7 @@ export function PautaVendaForm({ pautaVenda, open, onOpenChange, onSubmit, loadi
             <Label htmlFor="data">{t('date')}</Label>
             <Input
               id="data"
+              type="date"
               value={formData.data}
               onChange={(e) => setFormData({ ...formData, data: e.target.value })}
               required

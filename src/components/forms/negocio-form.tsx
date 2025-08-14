@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import type { Negocio } from "@/lib/api-client"
+import { getCurrentDateForForm } from "@/lib/datetime"
 
 interface NegocioFormProps {
   negocio?: Negocio
@@ -26,17 +27,33 @@ export function NegocioForm({ negocio, open, onOpenChange, onSubmit, loading }: 
     cliente: "",
     valor: "",
     status: "Proposta" as "Em Andamento" | "Proposta" | "Fechado",
-    data: new Date().toLocaleDateString("pt-BR"),
+    data: getCurrentDateForForm(),
     descricao: "",
   })
 
   useEffect(() => {
     if (negocio) {
+      // Convert date from database to form format (YYYY-MM-DD)
+      let formattedDate = getCurrentDateForForm()
+      
+      if (negocio.data) {
+        // If the date is in YYYY-MM-DD format, use it directly
+        if (/^\d{4}-\d{2}-\d{2}$/.test(negocio.data)) {
+          formattedDate = negocio.data
+        } else {
+          // Parse other formats (like dd/MM/yyyy)
+          const date = new Date(negocio.data)
+          if (!isNaN(date.getTime())) {
+            formattedDate = date.toISOString().split('T')[0]
+          }
+        }
+      }
+      
       setFormData({
         cliente: negocio.cliente || "",
         valor: negocio.valor || "",
         status: (negocio.status || "Proposta") as "Em Andamento" | "Proposta" | "Fechado",
-        data: negocio.data || new Date().toLocaleDateString("pt-BR"),
+        data: formattedDate,
         descricao: negocio.descricao || "",
       })
     } else {
@@ -44,7 +61,7 @@ export function NegocioForm({ negocio, open, onOpenChange, onSubmit, loading }: 
         cliente: "",
         valor: "",
         status: "Proposta" as "Em Andamento" | "Proposta" | "Fechado",
-        data: new Date().toLocaleDateString("pt-BR"),
+        data: getCurrentDateForForm(),
         descricao: "",
       })
     }
@@ -103,6 +120,7 @@ export function NegocioForm({ negocio, open, onOpenChange, onSubmit, loading }: 
             <Label htmlFor="data">{t('date')}</Label>
             <Input
               id="data"
+              type="date"
               value={formData.data}
               onChange={(e) => setFormData({ ...formData, data: e.target.value })}
               required

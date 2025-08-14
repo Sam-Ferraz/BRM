@@ -18,22 +18,7 @@ import { ArrowLeft, Plus, Pencil, Trash2, Search, Clock, User, HeadphonesIcon } 
 import { api, type Atendimento } from "@/lib/api-client"
 import { AtendimentoForm } from "@/components/forms/atendimento-form"
 import { useToast } from "@/hooks/use-toast"
-
-// Helper function to convert UTC dates to São Paulo timezone for display
-function formatDateForSaoPauloDisplay(dateStr: string): string {
-  if (!dateStr) return ""
-  
-  // Handle both "YYYY-MM-DD" and ISO format dates from the database
-  let date: Date
-  if (dateStr.includes('T')) {
-    date = new Date(dateStr)
-  } else {
-    // For "YYYY-MM-DD" format, create date in UTC
-    date = new Date(dateStr + 'T00:00:00.000Z')
-  }
-  
-  return date.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })
-}
+import { formatDateTime, combineDateAndTime } from "@/lib/datetime"
 
 export default function AtendimentosPage() {
   const { t } = useTranslation()
@@ -273,13 +258,7 @@ export default function AtendimentosPage() {
                       className="cursor-pointer" 
                       onClick={() => handleSort("data")}
                     >
-                      {t('date')} {sortBy === "data" && (sortOrder === "asc" ? "↑" : "↓")}
-                    </TableHead>
-                    <TableHead 
-                      className="cursor-pointer" 
-                      onClick={() => handleSort("hora")}
-                    >
-                      {t('time')} {sortBy === "hora" && (sortOrder === "asc" ? "↑" : "↓")}
+                      {t('dateTime')} {sortBy === "data" && (sortOrder === "asc" ? "↑" : "↓")}
                     </TableHead>
                     <TableHead>{t('description')}</TableHead>
                     <TableHead className="text-right">{t('actions')}</TableHead>
@@ -307,10 +286,9 @@ export default function AtendimentosPage() {
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Clock className="h-4 w-4 text-gray-400" />
-                          {formatDateForSaoPauloDisplay(atendimento.data)}
+                          {formatDateTime(combineDateAndTime(atendimento.data, atendimento.hora))}
                         </div>
                       </TableCell>
-                      <TableCell>{atendimento.hora}</TableCell>
                       <TableCell>
                         {atendimento.descricao ? (
                           <span className="text-sm text-gray-600 truncate max-w-32 block">
@@ -346,7 +324,7 @@ export default function AtendimentosPage() {
                   ))}
                   {atendimentos.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                      <TableCell colSpan={6} className="text-center py-8 text-gray-500">
                         {t('noServicesFound')}
                       </TableCell>
                     </TableRow>

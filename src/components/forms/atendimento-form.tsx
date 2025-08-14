@@ -11,29 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import type { Atendimento } from "@/lib/api-client"
-
-// Helper functions for São Paulo timezone conversion
-function formatDateForSaoPaulo(date: Date): string {
-  return date.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })
-}
-
-function formatTimeForSaoPaulo(date: Date): string {
-  return date.toLocaleTimeString('pt-BR', { 
-    timeZone: 'America/Sao_Paulo',
-    hour: '2-digit', 
-    minute: '2-digit' 
-  })
-}
-
-function parseUTCDate(dateStr: string): Date {
-  // Handle both "YYYY-MM-DD" and ISO format dates from the database
-  if (dateStr.includes('T')) {
-    return new Date(dateStr)
-  } else {
-    // For "YYYY-MM-DD" format, create date in UTC
-    return new Date(dateStr + 'T00:00:00.000Z')
-  }
-}
+import { getCurrentDateTimeForForm, combineDateAndTime } from "@/lib/datetime"
 
 interface AtendimentoFormProps {
   atendimento?: Atendimento
@@ -45,26 +23,46 @@ interface AtendimentoFormProps {
 
 export function AtendimentoForm({ atendimento, open, onOpenChange, onSubmit, loading }: AtendimentoFormProps) {
   const { t } = useTranslation()
+  const { date: currentDate, time: currentTime } = getCurrentDateTimeForForm()
   const [formData, setFormData] = useState({
     cliente: "",
     tipo: "Suporte" as "Suporte" | "Vendas" | "Consultoria",
     status: "Pendente" as "Em Andamento" | "Concluído" | "Pendente",
-    data: formatDateForSaoPaulo(new Date()),
-    hora: formatTimeForSaoPaulo(new Date()),
+    data: currentDate,
+    hora: currentTime,
     descricao: "",
   })
 
   useEffect(() => {
     if (atendimento) {
-      // Convert UTC date from database to São Paulo timezone
-      const utcDate = atendimento.data ? parseUTCDate(atendimento.data) : new Date()
+      // Convert date from database to form format (YYYY-MM-DD)
+      let formattedDate = currentDate
+      let formattedTime = currentTime
+      
+      if (atendimento.data) {
+        // If the date is in YYYY-MM-DD format, use it directly
+        if (/^\d{4}-\d{2}-\d{2}$/.test(atendimento.data)) {
+          formattedDate = atendimento.data
+        } else {
+          // Parse other formats
+          const date = new Date(atendimento.data)
+          formattedDate = date.toISOString().split('T')[0]
+        }
+      }
+      
+      if (atendimento.hora) {
+        // If hora is already in HH:mm format, use it directly
+        if (/^\d{2}:\d{2}$/.test(atendimento.hora)) {
+          formattedTime = atendimento.hora
+        }
+      }
       
       setFormData({
         cliente: atendimento.cliente || "",
         tipo: (atendimento.tipo || "Suporte") as "Suporte" | "Vendas" | "Consultoria",
         status: (atendimento.status || "Pendente") as "Em Andamento" | "Concluído" | "Pendente",
-        data: formatDateForSaoPaulo(utcDate),
-        hora: atendimento.hora || formatTimeForSaoPaulo(new Date()),
+        data: formattedDate,
+        hora: formattedTime,
         descricao: atendimento.descricao || "",
       })
     } else {
@@ -72,12 +70,12 @@ export function AtendimentoForm({ atendimento, open, onOpenChange, onSubmit, loa
         cliente: "",
         tipo: "Suporte" as "Suporte" | "Vendas" | "Consultoria",
         status: "Pendente" as "Em Andamento" | "Concluído" | "Pendente",
-        data: formatDateForSaoPaulo(new Date()),
-        hora: formatTimeForSaoPaulo(new Date()),
+        data: currentDate,
+        hora: currentTime,
         descricao: "",
       })
     }
-  }, [atendimento])
+  }, [atendimento, currentDate, currentTime])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -135,6 +133,7 @@ export function AtendimentoForm({ atendimento, open, onOpenChange, onSubmit, loa
               <Label htmlFor="data">{t('date')}</Label>
               <Input
                 id="data"
+                type="date"
                 value={formData.data}
                 onChange={(e) => setFormData({ ...formData, data: e.target.value })}
                 required
@@ -145,6 +144,7 @@ export function AtendimentoForm({ atendimento, open, onOpenChange, onSubmit, loa
               <Label htmlFor="hora">{t('hour')}</Label>
               <Input
                 id="hora"
+                type="time"
                 value={formData.hora}
                 onChange={(e) => setFormData({ ...formData, hora: e.target.value })}
                 required

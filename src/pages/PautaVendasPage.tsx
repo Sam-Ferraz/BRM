@@ -24,6 +24,7 @@ import { ArrowLeft, Plus, Pencil, Trash2, Search, DollarSign, Calendar, User } f
 import { api, type PautaVenda } from "@/lib/api-client"
 import { PautaVendaForm } from "@/components/forms/pauta-venda-form"
 import { useToast } from "@/hooks/use-toast"
+import { formatDate } from "@/lib/datetime"
 
 export default function PautaVendasPage() {
   const { t } = useTranslation()
@@ -285,7 +286,7 @@ export default function PautaVendasPage() {
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Calendar className="h-4 w-4 text-gray-400" />
-                          {pauta.data}
+                          {formatDate(pauta.data)}
                         </div>
                       </TableCell>
                       <TableCell>{getStatusBadge(pauta.status)}</TableCell>

@@ -1,0 +1,92 @@
+import { format, parseISO, isValid } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
+
+export function formatDateTime(dateTimeStr: string): string {
+  if (!dateTimeStr) return ""
+  
+  try {
+    // Handle both "YYYY-MM-DD" and ISO format dates from the database
+    let date: Date
+    if (dateTimeStr.includes('T')) {
+      date = parseISO(dateTimeStr)
+    } else {
+      // For "YYYY-MM-DD" format, create date in UTC
+      date = new Date(dateTimeStr + 'T00:00:00.000Z')
+    }
+    
+    if (!isValid(date)) return dateTimeStr
+    
+    return format(date, "dd/MM/yyyy 'às' HH:mm", { 
+      locale: ptBR,
+      timeZone: 'America/Sao_Paulo'
+    })
+  } catch {
+    return dateTimeStr
+  }
+}
+
+export function formatDate(dateStr: string): string {
+  if (!dateStr) return ""
+  
+  try {
+    // Handle both "YYYY-MM-DD" and ISO format dates from the database
+    let date: Date
+    if (dateStr.includes('T')) {
+      date = parseISO(dateStr)
+    } else {
+      // For "YYYY-MM-DD" format, create date in UTC
+      date = new Date(dateStr + 'T00:00:00.000Z')
+    }
+    
+    if (!isValid(date)) return dateStr
+    
+    return format(date, "dd/MM/yyyy", { 
+      locale: ptBR,
+      timeZone: 'America/Sao_Paulo'
+    })
+  } catch {
+    return dateStr
+  }
+}
+
+export function formatTime(timeStr: string): string {
+  if (!timeStr) return ""
+  
+  try {
+    // If it's just time (HH:MM), create a temporary date to format it
+    if (/^\d{2}:\d{2}$/.test(timeStr)) {
+      const [hours, minutes] = timeStr.split(':')
+      const date = new Date()
+      date.setHours(parseInt(hours), parseInt(minutes), 0, 0)
+      return format(date, "HH:mm")
+    }
+    
+    // If it's a full datetime string, extract just the time
+    const date = parseISO(timeStr)
+    if (!isValid(date)) return timeStr
+    
+    return format(date, "HH:mm")
+  } catch {
+    return timeStr
+  }
+}
+
+export function getCurrentDateTimeForForm(): { date: string; time: string } {
+  const now = new Date()
+  
+  return {
+    date: format(now, "yyyy-MM-dd"),
+    time: format(now, "HH:mm")
+  }
+}
+
+export function getCurrentDateForForm(): string {
+  return format(new Date(), "yyyy-MM-dd")
+}
+
+export function combineDateAndTime(date: string, time: string): string {
+  if (!date) return ""
+  if (!time) return date
+  
+  return `${date}T${time}:00`
+}
