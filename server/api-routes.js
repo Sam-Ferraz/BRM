@@ -331,13 +331,13 @@ export function createApiRoutes(app) {
       }
       
       if (sortBy) {
-        const validColumns = ['cliente', 'tipo', 'status', 'data', 'hora']
+        const validColumns = ['cliente', 'tipo', 'status', 'datetime_agendamento']
         if (validColumns.includes(sortBy)) {
           const order = sortOrder === 'desc' ? 'DESC' : 'ASC'
           query += ` ORDER BY ${sortBy} ${order}`
         }
       } else {
-        query += ' ORDER BY data DESC, hora DESC'
+        query += ' ORDER BY datetime_agendamento DESC'
       }
       
       const result = await client.query(query, params)
