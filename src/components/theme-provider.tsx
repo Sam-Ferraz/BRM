@@ -1,6 +1,5 @@
 import * as React from 'react'
-
-type Theme = 'dark' | 'light' | 'system'
+import { Theme, ThemeProviderContext } from '@/hooks/use-theme'
 
 interface ThemeProviderProps {
   children: React.ReactNode
@@ -9,18 +8,6 @@ interface ThemeProviderProps {
   enableSystem?: boolean
   disableTransitionOnChange?: boolean
 }
-
-interface ThemeProviderState {
-  theme: Theme
-  setTheme: (theme: Theme) => void
-}
-
-const initialState: ThemeProviderState = {
-  theme: 'system',
-  setTheme: () => null,
-}
-
-export const ThemeProviderContext = React.createContext<ThemeProviderState>(initialState)
 
 export function ThemeProvider({ 
   children, 
@@ -66,11 +53,3 @@ export function ThemeProvider({
   )
 }
 
-export const useTheme = () => {
-  const context = React.useContext(ThemeProviderContext)
-
-  if (context === undefined)
-    throw new Error('useTheme must be used within a ThemeProvider')
-
-  return context
-}

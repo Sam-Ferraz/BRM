@@ -1,26 +1,6 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
-
-export type ChartConfig = {
-  [k in string]: {
-    label?: React.ReactNode
-    color?: string
-  }
-}
-
-type ChartContextProps = {
-  config: ChartConfig
-}
-
-const ChartContext = React.createContext<ChartContextProps | null>(null)
-
-function useChart() {
-  const context = React.useContext(ChartContext)
-  if (!context) {
-    throw new Error("useChart must be used within a <ChartContainer />")
-  }
-  return context
-}
+import { ChartConfig, ChartContext } from "@/hooks/use-chart"
 
 const ChartContainer = React.forwardRef<
   HTMLDivElement,
@@ -104,5 +84,4 @@ export {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-  useChart,
 }
