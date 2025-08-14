@@ -5,18 +5,24 @@ export function formatDateTime(dateTimeStr: string): string {
   if (!dateTimeStr) return ""
   
   try {
+    // Clean up malformed datetime strings first
+    let cleanedDateTimeStr = dateTimeStr
+    
+    // Fix malformed time like "14:00:00:00" -> "14:00:00"
+    cleanedDateTimeStr = cleanedDateTimeStr.replace(/:00:00$/, ':00')
+    
     // Handle both "YYYY-MM-DD" and ISO format dates from the database
     let date: Date
-    if (dateTimeStr.includes('T')) {
-      date = parseISO(dateTimeStr)
+    if (cleanedDateTimeStr.includes('T')) {
+      date = parseISO(cleanedDateTimeStr)
     } else {
       // For "YYYY-MM-DD" format, create date in UTC
-      date = new Date(dateTimeStr + 'T00:00:00.000Z')
+      date = new Date(cleanedDateTimeStr + 'T00:00:00.000Z')
     }
     
     if (!isValid(date)) return dateTimeStr
     
-    return format(date, "dd/MM/yyyy 'às' HH:mm", { 
+    return format(date, "dd/MM/yyyy HH:mm", { 
       locale: ptBR,
       timeZone: 'America/Sao_Paulo'
     })
@@ -88,5 +94,20 @@ export function combineDateAndTime(date: string, time: string): string {
   if (!date) return ""
   if (!time) return date
   
-  return `${date}T${time}:00`
+  // Extract just the date part if it's already an ISO datetime string
+  let dateOnly = date
+  if (date.includes('T')) {
+    dateOnly = date.split('T')[0]
+  }
+  
+  // Handle time format - if it already has seconds, don't add more
+  let timeFormatted = time
+  if (time && !time.includes(':00:00') && time.match(/^\d{2}:\d{2}$/)) {
+    timeFormatted = `${time}:00`
+  } else if (time && time.includes(':00:00')) {
+    // Remove the extra :00 if it exists
+    timeFormatted = time.replace(':00:00', ':00')
+  }
+  
+  return `${dateOnly}T${timeFormatted}`
 }
