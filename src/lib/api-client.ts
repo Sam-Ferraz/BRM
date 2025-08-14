@@ -96,8 +96,7 @@ export interface Atendimento {
   cliente: string
   tipo: "Suporte" | "Vendas" | "Consultoria"
   status: "Em Andamento" | "Concluído" | "Pendente"
-  data: string
-  hora: string
+  datetime_agendamento: string
   descricao?: string
 }
 

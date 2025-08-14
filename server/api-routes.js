@@ -371,14 +371,13 @@ export function createApiRoutes(app) {
   app.post('/api/atendimentos', authenticateToken, async (req, res) => {
     const client = await pool.connect()
     try {
-      const { cliente, tipo, status, data, hora, descricao } = req.body
-      const convertedDate = convertBrazilianDate(data)
+      const { cliente, tipo, status, datetime_agendamento, descricao } = req.body
       
       // Ensure UTC timezone for this session
       await client.query('SET TIMEZONE = \'UTC\'')
       const result = await client.query(
-        'INSERT INTO atendimentos (cliente, tipo, status, data, hora, descricao) VALUES ($1, $2, $3, $4::date, $5, $6) RETURNING *',
-        [cliente, tipo, status, convertedDate, hora, descricao]
+        'INSERT INTO atendimentos (cliente, tipo, status, datetime_agendamento, descricao) VALUES ($1, $2, $3, $4::timestamp, $5) RETURNING *',
+        [cliente, tipo, status, datetime_agendamento, descricao]
       )
       res.json(result.rows[0])
     } catch (error) {
@@ -393,14 +392,13 @@ export function createApiRoutes(app) {
     const client = await pool.connect()
     try {
       const { id } = req.params
-      const { cliente, tipo, status, data, hora, descricao } = req.body
-      const convertedDate = convertBrazilianDate(data)
+      const { cliente, tipo, status, datetime_agendamento, descricao } = req.body
       
       // Ensure UTC timezone for this session
       await client.query('SET TIMEZONE = \'UTC\'')
       const result = await client.query(
-        'UPDATE atendimentos SET cliente = $1, tipo = $2, status = $3, data = $4::date, hora = $5, descricao = $6, updated_at = CURRENT_TIMESTAMP WHERE id = $7 RETURNING *',
-        [cliente, tipo, status, convertedDate, hora, descricao, id]
+        'UPDATE atendimentos SET cliente = $1, tipo = $2, status = $3, datetime_agendamento = $4::timestamp, descricao = $5, updated_at = CURRENT_TIMESTAMP WHERE id = $6 RETURNING *',
+        [cliente, tipo, status, datetime_agendamento, descricao, id]
       )
       if (result.rows.length === 0) {
         return res.status(404).json({ error: 'Atendimento não encontrado' })

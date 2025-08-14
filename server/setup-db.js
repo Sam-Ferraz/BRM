@@ -78,8 +78,7 @@ async function setupDatabase() {
         cliente VARCHAR(255) NOT NULL,
         tipo VARCHAR(50) NOT NULL,
         status VARCHAR(50) DEFAULT 'Pendente',
-        data DATE NOT NULL,
-        hora TIME NOT NULL,
+        datetime_agendamento TIMESTAMP NOT NULL,
         descricao TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -152,11 +151,11 @@ async function setupDatabase() {
       
       // Sample atendimentos
       await client.query(`
-        INSERT INTO atendimentos (cliente, tipo, status, data, hora, descricao) VALUES
-        ('João Silva', 'Suporte', 'Em Andamento', '2024-01-15', '14:30', 'Problemas no sistema ERP'),
-        ('Maria Santos', 'Vendas', 'Concluído', '2024-01-15', '10:15', 'Apresentação de produtos'),
-        ('Pedro Costa', 'Suporte', 'Pendente', '2024-01-14', '16:45', 'Configuração de servidor'),
-        ('Ana Oliveira', 'Consultoria', 'Em Andamento', '2024-01-14', '09:00', 'Análise de necessidades')
+        INSERT INTO atendimentos (cliente, tipo, status, datetime_agendamento, descricao) VALUES
+        ('João Silva', 'Suporte', 'Em Andamento', '2024-01-15 14:30:00'::timestamp, 'Problemas no sistema ERP'),
+        ('Maria Santos', 'Vendas', 'Concluído', '2024-01-15 10:15:00'::timestamp, 'Apresentação de produtos'),
+        ('Pedro Costa', 'Suporte', 'Pendente', '2024-01-14 16:45:00'::timestamp, 'Configuração de servidor'),
+        ('Ana Oliveira', 'Consultoria', 'Em Andamento', '2024-01-14 09:00:00'::timestamp, 'Análise de necessidades')
       `)
       
       // Sample pauta de vendas
