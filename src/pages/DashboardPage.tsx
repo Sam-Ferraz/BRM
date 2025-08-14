@@ -216,12 +216,12 @@ export default function DashboardPage() {
       <header className="bg-card shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
+            <Link to="/dashboard" className="flex items-center hover:opacity-80 transition-opacity">
               <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center mr-3">
                 <span className="text-white font-bold text-sm">LOGO</span>
               </div>
               <span className="font-semibold text-foreground">{t('managementSystem')}</span>
-            </div>
+            </Link>
             <div className="flex items-center space-x-4">
               <span className="text-sm text-muted-foreground">
                 {t('welcome')}, {user?.name || t('user')}
