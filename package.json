@@ -10,7 +10,13 @@
     "preview": "vite preview",
     "server": "node server/index.js",
     "server:dev": "node --watch server/index.js",
-    "setup-db": "node server/setup-db.js"
+    "setup-db": "node server/setup-db.js",
+    "migrate": "docker run --rm --env-file .env -v $(pwd):/flyway/sql -v $(pwd)/flyway.conf:/flyway/conf/flyway.conf flyway/flyway:11.11.1 migrate",
+    "migrate:info": "docker run --rm --env-file .env -v $(pwd):/flyway/sql -v $(pwd)/flyway.conf:/flyway/conf/flyway.conf flyway/flyway:11.11.1 info",
+    "migrate:validate": "docker run --rm --env-file .env -v $(pwd):/flyway/sql -v $(pwd)/flyway.conf:/flyway/conf/flyway.conf flyway/flyway:11.11.1 validate",
+    "migrate:clean": "docker run --rm --env-file .env -v $(pwd):/flyway/sql -v $(pwd)/flyway.conf:/flyway/conf/flyway.conf flyway/flyway:11.11.1 clean",
+    "migrate:baseline": "docker run --rm --env-file .env -v $(pwd):/flyway/sql -v $(pwd)/flyway.conf:/flyway/conf/flyway.conf flyway/flyway:11.11.1 baseline",
+    "migrate:setup": "npm run migrate:baseline && npm run migrate:info"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

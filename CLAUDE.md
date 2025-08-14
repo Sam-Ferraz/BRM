@@ -23,6 +23,14 @@ npm run preview
 # Lint code
 npm run lint
 
+# Database migrations (Flyway)
+npm run migrate              # Run pending migrations
+npm run migrate:info         # Show migration status
+npm run migrate:validate     # Validate migration files  
+npm run migrate:baseline     # Create baseline (first time setup)
+npm run migrate:setup        # Complete setup (baseline + info)
+npm run migrate:clean        # Clean database (dev only - DESTRUCTIVE)
+
 # Testing with Puppeteer (development only)
 node dev-tools/test-browser.js
 
@@ -137,6 +145,7 @@ Do not commit those credentials anywhere. Just use it on dev testing.
 
 **Backend:**
 - **Database**: PostgreSQL with connection pooling
+- **Database Migrations**: Flyway with Docker integration for schema versioning
 - **Authentication**: JWT tokens with configurable expiration
 - **Security**: bcrypt password hashing, CORS configuration
 - **Environment**: Configurable via environment variables
@@ -158,3 +167,44 @@ Do not commit those credentials anywhere. Just use it on dev testing.
 6. Frontend stores token in localStorage and sets auth context
 7. Protected routes check authentication status via context
 8. Token verification happens on app initialization and API calls
+
+## Database Migrations
+
+The project uses **Flyway** for database schema management with Docker integration.
+
+### Migration Setup
+- **Schema History**: Managed by `flyway_schema_history` table (auto-created)
+- **Configuration**: `flyway.conf` file with environment variable placeholders
+- **Migration Files**: Located in `db/migrations/` with naming convention `V{version}__{description}.sql`
+- **Supported Naming**: Both simple (`V1__Initial.sql`) and date-based (`V2025_08_14_01__Add_feature.sql`) formats
+
+### Creating Migrations
+1. **Create migration file** in `db/migrations/`:
+   ```sql
+   -- V2025_08_14_01__Add_user_table.sql
+   CREATE TABLE new_table (
+       id SERIAL PRIMARY KEY,
+       name VARCHAR(255) NOT NULL
+   );
+   ```
+
+2. **Run migration**:
+   ```bash
+   npm run migrate
+   ```
+
+### Migration Workflow
+- **Development**: Use `npm run migrate:info` to check status, `npm run migrate` to apply
+- **Production**: GitHub Actions automatically validates and applies migrations on deployment
+- **Rollbacks**: Supported through Flyway's undo migrations or manual intervention
+
+### GitHub Actions Integration
+- **Validation**: Tests migrations against PostgreSQL service on pull requests
+- **Deployment**: Auto-applies migrations to production database on main/trunk branch pushes
+- **Environment**: Uses GitHub secrets for production database credentials
+
+### Important Notes
+- **Never modify applied migrations** - create new ones instead
+- **Use date-based versioning** for team environments: `V2025_08_14_01__description.sql`
+- **Test migrations locally** before committing using `npm run migrate:validate`
+- **Baseline is set at version 1** - existing schema is preserved
