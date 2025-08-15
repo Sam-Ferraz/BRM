@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   Table,
   TableBody,
@@ -13,23 +14,26 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { ArrowLeft, Plus, Pencil, Trash2, Search, Mail, Phone, MapPin, Building } from "lucide-react"
-import { api, type Cliente } from "@/lib/api-client"
-import { ClienteForm } from "@/components/forms/cliente-form"
+import { ArrowLeft, Plus, Pencil, Trash2, Search, Clock, User, HeadphonesIcon } from "lucide-react"
+import { api, type Appointment } from "@/lib/api-client"
+import { AppointmentForm } from "@/components/forms/appointment-form"
 import { useToast } from "@/hooks/use-toast"
+import { ReactiveDateTime } from "@/components/reactive-datetime"
 
-export default function ClientesPage() {
+export default function AppointmentsPage() {
   const { t } = useTranslation()
   const [searchParams, setSearchParams] = useSearchParams()
-  const [clientes, setClientes] = useState<Cliente[]>([])
+  const [appointments, setAppointments] = useState<Appointment[]>([])
   const [loading, setLoading] = useState(true)
   const [formLoading, setFormLoading] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
+  const [statusFilter, setStatusFilter] = useState("Todos")
+  const [typeFilter, setTypeFilter] = useState("Todos")
   const [sortBy, setSortBy] = useState("")
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc")
   
   const [isFormOpen, setIsFormOpen] = useState(false)
-  const [editingCliente, setEditingCliente] = useState<Cliente | undefined>()
+  const [editingAppointment, setEditingAppointment] = useState<Appointment | undefined>()
   
   const { toast } = useToast()
 
@@ -37,7 +41,7 @@ export default function ClientesPage() {
   useEffect(() => {
     if (searchParams.get('new') === 'true') {
       setIsFormOpen(true)
-      setEditingCliente(undefined)
+      setEditingAppointment(undefined)
       // Remove the query parameter after opening
       const newParams = new URLSearchParams(searchParams)
       newParams.delete('new')
@@ -45,48 +49,50 @@ export default function ClientesPage() {
     }
   }, [searchParams, setSearchParams])
 
-  const fetchClientes = useCallback(async () => {
+  const fetchAppointments = useCallback(async () => {
     try {
       setLoading(true)
       const filters: any = {}
       
       if (searchTerm) filters.search = searchTerm
+      if (statusFilter && statusFilter !== "Todos") filters.status = statusFilter
+      if (typeFilter && typeFilter !== "Todos") filters.type = typeFilter
       if (sortBy) {
         filters.sortBy = sortBy
         filters.sortOrder = sortOrder
       }
       
-      const result = await api.clientes.getAll(filters)
-      setClientes(result.data)
+      const result = await api.appointments.getAll(filters)
+      setAppointments(result.data)
     } catch (error) {
       toast({
         title: t('error'),
-        description: t('clientLoadError'),
+        description: t('serviceLoadError'),
         variant: "destructive",
       })
     } finally {
       setLoading(false)
     }
-  }, [searchTerm, sortBy, sortOrder, toast, t])
+  }, [searchTerm, statusFilter, typeFilter, sortBy, sortOrder, toast, t])
 
   useEffect(() => {
-    fetchClientes()
-  }, [fetchClientes])
+    fetchAppointments()
+  }, [fetchAppointments])
 
-  const handleCreate = async (data: Omit<Cliente, "id">) => {
+  const handleCreate = async (data: Omit<Appointment, "id">) => {
     try {
       setFormLoading(true)
-      await api.clientes.create(data)
+      await api.appointments.create(data)
       toast({
         title: t('success'),
-        description: t('clientCreatedSuccess'),
+        description: t('serviceCreatedSuccess'),
       })
       setIsFormOpen(false)
-      fetchClientes()
+      fetchAppointments()
     } catch (error) {
       toast({
         title: t('error'),
-        description: t('clientCreateError'),
+        description: t('serviceCreateError'),
         variant: "destructive",
       })
     } finally {
@@ -94,23 +100,23 @@ export default function ClientesPage() {
     }
   }
 
-  const handleUpdate = async (data: Partial<Cliente>) => {
-    if (!editingCliente) return
+  const handleUpdate = async (data: Partial<Appointment>) => {
+    if (!editingAppointment) return
 
     try {
       setFormLoading(true)
-      await api.clientes.update(editingCliente.id, data)
+      await api.appointments.update(editingAppointment.id, data)
       toast({
         title: t('success'),
-        description: t('clientUpdatedSuccess'),
+        description: t('serviceUpdatedSuccess'),
       })
       setIsFormOpen(false)
-      setEditingCliente(undefined)
-      fetchClientes()
+      setEditingAppointment(undefined)
+      fetchAppointments()
     } catch (error) {
       toast({
         title: t('error'),
-        description: t('clientUpdateError'),
+        description: t('serviceUpdateError'),
         variant: "destructive",
       })
     } finally {
@@ -119,19 +125,19 @@ export default function ClientesPage() {
   }
 
   const handleDelete = async (id: number) => {
-    if (!confirm(t('confirmDeleteClient'))) return
+    if (!confirm(t('confirmDeleteService'))) return
 
     try {
-      await api.clientes.delete(id)
+      await api.appointments.delete(id)
       toast({
         title: t('success'),
-        description: t('clientDeletedSuccess'),
+        description: t('serviceDeletedSuccess'),
       })
-      fetchClientes()
+      fetchAppointments()
     } catch (error) {
       toast({
         title: t('error'),
-        description: t('clientDeleteError'),
+        description: t('serviceDeleteError'),
         variant: "destructive",
       })
     }
@@ -143,6 +149,32 @@ export default function ClientesPage() {
     } else {
       setSortBy(field)
       setSortOrder("asc")
+    }
+  }
+
+  const getStatusBadgeVariant = (status: string) => {
+    switch (status) {
+      case "Concluído":
+        return "default"
+      case "Em Andamento":
+        return "secondary"
+      case "Pendente":
+        return "destructive"
+      default:
+        return "outline"
+    }
+  }
+
+  const getTipoBadgeVariant = (tipo: string) => {
+    switch (tipo) {
+      case "Suporte":
+        return "destructive"
+      case "Vendas":
+        return "default"
+      case "Consultoria":
+        return "secondary"
+      default:
+        return "outline"
     }
   }
 
@@ -158,11 +190,11 @@ export default function ClientesPage() {
                   {t('backButton')}
                 </Link>
               </Button>
-              <h1 className="text-xl font-semibold text-foreground">{t('clientsTitle')}</h1>
+              <h1 className="text-xl font-semibold text-foreground">{t('servicesTitle')}</h1>
             </div>
             <Button onClick={() => setIsFormOpen(true)}>
               <Plus className="w-4 h-4 mr-2" />
-              {t('newClient')}
+              {t('newService')}
             </Button>
           </div>
         </div>
@@ -171,83 +203,100 @@ export default function ClientesPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Card>
           <CardHeader>
-            <CardTitle>{t('clientsManagement')}</CardTitle>
+            <CardTitle>{t('servicesManagement')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder={t('searchClients')}
+                  placeholder={t('searchServices')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-9"
                 />
               </div>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full sm:w-40">
+                  <SelectValue placeholder={t('status')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Todos">{t('allStatuses')}</SelectItem>
+                  <SelectItem value="Pendente">Pendente</SelectItem>
+                  <SelectItem value="Em Andamento">{t('inProgress')}</SelectItem>
+                  <SelectItem value="Concluído">{t('completed')}</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={typeFilter} onValueChange={setTypeFilter}>
+                <SelectTrigger className="w-full sm:w-40">
+                  <SelectValue placeholder={t('type')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Todos">{t('allTypes')}</SelectItem>
+                  <SelectItem value="Suporte">{t('supportType')}</SelectItem>
+                  <SelectItem value="Vendas">{t('salesType')}</SelectItem>
+                  <SelectItem value="Consultoria">{t('consultingType')}</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {loading ? (
-              <div className="text-center py-8">{t('loadingClients')}</div>
+              <div className="text-center py-8">{t('loadingServices')}</div>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead 
                       className="cursor-pointer" 
-                      onClick={() => handleSort("nome")}
+                      onClick={() => handleSort("client")}
                     >
-                      {t('name')} {sortBy === "nome" && (sortOrder === "asc" ? "↑" : "↓")}
+                      {t('client')} {sortBy === "client" && (sortOrder === "asc" ? "↑" : "↓")}
                     </TableHead>
+                    <TableHead>{t('type')}</TableHead>
+                    <TableHead>{t('status')}</TableHead>
                     <TableHead 
                       className="cursor-pointer" 
-                      onClick={() => handleSort("email")}
+                      onClick={() => handleSort("scheduled_datetime")}
                     >
-                      {t('email')} {sortBy === "email" && (sortOrder === "asc" ? "↑" : "↓")}
+                      {t('dateTime')} {sortBy === "scheduled_datetime" && (sortOrder === "asc" ? "↑" : "↓")}
                     </TableHead>
-                    <TableHead 
-                      className="cursor-pointer" 
-                      onClick={() => handleSort("telefone")}
-                    >
-                      {t('phone')} {sortBy === "telefone" && (sortOrder === "asc" ? "↑" : "↓")}
-                    </TableHead>
-                    <TableHead 
-                      className="cursor-pointer" 
-                      onClick={() => handleSort("cidade")}
-                    >
-                      {t('city')} {sortBy === "cidade" && (sortOrder === "asc" ? "↑" : "↓")}
-                    </TableHead>
-                    <TableHead>{t('company')}</TableHead>
+                    <TableHead>{t('description')}</TableHead>
                     <TableHead className="text-right">{t('actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {clientes.map((cliente) => (
-                    <TableRow key={cliente.id}>
-                      <TableCell className="font-medium">{cliente.nome}</TableCell>
-                      <TableCell>
+                  {appointments.map((appointment) => (
+                    <TableRow key={appointment.id}>
+                      <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
-                          <Mail className="h-4 w-4 text-muted-foreground" />
-                          {cliente.email}
+                          <User className="h-4 w-4 text-muted-foreground" />
+                          {appointment.client}
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Phone className="h-4 w-4 text-muted-foreground" />
-                          {cliente.telefone}
-                        </div>
+                        <Badge variant={getTipoBadgeVariant(appointment.type)}>
+                          {appointment.type}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={getStatusBadgeVariant(appointment.status)}>
+                          {appointment.status}
+                        </Badge>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4 text-muted-foreground" />
-                          {cliente.cidade}
+                          <Clock className="h-4 w-4 text-muted-foreground" />
+                          <ReactiveDateTime 
+                            value={appointment.scheduled_datetime}
+                            type="datetime"
+                          />
                         </div>
                       </TableCell>
                       <TableCell>
-                        {cliente.empresa ? (
-                          <div className="flex items-center gap-2">
-                            <Building className="h-4 w-4 text-muted-foreground" />
-                            <Badge variant="outline">{cliente.empresa}</Badge>
-                          </div>
+                        {appointment.description ? (
+                          <span className="text-sm text-muted-foreground truncate max-w-32 block">
+                            {appointment.description}
+                          </span>
                         ) : (
                           "-"
                         )}
@@ -258,7 +307,7 @@ export default function ClientesPage() {
                             variant="outline"
                             size="sm"
                             onClick={() => {
-                              setEditingCliente(cliente)
+                              setEditingAppointment(appointment)
                               setIsFormOpen(true)
                             }}
                           >
@@ -267,7 +316,7 @@ export default function ClientesPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleDelete(cliente.id)}
+                            onClick={() => handleDelete(appointment.id)}
                             className="text-red-600 hover:text-red-700"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -276,10 +325,10 @@ export default function ClientesPage() {
                       </TableCell>
                     </TableRow>
                   ))}
-                  {clientes.length === 0 && (
+                  {appointments.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                        {t('noClientsFound')}
+                        {t('noServicesFound')}
                       </TableCell>
                     </TableRow>
                   )}
@@ -290,14 +339,14 @@ export default function ClientesPage() {
         </Card>
       </div>
 
-      <ClienteForm
-        cliente={editingCliente}
+      <AppointmentForm
+        appointment={editingAppointment}
         open={isFormOpen}
         onOpenChange={(open) => {
           setIsFormOpen(open)
-          if (!open) setEditingCliente(undefined)
+          if (!open) setEditingAppointment(undefined)
         }}
-        onSubmit={editingCliente ? handleUpdate : handleCreate}
+        onSubmit={editingAppointment ? handleUpdate : handleCreate}
         loading={formLoading}
       />
     </div>

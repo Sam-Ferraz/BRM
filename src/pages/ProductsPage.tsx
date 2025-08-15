@@ -21,24 +21,24 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { ArrowLeft, Plus, Pencil, Trash2, Search } from "lucide-react"
-import { api, type Produto } from "@/lib/api-client"
-import { ProdutoForm } from "@/components/forms/produto-form"
+import { api, type Product } from "@/lib/api-client"
+import { ProductForm } from "@/components/forms/product-form"
 import { useToast } from "@/hooks/use-toast"
 
-export default function ProdutosPage() {
+export default function ProductsPage() {
   const { t } = useTranslation()
   const [searchParams, setSearchParams] = useSearchParams()
-  const [produtos, setProdutos] = useState<Produto[]>([])
+  const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [formLoading, setFormLoading] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
-  const [categoriaFilter, setCategoriaFilter] = useState("Todos")
-  const [estoqueFilter, setEstoqueFilter] = useState("Todos")
+  const [categoryFilter, setCategoryFilter] = useState("Todos")
+  const [stockFilter, setStockFilter] = useState("Todos")
   const [sortBy, setSortBy] = useState("")
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc")
   
   const [isFormOpen, setIsFormOpen] = useState(false)
-  const [editingProduto, setEditingProduto] = useState<Produto | undefined>()
+  const [editingProduct, setEditingProduct] = useState<Product | undefined>()
   
   const { toast } = useToast()
 
@@ -46,7 +46,7 @@ export default function ProdutosPage() {
   useEffect(() => {
     if (searchParams.get('new') === 'true') {
       setIsFormOpen(true)
-      setEditingProduto(undefined)
+      setEditingProduct(undefined)
       // Remove the query parameter after opening
       const newParams = new URLSearchParams(searchParams)
       newParams.delete('new')
@@ -54,21 +54,21 @@ export default function ProdutosPage() {
     }
   }, [searchParams, setSearchParams])
 
-  const fetchProdutos = useCallback(async () => {
+  const fetchProducts = useCallback(async () => {
     try {
       setLoading(true)
       const filters: any = {}
       
       if (searchTerm) filters.search = searchTerm
-      if (categoriaFilter !== "Todos") filters.categoria = categoriaFilter
-      if (estoqueFilter !== "Todos") filters.estoque = estoqueFilter
+      if (categoryFilter !== "Todos") filters.category = categoryFilter
+      if (stockFilter !== "Todos") filters.stock = stockFilter
       if (sortBy) {
         filters.sortBy = sortBy
         filters.sortOrder = sortOrder
       }
       
-      const result = await api.produtos.getAll(filters)
-      setProdutos(result.data)
+      const result = await api.products.getAll(filters)
+      setProducts(result.data)
     } catch (error) {
       toast({
         title: t('error'),
@@ -78,22 +78,22 @@ export default function ProdutosPage() {
     } finally {
       setLoading(false)
     }
-  }, [searchTerm, categoriaFilter, estoqueFilter, sortBy, sortOrder, toast, t])
+  }, [searchTerm, categoryFilter, stockFilter, sortBy, sortOrder, toast, t])
 
   useEffect(() => {
-    fetchProdutos()
-  }, [fetchProdutos])
+    fetchProducts()
+  }, [fetchProducts])
 
-  const handleCreate = async (data: Omit<Produto, "id">) => {
+  const handleCreate = async (data: Omit<Product, "id">) => {
     try {
       setFormLoading(true)
-      await api.produtos.create(data)
+      await api.products.create(data)
       toast({
         title: t('success'),
         description: t('productCreatedSuccess'),
       })
       setIsFormOpen(false)
-      fetchProdutos()
+      fetchProducts()
     } catch (error) {
       toast({
         title: t('error'),
@@ -105,19 +105,19 @@ export default function ProdutosPage() {
     }
   }
 
-  const handleUpdate = async (data: Partial<Produto>) => {
-    if (!editingProduto) return
+  const handleUpdate = async (data: Partial<Product>) => {
+    if (!editingProduct) return
 
     try {
       setFormLoading(true)
-      await api.produtos.update(editingProduto.id, data)
+      await api.products.update(editingProduct.id, data)
       toast({
         title: t('success'),
         description: t('productUpdatedSuccess'),
       })
       setIsFormOpen(false)
-      setEditingProduto(undefined)
-      fetchProdutos()
+      setEditingProduct(undefined)
+      fetchProducts()
     } catch (error) {
       toast({
         title: t('error'),
@@ -133,12 +133,12 @@ export default function ProdutosPage() {
     if (!confirm(t('confirmDeleteProduct'))) return
 
     try {
-      await api.produtos.delete(id)
+      await api.products.delete(id)
       toast({
         title: t('success'),
         description: t('productDeletedSuccess'),
       })
-      fetchProdutos()
+      fetchProducts()
     } catch (error) {
       toast({
         title: t('error'),
@@ -157,16 +157,16 @@ export default function ProdutosPage() {
     }
   }
 
-  const getEstoqueStatus = (estoque: number) => {
-    if (estoque === 0) {
+  const getStockStatus = (stock: number) => {
+    if (stock === 0) {
       return <Badge variant="destructive">{t('outOfStock')}</Badge>
-    } else if (estoque <= 10) {
+    } else if (stock <= 10) {
       return <Badge variant="secondary">{t('lowStock')}</Badge>
     }
     return <Badge variant="default">{t('inStock')}</Badge>
   }
 
-  const categorias = [
+  const categories = [
     { value: "Todos", label: t('allCategories') },
     { value: "Eletrônicos", label: "Eletrônicos" },
     { value: "Casa", label: "Casa" },
@@ -212,19 +212,19 @@ export default function ProdutosPage() {
                   className="pl-9"
                 />
               </div>
-              <Select value={categoriaFilter} onValueChange={setCategoriaFilter}>
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder={t('category')} />
                 </SelectTrigger>
                 <SelectContent>
-                  {categorias.map((categoria) => (
-                    <SelectItem key={categoria.value} value={categoria.value}>
-                      {categoria.label}
+                  {categories.map((category) => (
+                    <SelectItem key={category.value} value={category.value}>
+                      {category.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <Select value={estoqueFilter} onValueChange={setEstoqueFilter}>
+              <Select value={stockFilter} onValueChange={setStockFilter}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder={t('stock')} />
                 </SelectTrigger>
@@ -245,47 +245,47 @@ export default function ProdutosPage() {
                   <TableRow>
                     <TableHead 
                       className="cursor-pointer" 
-                      onClick={() => handleSort("nome")}
+                      onClick={() => handleSort("name")}
                     >
-                      {t('name')} {sortBy === "nome" && (sortOrder === "asc" ? "↑" : "↓")}
+                      {t('name')} {sortBy === "name" && (sortOrder === "asc" ? "↑" : "↓")}
                     </TableHead>
                     <TableHead 
                       className="cursor-pointer" 
-                      onClick={() => handleSort("preco")}
+                      onClick={() => handleSort("price")}
                     >
-                      {t('price')} {sortBy === "preco" && (sortOrder === "asc" ? "↑" : "↓")}
+                      {t('price')} {sortBy === "price" && (sortOrder === "asc" ? "↑" : "↓")}
                     </TableHead>
                     <TableHead 
                       className="cursor-pointer" 
-                      onClick={() => handleSort("categoria")}
+                      onClick={() => handleSort("category")}
                     >
-                      {t('category')} {sortBy === "categoria" && (sortOrder === "asc" ? "↑" : "↓")}
+                      {t('category')} {sortBy === "category" && (sortOrder === "asc" ? "↑" : "↓")}
                     </TableHead>
                     <TableHead 
                       className="cursor-pointer" 
-                      onClick={() => handleSort("estoque")}
+                      onClick={() => handleSort("stock")}
                     >
-                      {t('stock')} {sortBy === "estoque" && (sortOrder === "asc" ? "↑" : "↓")}
+                      {t('stock')} {sortBy === "stock" && (sortOrder === "asc" ? "↑" : "↓")}
                     </TableHead>
                     <TableHead>{t('status')}</TableHead>
                     <TableHead className="text-right">{t('actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {produtos.map((produto) => (
-                    <TableRow key={produto.id}>
-                      <TableCell className="font-medium">{produto.nome}</TableCell>
-                      <TableCell>{produto.preco}</TableCell>
-                      <TableCell>{produto.categoria}</TableCell>
-                      <TableCell>{produto.estoque}</TableCell>
-                      <TableCell>{getEstoqueStatus(produto.estoque)}</TableCell>
+                  {products.map((product) => (
+                    <TableRow key={product.id}>
+                      <TableCell className="font-medium">{product.name}</TableCell>
+                      <TableCell>{product.price}</TableCell>
+                      <TableCell>{product.category}</TableCell>
+                      <TableCell>{product.stock}</TableCell>
+                      <TableCell>{getStockStatus(product.stock)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => {
-                              setEditingProduto(produto)
+                              setEditingProduct(product)
                               setIsFormOpen(true)
                             }}
                           >
@@ -294,7 +294,7 @@ export default function ProdutosPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleDelete(produto.id)}
+                            onClick={() => handleDelete(product.id)}
                             className="text-red-600 hover:text-red-700"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -303,7 +303,7 @@ export default function ProdutosPage() {
                       </TableCell>
                     </TableRow>
                   ))}
-                  {produtos.length === 0 && (
+                  {products.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                         {t('noProductsFound')}
@@ -317,14 +317,14 @@ export default function ProdutosPage() {
         </Card>
       </div>
 
-      <ProdutoForm
-        produto={editingProduto}
+      <ProductForm
+        product={editingProduct}
         open={isFormOpen}
         onOpenChange={(open) => {
           setIsFormOpen(open)
-          if (!open) setEditingProduto(undefined)
+          if (!open) setEditingProduct(undefined)
         }}
-        onSubmit={editingProduto ? handleUpdate : handleCreate}
+        onSubmit={editingProduct ? handleUpdate : handleCreate}
         loading={formLoading}
       />
     </div>

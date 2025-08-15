@@ -52,8 +52,8 @@ Do not commit those credentials anywhere. Just use it on dev testing.
 - **Authentication**: JWT-based auth with bcrypt password hashing (`server/auth.js`)
 - **Database**: PostgreSQL with connection pooling (`server/database.js`)
 - **API Endpoints**: RESTful APIs for all entities (`server/api-routes.js`)
-- **Frontend API**: Client-side API wrapper in `src/lib/api.ts` (if exists) for frontend data operations
-- **Entities**: Negocio (deals), Cliente (customers), Atendimento (service tickets), Produto (products), PautaVenda (sales agenda), Users
+- **Frontend API**: Client-side API wrapper in `src/lib/api-client.ts` for frontend data operations
+- **Entities**: Deal (deals), Client (customers), Appointment (service tickets), Product (products), SalesAgenda (sales agenda), Users
 
 ### UI Architecture  
 - **React Router**: Pages in `src/pages/` directory with React Router navigation
@@ -87,7 +87,11 @@ Do not commit those credentials anywhere. Just use it on dev testing.
 - `POST /api/auth/register` - User registration
 - `GET /api/auth/verify` - Token verification
 - `POST /api/auth/logout` - User logout
-- RESTful endpoints for all entities (protected by JWT)
+- `GET/POST/PUT/DELETE /api/deals` - Deal management endpoints
+- `GET/POST/PUT/DELETE /api/clients` - Client management endpoints
+- `GET/POST/PUT/DELETE /api/appointments` - Appointment management endpoints
+- `GET/POST/PUT/DELETE /api/products` - Product management endpoints
+- `GET/POST/PUT/DELETE /api/sales-agenda` - Sales agenda management endpoints
 
 ## Key Files
 
@@ -119,11 +123,11 @@ Do not commit those credentials anywhere. Just use it on dev testing.
 
 ## Entity Schemas
 
-**Negocio (Deal)**: id, cliente, valor, status ("Em Andamento"|"Proposta"|"Fechado"), data, descricao  
-**Cliente (Customer)**: id, nome, email, telefone, cidade, endereco, empresa  
-**Atendimento (Service)**: id, cliente, tipo ("Suporte"|"Vendas"|"Consultoria"), status, data, hora, descricao  
-**Produto (Product)**: id, nome, preco, categoria, estoque, descricao  
-**PautaVenda (Sales Agenda)**: id, titulo, cliente, valor, data, status ("Ativa"|"Concluída"|"Cancelada")
+**Deal**: id, client, value, status ("Em Andamento"|"Proposta"|"Fechado"), date, description  
+**Client**: id, name, email, phone, city, address, company  
+**Appointment**: id, client, type ("Suporte"|"Vendas"|"Consultoria"), status, scheduled_datetime, description  
+**Product**: id, name, price, category, stock, description  
+**SalesAgenda**: id, title, client, value, date, status ("Ativa"|"Concluída"|"Cancelada")
 
 ## UI/UX Patterns
 
@@ -222,3 +226,4 @@ The project uses **Flyway** for database schema management with Docker integrati
 - **Baseline is set at version 1** - existing schema is preserved
 - **Avoid breaking migrations**: When removing a used column, first add the new column, update the code, then plan a future migration to remove the old column
 - **Update this documentation**: When learning about new patterns, tools, or implementation details that will speed up future work or reduce token usage, update this CLAUDE.md file immediately to preserve the knowledge
+- use english as default for development (variables, file names, columns, tables, etc)

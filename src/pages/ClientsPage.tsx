@@ -13,32 +13,23 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { ArrowLeft, Plus, Pencil, Trash2, Search } from "lucide-react"
-import { api, type Negocio } from "@/lib/api-client"
-import { NegocioForm } from "@/components/forms/negocio-form"
+import { ArrowLeft, Plus, Pencil, Trash2, Search, Mail, Phone, MapPin, Building } from "lucide-react"
+import { api, type Client } from "@/lib/api-client"
+import { ClientForm } from "@/components/forms/client-form"
 import { useToast } from "@/hooks/use-toast"
-import { ReactiveDateTime } from "@/components/reactive-datetime"
 
-export default function NegociosPage() {
+export default function ClientsPage() {
   const { t } = useTranslation()
   const [searchParams, setSearchParams] = useSearchParams()
-  const [negocios, setNegocios] = useState<Negocio[]>([])
+  const [clients, setClients] = useState<Client[]>([])
   const [loading, setLoading] = useState(true)
   const [formLoading, setFormLoading] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState("Todos")
   const [sortBy, setSortBy] = useState("")
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc")
   
   const [isFormOpen, setIsFormOpen] = useState(false)
-  const [editingNegocio, setEditingNegocio] = useState<Negocio | undefined>()
+  const [editingClient, setEditingClient] = useState<Client | undefined>()
   
   const { toast } = useToast()
 
@@ -46,7 +37,7 @@ export default function NegociosPage() {
   useEffect(() => {
     if (searchParams.get('new') === 'true') {
       setIsFormOpen(true)
-      setEditingNegocio(undefined)
+      setEditingClient(undefined)
       // Remove the query parameter after opening
       const newParams = new URLSearchParams(searchParams)
       newParams.delete('new')
@@ -54,49 +45,48 @@ export default function NegociosPage() {
     }
   }, [searchParams, setSearchParams])
 
-  const fetchNegocios = useCallback(async () => {
+  const fetchClients = useCallback(async () => {
     try {
       setLoading(true)
       const filters: any = {}
       
       if (searchTerm) filters.search = searchTerm
-      if (statusFilter !== "Todos") filters.status = statusFilter
       if (sortBy) {
         filters.sortBy = sortBy
         filters.sortOrder = sortOrder
       }
       
-      const result = await api.negocios.getAll(filters)
-      setNegocios(result.data)
+      const result = await api.clients.getAll(filters)
+      setClients(result.data)
     } catch (error) {
       toast({
         title: t('error'),
-        description: t('dealLoadError'),
+        description: t('clientLoadError'),
         variant: "destructive",
       })
     } finally {
       setLoading(false)
     }
-  }, [searchTerm, statusFilter, sortBy, sortOrder, toast, t])
+  }, [searchTerm, sortBy, sortOrder, toast, t])
 
   useEffect(() => {
-    fetchNegocios()
-  }, [fetchNegocios])
+    fetchClients()
+  }, [fetchClients])
 
-  const handleCreate = async (data: Omit<Negocio, "id">) => {
+  const handleCreate = async (data: Omit<Client, "id">) => {
     try {
       setFormLoading(true)
-      await api.negocios.create(data)
+      await api.clients.create(data)
       toast({
         title: t('success'),
-        description: t('dealCreatedSuccess'),
+        description: t('clientCreatedSuccess'),
       })
       setIsFormOpen(false)
-      fetchNegocios()
+      fetchClients()
     } catch (error) {
       toast({
         title: t('error'),
-        description: t('dealCreateError'),
+        description: t('clientCreateError'),
         variant: "destructive",
       })
     } finally {
@@ -104,23 +94,23 @@ export default function NegociosPage() {
     }
   }
 
-  const handleUpdate = async (data: Partial<Negocio>) => {
-    if (!editingNegocio) return
+  const handleUpdate = async (data: Partial<Client>) => {
+    if (!editingClient) return
 
     try {
       setFormLoading(true)
-      await api.negocios.update(editingNegocio.id, data)
+      await api.clients.update(editingClient.id, data)
       toast({
         title: t('success'),
-        description: t('dealUpdatedSuccess'),
+        description: t('clientUpdatedSuccess'),
       })
       setIsFormOpen(false)
-      setEditingNegocio(undefined)
-      fetchNegocios()
+      setEditingClient(undefined)
+      fetchClients()
     } catch (error) {
       toast({
         title: t('error'),
-        description: t('dealUpdateError'),
+        description: t('clientUpdateError'),
         variant: "destructive",
       })
     } finally {
@@ -129,19 +119,19 @@ export default function NegociosPage() {
   }
 
   const handleDelete = async (id: number) => {
-    if (!confirm(t('confirmDeleteDeal'))) return
+    if (!confirm(t('confirmDeleteClient'))) return
 
     try {
-      await api.negocios.delete(id)
+      await api.clients.delete(id)
       toast({
         title: t('success'),
-        description: t('dealDeletedSuccess'),
+        description: t('clientDeletedSuccess'),
       })
-      fetchNegocios()
+      fetchClients()
     } catch (error) {
       toast({
         title: t('error'),
-        description: t('dealDeleteError'),
+        description: t('clientDeleteError'),
         variant: "destructive",
       })
     }
@@ -156,26 +146,6 @@ export default function NegociosPage() {
     }
   }
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "Proposta":
-        return <Badge variant="secondary">{t('proposal')}</Badge>
-      case "Em Andamento":
-        return <Badge variant="default">{t('inProgress')}</Badge>
-      case "Fechado":
-        return <Badge variant="outline">{t('closed')}</Badge>
-      default:
-        return <Badge>{status}</Badge>
-    }
-  }
-
-  const statusOptions = [
-    { value: "Todos", label: t('allStatuses') },
-    { value: "Proposta", label: t('proposal') },
-    { value: "Em Andamento", label: t('inProgress') },
-    { value: "Fechado", label: t('closed') }
-  ]
-
   return (
     <div className="min-h-screen bg-background">
       <header className="bg-card shadow-sm border-b">
@@ -188,11 +158,11 @@ export default function NegociosPage() {
                   {t('backButton')}
                 </Link>
               </Button>
-              <h1 className="text-xl font-semibold text-foreground">{t('dealsTitle')}</h1>
+              <h1 className="text-xl font-semibold text-foreground">{t('clientsTitle')}</h1>
             </div>
             <Button onClick={() => setIsFormOpen(true)}>
               <Plus className="w-4 h-4 mr-2" />
-              {t('newDeal')}
+              {t('newClient')}
             </Button>
           </div>
         </div>
@@ -201,81 +171,86 @@ export default function NegociosPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Card>
           <CardHeader>
-            <CardTitle>{t('dealsManagement')}</CardTitle>
+            <CardTitle>{t('clientsManagement')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder={t('searchDeals')}
+                  placeholder={t('searchClients')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-9"
                 />
               </div>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder={t('status')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {statusOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
 
             {loading ? (
-              <div className="text-center py-8">{t('loadingDeals')}</div>
+              <div className="text-center py-8">{t('loadingClients')}</div>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead 
                       className="cursor-pointer" 
-                      onClick={() => handleSort("cliente")}
+                      onClick={() => handleSort("name")}
                     >
-                      {t('client')} {sortBy === "cliente" && (sortOrder === "asc" ? "↑" : "↓")}
+                      {t('name')} {sortBy === "name" && (sortOrder === "asc" ? "↑" : "↓")}
                     </TableHead>
                     <TableHead 
                       className="cursor-pointer" 
-                      onClick={() => handleSort("valor")}
+                      onClick={() => handleSort("email")}
                     >
-                      {t('value')} {sortBy === "valor" && (sortOrder === "asc" ? "↑" : "↓")}
+                      {t('email')} {sortBy === "email" && (sortOrder === "asc" ? "↑" : "↓")}
                     </TableHead>
                     <TableHead 
                       className="cursor-pointer" 
-                      onClick={() => handleSort("status")}
+                      onClick={() => handleSort("phone")}
                     >
-                      {t('status')} {sortBy === "status" && (sortOrder === "asc" ? "↑" : "↓")}
+                      {t('phone')} {sortBy === "phone" && (sortOrder === "asc" ? "↑" : "↓")}
                     </TableHead>
                     <TableHead 
                       className="cursor-pointer" 
-                      onClick={() => handleSort("data")}
+                      onClick={() => handleSort("city")}
                     >
-                      {t('date')} {sortBy === "data" && (sortOrder === "asc" ? "↑" : "↓")}
+                      {t('city')} {sortBy === "city" && (sortOrder === "asc" ? "↑" : "↓")}
                     </TableHead>
-                    <TableHead>{t('description')}</TableHead>
+                    <TableHead>{t('company')}</TableHead>
                     <TableHead className="text-right">{t('actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {negocios.map((negocio) => (
-                    <TableRow key={negocio.id}>
-                      <TableCell className="font-medium">{negocio.cliente}</TableCell>
-                      <TableCell>{negocio.valor}</TableCell>
-                      <TableCell>{getStatusBadge(negocio.status)}</TableCell>
+                  {clients.map((client) => (
+                    <TableRow key={client.id}>
+                      <TableCell className="font-medium">{client.name}</TableCell>
                       <TableCell>
-                        <ReactiveDateTime 
-                          value={negocio.data}
-                          type="date"
-                        />
+                        <div className="flex items-center gap-2">
+                          <Mail className="h-4 w-4 text-muted-foreground" />
+                          {client.email}
+                        </div>
                       </TableCell>
-                      <TableCell className="max-w-xs truncate">
-                        {negocio.descricao || "-"}
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Phone className="h-4 w-4 text-muted-foreground" />
+                          {client.phone}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-muted-foreground" />
+                          {client.city}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {client.company ? (
+                          <div className="flex items-center gap-2">
+                            <Building className="h-4 w-4 text-muted-foreground" />
+                            <Badge variant="outline">{client.company}</Badge>
+                          </div>
+                        ) : (
+                          "-"
+                        )}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
@@ -283,7 +258,7 @@ export default function NegociosPage() {
                             variant="outline"
                             size="sm"
                             onClick={() => {
-                              setEditingNegocio(negocio)
+                              setEditingClient(client)
                               setIsFormOpen(true)
                             }}
                           >
@@ -292,7 +267,7 @@ export default function NegociosPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleDelete(negocio.id)}
+                            onClick={() => handleDelete(client.id)}
                             className="text-red-600 hover:text-red-700"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -301,10 +276,10 @@ export default function NegociosPage() {
                       </TableCell>
                     </TableRow>
                   ))}
-                  {negocios.length === 0 && (
+                  {clients.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                        {t('noDealsFound')}
+                        {t('noClientsFound')}
                       </TableCell>
                     </TableRow>
                   )}
@@ -315,14 +290,14 @@ export default function NegociosPage() {
         </Card>
       </div>
 
-      <NegocioForm
-        negocio={editingNegocio}
+      <ClientForm
+        client={editingClient}
         open={isFormOpen}
         onOpenChange={(open) => {
           setIsFormOpen(open)
-          if (!open) setEditingNegocio(undefined)
+          if (!open) setEditingClient(undefined)
         }}
-        onSubmit={editingNegocio ? handleUpdate : handleCreate}
+        onSubmit={editingClient ? handleUpdate : handleCreate}
         loading={formLoading}
       />
     </div>

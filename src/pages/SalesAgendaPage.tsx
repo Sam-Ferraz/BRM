@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   Table,
   TableBody,
@@ -14,26 +13,32 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { ArrowLeft, Plus, Pencil, Trash2, Search, Clock, User, HeadphonesIcon } from "lucide-react"
-import { api, type Atendimento } from "@/lib/api-client"
-import { AtendimentoForm } from "@/components/forms/atendimento-form"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { ArrowLeft, Plus, Pencil, Trash2, Search, DollarSign, Calendar, User } from "lucide-react"
+import { api, type SalesAgenda } from "@/lib/api-client"
+import { SalesAgendaForm } from "@/components/forms/sales-agenda-form"
 import { useToast } from "@/hooks/use-toast"
-import { ReactiveDateTime } from "@/components/reactive-datetime"
+import { formatDate } from "@/lib/datetime"
 
-export default function AtendimentosPage() {
+export default function SalesAgendaPage() {
   const { t } = useTranslation()
   const [searchParams, setSearchParams] = useSearchParams()
-  const [atendimentos, setAtendimentos] = useState<Atendimento[]>([])
+  const [salesAgendas, setSalesAgendas] = useState<SalesAgenda[]>([])
   const [loading, setLoading] = useState(true)
   const [formLoading, setFormLoading] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("Todos")
-  const [tipoFilter, setTipoFilter] = useState("Todos")
   const [sortBy, setSortBy] = useState("")
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc")
   
   const [isFormOpen, setIsFormOpen] = useState(false)
-  const [editingAtendimento, setEditingAtendimento] = useState<Atendimento | undefined>()
+  const [editingSalesAgenda, setEditingSalesAgenda] = useState<SalesAgenda | undefined>()
   
   const { toast } = useToast()
 
@@ -41,7 +46,7 @@ export default function AtendimentosPage() {
   useEffect(() => {
     if (searchParams.get('new') === 'true') {
       setIsFormOpen(true)
-      setEditingAtendimento(undefined)
+      setEditingSalesAgenda(undefined)
       // Remove the query parameter after opening
       const newParams = new URLSearchParams(searchParams)
       newParams.delete('new')
@@ -49,50 +54,49 @@ export default function AtendimentosPage() {
     }
   }, [searchParams, setSearchParams])
 
-  const fetchAtendimentos = useCallback(async () => {
+  const fetchSalesAgendas = useCallback(async () => {
     try {
       setLoading(true)
       const filters: any = {}
       
       if (searchTerm) filters.search = searchTerm
-      if (statusFilter && statusFilter !== "Todos") filters.status = statusFilter
-      if (tipoFilter && tipoFilter !== "Todos") filters.tipo = tipoFilter
+      if (statusFilter !== "Todos") filters.status = statusFilter
       if (sortBy) {
         filters.sortBy = sortBy
         filters.sortOrder = sortOrder
       }
       
-      const result = await api.atendimentos.getAll(filters)
-      setAtendimentos(result.data)
+      const result = await api.salesAgendas.getAll(filters)
+      setSalesAgendas(result.data)
     } catch (error) {
       toast({
         title: t('error'),
-        description: t('serviceLoadError'),
+        description: t('salesAgendaLoadError'),
         variant: "destructive",
       })
     } finally {
       setLoading(false)
     }
-  }, [searchTerm, statusFilter, tipoFilter, sortBy, sortOrder, toast, t])
+  }, [searchTerm, statusFilter, sortBy, sortOrder, toast, t])
 
   useEffect(() => {
-    fetchAtendimentos()
-  }, [fetchAtendimentos])
+    fetchSalesAgendas()
+  }, [fetchSalesAgendas])
 
-  const handleCreate = async (data: Omit<Atendimento, "id">) => {
+  const handleCreate = async (data: Omit<SalesAgenda, "id">) => {
     try {
       setFormLoading(true)
-      await api.atendimentos.create(data)
+      await api.salesAgendas.create(data)
       toast({
         title: t('success'),
-        description: t('serviceCreatedSuccess'),
+        description: t('salesAgendaCreatedSuccess'),
       })
       setIsFormOpen(false)
-      fetchAtendimentos()
+      fetchSalesAgendas()
     } catch (error) {
       toast({
         title: t('error'),
-        description: t('serviceCreateError'),
+        description: t('salesAgendaCreateError'),
         variant: "destructive",
       })
     } finally {
@@ -100,23 +104,23 @@ export default function AtendimentosPage() {
     }
   }
 
-  const handleUpdate = async (data: Partial<Atendimento>) => {
-    if (!editingAtendimento) return
+  const handleUpdate = async (data: Partial<SalesAgenda>) => {
+    if (!editingSalesAgenda) return
 
     try {
       setFormLoading(true)
-      await api.atendimentos.update(editingAtendimento.id, data)
+      await api.salesAgendas.update(editingSalesAgenda.id, data)
       toast({
         title: t('success'),
-        description: t('serviceUpdatedSuccess'),
+        description: t('salesAgendaUpdatedSuccess'),
       })
       setIsFormOpen(false)
-      setEditingAtendimento(undefined)
-      fetchAtendimentos()
+      setEditingSalesAgenda(undefined)
+      fetchSalesAgendas()
     } catch (error) {
       toast({
         title: t('error'),
-        description: t('serviceUpdateError'),
+        description: t('salesAgendaUpdateError'),
         variant: "destructive",
       })
     } finally {
@@ -125,19 +129,19 @@ export default function AtendimentosPage() {
   }
 
   const handleDelete = async (id: number) => {
-    if (!confirm(t('confirmDeleteService'))) return
+    if (!confirm(t('confirmDeleteSalesAgenda'))) return
 
     try {
-      await api.atendimentos.delete(id)
+      await api.salesAgendas.delete(id)
       toast({
         title: t('success'),
-        description: t('serviceDeletedSuccess'),
+        description: t('salesAgendaDeletedSuccess'),
       })
-      fetchAtendimentos()
+      fetchSalesAgendas()
     } catch (error) {
       toast({
         title: t('error'),
-        description: t('serviceDeleteError'),
+        description: t('salesAgendaDeleteError'),
         variant: "destructive",
       })
     }
@@ -152,31 +156,25 @@ export default function AtendimentosPage() {
     }
   }
 
-  const getStatusBadgeVariant = (status: string) => {
+  const getStatusBadge = (status: string) => {
     switch (status) {
-      case "Concluído":
-        return "default"
-      case "Em Andamento":
-        return "secondary"
-      case "Pendente":
-        return "destructive"
+      case "Ativa":
+        return <Badge variant="default">{t('active')}</Badge>
+      case "Concluída":
+        return <Badge variant="outline">{t('completed')}</Badge>
+      case "Cancelada":
+        return <Badge variant="destructive">{t('cancelled')}</Badge>
       default:
-        return "outline"
+        return <Badge>{status}</Badge>
     }
   }
 
-  const getTipoBadgeVariant = (tipo: string) => {
-    switch (tipo) {
-      case "Suporte":
-        return "destructive"
-      case "Vendas":
-        return "default"
-      case "Consultoria":
-        return "secondary"
-      default:
-        return "outline"
-    }
-  }
+  const statusOptions = [
+    { value: "Todos", label: t('allStatuses') },
+    { value: "Ativa", label: t('active') },
+    { value: "Concluída", label: t('completed') },
+    { value: "Cancelada", label: t('cancelled') }
+  ]
 
   return (
     <div className="min-h-screen bg-background">
@@ -190,11 +188,11 @@ export default function AtendimentosPage() {
                   {t('backButton')}
                 </Link>
               </Button>
-              <h1 className="text-xl font-semibold text-foreground">{t('servicesTitle')}</h1>
+              <h1 className="text-xl font-semibold text-foreground">{t('salesAgendaTitle')}</h1>
             </div>
             <Button onClick={() => setIsFormOpen(true)}>
               <Plus className="w-4 h-4 mr-2" />
-              {t('newService')}
+              {t('newSalesAgenda')}
             </Button>
           </div>
         </div>
@@ -203,111 +201,102 @@ export default function AtendimentosPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Card>
           <CardHeader>
-            <CardTitle>{t('servicesManagement')}</CardTitle>
+            <CardTitle>{t('salesAgendaManagement')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder={t('searchServices')}
+                  placeholder={t('searchSalesAgenda')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-9"
                 />
               </div>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-full sm:w-40">
+                <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder={t('status')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Todos">{t('allStatuses')}</SelectItem>
-                  <SelectItem value="Pendente">Pendente</SelectItem>
-                  <SelectItem value="Em Andamento">{t('inProgress')}</SelectItem>
-                  <SelectItem value="Concluído">{t('completed')}</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={tipoFilter} onValueChange={setTipoFilter}>
-                <SelectTrigger className="w-full sm:w-40">
-                  <SelectValue placeholder={t('type')} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Todos">{t('allTypes')}</SelectItem>
-                  <SelectItem value="Suporte">{t('supportType')}</SelectItem>
-                  <SelectItem value="Vendas">{t('salesType')}</SelectItem>
-                  <SelectItem value="Consultoria">{t('consultingType')}</SelectItem>
+                  {statusOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
 
             {loading ? (
-              <div className="text-center py-8">{t('loadingServices')}</div>
+              <div className="text-center py-8">{t('loadingSalesAgenda')}</div>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead 
                       className="cursor-pointer" 
-                      onClick={() => handleSort("cliente")}
+                      onClick={() => handleSort("title")}
                     >
-                      {t('client')} {sortBy === "cliente" && (sortOrder === "asc" ? "↑" : "↓")}
+                      {t('title')} {sortBy === "title" && (sortOrder === "asc" ? "↑" : "↓")}
                     </TableHead>
-                    <TableHead>{t('type')}</TableHead>
-                    <TableHead>{t('status')}</TableHead>
                     <TableHead 
                       className="cursor-pointer" 
-                      onClick={() => handleSort("data")}
+                      onClick={() => handleSort("client")}
                     >
-                      {t('dateTime')} {sortBy === "data" && (sortOrder === "asc" ? "↑" : "↓")}
+                      {t('client')} {sortBy === "client" && (sortOrder === "asc" ? "↑" : "↓")}
                     </TableHead>
-                    <TableHead>{t('description')}</TableHead>
+                    <TableHead 
+                      className="cursor-pointer" 
+                      onClick={() => handleSort("value")}
+                    >
+                      {t('value')} {sortBy === "value" && (sortOrder === "asc" ? "↑" : "↓")}
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer" 
+                      onClick={() => handleSort("date")}
+                    >
+                      {t('date')} {sortBy === "date" && (sortOrder === "asc" ? "↑" : "↓")}
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer" 
+                      onClick={() => handleSort("status")}
+                    >
+                      {t('status')} {sortBy === "status" && (sortOrder === "asc" ? "↑" : "↓")}
+                    </TableHead>
                     <TableHead className="text-right">{t('actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {atendimentos.map((atendimento) => (
-                    <TableRow key={atendimento.id}>
-                      <TableCell className="font-medium">
+                  {salesAgendas.map((agenda) => (
+                    <TableRow key={agenda.id}>
+                      <TableCell className="font-medium">{agenda.title}</TableCell>
+                      <TableCell>
                         <div className="flex items-center gap-2">
                           <User className="h-4 w-4 text-muted-foreground" />
-                          {atendimento.cliente}
+                          {agenda.client}
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={getTipoBadgeVariant(atendimento.tipo)}>
-                          {atendimento.tipo}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={getStatusBadgeVariant(atendimento.status)}>
-                          {atendimento.status}
-                        </Badge>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4 text-muted-foreground" />
-                          <ReactiveDateTime 
-                            value={atendimento.datetime_agendamento}
-                            type="datetime"
-                          />
+                          <DollarSign className="h-4 w-4 text-muted-foreground" />
+                          {agenda.value}
                         </div>
                       </TableCell>
                       <TableCell>
-                        {atendimento.descricao ? (
-                          <span className="text-sm text-muted-foreground truncate max-w-32 block">
-                            {atendimento.descricao}
-                          </span>
-                        ) : (
-                          "-"
-                        )}
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-muted-foreground" />
+                          {formatDate(agenda.date)}
+                        </div>
                       </TableCell>
+                      <TableCell>{getStatusBadge(agenda.status)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => {
-                              setEditingAtendimento(atendimento)
+                              setEditingSalesAgenda(agenda)
                               setIsFormOpen(true)
                             }}
                           >
@@ -316,7 +305,7 @@ export default function AtendimentosPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleDelete(atendimento.id)}
+                            onClick={() => handleDelete(agenda.id)}
                             className="text-red-600 hover:text-red-700"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -325,10 +314,10 @@ export default function AtendimentosPage() {
                       </TableCell>
                     </TableRow>
                   ))}
-                  {atendimentos.length === 0 && (
+                  {salesAgendas.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                        {t('noServicesFound')}
+                        {t('noSalesAgendaFound')}
                       </TableCell>
                     </TableRow>
                   )}
@@ -339,14 +328,14 @@ export default function AtendimentosPage() {
         </Card>
       </div>
 
-      <AtendimentoForm
-        atendimento={editingAtendimento}
+      <SalesAgendaForm
+        salesAgenda={editingSalesAgenda}
         open={isFormOpen}
         onOpenChange={(open) => {
           setIsFormOpen(open)
-          if (!open) setEditingAtendimento(undefined)
+          if (!open) setEditingSalesAgenda(undefined)
         }}
-        onSubmit={editingAtendimento ? handleUpdate : handleCreate}
+        onSubmit={editingSalesAgenda ? handleUpdate : handleCreate}
         loading={formLoading}
       />
     </div>

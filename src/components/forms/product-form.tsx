@@ -9,17 +9,17 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import type { Produto } from "@/lib/api-client"
+import type { Product } from "@/lib/api-client"
 
-interface ProdutoFormProps {
-  produto?: Produto
+interface ProductFormProps {
+  product?: Product
   open: boolean
   onOpenChange: (open: boolean) => void
-  onSubmit: (data: Omit<Produto, "id"> | Partial<Produto>) => void
+  onSubmit: (data: Omit<Product, "id"> | Partial<Product>) => void
   loading?: boolean
 }
 
-export function ProdutoForm({ produto, open, onOpenChange, onSubmit, loading }: ProdutoFormProps) {
+export function ProductForm({ product, open, onOpenChange, onSubmit, loading }: ProductFormProps) {
   const { t } = useTranslation()
   const [formData, setFormData] = useState({
     nome: "",
@@ -30,24 +30,24 @@ export function ProdutoForm({ produto, open, onOpenChange, onSubmit, loading }: 
   })
 
   useEffect(() => {
-    if (produto) {
+    if (product) {
       setFormData({
-        nome: produto.nome || "",
-        preco: produto.preco || "",
-        categoria: produto.categoria || "",
-        estoque: produto.estoque || 0,
-        descricao: produto.descricao || "",
+        name: product.name || "",
+        price: product.price || "",
+        category: product.category || "",
+        stock: product.stock || 0,
+        description: product.description || "",
       })
     } else {
       setFormData({
-        nome: "",
-        preco: "",
-        categoria: "",
-        estoque: 0,
-        descricao: "",
+        name: "",
+        price: "",
+        category: "",
+        stock: 0,
+        description: "",
       })
     }
-  }, [produto])
+  }, [product])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -58,15 +58,15 @@ export function ProdutoForm({ produto, open, onOpenChange, onSubmit, loading }: 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>{produto ? t('editProduct') : t('newProduct')}</DialogTitle>
+          <DialogTitle>{product ? t('editProduct') : t('newProduct')}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="nome">{t('name')}</Label>
             <Input
               id="nome"
-              value={formData.nome}
-              onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               required
               tabIndex={1}
             />
@@ -75,8 +75,8 @@ export function ProdutoForm({ produto, open, onOpenChange, onSubmit, loading }: 
             <Label htmlFor="preco">{t('price')}</Label>
             <Input
               id="preco"
-              value={formData.preco}
-              onChange={(e) => setFormData({ ...formData, preco: e.target.value })}
+              value={formData.price}
+              onChange={(e) => setFormData({ ...formData, price: e.target.value })}
               placeholder={t('currencyPlaceholder')}
               required
               tabIndex={2}
@@ -86,8 +86,8 @@ export function ProdutoForm({ produto, open, onOpenChange, onSubmit, loading }: 
             <Label htmlFor="categoria">{t('category')}</Label>
             <Input
               id="categoria"
-              value={formData.categoria}
-              onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
+              value={formData.category}
+              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
               required
               tabIndex={3}
             />
@@ -97,8 +97,8 @@ export function ProdutoForm({ produto, open, onOpenChange, onSubmit, loading }: 
             <Input
               id="estoque"
               type="number"
-              value={formData.estoque}
-              onChange={(e) => setFormData({ ...formData, estoque: Number.parseInt(e.target.value) || 0 })}
+              value={formData.stock}
+              onChange={(e) => setFormData({ ...formData, stock: Number.parseInt(e.target.value) || 0 })}
               required
               tabIndex={4}
             />
@@ -107,8 +107,8 @@ export function ProdutoForm({ produto, open, onOpenChange, onSubmit, loading }: 
             <Label htmlFor="descricao">{t('description')}</Label>
             <Textarea
               id="descricao"
-              value={formData.descricao}
-              onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               rows={3}
               tabIndex={5}
             />

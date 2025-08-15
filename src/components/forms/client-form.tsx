@@ -8,48 +8,48 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import type { Cliente } from "@/lib/api-client"
+import type { Client } from "@/lib/api-client"
 
-interface ClienteFormProps {
-  cliente?: Cliente
+interface ClientFormProps {
+  client?: Client
   open: boolean
   onOpenChange: (open: boolean) => void
-  onSubmit: (data: Omit<Cliente, "id"> | Partial<Cliente>) => void
+  onSubmit: (data: Omit<Client, "id"> | Partial<Client>) => void
   loading?: boolean
 }
 
-export function ClienteForm({ cliente, open, onOpenChange, onSubmit, loading }: ClienteFormProps) {
+export function ClientForm({ client, open, onOpenChange, onSubmit, loading }: ClientFormProps) {
   const { t } = useTranslation()
   const [formData, setFormData] = useState({
-    nome: "",
+    name: "",
     email: "",
-    telefone: "",
-    cidade: "",
-    endereco: "",
-    empresa: "",
+    phone: "",
+    city: "",
+    address: "",
+    company: "",
   })
 
   useEffect(() => {
-    if (cliente) {
+    if (client) {
       setFormData({
-        nome: cliente.nome || "",
-        email: cliente.email || "",
-        telefone: cliente.telefone || "",
-        cidade: cliente.cidade || "",
-        endereco: cliente.endereco || "",
-        empresa: cliente.empresa || "",
+        name: client.name || "",
+        email: client.email || "",
+        phone: client.phone || "",
+        city: client.city || "",
+        address: client.address || "",
+        company: client.company || "",
       })
     } else {
       setFormData({
-        nome: "",
+        name: "",
         email: "",
-        telefone: "",
-        cidade: "",
-        endereco: "",
-        empresa: "",
+        phone: "",
+        city: "",
+        address: "",
+        company: "",
       })
     }
-  }, [cliente])
+  }, [client])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -60,15 +60,15 @@ export function ClienteForm({ cliente, open, onOpenChange, onSubmit, loading }: 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>{cliente ? t('editClient') : t('newClient')}</DialogTitle>
+          <DialogTitle>{client ? t('editClient') : t('newClient')}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="nome">{t('name')}</Label>
+            <Label htmlFor="name">{t('name')}</Label>
             <Input
-              id="nome"
-              value={formData.nome}
-              onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+              id="name"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               required
               tabIndex={1}
             />
@@ -84,38 +84,38 @@ export function ClienteForm({ cliente, open, onOpenChange, onSubmit, loading }: 
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="telefone">{t('phone')}</Label>
+            <Label htmlFor="phone">{t('phone')}</Label>
             <Input
-              id="telefone"
-              value={formData.telefone}
-              onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
+              id="phone"
+              value={formData.phone}
+              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
               tabIndex={3}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="cidade">{t('city')}</Label>
+            <Label htmlFor="city">{t('city')}</Label>
             <Input
-              id="cidade"
-              value={formData.cidade}
-              onChange={(e) => setFormData({ ...formData, cidade: e.target.value })}
+              id="city"
+              value={formData.city}
+              onChange={(e) => setFormData({ ...formData, city: e.target.value })}
               tabIndex={4}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="endereco">{t('address')}</Label>
+            <Label htmlFor="address">{t('address')}</Label>
             <Input
-              id="endereco"
-              value={formData.endereco}
-              onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
+              id="address"
+              value={formData.address}
+              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
               tabIndex={5}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="empresa">{t('company')}</Label>
+            <Label htmlFor="company">{t('company')}</Label>
             <Input
-              id="empresa"
-              value={formData.empresa}
-              onChange={(e) => setFormData({ ...formData, empresa: e.target.value })}
+              id="company"
+              value={formData.company}
+              onChange={(e) => setFormData({ ...formData, company: e.target.value })}
               tabIndex={6}
             />
           </div>

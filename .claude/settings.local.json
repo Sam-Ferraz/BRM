@@ -26,7 +26,10 @@
       "Bash(sudo systemctl start:*)",
       "Bash(sudo systemctl:*)",
       "Bash(npm install:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(for route in deals clients appointments products sales-agenda)",
+      "Bash(do echo -n \"$route: \")",
+      "Bash(done)"
     ],
     "deny": []
   }

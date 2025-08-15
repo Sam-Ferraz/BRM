@@ -4,17 +4,17 @@ import { authenticateToken } from './auth.js'
 // Generic CRUD operations for database entities
 export function createApiRoutes(app) {
   
-  // Negócios routes
-  app.get('/api/negocios', authenticateToken, async (req, res) => {
+  // Deals routes
+  app.get('/api/deals', authenticateToken, async (req, res) => {
     const client = await pool.connect()
     try {
       const { search, status, sortBy, sortOrder } = req.query
-      let query = 'SELECT * FROM negocios WHERE 1=1'
+      let query = 'SELECT * FROM deals WHERE 1=1'
       let params = []
       let paramCount = 1
       
       if (search) {
-        query += ` AND (cliente ILIKE $${paramCount} OR valor ILIKE $${paramCount})`
+        query += ` AND (client ILIKE $${paramCount} OR value ILIKE $${paramCount})`
         params.push(`%${search}%`)
         paramCount++
       }
@@ -26,7 +26,7 @@ export function createApiRoutes(app) {
       }
       
       if (sortBy) {
-        const validColumns = ['cliente', 'valor', 'status', 'data']
+        const validColumns = ['client', 'value', 'status', 'date']
         if (validColumns.includes(sortBy)) {
           const order = sortOrder === 'desc' ? 'DESC' : 'ASC'
           query += ` ORDER BY ${sortBy} ${order}`
@@ -38,313 +38,313 @@ export function createApiRoutes(app) {
       const result = await client.query(query, params)
       res.json({ data: result.rows, total: result.rows.length })
     } catch (error) {
-      console.error('Error fetching negocios:', error)
-      res.status(500).json({ error: 'Erro interno do servidor' })
+      console.error('Error fetching deals:', error)
+      res.status(500).json({ error: 'Internal server error' })
     } finally {
       client.release()
     }
   })
   
-  app.post('/api/negocios', authenticateToken, async (req, res) => {
+  app.post('/api/deals', authenticateToken, async (req, res) => {
     const client = await pool.connect()
     try {
-      const { cliente, valor, status, data, descricao } = req.body
+      const { client: clientName, value, status, date, description } = req.body
       const result = await client.query(
-        'INSERT INTO negocios (cliente, valor, status, data, descricao) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-        [cliente, valor, status, data, descricao]
+        'INSERT INTO deals (client, value, status, date, description) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+        [clientName, value, status, date, description]
       )
       res.json(result.rows[0])
     } catch (error) {
-      console.error('Error creating negocio:', error)
-      res.status(500).json({ error: 'Erro interno do servidor' })
+      console.error('Error creating deal:', error)
+      res.status(500).json({ error: 'Internal server error' })
     } finally {
       client.release()
     }
   })
   
-  app.put('/api/negocios/:id', authenticateToken, async (req, res) => {
+  app.put('/api/deals/:id', authenticateToken, async (req, res) => {
     const client = await pool.connect()
     try {
       const { id } = req.params
-      const { cliente, valor, status, data, descricao } = req.body
+      const { client: clientName, value, status, date, description } = req.body
       const result = await client.query(
-        'UPDATE negocios SET cliente = $1, valor = $2, status = $3, data = $4, descricao = $5, updated_at = CURRENT_TIMESTAMP WHERE id = $6 RETURNING *',
-        [cliente, valor, status, data, descricao, id]
+        'UPDATE deals SET client = $1, value = $2, status = $3, date = $4, description = $5, updated_at = CURRENT_TIMESTAMP WHERE id = $6 RETURNING *',
+        [clientName, value, status, date, description, id]
       )
       if (result.rows.length === 0) {
-        return res.status(404).json({ error: 'Negócio não encontrado' })
+        return res.status(404).json({ error: 'Deal not found' })
       }
       res.json(result.rows[0])
     } catch (error) {
-      console.error('Error updating negocio:', error)
-      res.status(500).json({ error: 'Erro interno do servidor' })
+      console.error('Error updating deal:', error)
+      res.status(500).json({ error: 'Internal server error' })
     } finally {
       client.release()
     }
   })
   
-  app.delete('/api/negocios/:id', authenticateToken, async (req, res) => {
+  app.delete('/api/deals/:id', authenticateToken, async (req, res) => {
     const client = await pool.connect()
     try {
       const { id } = req.params
-      const result = await client.query('DELETE FROM negocios WHERE id = $1 RETURNING *', [id])
+      const result = await client.query('DELETE FROM deals WHERE id = $1 RETURNING *', [id])
       if (result.rows.length === 0) {
-        return res.status(404).json({ error: 'Negócio não encontrado' })
+        return res.status(404).json({ error: 'Deal not found' })
       }
       res.json({ success: true })
     } catch (error) {
-      console.error('Error deleting negocio:', error)
-      res.status(500).json({ error: 'Erro interno do servidor' })
+      console.error('Error deleting deal:', error)
+      res.status(500).json({ error: 'Internal server error' })
     } finally {
       client.release()
     }
   })
   
-  // Clientes routes
-  app.get('/api/clientes', authenticateToken, async (req, res) => {
+  // Clients routes
+  app.get('/api/clients', authenticateToken, async (req, res) => {
     const client = await pool.connect()
     try {
       const { search, sortBy, sortOrder } = req.query
-      let query = 'SELECT * FROM clientes WHERE 1=1'
+      let query = 'SELECT * FROM clients WHERE 1=1'
       let params = []
       let paramCount = 1
       
       if (search) {
-        query += ` AND (nome ILIKE $${paramCount} OR email ILIKE $${paramCount} OR cidade ILIKE $${paramCount})`
+        query += ` AND (name ILIKE $${paramCount} OR email ILIKE $${paramCount} OR city ILIKE $${paramCount})`
         params.push(`%${search}%`)
         paramCount++
       }
       
       if (sortBy) {
-        const validColumns = ['nome', 'email', 'telefone', 'cidade']
+        const validColumns = ['name', 'email', 'phone', 'city']
         if (validColumns.includes(sortBy)) {
           const order = sortOrder === 'desc' ? 'DESC' : 'ASC'
           query += ` ORDER BY ${sortBy} ${order}`
         }
       } else {
-        query += ' ORDER BY nome ASC'
+        query += ' ORDER BY name ASC'
       }
       
       const result = await client.query(query, params)
       res.json({ data: result.rows, total: result.rows.length })
     } catch (error) {
-      console.error('Error fetching clientes:', error)
-      res.status(500).json({ error: 'Erro interno do servidor' })
+      console.error('Error fetching clients:', error)
+      res.status(500).json({ error: 'Internal server error' })
     } finally {
       client.release()
     }
   })
   
-  app.post('/api/clientes', authenticateToken, async (req, res) => {
+  app.post('/api/clients', authenticateToken, async (req, res) => {
     const client = await pool.connect()
     try {
-      const { nome, email, telefone, cidade, endereco, empresa } = req.body
+      const { name, email, phone, city, address, company } = req.body
       const result = await client.query(
-        'INSERT INTO clientes (nome, email, telefone, cidade, endereco, empresa) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-        [nome, email, telefone, cidade, endereco, empresa]
+        'INSERT INTO clients (name, email, phone, city, address, company) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+        [name, email, phone, city, address, company]
       )
       res.json(result.rows[0])
     } catch (error) {
-      console.error('Error creating cliente:', error)
-      res.status(500).json({ error: 'Erro interno do servidor' })
+      console.error('Error creating client:', error)
+      res.status(500).json({ error: 'Internal server error' })
     } finally {
       client.release()
     }
   })
   
-  app.put('/api/clientes/:id', authenticateToken, async (req, res) => {
+  app.put('/api/clients/:id', authenticateToken, async (req, res) => {
     const client = await pool.connect()
     try {
       const { id } = req.params
-      const { nome, email, telefone, cidade, endereco, empresa } = req.body
+      const { name, email, phone, city, address, company } = req.body
       const result = await client.query(
-        'UPDATE clientes SET nome = $1, email = $2, telefone = $3, cidade = $4, endereco = $5, empresa = $6, updated_at = CURRENT_TIMESTAMP WHERE id = $7 RETURNING *',
-        [nome, email, telefone, cidade, endereco, empresa, id]
+        'UPDATE clients SET name = $1, email = $2, phone = $3, city = $4, address = $5, company = $6, updated_at = CURRENT_TIMESTAMP WHERE id = $7 RETURNING *',
+        [name, email, phone, city, address, company, id]
       )
       if (result.rows.length === 0) {
-        return res.status(404).json({ error: 'Cliente não encontrado' })
+        return res.status(404).json({ error: 'Client not found' })
       }
       res.json(result.rows[0])
     } catch (error) {
-      console.error('Error updating cliente:', error)
-      res.status(500).json({ error: 'Erro interno do servidor' })
+      console.error('Error updating client:', error)
+      res.status(500).json({ error: 'Internal server error' })
     } finally {
       client.release()
     }
   })
   
-  app.delete('/api/clientes/:id', authenticateToken, async (req, res) => {
+  app.delete('/api/clients/:id', authenticateToken, async (req, res) => {
     const client = await pool.connect()
     try {
       const { id } = req.params
-      const result = await client.query('DELETE FROM clientes WHERE id = $1 RETURNING *', [id])
+      const result = await client.query('DELETE FROM clients WHERE id = $1 RETURNING *', [id])
       if (result.rows.length === 0) {
-        return res.status(404).json({ error: 'Cliente não encontrado' })
+        return res.status(404).json({ error: 'Client not found' })
       }
       res.json({ success: true })
     } catch (error) {
-      console.error('Error deleting cliente:', error)
-      res.status(500).json({ error: 'Erro interno do servidor' })
+      console.error('Error deleting client:', error)
+      res.status(500).json({ error: 'Internal server error' })
     } finally {
       client.release()
     }
   })
   
-  // Produtos routes
-  app.get('/api/produtos', authenticateToken, async (req, res) => {
+  // Products routes
+  app.get('/api/products', authenticateToken, async (req, res) => {
     const client = await pool.connect()
     try {
-      const { search, categoria, estoque, sortBy, sortOrder } = req.query
-      let query = 'SELECT * FROM produtos WHERE 1=1'
+      const { search, category, stock, sortBy, sortOrder } = req.query
+      let query = 'SELECT * FROM products WHERE 1=1'
       let params = []
       let paramCount = 1
       
       if (search) {
-        query += ` AND (nome ILIKE $${paramCount} OR categoria ILIKE $${paramCount})`
+        query += ` AND (name ILIKE $${paramCount} OR category ILIKE $${paramCount})`
         params.push(`%${search}%`)
         paramCount++
       }
       
-      if (categoria && categoria !== 'Todos') {
-        query += ` AND categoria = $${paramCount}`
-        params.push(categoria)
+      if (category && category !== 'All') {
+        query += ` AND category = $${paramCount}`
+        params.push(category)
         paramCount++
       }
       
-      if (estoque) {
-        switch (estoque) {
-          case 'Em Estoque':
-            query += ` AND estoque > 10`
+      if (stock) {
+        switch (stock) {
+          case 'In Stock':
+            query += ` AND stock > 10`
             break
-          case 'Baixo Estoque':
-            query += ` AND estoque > 0 AND estoque <= 10`
+          case 'Low Stock':
+            query += ` AND stock > 0 AND stock <= 10`
             break
-          case 'Sem Estoque':
-            query += ` AND estoque = 0`
+          case 'Out of Stock':
+            query += ` AND stock = 0`
             break
         }
       }
       
       if (sortBy) {
-        const validColumns = ['nome', 'preco', 'categoria', 'estoque']
+        const validColumns = ['name', 'price', 'category', 'stock']
         if (validColumns.includes(sortBy)) {
           const order = sortOrder === 'desc' ? 'DESC' : 'ASC'
           query += ` ORDER BY ${sortBy} ${order}`
         }
       } else {
-        query += ' ORDER BY nome ASC'
+        query += ' ORDER BY name ASC'
       }
       
       const result = await client.query(query, params)
       res.json({ data: result.rows, total: result.rows.length })
     } catch (error) {
-      console.error('Error fetching produtos:', error)
-      res.status(500).json({ error: 'Erro interno do servidor' })
+      console.error('Error fetching products:', error)
+      res.status(500).json({ error: 'Internal server error' })
     } finally {
       client.release()
     }
   })
   
-  app.post('/api/produtos', authenticateToken, async (req, res) => {
+  app.post('/api/products', authenticateToken, async (req, res) => {
     const client = await pool.connect()
     try {
-      const { nome, preco, categoria, estoque, descricao } = req.body
+      const { name, price, category, stock, description } = req.body
       const result = await client.query(
-        'INSERT INTO produtos (nome, preco, categoria, estoque, descricao) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-        [nome, preco, categoria, estoque, descricao]
+        'INSERT INTO products (name, price, category, stock, description) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+        [name, price, category, stock, description]
       )
       res.json(result.rows[0])
     } catch (error) {
-      console.error('Error creating produto:', error)
-      res.status(500).json({ error: 'Erro interno do servidor' })
+      console.error('Error creating product:', error)
+      res.status(500).json({ error: 'Internal server error' })
     } finally {
       client.release()
     }
   })
   
-  app.put('/api/produtos/:id', authenticateToken, async (req, res) => {
+  app.put('/api/products/:id', authenticateToken, async (req, res) => {
     const client = await pool.connect()
     try {
       const { id } = req.params
-      const { nome, preco, categoria, estoque, descricao } = req.body
+      const { name, price, category, stock, description } = req.body
       const result = await client.query(
-        'UPDATE produtos SET nome = $1, preco = $2, categoria = $3, estoque = $4, descricao = $5, updated_at = CURRENT_TIMESTAMP WHERE id = $6 RETURNING *',
-        [nome, preco, categoria, estoque, descricao, id]
+        'UPDATE products SET name = $1, price = $2, category = $3, stock = $4, description = $5, updated_at = CURRENT_TIMESTAMP WHERE id = $6 RETURNING *',
+        [name, price, category, stock, description, id]
       )
       if (result.rows.length === 0) {
-        return res.status(404).json({ error: 'Produto não encontrado' })
+        return res.status(404).json({ error: 'Product not found' })
       }
       res.json(result.rows[0])
     } catch (error) {
-      console.error('Error updating produto:', error)
-      res.status(500).json({ error: 'Erro interno do servidor' })
+      console.error('Error updating product:', error)
+      res.status(500).json({ error: 'Internal server error' })
     } finally {
       client.release()
     }
   })
   
-  app.delete('/api/produtos/:id', authenticateToken, async (req, res) => {
+  app.delete('/api/products/:id', authenticateToken, async (req, res) => {
     const client = await pool.connect()
     try {
       const { id } = req.params
-      const result = await client.query('DELETE FROM produtos WHERE id = $1 RETURNING *', [id])
+      const result = await client.query('DELETE FROM products WHERE id = $1 RETURNING *', [id])
       if (result.rows.length === 0) {
-        return res.status(404).json({ error: 'Produto não encontrado' })
+        return res.status(404).json({ error: 'Product not found' })
       }
       res.json({ success: true })
     } catch (error) {
-      console.error('Error deleting produto:', error)
-      res.status(500).json({ error: 'Erro interno do servidor' })
+      console.error('Error deleting product:', error)
+      res.status(500).json({ error: 'Internal server error' })
     } finally {
       client.release()
     }
   })
 
-  // Atendimentos routes
-  app.get('/api/atendimentos', authenticateToken, async (req, res) => {
+  // Appointments routes
+  app.get('/api/appointments', authenticateToken, async (req, res) => {
     const client = await pool.connect()
     try {
       // Ensure UTC timezone for this session
       await client.query('SET TIMEZONE = \'UTC\'')
       
-      const { search, status, tipo, sortBy, sortOrder } = req.query
-      let query = 'SELECT * FROM atendimentos WHERE 1=1'
+      const { search, status, type, sortBy, sortOrder } = req.query
+      let query = 'SELECT * FROM appointments WHERE 1=1'
       let params = []
       let paramCount = 1
       
       if (search) {
-        query += ` AND (cliente ILIKE $${paramCount} OR tipo ILIKE $${paramCount})`
+        query += ` AND (client ILIKE $${paramCount} OR type ILIKE $${paramCount})`
         params.push(`%${search}%`)
         paramCount++
       }
       
-      if (status && status !== 'Todos') {
+      if (status && status !== 'All') {
         query += ` AND status = $${paramCount}`
         params.push(status)
         paramCount++
       }
       
-      if (tipo && tipo !== 'Todos') {
-        query += ` AND tipo = $${paramCount}`
-        params.push(tipo)
+      if (type && type !== 'All') {
+        query += ` AND type = $${paramCount}`
+        params.push(type)
         paramCount++
       }
       
       if (sortBy) {
-        const validColumns = ['cliente', 'tipo', 'status', 'datetime_agendamento']
+        const validColumns = ['client', 'type', 'status', 'scheduled_datetime']
         if (validColumns.includes(sortBy)) {
           const order = sortOrder === 'desc' ? 'DESC' : 'ASC'
           query += ` ORDER BY ${sortBy} ${order}`
         }
       } else {
-        query += ' ORDER BY datetime_agendamento DESC'
+        query += ' ORDER BY scheduled_datetime DESC'
       }
       
       const result = await client.query(query, params)
       res.json({ data: result.rows, total: result.rows.length })
     } catch (error) {
-      console.error('Error fetching atendimentos:', error)
-      res.status(500).json({ error: 'Erro interno do servidor' })
+      console.error('Error fetching appointments:', error)
+      res.status(500).json({ error: 'Internal server error' })
     } finally {
       client.release()
     }
@@ -368,158 +368,158 @@ export function createApiRoutes(app) {
     return dateStr
   }
 
-  app.post('/api/atendimentos', authenticateToken, async (req, res) => {
+  app.post('/api/appointments', authenticateToken, async (req, res) => {
     const client = await pool.connect()
     try {
-      const { cliente, tipo, status, datetime_agendamento, descricao } = req.body
+      const { client: clientName, type, status, scheduled_datetime, description } = req.body
       
       // Ensure UTC timezone for this session
       await client.query('SET TIMEZONE = \'UTC\'')
       const result = await client.query(
-        'INSERT INTO atendimentos (cliente, tipo, status, datetime_agendamento, descricao) VALUES ($1, $2, $3, $4::timestamp, $5) RETURNING *',
-        [cliente, tipo, status, datetime_agendamento, descricao]
+        'INSERT INTO appointments (client, type, status, scheduled_datetime, description) VALUES ($1, $2, $3, $4::timestamp, $5) RETURNING *',
+        [clientName, type, status, scheduled_datetime, description]
       )
       res.json(result.rows[0])
     } catch (error) {
-      console.error('Error creating atendimento:', error)
-      res.status(500).json({ error: 'Erro interno do servidor' })
+      console.error('Error creating appointment:', error)
+      res.status(500).json({ error: 'Internal server error' })
     } finally {
       client.release()
     }
   })
   
-  app.put('/api/atendimentos/:id', authenticateToken, async (req, res) => {
+  app.put('/api/appointments/:id', authenticateToken, async (req, res) => {
     const client = await pool.connect()
     try {
       const { id } = req.params
-      const { cliente, tipo, status, datetime_agendamento, descricao } = req.body
+      const { client: clientName, type, status, scheduled_datetime, description } = req.body
       
       // Ensure UTC timezone for this session
       await client.query('SET TIMEZONE = \'UTC\'')
       const result = await client.query(
-        'UPDATE atendimentos SET cliente = $1, tipo = $2, status = $3, datetime_agendamento = $4::timestamp, descricao = $5, updated_at = CURRENT_TIMESTAMP WHERE id = $6 RETURNING *',
-        [cliente, tipo, status, datetime_agendamento, descricao, id]
+        'UPDATE appointments SET client = $1, type = $2, status = $3, scheduled_datetime = $4::timestamp, description = $5, updated_at = CURRENT_TIMESTAMP WHERE id = $6 RETURNING *',
+        [clientName, type, status, scheduled_datetime, description, id]
       )
       if (result.rows.length === 0) {
-        return res.status(404).json({ error: 'Atendimento não encontrado' })
+        return res.status(404).json({ error: 'Appointment not found' })
       }
       res.json(result.rows[0])
     } catch (error) {
-      console.error('Error updating atendimento:', error)
-      res.status(500).json({ error: 'Erro interno do servidor' })
+      console.error('Error updating appointment:', error)
+      res.status(500).json({ error: 'Internal server error' })
     } finally {
       client.release()
     }
   })
   
-  app.delete('/api/atendimentos/:id', authenticateToken, async (req, res) => {
+  app.delete('/api/appointments/:id', authenticateToken, async (req, res) => {
     const client = await pool.connect()
     try {
       const { id } = req.params
-      const result = await client.query('DELETE FROM atendimentos WHERE id = $1 RETURNING *', [id])
+      const result = await client.query('DELETE FROM appointments WHERE id = $1 RETURNING *', [id])
       if (result.rows.length === 0) {
-        return res.status(404).json({ error: 'Atendimento não encontrado' })
+        return res.status(404).json({ error: 'Appointment not found' })
       }
       res.json({ success: true })
     } catch (error) {
-      console.error('Error deleting atendimento:', error)
-      res.status(500).json({ error: 'Erro interno do servidor' })
+      console.error('Error deleting appointment:', error)
+      res.status(500).json({ error: 'Internal server error' })
     } finally {
       client.release()
     }
   })
 
-  // Pauta Vendas routes
-  app.get('/api/pauta-vendas', authenticateToken, async (req, res) => {
+  // Sales Agenda routes
+  app.get('/api/sales-agenda', authenticateToken, async (req, res) => {
     const client = await pool.connect()
     try {
       const { search, status, sortBy, sortOrder } = req.query
-      let query = 'SELECT * FROM pauta_vendas WHERE 1=1'
+      let query = 'SELECT * FROM sales_agenda WHERE 1=1'
       let params = []
       let paramCount = 1
       
       if (search) {
-        query += ` AND (titulo ILIKE $${paramCount} OR cliente ILIKE $${paramCount})`
+        query += ` AND (title ILIKE $${paramCount} OR client ILIKE $${paramCount})`
         params.push(`%${search}%`)
         paramCount++
       }
       
-      if (status && status !== 'Todos') {
+      if (status && status !== 'All') {
         query += ` AND status = $${paramCount}`
         params.push(status)
         paramCount++
       }
       
       if (sortBy) {
-        const validColumns = ['titulo', 'cliente', 'valor', 'data', 'status']
+        const validColumns = ['title', 'client', 'value', 'date', 'status']
         if (validColumns.includes(sortBy)) {
           const order = sortOrder === 'desc' ? 'DESC' : 'ASC'
           query += ` ORDER BY ${sortBy} ${order}`
         }
       } else {
-        query += ' ORDER BY data DESC'
+        query += ' ORDER BY date DESC'
       }
       
       const result = await client.query(query, params)
       res.json({ data: result.rows, total: result.rows.length })
     } catch (error) {
-      console.error('Error fetching pauta vendas:', error)
-      res.status(500).json({ error: 'Erro interno do servidor' })
+      console.error('Error fetching sales agenda:', error)
+      res.status(500).json({ error: 'Internal server error' })
     } finally {
       client.release()
     }
   })
   
-  app.post('/api/pauta-vendas', authenticateToken, async (req, res) => {
+  app.post('/api/sales-agenda', authenticateToken, async (req, res) => {
     const client = await pool.connect()
     try {
-      const { titulo, cliente, valor, data, status } = req.body
+      const { title, client: clientName, value, date, status } = req.body
       const result = await client.query(
-        'INSERT INTO pauta_vendas (titulo, cliente, valor, data, status) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-        [titulo, cliente, valor, data, status]
+        'INSERT INTO sales_agenda (title, client, value, date, status) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+        [title, clientName, value, date, status]
       )
       res.json(result.rows[0])
     } catch (error) {
-      console.error('Error creating pauta venda:', error)
-      res.status(500).json({ error: 'Erro interno do servidor' })
+      console.error('Error creating sales agenda:', error)
+      res.status(500).json({ error: 'Internal server error' })
     } finally {
       client.release()
     }
   })
   
-  app.put('/api/pauta-vendas/:id', authenticateToken, async (req, res) => {
+  app.put('/api/sales-agenda/:id', authenticateToken, async (req, res) => {
     const client = await pool.connect()
     try {
       const { id } = req.params
-      const { titulo, cliente, valor, data, status } = req.body
+      const { title, client: clientName, value, date, status } = req.body
       const result = await client.query(
-        'UPDATE pauta_vendas SET titulo = $1, cliente = $2, valor = $3, data = $4, status = $5, updated_at = CURRENT_TIMESTAMP WHERE id = $6 RETURNING *',
-        [titulo, cliente, valor, data, status, id]
+        'UPDATE sales_agenda SET title = $1, client = $2, value = $3, date = $4, status = $5, updated_at = CURRENT_TIMESTAMP WHERE id = $6 RETURNING *',
+        [title, clientName, value, date, status, id]
       )
       if (result.rows.length === 0) {
-        return res.status(404).json({ error: 'Pauta não encontrada' })
+        return res.status(404).json({ error: 'Sales agenda not found' })
       }
       res.json(result.rows[0])
     } catch (error) {
-      console.error('Error updating pauta venda:', error)
-      res.status(500).json({ error: 'Erro interno do servidor' })
+      console.error('Error updating sales agenda:', error)
+      res.status(500).json({ error: 'Internal server error' })
     } finally {
       client.release()
     }
   })
   
-  app.delete('/api/pauta-vendas/:id', authenticateToken, async (req, res) => {
+  app.delete('/api/sales-agenda/:id', authenticateToken, async (req, res) => {
     const client = await pool.connect()
     try {
       const { id } = req.params
-      const result = await client.query('DELETE FROM pauta_vendas WHERE id = $1 RETURNING *', [id])
+      const result = await client.query('DELETE FROM sales_agenda WHERE id = $1 RETURNING *', [id])
       if (result.rows.length === 0) {
-        return res.status(404).json({ error: 'Pauta não encontrada' })
+        return res.status(404).json({ error: 'Sales agenda not found' })
       }
       res.json({ success: true })
     } catch (error) {
-      console.error('Error deleting pauta venda:', error)
-      res.status(500).json({ error: 'Erro interno do servidor' })
+      console.error('Error deleting sales agenda:', error)
+      res.status(500).json({ error: 'Internal server error' })
     } finally {
       client.release()
     }

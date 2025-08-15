@@ -9,10 +9,10 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, PieChart, Pie, Cell } from "recharts"
 import { useAuth } from "@/hooks/use-auth"
 import { useToast } from "@/hooks/use-toast"
-import { NegocioForm } from "@/components/forms/negocio-form"
-import { ClienteForm } from "@/components/forms/cliente-form"
-import { ProdutoForm } from "@/components/forms/produto-form"
-import { AtendimentoForm } from "@/components/forms/atendimento-form"
+import { DealForm } from "@/components/forms/deal-form"
+import { ClientForm } from "@/components/forms/client-form"
+import { ProductForm } from "@/components/forms/product-form"
+import { AppointmentForm } from "@/components/forms/appointment-form"
 import { api } from "@/lib/api-client"
 
 // Mock data for charts
@@ -34,16 +34,16 @@ const getStatusData = (t: any) => [
 export default function DashboardPage() {
   const { t } = useTranslation()
   const [stats, setStats] = useState({
-    totalNegocios: 0,
-    totalClientes: 0,
-    totalProdutos: 0,
-    totalAtendimentos: 0,
+    totalDeals: 0,
+    totalClients: 0,
+    totalProducts: 0,
+    totalAppointments: 0,
   })
   const [formStates, setFormStates] = useState({
-    negocio: false,
-    cliente: false,
-    produto: false,
-    atendimento: false,
+    deal: false,
+    client: false,
+    product: false,
+    appointment: false,
   })
   const [fabMenuOpen, setFabMenuOpen] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -54,10 +54,10 @@ export default function DashboardPage() {
   useEffect(() => {
     // Mock stats - in real app, fetch from API
     setStats({
-      totalNegocios: 24,
-      totalClientes: 156,
-      totalProdutos: 89,
-      totalAtendimentos: 42,
+      totalDeals: 24,
+      totalClients: 156,
+      totalProducts: 89,
+      totalAppointments: 42,
     })
   }, [])
 
@@ -108,17 +108,17 @@ export default function DashboardPage() {
     setFabMenuOpen(false)
   }
 
-  const handleCreateNegocio = async (data: any) => {
+  const handleCreateDeal = async (data: any) => {
     setLoading(true)
     try {
-      await api.negocios.create(data)
+      await api.deals.create(data)
       toast({
         title: t('successMessages.dealCreated'),
         description: t('successMessages.dealCreated'),
       })
-      closeForm('negocio')
+      closeForm('deal')
       // Update stats
-      setStats(prev => ({ ...prev, totalNegocios: prev.totalNegocios + 1 }))
+      setStats(prev => ({ ...prev, totalDeals: prev.totalDeals + 1 }))
     } catch (error) {
       toast({
         title: t('errorMessages.dealCreationError'),
@@ -130,17 +130,17 @@ export default function DashboardPage() {
     }
   }
 
-  const handleCreateCliente = async (data: any) => {
+  const handleCreateClient = async (data: any) => {
     setLoading(true)
     try {
-      await api.clientes.create(data)
+      await api.clients.create(data)
       toast({
         title: t('successMessages.clientCreated'),
         description: t('successMessages.clientCreated'),
       })
-      closeForm('cliente')
+      closeForm('client')
       // Update stats
-      setStats(prev => ({ ...prev, totalClientes: prev.totalClientes + 1 }))
+      setStats(prev => ({ ...prev, totalClients: prev.totalClients + 1 }))
     } catch (error) {
       toast({
         title: t('errorMessages.clientCreationError'),
@@ -152,17 +152,17 @@ export default function DashboardPage() {
     }
   }
 
-  const handleCreateProduto = async (data: any) => {
+  const handleCreateProduct = async (data: any) => {
     setLoading(true)
     try {
-      await api.produtos.create(data)
+      await api.products.create(data)
       toast({
         title: t('successMessages.productCreated'),
         description: t('successMessages.productCreated'),
       })
-      closeForm('produto')
+      closeForm('product')
       // Update stats
-      setStats(prev => ({ ...prev, totalProdutos: prev.totalProdutos + 1 }))
+      setStats(prev => ({ ...prev, totalProducts: prev.totalProducts + 1 }))
     } catch (error) {
       toast({
         title: t('errorMessages.productCreationError'),
@@ -174,17 +174,17 @@ export default function DashboardPage() {
     }
   }
 
-  const handleCreateAtendimento = async (data: any) => {
+  const handleCreateAppointment = async (data: any) => {
     setLoading(true)
     try {
-      await api.atendimentos.create(data)
+      await api.appointments.create(data)
       toast({
         title: t('successMessages.serviceCreated'),
         description: t('successMessages.serviceCreated'),
       })
-      closeForm('atendimento')
+      closeForm('appointment')
       // Update stats
-      setStats(prev => ({ ...prev, totalAtendimentos: prev.totalAtendimentos + 1 }))
+      setStats(prev => ({ ...prev, totalAppointments: prev.totalAppointments + 1 }))
     } catch (error) {
       toast({
         title: t('errorMessages.serviceCreationError'),
@@ -201,7 +201,7 @@ export default function DashboardPage() {
     {
       title: t('settings'),
       icon: Settings,
-      href: "/configuracoes",
+      href: "/settings",
     },
     {
       title: t('support'),
@@ -238,7 +238,7 @@ export default function DashboardPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 mb-8">
-          <Link to="/negocios">
+          <Link to="/deals">
             <Card className="hover:shadow-md transition-shadow cursor-pointer">
               <CardContent className="p-6">
                 <div>
@@ -247,14 +247,14 @@ export default function DashboardPage() {
                     <div className="p-2 bg-blue-100 rounded-lg">
                       <Briefcase className="w-6 h-6 text-blue-600" />
                     </div>
-                    <p className="text-2xl font-bold text-foreground ml-3">{stats.totalNegocios}</p>
+                    <p className="text-2xl font-bold text-foreground ml-3">{stats.totalDeals}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
           </Link>
 
-          <Link to="/clientes">
+          <Link to="/clients">
             <Card className="hover:shadow-md transition-shadow cursor-pointer">
               <CardContent className="p-6">
                 <div>
@@ -263,14 +263,14 @@ export default function DashboardPage() {
                     <div className="p-2 bg-green-100 rounded-lg">
                       <Users className="w-6 h-6 text-green-600" />
                     </div>
-                    <p className="text-2xl font-bold text-foreground ml-3">{stats.totalClientes}</p>
+                    <p className="text-2xl font-bold text-foreground ml-3">{stats.totalClients}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
           </Link>
 
-          <Link to="/produtos">
+          <Link to="/products">
             <Card className="hover:shadow-md transition-shadow cursor-pointer">
               <CardContent className="p-6">
                 <div>
@@ -279,14 +279,14 @@ export default function DashboardPage() {
                     <div className="p-2 bg-orange-100 rounded-lg">
                       <Package className="w-6 h-6 text-orange-600" />
                     </div>
-                    <p className="text-2xl font-bold text-foreground ml-3">{stats.totalProdutos}</p>
+                    <p className="text-2xl font-bold text-foreground ml-3">{stats.totalProducts}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
           </Link>
 
-          <Link to="/atendimentos">
+          <Link to="/appointments">
             <Card className="hover:shadow-md transition-shadow cursor-pointer">
               <CardContent className="p-6">
                 <div>
@@ -295,14 +295,14 @@ export default function DashboardPage() {
                     <div className="p-2 bg-purple-100 rounded-lg">
                       <HeadphonesIcon className="w-6 h-6 text-purple-600" />
                     </div>
-                    <p className="text-2xl font-bold text-foreground ml-3">{stats.totalAtendimentos}</p>
+                    <p className="text-2xl font-bold text-foreground ml-3">{stats.totalAppointments}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
           </Link>
 
-          <Link to="/pauta-vendas">
+          <Link to="/sales-agenda">
             <Card className="hover:shadow-md transition-shadow cursor-pointer">
               <CardContent className="p-6">
                 <div>
@@ -465,7 +465,7 @@ export default function DashboardPage() {
             <Button
               size="sm"
               className="rounded-full shadow-lg bg-blue-600 hover:bg-blue-700 text-white"
-              onClick={() => openFormFromFab('negocio')}
+              onClick={() => openFormFromFab('deal')}
             >
               <Briefcase className="w-4 h-4 mr-2" />
               {t('deal')}
@@ -474,7 +474,7 @@ export default function DashboardPage() {
               size="sm"
               variant="outline"
               className="rounded-full shadow-lg bg-white border-gray-300"
-              onClick={() => openFormFromFab('cliente')}
+              onClick={() => openFormFromFab('client')}
             >
               <Users className="w-4 h-4 mr-2" />
               {t('client')}
@@ -483,7 +483,7 @@ export default function DashboardPage() {
               size="sm"
               variant="outline"
               className="rounded-full shadow-lg bg-white border-gray-300"
-              onClick={() => openFormFromFab('produto')}
+              onClick={() => openFormFromFab('product')}
             >
               <Package className="w-4 h-4 mr-2" />
               {t('product')}
@@ -492,7 +492,7 @@ export default function DashboardPage() {
               size="sm"
               variant="outline"
               className="rounded-full shadow-lg bg-white border-gray-300"
-              onClick={() => openFormFromFab('atendimento')}
+              onClick={() => openFormFromFab('appointment')}
             >
               <HeadphonesIcon className="w-4 h-4 mr-2" />
               {t('service')}
@@ -513,28 +513,28 @@ export default function DashboardPage() {
       </div>
 
       {/* Forms */}
-      <NegocioForm
-        open={formStates.negocio}
-        onOpenChange={() => closeForm('negocio')}
-        onSubmit={handleCreateNegocio}
+      <DealForm
+        open={formStates.deal}
+        onOpenChange={() => closeForm('deal')}
+        onSubmit={handleCreateDeal}
         loading={loading}
       />
-      <ClienteForm
-        open={formStates.cliente}
-        onOpenChange={() => closeForm('cliente')}
-        onSubmit={handleCreateCliente}
+      <ClientForm
+        open={formStates.client}
+        onOpenChange={() => closeForm('client')}
+        onSubmit={handleCreateClient}
         loading={loading}
       />
-      <ProdutoForm
-        open={formStates.produto}
-        onOpenChange={() => closeForm('produto')}
-        onSubmit={handleCreateProduto}
+      <ProductForm
+        open={formStates.product}
+        onOpenChange={() => closeForm('product')}
+        onSubmit={handleCreateProduct}
         loading={loading}
       />
-      <AtendimentoForm
-        open={formStates.atendimento}
-        onOpenChange={() => closeForm('atendimento')}
-        onSubmit={handleCreateAtendimento}
+      <AppointmentForm
+        open={formStates.appointment}
+        onOpenChange={() => closeForm('appointment')}
+        onSubmit={handleCreateAppointment}
         loading={loading}
       />
     </div>

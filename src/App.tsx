@@ -6,11 +6,11 @@ import { AuthProvider } from '@/contexts/AuthContext'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import LoginPage from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
-import NegociosPage from './pages/NegociosPage'
-import ClientesPage from './pages/ClientesPage'
-import AtendimentosPage from './pages/AtendimentosPage'
-import ProdutosPage from './pages/ProdutosPage'
-import PautaVendasPage from './pages/PautaVendasPage'
+import DealsPage from './pages/DealsPage'
+import ClientsPage from './pages/ClientsPage'
+import AppointmentsPage from './pages/AppointmentsPage'
+import ProductsPage from './pages/ProductsPage'
+import SalesAgendaPage from './pages/SalesAgendaPage'
 import ConfigPage from './pages/ConfigPage'
 import './lib/i18n'
 import './index.css'
@@ -28,32 +28,32 @@ function App() {
                   <DashboardPage />
                 </ProtectedRoute>
               } />
-              <Route path="/negocios" element={
+              <Route path="/deals" element={
                 <ProtectedRoute>
-                  <NegociosPage />
+                  <DealsPage />
                 </ProtectedRoute>
               } />
-              <Route path="/clientes" element={
+              <Route path="/clients" element={
                 <ProtectedRoute>
-                  <ClientesPage />
+                  <ClientsPage />
                 </ProtectedRoute>
               } />
-              <Route path="/atendimentos" element={
+              <Route path="/appointments" element={
                 <ProtectedRoute>
-                  <AtendimentosPage />
+                  <AppointmentsPage />
                 </ProtectedRoute>
               } />
-              <Route path="/produtos" element={
+              <Route path="/products" element={
                 <ProtectedRoute>
-                  <ProdutosPage />
+                  <ProductsPage />
                 </ProtectedRoute>
               } />
-              <Route path="/pauta-vendas" element={
+              <Route path="/sales-agenda" element={
                 <ProtectedRoute>
-                  <PautaVendasPage />
+                  <SalesAgendaPage />
                 </ProtectedRoute>
               } />
-              <Route path="/configuracoes" element={
+              <Route path="/settings" element={
                 <ProtectedRoute>
                   <ConfigPage />
                 </ProtectedRoute>

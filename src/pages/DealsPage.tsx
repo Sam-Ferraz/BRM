@@ -20,16 +20,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { ArrowLeft, Plus, Pencil, Trash2, Search, DollarSign, Calendar, User } from "lucide-react"
-import { api, type PautaVenda } from "@/lib/api-client"
-import { PautaVendaForm } from "@/components/forms/pauta-venda-form"
+import { ArrowLeft, Plus, Pencil, Trash2, Search } from "lucide-react"
+import { api, type Deal } from "@/lib/api-client"
+import { DealForm } from "@/components/forms/deal-form"
 import { useToast } from "@/hooks/use-toast"
-import { formatDate } from "@/lib/datetime"
+import { ReactiveDateTime } from "@/components/reactive-datetime"
 
-export default function PautaVendasPage() {
+export default function DealsPage() {
   const { t } = useTranslation()
   const [searchParams, setSearchParams] = useSearchParams()
-  const [pautaVendas, setPautaVendas] = useState<PautaVenda[]>([])
+  const [deals, setDeals] = useState<Deal[]>([])
   const [loading, setLoading] = useState(true)
   const [formLoading, setFormLoading] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
@@ -38,7 +38,7 @@ export default function PautaVendasPage() {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc")
   
   const [isFormOpen, setIsFormOpen] = useState(false)
-  const [editingPautaVenda, setEditingPautaVenda] = useState<PautaVenda | undefined>()
+  const [editingDeal, setEditingDeal] = useState<Deal | undefined>()
   
   const { toast } = useToast()
 
@@ -46,7 +46,7 @@ export default function PautaVendasPage() {
   useEffect(() => {
     if (searchParams.get('new') === 'true') {
       setIsFormOpen(true)
-      setEditingPautaVenda(undefined)
+      setEditingNegocio(undefined)
       // Remove the query parameter after opening
       const newParams = new URLSearchParams(searchParams)
       newParams.delete('new')
@@ -54,7 +54,7 @@ export default function PautaVendasPage() {
     }
   }, [searchParams, setSearchParams])
 
-  const fetchPautaVendas = useCallback(async () => {
+  const fetchDeals = useCallback(async () => {
     try {
       setLoading(true)
       const filters: any = {}
@@ -66,12 +66,12 @@ export default function PautaVendasPage() {
         filters.sortOrder = sortOrder
       }
       
-      const result = await api.pautaVendas.getAll(filters)
-      setPautaVendas(result.data)
+      const result = await api.deals.getAll(filters)
+      setDeals(result.data)
     } catch (error) {
       toast({
         title: t('error'),
-        description: t('salesAgendaLoadError'),
+        description: t('dealLoadError'),
         variant: "destructive",
       })
     } finally {
@@ -80,23 +80,23 @@ export default function PautaVendasPage() {
   }, [searchTerm, statusFilter, sortBy, sortOrder, toast, t])
 
   useEffect(() => {
-    fetchPautaVendas()
-  }, [fetchPautaVendas])
+    fetchDeals()
+  }, [fetchDeals])
 
-  const handleCreate = async (data: Omit<PautaVenda, "id">) => {
+  const handleCreate = async (data: Omit<Deal, "id">) => {
     try {
       setFormLoading(true)
-      await api.pautaVendas.create(data)
+      await api.deals.create(data)
       toast({
         title: t('success'),
-        description: t('salesAgendaCreatedSuccess'),
+        description: t('dealCreatedSuccess'),
       })
       setIsFormOpen(false)
-      fetchPautaVendas()
+      fetchDeals()
     } catch (error) {
       toast({
         title: t('error'),
-        description: t('salesAgendaCreateError'),
+        description: t('dealCreateError'),
         variant: "destructive",
       })
     } finally {
@@ -104,23 +104,23 @@ export default function PautaVendasPage() {
     }
   }
 
-  const handleUpdate = async (data: Partial<PautaVenda>) => {
-    if (!editingPautaVenda) return
+  const handleUpdate = async (data: Partial<Deal>) => {
+    if (!editingDeal) return
 
     try {
       setFormLoading(true)
-      await api.pautaVendas.update(editingPautaVenda.id, data)
+      await api.deals.update(editingDeal.id, data)
       toast({
         title: t('success'),
-        description: t('salesAgendaUpdatedSuccess'),
+        description: t('dealUpdatedSuccess'),
       })
       setIsFormOpen(false)
-      setEditingPautaVenda(undefined)
-      fetchPautaVendas()
+      setEditingDeal(undefined)
+      fetchDeals()
     } catch (error) {
       toast({
         title: t('error'),
-        description: t('salesAgendaUpdateError'),
+        description: t('dealUpdateError'),
         variant: "destructive",
       })
     } finally {
@@ -129,19 +129,19 @@ export default function PautaVendasPage() {
   }
 
   const handleDelete = async (id: number) => {
-    if (!confirm(t('confirmDeleteSalesAgenda'))) return
+    if (!confirm(t('confirmDeleteDeal'))) return
 
     try {
-      await api.pautaVendas.delete(id)
+      await api.deals.delete(id)
       toast({
         title: t('success'),
-        description: t('salesAgendaDeletedSuccess'),
+        description: t('dealDeletedSuccess'),
       })
-      fetchPautaVendas()
+      fetchDeals()
     } catch (error) {
       toast({
         title: t('error'),
-        description: t('salesAgendaDeleteError'),
+        description: t('dealDeleteError'),
         variant: "destructive",
       })
     }
@@ -158,12 +158,12 @@ export default function PautaVendasPage() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "Ativa":
-        return <Badge variant="default">{t('active')}</Badge>
-      case "Concluída":
-        return <Badge variant="outline">{t('completed')}</Badge>
-      case "Cancelada":
-        return <Badge variant="destructive">{t('cancelled')}</Badge>
+      case "Proposta":
+        return <Badge variant="secondary">{t('proposal')}</Badge>
+      case "Em Andamento":
+        return <Badge variant="default">{t('inProgress')}</Badge>
+      case "Fechado":
+        return <Badge variant="outline">{t('closed')}</Badge>
       default:
         return <Badge>{status}</Badge>
     }
@@ -171,9 +171,9 @@ export default function PautaVendasPage() {
 
   const statusOptions = [
     { value: "Todos", label: t('allStatuses') },
-    { value: "Ativa", label: t('active') },
-    { value: "Concluída", label: t('completed') },
-    { value: "Cancelada", label: t('cancelled') }
+    { value: "Proposta", label: t('proposal') },
+    { value: "Em Andamento", label: t('inProgress') },
+    { value: "Fechado", label: t('closed') }
   ]
 
   return (
@@ -188,11 +188,11 @@ export default function PautaVendasPage() {
                   {t('backButton')}
                 </Link>
               </Button>
-              <h1 className="text-xl font-semibold text-foreground">{t('salesAgendaTitle')}</h1>
+              <h1 className="text-xl font-semibold text-foreground">{t('dealsTitle')}</h1>
             </div>
             <Button onClick={() => setIsFormOpen(true)}>
               <Plus className="w-4 h-4 mr-2" />
-              {t('newSalesAgenda')}
+              {t('newDeal')}
             </Button>
           </div>
         </div>
@@ -201,14 +201,14 @@ export default function PautaVendasPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Card>
           <CardHeader>
-            <CardTitle>{t('salesAgendaManagement')}</CardTitle>
+            <CardTitle>{t('dealsManagement')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder={t('searchSalesAgenda')}
+                  placeholder={t('searchDeals')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-9"
@@ -229,34 +229,22 @@ export default function PautaVendasPage() {
             </div>
 
             {loading ? (
-              <div className="text-center py-8">{t('loadingSalesAgenda')}</div>
+              <div className="text-center py-8">{t('loadingDeals')}</div>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead 
                       className="cursor-pointer" 
-                      onClick={() => handleSort("titulo")}
+                      onClick={() => handleSort("client")}
                     >
-                      {t('title')} {sortBy === "titulo" && (sortOrder === "asc" ? "↑" : "↓")}
+                      {t('client')} {sortBy === "client" && (sortOrder === "asc" ? "↑" : "↓")}
                     </TableHead>
                     <TableHead 
                       className="cursor-pointer" 
-                      onClick={() => handleSort("cliente")}
+                      onClick={() => handleSort("value")}
                     >
-                      {t('client')} {sortBy === "cliente" && (sortOrder === "asc" ? "↑" : "↓")}
-                    </TableHead>
-                    <TableHead 
-                      className="cursor-pointer" 
-                      onClick={() => handleSort("valor")}
-                    >
-                      {t('value')} {sortBy === "valor" && (sortOrder === "asc" ? "↑" : "↓")}
-                    </TableHead>
-                    <TableHead 
-                      className="cursor-pointer" 
-                      onClick={() => handleSort("data")}
-                    >
-                      {t('date')} {sortBy === "data" && (sortOrder === "asc" ? "↑" : "↓")}
+                      {t('value')} {sortBy === "value" && (sortOrder === "asc" ? "↑" : "↓")}
                     </TableHead>
                     <TableHead 
                       className="cursor-pointer" 
@@ -264,39 +252,38 @@ export default function PautaVendasPage() {
                     >
                       {t('status')} {sortBy === "status" && (sortOrder === "asc" ? "↑" : "↓")}
                     </TableHead>
+                    <TableHead 
+                      className="cursor-pointer" 
+                      onClick={() => handleSort("date")}
+                    >
+                      {t('date')} {sortBy === "date" && (sortOrder === "asc" ? "↑" : "↓")}
+                    </TableHead>
+                    <TableHead>{t('description')}</TableHead>
                     <TableHead className="text-right">{t('actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {pautaVendas.map((pauta) => (
-                    <TableRow key={pauta.id}>
-                      <TableCell className="font-medium">{pauta.titulo}</TableCell>
+                  {deals.map((deal) => (
+                    <TableRow key={deal.id}>
+                      <TableCell className="font-medium">{deal.client}</TableCell>
+                      <TableCell>{deal.value}</TableCell>
+                      <TableCell>{getStatusBadge(deal.status)}</TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2">
-                          <User className="h-4 w-4 text-muted-foreground" />
-                          {pauta.cliente}
-                        </div>
+                        <ReactiveDateTime 
+                          value={deal.date}
+                          type="date"
+                        />
                       </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <DollarSign className="h-4 w-4 text-muted-foreground" />
-                          {pauta.valor}
-                        </div>
+                      <TableCell className="max-w-xs truncate">
+                        {deal.description || "-"}
                       </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-muted-foreground" />
-                          {formatDate(pauta.data)}
-                        </div>
-                      </TableCell>
-                      <TableCell>{getStatusBadge(pauta.status)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => {
-                              setEditingPautaVenda(pauta)
+                              setEditingDeal(deal)
                               setIsFormOpen(true)
                             }}
                           >
@@ -305,7 +292,7 @@ export default function PautaVendasPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleDelete(pauta.id)}
+                            onClick={() => handleDelete(deal.id)}
                             className="text-red-600 hover:text-red-700"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -314,10 +301,10 @@ export default function PautaVendasPage() {
                       </TableCell>
                     </TableRow>
                   ))}
-                  {pautaVendas.length === 0 && (
+                  {deals.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                        {t('noSalesAgendaFound')}
+                        {t('noDealsFound')}
                       </TableCell>
                     </TableRow>
                   )}
@@ -328,14 +315,14 @@ export default function PautaVendasPage() {
         </Card>
       </div>
 
-      <PautaVendaForm
-        pautaVenda={editingPautaVenda}
+      <DealForm
+        deal={editingDeal}
         open={isFormOpen}
         onOpenChange={(open) => {
           setIsFormOpen(open)
-          if (!open) setEditingPautaVenda(undefined)
+          if (!open) setEditingDeal(undefined)
         }}
-        onSubmit={editingPautaVenda ? handleUpdate : handleCreate}
+        onSubmit={editingDeal ? handleUpdate : handleCreate}
         loading={formLoading}
       />
     </div>

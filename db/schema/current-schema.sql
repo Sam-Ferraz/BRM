@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict qjc7rMBuVfiq1vFaL4suJSZaoQ5BF7IK98OhKW7ST4Di8rbTeyOdH5NQlf94gdS
+\restrict MXGaYP3G0AT1hLDXSb6v430ON3XgFsaDPWkPzVAhiX6iVU9TdSNcxsMMptPgXCo
 
 -- Dumped from database version 17.4
 -- Dumped by pg_dump version 17.6 (Debian 17.6-1.pgdg13+1)
@@ -34,10 +34,10 @@ COMMENT ON EXTENSION "uuid-ossp" IS 'generate universally unique identifiers (UU
 
 
 --
--- Name: atendimento_status; Type: TYPE; Schema: public; Owner: -
+-- Name: appointment_status; Type: TYPE; Schema: public; Owner: -
 --
 
-CREATE TYPE public.atendimento_status AS ENUM (
+CREATE TYPE public.appointment_status AS ENUM (
     'agendado',
     'em_andamento',
     'concluido',
@@ -46,10 +46,10 @@ CREATE TYPE public.atendimento_status AS ENUM (
 
 
 --
--- Name: atendimento_tipo; Type: TYPE; Schema: public; Owner: -
+-- Name: appointment_type; Type: TYPE; Schema: public; Owner: -
 --
 
-CREATE TYPE public.atendimento_tipo AS ENUM (
+CREATE TYPE public.appointment_type AS ENUM (
     'presencial',
     'online',
     'telefone'
@@ -57,20 +57,20 @@ CREATE TYPE public.atendimento_tipo AS ENUM (
 
 
 --
--- Name: cliente_tipo; Type: TYPE; Schema: public; Owner: -
+-- Name: client_type; Type: TYPE; Schema: public; Owner: -
 --
 
-CREATE TYPE public.cliente_tipo AS ENUM (
+CREATE TYPE public.client_type AS ENUM (
     'pessoa_fisica',
     'pessoa_juridica'
 );
 
 
 --
--- Name: negocio_status; Type: TYPE; Schema: public; Owner: -
+-- Name: deal_status; Type: TYPE; Schema: public; Owner: -
 --
 
-CREATE TYPE public.negocio_status AS ENUM (
+CREATE TYPE public.deal_status AS ENUM (
     'ativo',
     'inativo',
     'suspenso'
@@ -78,10 +78,10 @@ CREATE TYPE public.negocio_status AS ENUM (
 
 
 --
--- Name: produto_status; Type: TYPE; Schema: public; Owner: -
+-- Name: product_status; Type: TYPE; Schema: public; Owner: -
 --
 
-CREATE TYPE public.produto_status AS ENUM (
+CREATE TYPE public.product_status AS ENUM (
     'ativo',
     'inativo',
     'descontinuado'
@@ -107,26 +107,26 @@ SET default_tablespace = '';
 SET default_table_access_method = heap;
 
 --
--- Name: atendimentos; Type: TABLE; Schema: public; Owner: -
+-- Name: appointments; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.atendimentos (
+CREATE TABLE public.appointments (
     id integer NOT NULL,
-    cliente character varying(255) NOT NULL,
-    tipo character varying(50) NOT NULL,
+    client character varying(255) NOT NULL,
+    type character varying(50) NOT NULL,
     status character varying(50) DEFAULT 'Pendente'::character varying,
-    descricao text,
+    description text,
     created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    datetime_agendamento timestamp without time zone NOT NULL
+    scheduled_datetime timestamp without time zone NOT NULL
 );
 
 
 --
--- Name: atendimentos_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: appointments_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
-CREATE SEQUENCE public.atendimentos_id_seq
+CREATE SEQUENCE public.appointments_id_seq
     AS integer
     START WITH 1
     INCREMENT BY 1
@@ -136,34 +136,34 @@ CREATE SEQUENCE public.atendimentos_id_seq
 
 
 --
--- Name: atendimentos_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+-- Name: appointments_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
-ALTER SEQUENCE public.atendimentos_id_seq OWNED BY public.atendimentos.id;
+ALTER SEQUENCE public.appointments_id_seq OWNED BY public.appointments.id;
 
 
 --
--- Name: clientes; Type: TABLE; Schema: public; Owner: -
+-- Name: clients; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.clientes (
+CREATE TABLE public.clients (
     id integer NOT NULL,
-    nome character varying(255) NOT NULL,
+    name character varying(255) NOT NULL,
     email character varying(255),
-    telefone character varying(50),
-    cidade character varying(100),
-    endereco text,
-    empresa character varying(255),
+    phone character varying(50),
+    city character varying(100),
+    address text,
+    company character varying(255),
     created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
 );
 
 
 --
--- Name: clientes_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: clients_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
-CREATE SEQUENCE public.clientes_id_seq
+CREATE SEQUENCE public.clients_id_seq
     AS integer
     START WITH 1
     INCREMENT BY 1
@@ -173,10 +173,46 @@ CREATE SEQUENCE public.clientes_id_seq
 
 
 --
--- Name: clientes_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+-- Name: clients_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
-ALTER SEQUENCE public.clientes_id_seq OWNED BY public.clientes.id;
+ALTER SEQUENCE public.clients_id_seq OWNED BY public.clients.id;
+
+
+--
+-- Name: deals; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.deals (
+    id integer NOT NULL,
+    client character varying(255) NOT NULL,
+    value character varying(50) NOT NULL,
+    status character varying(50) DEFAULT 'Em Andamento'::character varying,
+    date date NOT NULL,
+    description text,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+--
+-- Name: deals_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.deals_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: deals_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.deals_id_seq OWNED BY public.deals.id;
 
 
 --
@@ -198,26 +234,26 @@ CREATE TABLE public.flyway_schema_history (
 
 
 --
--- Name: negocios; Type: TABLE; Schema: public; Owner: -
+-- Name: products; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.negocios (
+CREATE TABLE public.products (
     id integer NOT NULL,
-    cliente character varying(255) NOT NULL,
-    valor character varying(50) NOT NULL,
-    status character varying(50) DEFAULT 'Em Andamento'::character varying,
-    data date NOT NULL,
-    descricao text,
+    name character varying(255) NOT NULL,
+    price character varying(50) NOT NULL,
+    category character varying(100),
+    stock integer DEFAULT 0,
+    description text,
     created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
 );
 
 
 --
--- Name: negocios_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: products_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
-CREATE SEQUENCE public.negocios_id_seq
+CREATE SEQUENCE public.products_id_seq
     AS integer
     START WITH 1
     INCREMENT BY 1
@@ -227,22 +263,22 @@ CREATE SEQUENCE public.negocios_id_seq
 
 
 --
--- Name: negocios_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+-- Name: products_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
-ALTER SEQUENCE public.negocios_id_seq OWNED BY public.negocios.id;
+ALTER SEQUENCE public.products_id_seq OWNED BY public.products.id;
 
 
 --
--- Name: pauta_vendas; Type: TABLE; Schema: public; Owner: -
+-- Name: sales_agenda; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.pauta_vendas (
+CREATE TABLE public.sales_agenda (
     id integer NOT NULL,
-    titulo character varying(255) NOT NULL,
-    cliente character varying(255) NOT NULL,
-    valor character varying(50) NOT NULL,
-    data date NOT NULL,
+    title character varying(255) NOT NULL,
+    client character varying(255) NOT NULL,
+    value character varying(50) NOT NULL,
+    date date NOT NULL,
     status character varying(50) DEFAULT 'Ativa'::character varying,
     created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
@@ -250,10 +286,10 @@ CREATE TABLE public.pauta_vendas (
 
 
 --
--- Name: pauta_vendas_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: sales_agenda_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
-CREATE SEQUENCE public.pauta_vendas_id_seq
+CREATE SEQUENCE public.sales_agenda_id_seq
     AS integer
     START WITH 1
     INCREMENT BY 1
@@ -263,46 +299,10 @@ CREATE SEQUENCE public.pauta_vendas_id_seq
 
 
 --
--- Name: pauta_vendas_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+-- Name: sales_agenda_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
-ALTER SEQUENCE public.pauta_vendas_id_seq OWNED BY public.pauta_vendas.id;
-
-
---
--- Name: produtos; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.produtos (
-    id integer NOT NULL,
-    nome character varying(255) NOT NULL,
-    preco character varying(50) NOT NULL,
-    categoria character varying(100),
-    estoque integer DEFAULT 0,
-    descricao text,
-    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
-);
-
-
---
--- Name: produtos_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.produtos_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: produtos_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.produtos_id_seq OWNED BY public.produtos.id;
+ALTER SEQUENCE public.sales_agenda_id_seq OWNED BY public.sales_agenda.id;
 
 
 --
@@ -342,38 +342,38 @@ ALTER SEQUENCE public.users_id_seq OWNED BY public.users.id;
 
 
 --
--- Name: atendimentos id; Type: DEFAULT; Schema: public; Owner: -
+-- Name: appointments id; Type: DEFAULT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.atendimentos ALTER COLUMN id SET DEFAULT nextval('public.atendimentos_id_seq'::regclass);
-
-
---
--- Name: clientes id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.clientes ALTER COLUMN id SET DEFAULT nextval('public.clientes_id_seq'::regclass);
+ALTER TABLE ONLY public.appointments ALTER COLUMN id SET DEFAULT nextval('public.appointments_id_seq'::regclass);
 
 
 --
--- Name: negocios id; Type: DEFAULT; Schema: public; Owner: -
+-- Name: clients id; Type: DEFAULT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.negocios ALTER COLUMN id SET DEFAULT nextval('public.negocios_id_seq'::regclass);
-
-
---
--- Name: pauta_vendas id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.pauta_vendas ALTER COLUMN id SET DEFAULT nextval('public.pauta_vendas_id_seq'::regclass);
+ALTER TABLE ONLY public.clients ALTER COLUMN id SET DEFAULT nextval('public.clients_id_seq'::regclass);
 
 
 --
--- Name: produtos id; Type: DEFAULT; Schema: public; Owner: -
+-- Name: deals id; Type: DEFAULT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.produtos ALTER COLUMN id SET DEFAULT nextval('public.produtos_id_seq'::regclass);
+ALTER TABLE ONLY public.deals ALTER COLUMN id SET DEFAULT nextval('public.deals_id_seq'::regclass);
+
+
+--
+-- Name: products id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.products ALTER COLUMN id SET DEFAULT nextval('public.products_id_seq'::regclass);
+
+
+--
+-- Name: sales_agenda id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sales_agenda ALTER COLUMN id SET DEFAULT nextval('public.sales_agenda_id_seq'::regclass);
 
 
 --
@@ -384,19 +384,27 @@ ALTER TABLE ONLY public.users ALTER COLUMN id SET DEFAULT nextval('public.users_
 
 
 --
--- Name: atendimentos atendimentos_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: appointments appointments_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.atendimentos
-    ADD CONSTRAINT atendimentos_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.appointments
+    ADD CONSTRAINT appointments_pkey PRIMARY KEY (id);
 
 
 --
--- Name: clientes clientes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: clients clients_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.clientes
-    ADD CONSTRAINT clientes_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.clients
+    ADD CONSTRAINT clients_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: deals deals_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.deals
+    ADD CONSTRAINT deals_pkey PRIMARY KEY (id);
 
 
 --
@@ -408,27 +416,19 @@ ALTER TABLE ONLY public.flyway_schema_history
 
 
 --
--- Name: negocios negocios_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: products products_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.negocios
-    ADD CONSTRAINT negocios_pkey PRIMARY KEY (id);
-
-
---
--- Name: pauta_vendas pauta_vendas_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.pauta_vendas
-    ADD CONSTRAINT pauta_vendas_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.products
+    ADD CONSTRAINT products_pkey PRIMARY KEY (id);
 
 
 --
--- Name: produtos produtos_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: sales_agenda sales_agenda_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.produtos
-    ADD CONSTRAINT produtos_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.sales_agenda
+    ADD CONSTRAINT sales_agenda_pkey PRIMARY KEY (id);
 
 
 --
@@ -465,5 +465,5 @@ CREATE INDEX idx_users_preferences ON public.users USING gin (preferences);
 -- PostgreSQL database dump complete
 --
 
-\unrestrict qjc7rMBuVfiq1vFaL4suJSZaoQ5BF7IK98OhKW7ST4Di8rbTeyOdH5NQlf94gdS
+\unrestrict MXGaYP3G0AT1hLDXSb6v430ON3XgFsaDPWkPzVAhiX6iVU9TdSNcxsMMptPgXCo
 

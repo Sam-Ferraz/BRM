@@ -72,49 +72,49 @@ class ApiClient {
 export const apiClient = new ApiClient()
 
 // API endpoints with type safety
-export interface Negocio {
+export interface Deal {
   id: number
-  cliente: string
-  valor: string
+  client: string
+  value: string
   status: "Em Andamento" | "Proposta" | "Fechado"
-  data: string
-  descricao?: string
+  date: string
+  description?: string
 }
 
-export interface Cliente {
+export interface Client {
   id: number
-  nome: string
+  name: string
   email: string
-  telefone: string
-  cidade: string
-  endereco?: string
-  empresa?: string
+  phone: string
+  city: string
+  address?: string
+  company?: string
 }
 
-export interface Atendimento {
+export interface Appointment {
   id: number
-  cliente: string
-  tipo: "Suporte" | "Vendas" | "Consultoria"
+  client: string
+  type: "Suporte" | "Vendas" | "Consultoria"
   status: "Em Andamento" | "Concluído" | "Pendente"
-  datetime_agendamento: string
-  descricao?: string
+  scheduled_datetime: string
+  description?: string
 }
 
-export interface Produto {
+export interface Product {
   id: number
-  nome: string
-  preco: string
-  categoria: string
-  estoque: number
-  descricao?: string
+  name: string
+  price: string
+  category: string
+  stock: number
+  description?: string
 }
 
-export interface PautaVenda {
+export interface SalesAgenda {
   id: number
-  titulo: string
-  cliente: string
-  valor: string
-  data: string
+  title: string
+  client: string
+  value: string
+  date: string
   status: "Ativa" | "Concluída" | "Cancelada"
 }
 
@@ -125,9 +125,9 @@ export interface ApiResponse<T> {
 
 // API service methods
 export const api = {
-  // Negócios
-  negocios: {
-    getAll: async (filters?: { search?: string; status?: string; sortBy?: string; sortOrder?: "asc" | "desc" }): Promise<ApiResponse<Negocio>> => {
+  // Deals
+  deals: {
+    getAll: async (filters?: { search?: string; status?: string; sortBy?: string; sortOrder?: "asc" | "desc" }): Promise<ApiResponse<Deal>> => {
       const params = new URLSearchParams()
       if (filters?.search) params.append('search', filters.search)
       if (filters?.status) params.append('status', filters.status)
@@ -135,116 +135,116 @@ export const api = {
       if (filters?.sortOrder) params.append('sortOrder', filters.sortOrder)
       
       const query = params.toString()
-      return apiClient.get<ApiResponse<Negocio>>(`/negocios${query ? `?${query}` : ''}`)
+      return apiClient.get<ApiResponse<Deal>>(`/deals${query ? `?${query}` : ''}`)
     },
 
-    create: async (data: Omit<Negocio, "id">): Promise<Negocio> => {
-      return apiClient.post<Negocio>('/negocios', data)
+    create: async (data: Omit<Deal, "id">): Promise<Deal> => {
+      return apiClient.post<Deal>('/deals', data)
     },
 
-    update: async (id: number, data: Partial<Negocio>): Promise<Negocio> => {
-      return apiClient.put<Negocio>(`/negocios/${id}`, data)
+    update: async (id: number, data: Partial<Deal>): Promise<Deal> => {
+      return apiClient.put<Deal>(`/deals/${id}`, data)
     },
 
     delete: async (id: number): Promise<{ success: boolean }> => {
-      return apiClient.delete<{ success: boolean }>(`/negocios/${id}`)
+      return apiClient.delete<{ success: boolean }>(`/deals/${id}`)
     },
   },
 
-  // Clientes
-  clientes: {
-    getAll: async (filters?: { search?: string; sortBy?: string; sortOrder?: "asc" | "desc" }): Promise<ApiResponse<Cliente>> => {
+  // Clients
+  clients: {
+    getAll: async (filters?: { search?: string; sortBy?: string; sortOrder?: "asc" | "desc" }): Promise<ApiResponse<Client>> => {
       const params = new URLSearchParams()
       if (filters?.search) params.append('search', filters.search)
       if (filters?.sortBy) params.append('sortBy', filters.sortBy)
       if (filters?.sortOrder) params.append('sortOrder', filters.sortOrder)
       
       const query = params.toString()
-      return apiClient.get<ApiResponse<Cliente>>(`/clientes${query ? `?${query}` : ''}`)
+      return apiClient.get<ApiResponse<Client>>(`/clients${query ? `?${query}` : ''}`)
     },
 
-    create: async (data: Omit<Cliente, "id">): Promise<Cliente> => {
-      return apiClient.post<Cliente>('/clientes', data)
+    create: async (data: Omit<Client, "id">): Promise<Client> => {
+      return apiClient.post<Client>('/clients', data)
     },
 
-    update: async (id: number, data: Partial<Cliente>): Promise<Cliente> => {
-      return apiClient.put<Cliente>(`/clientes/${id}`, data)
+    update: async (id: number, data: Partial<Client>): Promise<Client> => {
+      return apiClient.put<Client>(`/clients/${id}`, data)
     },
 
     delete: async (id: number): Promise<{ success: boolean }> => {
-      return apiClient.delete<{ success: boolean }>(`/clientes/${id}`)
+      return apiClient.delete<{ success: boolean }>(`/clients/${id}`)
     },
   },
 
-  // Produtos
-  produtos: {
+  // Products
+  products: {
     getAll: async (filters?: {
       search?: string
-      categoria?: string
-      estoque?: string
+      category?: string
+      stock?: string
       sortBy?: string
       sortOrder?: "asc" | "desc"
-    }): Promise<ApiResponse<Produto>> => {
+    }): Promise<ApiResponse<Product>> => {
       const params = new URLSearchParams()
       if (filters?.search) params.append('search', filters.search)
-      if (filters?.categoria) params.append('categoria', filters.categoria)
-      if (filters?.estoque) params.append('estoque', filters.estoque)
+      if (filters?.category) params.append('category', filters.category)
+      if (filters?.stock) params.append('stock', filters.stock)
       if (filters?.sortBy) params.append('sortBy', filters.sortBy)
       if (filters?.sortOrder) params.append('sortOrder', filters.sortOrder)
       
       const query = params.toString()
-      return apiClient.get<ApiResponse<Produto>>(`/produtos${query ? `?${query}` : ''}`)
+      return apiClient.get<ApiResponse<Product>>(`/products${query ? `?${query}` : ''}`)
     },
 
-    create: async (data: Omit<Produto, "id">): Promise<Produto> => {
-      return apiClient.post<Produto>('/produtos', data)
+    create: async (data: Omit<Product, "id">): Promise<Product> => {
+      return apiClient.post<Product>('/products', data)
     },
 
-    update: async (id: number, data: Partial<Produto>): Promise<Produto> => {
-      return apiClient.put<Produto>(`/produtos/${id}`, data)
+    update: async (id: number, data: Partial<Product>): Promise<Product> => {
+      return apiClient.put<Product>(`/products/${id}`, data)
     },
 
     delete: async (id: number): Promise<{ success: boolean }> => {
-      return apiClient.delete<{ success: boolean }>(`/produtos/${id}`)
+      return apiClient.delete<{ success: boolean }>(`/products/${id}`)
     },
   },
 
-  // Atendimentos
-  atendimentos: {
+  // Appointments
+  appointments: {
     getAll: async (filters?: {
       search?: string
       status?: string
-      tipo?: string
+      type?: string
       sortBy?: string
       sortOrder?: "asc" | "desc"
-    }): Promise<ApiResponse<Atendimento>> => {
+    }): Promise<ApiResponse<Appointment>> => {
       const params = new URLSearchParams()
       if (filters?.search) params.append('search', filters.search)
       if (filters?.status) params.append('status', filters.status)
-      if (filters?.tipo) params.append('tipo', filters.tipo)
+      if (filters?.type) params.append('type', filters.type)
       if (filters?.sortBy) params.append('sortBy', filters.sortBy)
       if (filters?.sortOrder) params.append('sortOrder', filters.sortOrder)
       
       const query = params.toString()
-      return apiClient.get<ApiResponse<Atendimento>>(`/atendimentos${query ? `?${query}` : ''}`)
+      return apiClient.get<ApiResponse<Appointment>>(`/appointments${query ? `?${query}` : ''}`)
     },
 
-    create: async (data: Omit<Atendimento, "id">): Promise<Atendimento> => {
-      return apiClient.post<Atendimento>('/atendimentos', data)
+    create: async (data: Omit<Appointment, "id">): Promise<Appointment> => {
+      return apiClient.post<Appointment>('/appointments', data)
     },
 
-    update: async (id: number, data: Partial<Atendimento>): Promise<Atendimento> => {
-      return apiClient.put<Atendimento>(`/atendimentos/${id}`, data)
+    update: async (id: number, data: Partial<Appointment>): Promise<Appointment> => {
+      return apiClient.put<Appointment>(`/appointments/${id}`, data)
     },
 
     delete: async (id: number): Promise<{ success: boolean }> => {
-      return apiClient.delete<{ success: boolean }>(`/atendimentos/${id}`)
+      return apiClient.delete<{ success: boolean }>(`/appointments/${id}`)
     },
   },
 
-  // Pauta de Vendas
-  pautaVendas: {
-    getAll: async (filters?: { search?: string; status?: string; sortBy?: string; sortOrder?: "asc" | "desc" }): Promise<ApiResponse<PautaVenda>> => {
+  // Sales Agenda
+  salesAgenda: {
+    getAll: async (filters?: { search?: string; status?: string; sortBy?: string; sortOrder?: "asc" | "desc" }): Promise<ApiResponse<SalesAgenda>> => {
       const params = new URLSearchParams()
       if (filters?.search) params.append('search', filters.search)
       if (filters?.status) params.append('status', filters.status)
@@ -252,19 +252,19 @@ export const api = {
       if (filters?.sortOrder) params.append('sortOrder', filters.sortOrder)
       
       const query = params.toString()
-      return apiClient.get<ApiResponse<PautaVenda>>(`/pauta-vendas${query ? `?${query}` : ''}`)
+      return apiClient.get<ApiResponse<SalesAgenda>>(`/sales-agenda${query ? `?${query}` : ''}`)
     },
 
-    create: async (data: Omit<PautaVenda, "id">): Promise<PautaVenda> => {
-      return apiClient.post<PautaVenda>('/pauta-vendas', data)
+    create: async (data: Omit<SalesAgenda, "id">): Promise<SalesAgenda> => {
+      return apiClient.post<SalesAgenda>('/sales-agenda', data)
     },
 
-    update: async (id: number, data: Partial<PautaVenda>): Promise<PautaVenda> => {
-      return apiClient.put<PautaVenda>(`/pauta-vendas/${id}`, data)
+    update: async (id: number, data: Partial<SalesAgenda>): Promise<SalesAgenda> => {
+      return apiClient.put<SalesAgenda>(`/sales-agenda/${id}`, data)
     },
 
     delete: async (id: number): Promise<{ success: boolean }> => {
-      return apiClient.delete<{ success: boolean }>(`/pauta-vendas/${id}`)
+      return apiClient.delete<{ success: boolean }>(`/sales-agenda/${id}`)
     },
   },
 }

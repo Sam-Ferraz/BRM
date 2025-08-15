@@ -8,41 +8,40 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import type { Negocio } from "@/lib/api-client"
+import type { SalesAgenda } from "@/lib/api-client"
 import { getCurrentDateForForm } from "@/lib/datetime"
 
-interface NegocioFormProps {
-  negocio?: Negocio
+interface SalesAgendaFormProps {
+  salesAgenda?: SalesAgenda
   open: boolean
   onOpenChange: (open: boolean) => void
-  onSubmit: (data: Omit<Negocio, "id"> | Partial<Negocio>) => void
+  onSubmit: (data: Omit<SalesAgenda, "id"> | Partial<SalesAgenda>) => void
   loading?: boolean
 }
 
-export function NegocioForm({ negocio, open, onOpenChange, onSubmit, loading }: NegocioFormProps) {
+export function SalesAgendaForm({ salesAgenda, open, onOpenChange, onSubmit, loading }: SalesAgendaFormProps) {
   const { t } = useTranslation()
   const [formData, setFormData] = useState({
+    titulo: "",
     cliente: "",
     valor: "",
-    status: "Proposta" as "Em Andamento" | "Proposta" | "Fechado",
     data: getCurrentDateForForm(),
-    descricao: "",
+    status: "Ativa" as "Ativa" | "Concluída" | "Cancelada",
   })
 
   useEffect(() => {
-    if (negocio) {
+    if (salesAgenda) {
       // Convert date from database to form format (YYYY-MM-DD)
       let formattedDate = getCurrentDateForForm()
       
-      if (negocio.data) {
+      if (salesAgenda.data) {
         // If the date is in YYYY-MM-DD format, use it directly
-        if (/^\d{4}-\d{2}-\d{2}$/.test(negocio.data)) {
-          formattedDate = negocio.data
+        if (/^\d{4}-\d{2}-\d{2}$/.test(salesAgenda.data)) {
+          formattedDate = salesAgenda.data
         } else {
           // Parse other formats (like dd/MM/yyyy)
-          const date = new Date(negocio.data)
+          const date = new Date(salesAgenda.data)
           if (!isNaN(date.getTime())) {
             formattedDate = date.toISOString().split('T')[0]
           }
@@ -50,22 +49,22 @@ export function NegocioForm({ negocio, open, onOpenChange, onSubmit, loading }: 
       }
       
       setFormData({
-        cliente: negocio.cliente || "",
-        valor: negocio.valor || "",
-        status: (negocio.status || "Proposta") as "Em Andamento" | "Proposta" | "Fechado",
-        data: formattedDate,
-        descricao: negocio.descricao || "",
+        title: salesAgenda.title || "",
+        client: salesAgenda.client || "",
+        value: salesAgenda.value || "",
+        date: formattedDate,
+        status: (salesAgenda.status || "Ativa") as "Ativa" | "Concluída" | "Cancelada",
       })
     } else {
       setFormData({
-        cliente: "",
-        valor: "",
-        status: "Proposta" as "Em Andamento" | "Proposta" | "Fechado",
-        data: getCurrentDateForForm(),
-        descricao: "",
+        title: "",
+        client: "",
+        value: "",
+        date: getCurrentDateForForm(),
+        status: "Ativa" as "Ativa" | "Concluída" | "Cancelada",
       })
     }
-  }, [negocio])
+  }, [salesAgenda])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -76,28 +75,35 @@ export function NegocioForm({ negocio, open, onOpenChange, onSubmit, loading }: 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>{negocio ? t('editDeal') : t('newDeal')}</DialogTitle>
+          <DialogTitle>{salesAgenda ? t('editSalesAgenda') : t('newSalesAgenda')}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="titulo">{t('title')}</Label>
+            <Input
+              id="titulo"
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              required
+            />
+          </div>
           <div className="space-y-2">
             <Label htmlFor="cliente">{t('client')}</Label>
             <Input
               id="cliente"
-              value={formData.cliente}
-              onChange={(e) => setFormData({ ...formData, cliente: e.target.value })}
+              value={formData.client}
+              onChange={(e) => setFormData({ ...formData, client: e.target.value })}
               required
-              tabIndex={1}
             />
           </div>
           <div className="space-y-2">
             <Label htmlFor="valor">{t('value')}</Label>
             <Input
               id="valor"
-              value={formData.valor}
-              onChange={(e) => setFormData({ ...formData, valor: e.target.value })}
+              value={formData.value}
+              onChange={(e) => setFormData({ ...formData, value: e.target.value })}
               placeholder={t('currencyPlaceholder')}
               required
-              tabIndex={2}
             />
           </div>
           <div className="space-y-2">
@@ -106,13 +112,13 @@ export function NegocioForm({ negocio, open, onOpenChange, onSubmit, loading }: 
               value={formData.status}
               onValueChange={(value) => setFormData({ ...formData, status: value as any })}
             >
-              <SelectTrigger tabIndex={3}>
+              <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Proposta">{t('proposal')}</SelectItem>
-                <SelectItem value="Em Andamento">{t('inProgress')}</SelectItem>
-                <SelectItem value="Fechado">{t('closed')}</SelectItem>
+                <SelectItem value="Ativa">{t('active')}</SelectItem>
+                <SelectItem value="Concluída">{t('completed')}</SelectItem>
+                <SelectItem value="Cancelada">{t('cancelled')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -121,27 +127,16 @@ export function NegocioForm({ negocio, open, onOpenChange, onSubmit, loading }: 
             <Input
               id="data"
               type="date"
-              value={formData.data}
-              onChange={(e) => setFormData({ ...formData, data: e.target.value })}
+              value={formData.date}
+              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
               required
-              tabIndex={4}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="descricao">{t('description')}</Label>
-            <Textarea
-              id="descricao"
-              value={formData.descricao}
-              onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
-              rows={3}
-              tabIndex={5}
             />
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} tabIndex={6}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               {t('cancel')}
             </Button>
-            <Button type="submit" disabled={loading} tabIndex={7}>
+            <Button type="submit" disabled={loading}>
               {loading ? t('saving') : t('save')}
             </Button>
           </DialogFooter>

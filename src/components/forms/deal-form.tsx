@@ -8,40 +8,41 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import type { PautaVenda } from "@/lib/api-client"
+import type { Deal } from "@/lib/api-client"
 import { getCurrentDateForForm } from "@/lib/datetime"
 
-interface PautaVendaFormProps {
-  pautaVenda?: PautaVenda
+interface DealFormProps {
+  deal?: Deal
   open: boolean
   onOpenChange: (open: boolean) => void
-  onSubmit: (data: Omit<PautaVenda, "id"> | Partial<PautaVenda>) => void
+  onSubmit: (data: Omit<Deal, "id"> | Partial<Deal>) => void
   loading?: boolean
 }
 
-export function PautaVendaForm({ pautaVenda, open, onOpenChange, onSubmit, loading }: PautaVendaFormProps) {
+export function DealForm({ deal, open, onOpenChange, onSubmit, loading }: DealFormProps) {
   const { t } = useTranslation()
   const [formData, setFormData] = useState({
-    titulo: "",
     cliente: "",
     valor: "",
+    status: "Proposta" as "Em Andamento" | "Proposta" | "Fechado",
     data: getCurrentDateForForm(),
-    status: "Ativa" as "Ativa" | "Concluída" | "Cancelada",
+    descricao: "",
   })
 
   useEffect(() => {
-    if (pautaVenda) {
+    if (deal) {
       // Convert date from database to form format (YYYY-MM-DD)
       let formattedDate = getCurrentDateForForm()
       
-      if (pautaVenda.data) {
+      if (deal.data) {
         // If the date is in YYYY-MM-DD format, use it directly
-        if (/^\d{4}-\d{2}-\d{2}$/.test(pautaVenda.data)) {
-          formattedDate = pautaVenda.data
+        if (/^\d{4}-\d{2}-\d{2}$/.test(deal.data)) {
+          formattedDate = deal.data
         } else {
           // Parse other formats (like dd/MM/yyyy)
-          const date = new Date(pautaVenda.data)
+          const date = new Date(deal.data)
           if (!isNaN(date.getTime())) {
             formattedDate = date.toISOString().split('T')[0]
           }
@@ -49,22 +50,22 @@ export function PautaVendaForm({ pautaVenda, open, onOpenChange, onSubmit, loadi
       }
       
       setFormData({
-        titulo: pautaVenda.titulo || "",
-        cliente: pautaVenda.cliente || "",
-        valor: pautaVenda.valor || "",
-        data: formattedDate,
-        status: (pautaVenda.status || "Ativa") as "Ativa" | "Concluída" | "Cancelada",
+        client: deal.client || "",
+        value: deal.value || "",
+        status: (deal.status || "Proposta") as "Em Andamento" | "Proposta" | "Fechado",
+        date: formattedDate,
+        description: deal.description || "",
       })
     } else {
       setFormData({
-        titulo: "",
-        cliente: "",
-        valor: "",
-        data: getCurrentDateForForm(),
-        status: "Ativa" as "Ativa" | "Concluída" | "Cancelada",
+        client: "",
+        value: "",
+        status: "Proposta" as "Em Andamento" | "Proposta" | "Fechado",
+        date: getCurrentDateForForm(),
+        description: "",
       })
     }
-  }, [pautaVenda])
+  }, [deal])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -75,35 +76,28 @@ export function PautaVendaForm({ pautaVenda, open, onOpenChange, onSubmit, loadi
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>{pautaVenda ? t('editSalesAgenda') : t('newSalesAgenda')}</DialogTitle>
+          <DialogTitle>{deal ? t('editDeal') : t('newDeal')}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="titulo">{t('title')}</Label>
-            <Input
-              id="titulo"
-              value={formData.titulo}
-              onChange={(e) => setFormData({ ...formData, titulo: e.target.value })}
-              required
-            />
-          </div>
           <div className="space-y-2">
             <Label htmlFor="cliente">{t('client')}</Label>
             <Input
               id="cliente"
-              value={formData.cliente}
-              onChange={(e) => setFormData({ ...formData, cliente: e.target.value })}
+              value={formData.client}
+              onChange={(e) => setFormData({ ...formData, client: e.target.value })}
               required
+              tabIndex={1}
             />
           </div>
           <div className="space-y-2">
             <Label htmlFor="valor">{t('value')}</Label>
             <Input
               id="valor"
-              value={formData.valor}
-              onChange={(e) => setFormData({ ...formData, valor: e.target.value })}
+              value={formData.value}
+              onChange={(e) => setFormData({ ...formData, value: e.target.value })}
               placeholder={t('currencyPlaceholder')}
               required
+              tabIndex={2}
             />
           </div>
           <div className="space-y-2">
@@ -112,13 +106,13 @@ export function PautaVendaForm({ pautaVenda, open, onOpenChange, onSubmit, loadi
               value={formData.status}
               onValueChange={(value) => setFormData({ ...formData, status: value as any })}
             >
-              <SelectTrigger>
+              <SelectTrigger tabIndex={3}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Ativa">{t('active')}</SelectItem>
-                <SelectItem value="Concluída">{t('completed')}</SelectItem>
-                <SelectItem value="Cancelada">{t('cancelled')}</SelectItem>
+                <SelectItem value="Proposta">{t('proposal')}</SelectItem>
+                <SelectItem value="Em Andamento">{t('inProgress')}</SelectItem>
+                <SelectItem value="Fechado">{t('closed')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -127,16 +121,27 @@ export function PautaVendaForm({ pautaVenda, open, onOpenChange, onSubmit, loadi
             <Input
               id="data"
               type="date"
-              value={formData.data}
-              onChange={(e) => setFormData({ ...formData, data: e.target.value })}
+              value={formData.date}
+              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
               required
+              tabIndex={4}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="descricao">{t('description')}</Label>
+            <Textarea
+              id="descricao"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              rows={3}
+              tabIndex={5}
             />
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} tabIndex={6}>
               {t('cancel')}
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading} tabIndex={7}>
               {loading ? t('saving') : t('save')}
             </Button>
           </DialogFooter>
