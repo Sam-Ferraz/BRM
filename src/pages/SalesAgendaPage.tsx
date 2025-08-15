@@ -66,7 +66,7 @@ export default function SalesAgendaPage() {
         filters.sortOrder = sortOrder
       }
       
-      const result = await api.salesAgendas.getAll(filters)
+      const result = await api.salesAgenda.getAll(filters)
       setSalesAgendas(result.data)
     } catch (error) {
       toast({
@@ -86,7 +86,7 @@ export default function SalesAgendaPage() {
   const handleCreate = async (data: Omit<SalesAgenda, "id">) => {
     try {
       setFormLoading(true)
-      await api.salesAgendas.create(data)
+      await api.salesAgenda.create(data)
       toast({
         title: t('success'),
         description: t('salesAgendaCreatedSuccess'),
@@ -109,7 +109,7 @@ export default function SalesAgendaPage() {
 
     try {
       setFormLoading(true)
-      await api.salesAgendas.update(editingSalesAgenda.id, data)
+      await api.salesAgenda.update(editingSalesAgenda.id, data)
       toast({
         title: t('success'),
         description: t('salesAgendaUpdatedSuccess'),
@@ -132,7 +132,7 @@ export default function SalesAgendaPage() {
     if (!confirm(t('confirmDeleteSalesAgenda'))) return
 
     try {
-      await api.salesAgendas.delete(id)
+      await api.salesAgenda.delete(id)
       toast({
         title: t('success'),
         description: t('salesAgendaDeletedSuccess'),
