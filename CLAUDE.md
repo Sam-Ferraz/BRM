@@ -11,8 +11,18 @@ This is a **Business Relationship Management (BRM)** system - a comprehensive CR
 ## Development Commands
 
 ```bash
-# Development server
+# Frontend development server
 npm run dev
+
+# Backend server (production mode)
+npm run server
+
+# Backend server (development mode with watch)
+npm run server:dev
+
+# Start both servers (recommended for development)
+# Terminal 1: npm run server:dev
+# Terminal 2: npm run dev
 
 # Build for production  
 npm run build

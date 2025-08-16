@@ -92,8 +92,16 @@ See [Setup Guide](.github/SETUP.md) for detailed configuration steps.
 # Install dependencies
 npm install
 
-# Start development server
+# Start both servers (recommended)
+# Terminal 1: Start backend server
+npm run server:dev
+
+# Terminal 2: Start frontend development server  
 npm run dev
+
+# Or start servers individually:
+npm run server     # Backend (production mode)
+npm run dev        # Frontend only
 
 # Build for production
 npm run build

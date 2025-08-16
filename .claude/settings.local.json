@@ -31,6 +31,7 @@
       "Bash(do echo -n \"$route: \")",
       "Bash(done)"
     ],
-    "deny": []
+    "deny": [],
+    "defaultMode": "acceptEdits"
   }
 }
