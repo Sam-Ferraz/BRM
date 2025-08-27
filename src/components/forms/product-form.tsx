@@ -49,7 +49,7 @@ export function ProductForm({ product, initialName, open, onOpenChange, onSubmit
         description: "",
       })
     }
-  }, [product, initialName])
+  }, [product, initialName, open])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()

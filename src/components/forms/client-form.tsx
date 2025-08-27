@@ -50,7 +50,7 @@ export function ClientForm({ client, initialName, open, onOpenChange, onSubmit, 
         company: "",
       })
     }
-  }, [client, initialName])
+  }, [client, initialName, open])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()

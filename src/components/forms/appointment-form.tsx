@@ -67,7 +67,7 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
         description: "",
       })
     }
-  }, [appointment, currentDateTime])
+  }, [appointment, currentDateTime, open])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()

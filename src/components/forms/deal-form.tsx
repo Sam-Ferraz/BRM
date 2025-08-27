@@ -26,11 +26,11 @@ interface DealFormProps {
 export function DealForm({ deal, open, onOpenChange, onSubmit, loading }: DealFormProps) {
   const { t } = useTranslation()
   const [formData, setFormData] = useState({
-    cliente: "",
-    valor: "",
+    client: "",
+    value: "",
     status: "Proposta" as "Em Andamento" | "Proposta" | "Fechado",
-    data: getCurrentDateForForm(),
-    descricao: "",
+    date: getCurrentDateForForm(),
+    description: "",
   })
 
   useEffect(() => {
@@ -38,13 +38,13 @@ export function DealForm({ deal, open, onOpenChange, onSubmit, loading }: DealFo
       // Convert date from database to form format (YYYY-MM-DD)
       let formattedDate = getCurrentDateForForm()
       
-      if (deal.data) {
+      if (deal.date) {
         // If the date is in YYYY-MM-DD format, use it directly
-        if (/^\d{4}-\d{2}-\d{2}$/.test(deal.data)) {
-          formattedDate = deal.data
+        if (/^\d{4}-\d{2}-\d{2}$/.test(deal.date)) {
+          formattedDate = deal.date
         } else {
           // Parse other formats (like dd/MM/yyyy)
-          const date = new Date(deal.data)
+          const date = new Date(deal.date)
           if (!isNaN(date.getTime())) {
             formattedDate = date.toISOString().split('T')[0]
           }
@@ -67,7 +67,7 @@ export function DealForm({ deal, open, onOpenChange, onSubmit, loading }: DealFo
         description: "",
       })
     }
-  }, [deal])
+  }, [deal, open])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
