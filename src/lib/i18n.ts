@@ -25,7 +25,7 @@ const resources = {
       deals: 'Negócios',
       clients: 'Clientes',
       services: 'Atendimentos',
-      products: 'Produtos',
+      products: 'Imóveis',
       salesAgenda: 'Pauta de Vendas',
       settings: 'Configurações',
       support: 'Suporte',
@@ -43,7 +43,7 @@ const resources = {
       dealsModule: 'Gerencie seus negócios e oportunidades',
       clientsModule: 'Cadastro e gestão de clientes',
       servicesModule: 'Controle de atendimentos e suporte',
-      productsModule: 'Catálogo e estoque de produtos',
+      productsModule: 'Catálogo e estoque de imóveis',
       salesAgendaModule: 'Planejamento e acompanhamento de vendas',
       
       // Charts
@@ -68,7 +68,7 @@ const resources = {
       successMessages: {
         dealCreated: 'Negócio criado com sucesso',
         clientCreated: 'Cliente criado com sucesso',
-        productCreated: 'Produto criado com sucesso',
+        productCreated: 'Imóvel criado com sucesso',
         serviceCreated: 'Atendimento criado com sucesso',
         logoutSuccess: 'Logout realizado com sucesso',
         loginSuccess: 'Login realizado com sucesso',
@@ -76,7 +76,7 @@ const resources = {
       errorMessages: {
         dealCreationError: 'Erro ao criar negócio',
         clientCreationError: 'Erro ao criar cliente',
-        productCreationError: 'Erro ao criar produto',
+        productCreationError: 'Erro ao criar imóvel',
         serviceCreationError: 'Erro ao criar atendimento',
         logoutError: 'Erro ao fazer logout',
       },
@@ -84,7 +84,7 @@ const resources = {
       // Forms
       deal: 'Negócio',
       client: 'Cliente',
-      product: 'Produto',
+      product: 'Imóvel',
       service: 'Atendimento',
       
       // Entity Pages - Common
@@ -157,10 +157,10 @@ const resources = {
       serviceLoadError: 'Falha ao carregar atendimentos',
       
       // Products Page
-      productsTitle: 'Produtos',
-      productsManagement: 'Gestão de Produtos',
-      newProduct: 'Novo Produto',
-      searchProducts: 'Buscar produtos...',
+      productsTitle: 'Imóveis',
+      productsManagement: 'Gestão de Imóveis',
+      newProduct: 'Novo Imóvel',
+      searchProducts: 'Buscar imóveis...',
       price: 'Preço',
       category: 'Categoria',
       stock: 'Estoque',
@@ -168,16 +168,16 @@ const resources = {
       lowStock: 'Estoque Baixo',
       inStock: 'Em Estoque',
       outOfStock: 'Sem Estoque',
-      loadingProducts: 'Carregando produtos...',
-      noProductsFound: 'Nenhum produto encontrado',
-      confirmDeleteProduct: 'Tem certeza que deseja excluir este produto?',
-      productCreatedSuccess: 'Produto criado com sucesso',
-      productUpdatedSuccess: 'Produto atualizado com sucesso',
-      productDeletedSuccess: 'Produto excluído com sucesso',
-      productCreateError: 'Falha ao criar produto',
-      productUpdateError: 'Falha ao atualizar produto',
-      productDeleteError: 'Falha ao excluir produto',
-      productLoadError: 'Falha ao carregar produtos',
+      loadingProducts: 'Carregando imóveis...',
+      noProductsFound: 'Nenhum imóvel encontrado',
+      confirmDeleteProduct: 'Tem certeza que deseja excluir este imóvel?',
+      productCreatedSuccess: 'Imóvel criado com sucesso',
+      productUpdatedSuccess: 'Imóvel atualizado com sucesso',
+      productDeletedSuccess: 'Imóvel excluído com sucesso',
+      productCreateError: 'Falha ao criar imóvel',
+      productUpdateError: 'Falha ao atualizar imóvel',
+      productDeleteError: 'Falha ao excluir imóvel',
+      productLoadError: 'Falha ao carregar imóveis',
       
       // Sales Agenda Page
       salesAgendaTitle: 'Pauta de Vendas',
@@ -210,7 +210,7 @@ const resources = {
       editDeal: 'Editar Negócio',
       editClient: 'Editar Cliente',
       editService: 'Editar Atendimento',
-      editProduct: 'Editar Produto',
+      editProduct: 'Editar Imóvel',
       editSalesAgenda: 'Editar Pauta',
       
       // Form Placeholders
@@ -269,7 +269,7 @@ const resources = {
       deals: 'Deals',
       clients: 'Clients',
       services: 'Services',
-      products: 'Products',
+      products: 'Real Estate',
       salesAgenda: 'Sales Agenda',
       settings: 'Settings',
       support: 'Support',
@@ -287,7 +287,7 @@ const resources = {
       dealsModule: 'Manage your deals and opportunities',
       clientsModule: 'Client registration and management',
       servicesModule: 'Service and support control',
-      productsModule: 'Product catalog and inventory',
+      productsModule: 'Real estate catalog and inventory',
       salesAgendaModule: 'Sales planning and tracking',
       
       // Charts
@@ -312,7 +312,7 @@ const resources = {
       successMessages: {
         dealCreated: 'Deal created successfully',
         clientCreated: 'Client created successfully',
-        productCreated: 'Product created successfully',
+        productCreated: 'Property created successfully',
         serviceCreated: 'Service created successfully',
         logoutSuccess: 'Logout successful',
         loginSuccess: 'Login successful',
@@ -320,7 +320,7 @@ const resources = {
       errorMessages: {
         dealCreationError: 'Error creating deal',
         clientCreationError: 'Error creating client',
-        productCreationError: 'Error creating product',
+        productCreationError: 'Error creating property',
         serviceCreationError: 'Error creating service',
         logoutError: 'Error during logout',
       },
@@ -328,7 +328,7 @@ const resources = {
       // Forms
       deal: 'Deal',
       client: 'Client',
-      product: 'Product',
+      product: 'Property',
       service: 'Service',
       
       // Entity Pages - Common
@@ -401,10 +401,10 @@ const resources = {
       serviceLoadError: 'Failed to load services',
       
       // Products Page
-      productsTitle: 'Products',
-      productsManagement: 'Product Management',
-      newProduct: 'New Product',
-      searchProducts: 'Search products...',
+      productsTitle: 'Real Estate',
+      productsManagement: 'Real Estate Management',
+      newProduct: 'New Property',
+      searchProducts: 'Search properties...',
       price: 'Price',
       category: 'Category',
       stock: 'Stock',
@@ -412,16 +412,16 @@ const resources = {
       lowStock: 'Low Stock',
       inStock: 'In Stock',
       outOfStock: 'Out of Stock',
-      loadingProducts: 'Loading products...',
-      noProductsFound: 'No products found',
-      confirmDeleteProduct: 'Are you sure you want to delete this product?',
-      productCreatedSuccess: 'Product created successfully',
-      productUpdatedSuccess: 'Product updated successfully',
-      productDeletedSuccess: 'Product deleted successfully',
-      productCreateError: 'Failed to create product',
-      productUpdateError: 'Failed to update product',
-      productDeleteError: 'Failed to delete product',
-      productLoadError: 'Failed to load products',
+      loadingProducts: 'Loading properties...',
+      noProductsFound: 'No properties found',
+      confirmDeleteProduct: 'Are you sure you want to delete this property?',
+      productCreatedSuccess: 'Property created successfully',
+      productUpdatedSuccess: 'Property updated successfully',
+      productDeletedSuccess: 'Property deleted successfully',
+      productCreateError: 'Failed to create property',
+      productUpdateError: 'Failed to update property',
+      productDeleteError: 'Failed to delete property',
+      productLoadError: 'Failed to load properties',
       
       // Sales Agenda Page
       salesAgendaTitle: 'Sales Agenda',
@@ -454,7 +454,7 @@ const resources = {
       editDeal: 'Edit Deal',
       editClient: 'Edit Client',
       editService: 'Edit Service',
-      editProduct: 'Edit Product',
+      editProduct: 'Edit Property',
       editSalesAgenda: 'Edit Sales Agenda',
       
       // Form Placeholders
@@ -513,7 +513,7 @@ const resources = {
       deals: 'Negocios',
       clients: 'Clientes',
       services: 'Servicios',
-      products: 'Productos',
+      products: 'Inmuebles',
       salesAgenda: 'Agenda de Ventas',
       settings: 'Configuración',
       support: 'Soporte',
@@ -531,7 +531,7 @@ const resources = {
       dealsModule: 'Gestiona tus negocios y oportunidades',
       clientsModule: 'Registro y gestión de clientes',
       servicesModule: 'Control de servicios y soporte',
-      productsModule: 'Catálogo e inventario de productos',
+      productsModule: 'Catálogo e inventario de inmuebles',
       salesAgendaModule: 'Planificación y seguimiento de ventas',
       
       // Charts
@@ -556,7 +556,7 @@ const resources = {
       successMessages: {
         dealCreated: 'Negocio creado exitosamente',
         clientCreated: 'Cliente creado exitosamente',
-        productCreated: 'Producto creado exitosamente',
+        productCreated: 'Inmueble creado exitosamente',
         serviceCreated: 'Servicio creado exitosamente',
         logoutSuccess: 'Cierre de sesión exitoso',
         loginSuccess: 'Inicio de sesión exitoso',
@@ -564,7 +564,7 @@ const resources = {
       errorMessages: {
         dealCreationError: 'Error al crear negocio',
         clientCreationError: 'Error al crear cliente',
-        productCreationError: 'Error al crear producto',
+        productCreationError: 'Error al crear inmueble',
         serviceCreationError: 'Error al crear servicio',
         logoutError: 'Error al cerrar sesión',
       },
@@ -572,7 +572,7 @@ const resources = {
       // Forms
       deal: 'Negocio',
       client: 'Cliente',
-      product: 'Producto',
+      product: 'Inmueble',
       service: 'Servicio',
       
       // Entity Pages - Common
@@ -645,10 +645,10 @@ const resources = {
       serviceLoadError: 'Error al cargar servicios',
       
       // Products Page
-      productsTitle: 'Productos',
-      productsManagement: 'Gestión de Productos',
-      newProduct: 'Nuevo Producto',
-      searchProducts: 'Buscar productos...',
+      productsTitle: 'Inmuebles',
+      productsManagement: 'Gestión de Inmuebles',
+      newProduct: 'Nuevo Inmueble',
+      searchProducts: 'Buscar inmuebles...',
       price: 'Precio',
       category: 'Categoría',
       stock: 'Stock',
@@ -656,16 +656,16 @@ const resources = {
       lowStock: 'Stock Bajo',
       inStock: 'En Stock',
       outOfStock: 'Sin Stock',
-      loadingProducts: 'Cargando productos...',
-      noProductsFound: 'No se encontraron productos',
-      confirmDeleteProduct: '¿Está seguro de que desea eliminar este producto?',
-      productCreatedSuccess: 'Producto creado exitosamente',
-      productUpdatedSuccess: 'Producto actualizado exitosamente',
-      productDeletedSuccess: 'Producto eliminado exitosamente',
-      productCreateError: 'Error al crear producto',
-      productUpdateError: 'Error al actualizar producto',
-      productDeleteError: 'Error al eliminar producto',
-      productLoadError: 'Error al cargar productos',
+      loadingProducts: 'Cargando inmuebles...',
+      noProductsFound: 'No se encontraron inmuebles',
+      confirmDeleteProduct: '¿Está seguro de que desea eliminar este inmueble?',
+      productCreatedSuccess: 'Inmueble creado exitosamente',
+      productUpdatedSuccess: 'Inmueble actualizado exitosamente',
+      productDeletedSuccess: 'Inmueble eliminado exitosamente',
+      productCreateError: 'Error al crear inmueble',
+      productUpdateError: 'Error al actualizar inmueble',
+      productDeleteError: 'Error al eliminar inmueble',
+      productLoadError: 'Error al cargar inmuebles',
       
       // Sales Agenda Page
       salesAgendaTitle: 'Agenda de Ventas',
@@ -698,7 +698,7 @@ const resources = {
       editDeal: 'Editar Negocio',
       editClient: 'Editar Cliente',
       editService: 'Editar Servicio',
-      editProduct: 'Editar Producto',
+      editProduct: 'Editar Inmueble',
       editSalesAgenda: 'Editar Agenda de Ventas',
       
       // Form Placeholders
