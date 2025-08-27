@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { CurrencyInput } from "@/components/ui/currency-input"
+import { ProductSearch } from "@/components/product-search"
 import type { SalesAgenda } from "@/lib/api-client"
 import { getCurrentDateForForm } from "@/lib/datetime"
 
@@ -24,10 +25,11 @@ interface SalesAgendaFormProps {
 export function SalesAgendaForm({ salesAgenda, open, onOpenChange, onSubmit, loading }: SalesAgendaFormProps) {
   const { t } = useTranslation()
   const [formData, setFormData] = useState({
-    titulo: "",
-    cliente: "",
-    valor: "",
-    data: getCurrentDateForForm(),
+    title: "",
+    client: "",
+    product_name: "",
+    value: "",
+    date: getCurrentDateForForm(),
     status: "Ativa" as "Ativa" | "Concluída" | "Cancelada",
   })
 
@@ -36,13 +38,13 @@ export function SalesAgendaForm({ salesAgenda, open, onOpenChange, onSubmit, loa
       // Convert date from database to form format (YYYY-MM-DD)
       let formattedDate = getCurrentDateForForm()
       
-      if (salesAgenda.data) {
+      if (salesAgenda.date) {
         // If the date is in YYYY-MM-DD format, use it directly
-        if (/^\d{4}-\d{2}-\d{2}$/.test(salesAgenda.data)) {
-          formattedDate = salesAgenda.data
+        if (/^\d{4}-\d{2}-\d{2}$/.test(salesAgenda.date)) {
+          formattedDate = salesAgenda.date
         } else {
           // Parse other formats (like dd/MM/yyyy)
-          const date = new Date(salesAgenda.data)
+          const date = new Date(salesAgenda.date)
           if (!isNaN(date.getTime())) {
             formattedDate = date.toISOString().split('T')[0]
           }
@@ -52,6 +54,7 @@ export function SalesAgendaForm({ salesAgenda, open, onOpenChange, onSubmit, loa
       setFormData({
         title: salesAgenda.title || "",
         client: salesAgenda.client || "",
+        product_name: salesAgenda.product_name || "",
         value: salesAgenda.value || "",
         date: formattedDate,
         status: (salesAgenda.status || "Ativa") as "Ativa" | "Concluída" | "Cancelada",
@@ -60,6 +63,7 @@ export function SalesAgendaForm({ salesAgenda, open, onOpenChange, onSubmit, loa
       setFormData({
         title: "",
         client: "",
+        product_name: "",
         value: "",
         date: getCurrentDateForForm(),
         status: "Ativa" as "Ativa" | "Concluída" | "Cancelada",
@@ -95,6 +99,15 @@ export function SalesAgendaForm({ salesAgenda, open, onOpenChange, onSubmit, loa
               value={formData.client}
               onChange={(e) => setFormData({ ...formData, client: e.target.value })}
               required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="product">{t('product')}</Label>
+            <ProductSearch
+              value={formData.product_name}
+              onSelect={(productName) => setFormData({ ...formData, product_name: productName })}
+              placeholder={t('selectProduct')}
+              className="w-full"
             />
           </div>
           <div className="space-y-2">

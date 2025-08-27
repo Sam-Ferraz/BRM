@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { ArrowLeft, Plus, Pencil, Trash2, Search, DollarSign, Calendar, User } from "lucide-react"
+import { ArrowLeft, Plus, Pencil, Trash2, Search, DollarSign, Calendar, User, Package } from "lucide-react"
 import { api, type SalesAgenda } from "@/lib/api-client"
 import { SalesAgendaForm } from "@/components/forms/sales-agenda-form"
 import { useToast } from "@/hooks/use-toast"
@@ -248,6 +248,12 @@ export default function SalesAgendaPage() {
                     </TableHead>
                     <TableHead 
                       className="cursor-pointer" 
+                      onClick={() => handleSort("product_name")}
+                    >
+                      {t('product')} {sortBy === "product_name" && (sortOrder === "asc" ? "↑" : "↓")}
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer" 
                       onClick={() => handleSort("value")}
                     >
                       {t('value')} {sortBy === "value" && (sortOrder === "asc" ? "↑" : "↓")}
@@ -275,6 +281,12 @@ export default function SalesAgendaPage() {
                         <div className="flex items-center gap-2">
                           <User className="h-4 w-4 text-muted-foreground" />
                           {agenda.client}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Package className="h-4 w-4 text-muted-foreground" />
+                          {agenda.product_name || 'N/A'}
                         </div>
                       </TableCell>
                       <TableCell>
