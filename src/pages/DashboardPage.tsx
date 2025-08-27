@@ -5,14 +5,42 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Users, Briefcase, Package, HeadphonesIcon, Settings, LogOut, FileText, Plus, BarChart3 } from "lucide-react"
+import { ChartContainer } from "@/components/ui/chart-simple"
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from "recharts"
 import { useAuth } from "@/hooks/use-auth"
 import { useToast } from "@/hooks/use-toast"
 import { DealForm } from "@/components/forms/deal-form"
 import { ClientForm } from "@/components/forms/client-form"
 import { ProductForm } from "@/components/forms/product-form"
 import { AppointmentForm } from "@/components/forms/appointment-form"
-import { api } from "@/lib/api-client"
+import { api, AppointmentAnalytics } from "@/lib/api-client"
 
+const formatAppointmentAnalytics = (analytics: AppointmentAnalytics[], t: any) => {
+  return analytics.map(item => {
+    const date = new Date(item.date)
+    const today = new Date()
+    const yesterday = new Date()
+    yesterday.setDate(today.getDate() - 1)
+    
+    let dateLabel = ''
+    if (date.toDateString() === today.toDateString()) {
+      dateLabel = t('today') || 'Hoje'
+    } else if (date.toDateString() === yesterday.toDateString()) {
+      dateLabel = t('yesterday') || 'Ontem'
+    } else {
+      dateLabel = date.toLocaleDateString('pt-BR', { 
+        weekday: 'short',
+        day: '2-digit'
+      })
+    }
+    
+    return {
+      date: dateLabel,
+      [t('answered')]: parseInt(item.answered),
+      [t('notAnswered')]: parseInt(item.not_answered),
+    }
+  })
+}
 
 
 export default function DashboardPage() {
@@ -24,6 +52,7 @@ export default function DashboardPage() {
     totalAppointments: 0,
     totalSalesAgenda: 0,
   })
+  const [appointmentAnalytics, setAppointmentAnalytics] = useState<AppointmentAnalytics[]>([])
   const [formStates, setFormStates] = useState({
     deal: false,
     client: false,
@@ -39,7 +68,10 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const stats = await api.dashboard.getStats()
+        const [stats, analytics] = await Promise.all([
+          api.dashboard.getStats(),
+          api.appointments.getAnalyticsLast7Days()
+        ])
         
         setStats({
           totalDeals: stats.totalDeals,
@@ -48,6 +80,8 @@ export default function DashboardPage() {
           totalAppointments: stats.totalAppointments,
           totalSalesAgenda: stats.totalSalesAgenda,
         })
+        
+        setAppointmentAnalytics(analytics.data)
         
       } catch (error) {
         console.error('Error fetching dashboard data:', error)
@@ -59,6 +93,7 @@ export default function DashboardPage() {
           totalAppointments: 0,
           totalSalesAgenda: 0,
         })
+        setAppointmentAnalytics([])
       }
     }
     
@@ -67,7 +102,10 @@ export default function DashboardPage() {
 
   const refreshStats = async () => {
     try {
-      const stats = await api.dashboard.getStats()
+      const [stats, analytics] = await Promise.all([
+        api.dashboard.getStats(),
+        api.appointments.getAnalyticsLast7Days()
+      ])
       
       setStats({
         totalDeals: stats.totalDeals,
@@ -76,6 +114,8 @@ export default function DashboardPage() {
         totalAppointments: stats.totalAppointments,
         totalSalesAgenda: stats.totalSalesAgenda,
       })
+      
+      setAppointmentAnalytics(analytics.data)
     } catch (error) {
       console.error('Error refreshing dashboard data:', error)
     }
@@ -345,6 +385,143 @@ export default function DashboardPage() {
                 </Card>
               </Link>
             </div>
+
+            {/* Appointments Analytics Chart */}
+            <div className="mt-8">
+              <Card className="bg-gradient-to-br from-slate-50 to-white border-slate-200">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-xl font-semibold text-slate-800 flex items-center gap-3">
+                    <div className="w-2 h-8 bg-gradient-to-b from-blue-500 to-purple-600 rounded-full"></div>
+                    {t('appointmentsLast7Days')}
+                  </CardTitle>
+                  <p className="text-sm text-slate-600 mt-1">
+                    {t('appointmentsAnalyticsDescription')}
+                  </p>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <ChartContainer
+                    config={{
+                      [t('answered')]: {
+                        label: t('answered'),
+                        color: "hsl(142, 76%, 36%)",
+                      },
+                      [t('notAnswered')]: {
+                        label: t('notAnswered'),
+                        color: "hsl(0, 84%, 60%)",
+                      },
+                    }}
+                    className="h-[300px]"
+                  >
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart 
+                        data={formatAppointmentAnalytics(appointmentAnalytics, t)}
+                        margin={{ top: 20, right: 5, left: 0, bottom: 20 }}
+                        barCategoryGap="15%"
+                      >
+                        <defs>
+                          <linearGradient id="answeredGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#10b981" stopOpacity={1} />
+                            <stop offset="100%" stopColor="#059669" stopOpacity={0.8} />
+                          </linearGradient>
+                          <linearGradient id="notAnsweredGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#ef4444" stopOpacity={1} />
+                            <stop offset="100%" stopColor="#dc2626" stopOpacity={0.8} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid 
+                          strokeDasharray="3 3" 
+                          stroke="#e2e8f0" 
+                          strokeOpacity={0.6}
+                          horizontal={true}
+                          vertical={false}
+                        />
+                        <XAxis 
+                          dataKey="date" 
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fontSize: 12, fill: '#64748b' }}
+                          tickMargin={8}
+                        />
+                        <YAxis 
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fontSize: 12, fill: '#64748b' }}
+                          tickMargin={2}
+                          width={30}
+                        />
+                        <Tooltip 
+                          cursor={{ fill: 'rgba(59, 130, 246, 0.1)' }}
+                          content={({ active, payload, label }) => {
+                            if (active && payload && payload.length) {
+                              const total = payload.reduce((sum, entry) => sum + (Number(entry.value) || 0), 0)
+                              const answeredEntry = payload.find(entry => entry.dataKey === t('answered'))
+                              const responseRate = total > 0 ? ((Number(answeredEntry?.value) || 0) / total * 100).toFixed(1) : '0.0'
+                              
+                              return (
+                                <div className="bg-white border border-slate-200 rounded-lg shadow-xl p-4 min-w-[200px]">
+                                  <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-100">
+                                    <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                                    <p className="font-semibold text-slate-800">{label}</p>
+                                  </div>
+                                  
+                                  {payload.map((entry, index) => (
+                                    <div key={index} className="flex items-center justify-between gap-4 mb-2">
+                                      <div className="flex items-center gap-2">
+                                        <div 
+                                          className="w-3 h-3 rounded-full shadow-sm" 
+                                          style={{ backgroundColor: entry.color }}
+                                        ></div>
+                                        <span className="text-slate-600 text-sm">{entry.dataKey}</span>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-bold text-slate-800">{entry.value}</span>
+                                        <span className="text-xs text-slate-500">
+                                          ({total > 0 ? ((Number(entry.value) || 0) / total * 100).toFixed(1) : '0.0'}%)
+                                        </span>
+                                      </div>
+                                    </div>
+                                  ))}
+                                  
+                                  <div className="mt-3 pt-2 border-t border-slate-100">
+                                    <div className="flex items-center justify-between text-sm">
+                                      <span className="text-slate-600 font-medium">{t('totalAppointments')}:</span>
+                                      <span className="font-bold text-blue-600">{total}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-sm mt-1">
+                                      <span className="text-slate-600 font-medium">{t('responseRate')}:</span>
+                                      <span className={`font-bold ${parseFloat(responseRate) >= 50 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                        {responseRate}%
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              )
+                            }
+                            return null
+                          }}
+                        />
+                        <Bar 
+                          dataKey={t('answered')} 
+                          fill="url(#answeredGradient)" 
+                          radius={[6, 6, 0, 0]}
+                          stroke="#059669"
+                          strokeWidth={1}
+                          style={{ cursor: 'pointer' }}
+                        />
+                        <Bar 
+                          dataKey={t('notAnswered')} 
+                          fill="url(#notAnsweredGradient)" 
+                          radius={[6, 6, 0, 0]}
+                          stroke="#dc2626"
+                          strokeWidth={1}
+                          style={{ cursor: 'pointer' }}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </ChartContainer>
+                </CardContent>
+              </Card>
+            </div>
           </div>
 
           {/* Right side - Sidebar */}
@@ -355,6 +532,22 @@ export default function DashboardPage() {
                 <CardTitle className="text-lg">{t('performanceIndicators')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">{t('totalAppointments')} (7d)</span>
+                  <span className="font-semibold text-blue-600">
+                    {appointmentAnalytics.reduce((sum, item) => sum + parseInt(item.answered) + parseInt(item.not_answered), 0)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">{t('responseRate')} (7d)</span>
+                  <span className="font-semibold text-green-600">
+                    {(() => {
+                      const total = appointmentAnalytics.reduce((sum, item) => sum + parseInt(item.answered) + parseInt(item.not_answered), 0)
+                      const answered = appointmentAnalytics.reduce((sum, item) => sum + parseInt(item.answered), 0)
+                      return total > 0 ? `${((answered / total) * 100).toFixed(1)}%` : '0%'
+                    })()}
+                  </span>
+                </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">{t('conversionRate')}</span>
                   <span className="font-semibold text-green-600">68%</span>
