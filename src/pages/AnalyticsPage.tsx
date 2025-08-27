@@ -34,14 +34,14 @@ const getTypeHeaderColor = (index: number) => {
 // Consistent colors for answered/not answered
 const getAnswerColors = () => ({
   answered: {
-    primary: '#10b981', // Green
-    secondary: '#059669', // Dark green
-    gradient: 'from-emerald-500 to-emerald-600'
+    primary: 'hsl(var(--chart-2))', // Green from CSS variables
+    secondary: 'hsl(var(--chart-2))',
+    gradient: 'from-emerald-500 to-emerald-600 dark:from-emerald-400 dark:to-emerald-500'
   },
   notAnswered: {
-    primary: '#ef4444', // Red
-    secondary: '#dc2626', // Dark red
-    gradient: 'from-red-500 to-red-600'
+    primary: 'hsl(var(--destructive))', // Red from CSS variables
+    secondary: 'hsl(var(--destructive))',
+    gradient: 'from-red-500 to-red-600 dark:from-red-400 dark:to-red-500'
   }
 })
 
@@ -216,13 +216,13 @@ export default function AnalyticsPage() {
           </div>
 
           {/* Main Appointments Analytics Chart */}
-          <Card className="bg-gradient-to-br from-slate-50 to-white border-slate-200">
+          <Card className="bg-gradient-to-br from-slate-50 to-white dark:from-slate-900/50 dark:to-slate-800/50 border-slate-200 dark:border-slate-700 dark:backdrop-blur-sm dark:bg-slate-900/80">
             <CardHeader className="pb-4 px-3 sm:px-6">
-              <CardTitle className="text-xl font-semibold text-slate-800 flex items-center gap-3">
-                <div className="w-2 h-8 bg-gradient-to-b from-blue-500 to-purple-600 rounded-full"></div>
+              <CardTitle className="text-xl font-semibold text-foreground flex items-center gap-3">
+                <div className="w-2 h-8 bg-gradient-to-b from-blue-500 to-purple-600 dark:from-blue-400 dark:to-purple-400 rounded-full"></div>
                 {t('appointmentsLast7Days')}
               </CardTitle>
-              <p className="text-sm text-slate-600 mt-1">
+              <p className="text-sm text-muted-foreground mt-1">
                 {t('appointmentsAnalyticsDescription')}
               </p>
             </CardHeader>
@@ -248,17 +248,17 @@ export default function AnalyticsPage() {
                   >
                     <defs>
                       <linearGradient id="answeredGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#10b981" stopOpacity={1} />
-                        <stop offset="100%" stopColor="#059669" stopOpacity={0.8} />
+                        <stop offset="0%" stopColor="hsl(var(--chart-2))" stopOpacity={1} />
+                        <stop offset="100%" stopColor="hsl(var(--chart-2))" stopOpacity={0.8} />
                       </linearGradient>
                       <linearGradient id="notAnsweredGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#ef4444" stopOpacity={1} />
-                        <stop offset="100%" stopColor="#dc2626" stopOpacity={0.8} />
+                        <stop offset="0%" stopColor="hsl(var(--destructive))" stopOpacity={1} />
+                        <stop offset="100%" stopColor="hsl(var(--destructive))" stopOpacity={0.8} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid 
                       strokeDasharray="3 3" 
-                      stroke="#e2e8f0" 
+                      stroke="hsl(var(--border))" 
                       strokeOpacity={0.6}
                       horizontal={true}
                       vertical={false}
@@ -267,13 +267,13 @@ export default function AnalyticsPage() {
                       dataKey="date" 
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fontSize: 12, fill: '#64748b' }}
+                      tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
                       tickMargin={8}
                     />
                     <YAxis 
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fontSize: 12, fill: '#64748b' }}
+                      tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
                       tickMargin={2}
                       width={30}
                     />
@@ -286,10 +286,10 @@ export default function AnalyticsPage() {
                           const responseRate = total > 0 ? ((Number(answeredEntry?.value) || 0) / total * 100).toFixed(1) : '0.0'
                           
                           return (
-                            <div className="bg-white border border-slate-200 rounded-lg shadow-xl p-4 min-w-[200px]">
-                              <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-100">
+                            <div className="bg-card border border-border rounded-lg shadow-xl p-4 min-w-[200px]">
+                              <div className="flex items-center gap-2 mb-3 pb-2 border-b border-border">
                                 <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                                <p className="font-semibold text-slate-800">{label}</p>
+                                <p className="font-semibold text-foreground">{label}</p>
                               </div>
                               
                               {payload.map((entry, index) => (
@@ -299,24 +299,24 @@ export default function AnalyticsPage() {
                                       className="w-3 h-3 rounded-full shadow-sm" 
                                       style={{ backgroundColor: entry.color }}
                                     ></div>
-                                    <span className="text-slate-600 text-sm">{entry.dataKey}</span>
+                                    <span className="text-muted-foreground text-sm">{entry.dataKey}</span>
                                   </div>
                                   <div className="flex items-center gap-2">
-                                    <span className="font-bold text-slate-800">{entry.value}</span>
-                                    <span className="text-xs text-slate-500">
+                                    <span className="font-bold text-foreground">{entry.value}</span>
+                                    <span className="text-xs text-muted-foreground">
                                       ({total > 0 ? ((Number(entry.value) || 0) / total * 100).toFixed(1) : '0.0'}%)
                                     </span>
                                   </div>
                                 </div>
                               ))}
                               
-                              <div className="mt-3 pt-2 border-t border-slate-100">
+                              <div className="mt-3 pt-2 border-t border-border">
                                 <div className="flex items-center justify-between text-sm">
-                                  <span className="text-slate-600 font-medium">{t('totalAppointments')}:</span>
+                                  <span className="text-muted-foreground font-medium">{t('totalAppointments')}:</span>
                                   <span className="font-bold text-blue-600">{total}</span>
                                 </div>
                                 <div className="flex items-center justify-between text-sm mt-1">
-                                  <span className="text-slate-600 font-medium">{t('responseRate')}:</span>
+                                  <span className="text-muted-foreground font-medium">{t('responseRate')}:</span>
                                   <span className={`font-bold ${parseFloat(responseRate) >= 50 ? 'text-emerald-600' : 'text-amber-600'}`}>
                                     {responseRate}%
                                   </span>
@@ -332,7 +332,7 @@ export default function AnalyticsPage() {
                       dataKey={t('answered')} 
                       fill="url(#answeredGradient)" 
                       radius={[6, 6, 0, 0]}
-                      stroke="#059669"
+                      stroke="hsl(var(--chart-2))"
                       strokeWidth={1}
                       style={{ cursor: 'pointer' }}
                     />
@@ -340,7 +340,7 @@ export default function AnalyticsPage() {
                       dataKey={t('notAnswered')} 
                       fill="url(#notAnsweredGradient)" 
                       radius={[6, 6, 0, 0]}
-                      stroke="#dc2626"
+                      stroke="hsl(var(--destructive))"
                       strokeWidth={1}
                       style={{ cursor: 'pointer' }}
                     />
@@ -352,13 +352,13 @@ export default function AnalyticsPage() {
 
           {/* Dynamic Appointment Type Charts */}
           {Object.keys(appointmentAnalyticsByType).length > 0 && (
-            <Card className="bg-gradient-to-br from-slate-50 to-white border-slate-200">
+            <Card className="bg-gradient-to-br from-slate-50 to-white dark:from-slate-900/50 dark:to-slate-800/50 border-slate-200 dark:border-slate-700 dark:backdrop-blur-sm dark:bg-slate-900/80">
               <CardHeader className="pb-4 px-3 sm:px-6">
-                <CardTitle className="text-xl font-semibold text-slate-800 flex items-center gap-3">
-                  <div className="w-2 h-8 bg-gradient-to-b from-indigo-500 to-purple-600 rounded-full"></div>
+                <CardTitle className="text-xl font-semibold text-foreground flex items-center gap-3">
+                  <div className="w-2 h-8 bg-gradient-to-b from-indigo-500 to-purple-600 dark:from-indigo-400 dark:to-purple-400 rounded-full"></div>
                   {t('appointmentsByType')}
                 </CardTitle>
-                <p className="text-sm text-slate-600 mt-1">
+                <p className="text-sm text-muted-foreground mt-1">
                   {t('appointmentsByTypeDescription')}
                 </p>
               </CardHeader>
@@ -375,7 +375,7 @@ export default function AnalyticsPage() {
                           <div 
                             className={`w-4 h-4 rounded bg-gradient-to-b ${headerColor.gradient}`}
                           ></div>
-                          <h3 className="text-lg font-semibold text-slate-700">
+                          <h3 className="text-lg font-semibold text-foreground">
                             {getAppointmentTypeTranslation(appointmentType, t)}
                           </h3>
                         </div>
@@ -411,7 +411,7 @@ export default function AnalyticsPage() {
                               </defs>
                               <CartesianGrid 
                                 strokeDasharray="3 3" 
-                                stroke="#e2e8f0" 
+                                stroke="hsl(var(--border))" 
                                 strokeOpacity={0.6}
                                 horizontal={true}
                                 vertical={false}
@@ -420,18 +420,18 @@ export default function AnalyticsPage() {
                                 dataKey="date" 
                                 axisLine={false}
                                 tickLine={false}
-                                tick={{ fontSize: 10, fill: '#64748b' }}
+                                tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
                                 tickMargin={6}
                               />
                               <YAxis 
                                 axisLine={false}
                                 tickLine={false}
-                                tick={{ fontSize: 10, fill: '#64748b' }}
+                                tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
                                 tickMargin={2}
                                 width={25}
                               />
                               <Tooltip 
-                                cursor={{ fill: `${answerColors.answered.primary}20` }}
+                                cursor={{ fill: 'rgba(59, 130, 246, 0.1)' }}
                                 content={({ active, payload, label }) => {
                                   if (active && payload && payload.length) {
                                     const total = payload.reduce((sum, entry) => sum + (Number(entry.value) || 0), 0)
@@ -439,13 +439,13 @@ export default function AnalyticsPage() {
                                     const responseRate = total > 0 ? ((Number(answeredEntry?.value) || 0) / total * 100).toFixed(1) : '0.0'
                                     
                                     return (
-                                      <div className="bg-white border border-slate-200 rounded-lg shadow-xl p-3 min-w-[180px]">
-                                        <div className="flex items-center gap-2 mb-2 pb-1 border-b border-slate-100">
+                                      <div className="bg-card border border-border rounded-lg shadow-xl p-3 min-w-[180px]">
+                                        <div className="flex items-center gap-2 mb-2 pb-1 border-b border-border">
                                           <div 
                                             className="w-2 h-2 rounded-full"
                                             style={{ backgroundColor: answerColors.answered.primary }}
                                           ></div>
-                                          <p className="font-semibold text-slate-800 text-sm">{label}</p>
+                                          <p className="font-semibold text-foreground text-sm">{label}</p>
                                         </div>
                                         
                                         {payload.map((entry, idx) => (
@@ -455,20 +455,20 @@ export default function AnalyticsPage() {
                                                 className="w-2 h-2 rounded-full" 
                                                 style={{ backgroundColor: entry.color }}
                                               ></div>
-                                              <span className="text-slate-600 text-xs">{entry.dataKey}</span>
+                                              <span className="text-muted-foreground text-xs">{entry.dataKey}</span>
                                             </div>
                                             <div className="flex items-center gap-1">
-                                              <span className="font-bold text-slate-800 text-sm">{entry.value}</span>
-                                              <span className="text-xs text-slate-500">
+                                              <span className="font-bold text-foreground text-sm">{entry.value}</span>
+                                              <span className="text-xs text-muted-foreground">
                                                 ({total > 0 ? ((Number(entry.value) || 0) / total * 100).toFixed(1) : '0.0'}%)
                                               </span>
                                             </div>
                                           </div>
                                         ))}
                                         
-                                        <div className="mt-2 pt-1 border-t border-slate-100">
+                                        <div className="mt-2 pt-1 border-t border-border">
                                           <div className="flex items-center justify-between text-xs">
-                                            <span className="text-slate-600 font-medium">{t('responseRate')}:</span>
+                                            <span className="text-muted-foreground font-medium">{t('responseRate')}:</span>
                                             <span className={`font-bold ${parseFloat(responseRate) >= 50 ? 'text-emerald-600' : 'text-amber-600'}`}>
                                               {responseRate}%
                                             </span>
@@ -500,17 +500,17 @@ export default function AnalyticsPage() {
                         
                         {/* Type-specific summary */}
                         <div className="grid grid-cols-2 gap-4 text-center mt-3">
-                          <div className="p-2 bg-slate-50 rounded-lg">
+                          <div className="p-2 bg-muted rounded-lg">
                             <div className="text-lg font-bold" style={{ color: answerColors.answered.primary }}>
                               {data.reduce((sum, item) => sum + parseInt(item.answered), 0)}
                             </div>
-                            <div className="text-xs text-slate-600">{t('answered')}</div>
+                            <div className="text-xs text-muted-foreground">{t('answered')}</div>
                           </div>
-                          <div className="p-2 bg-slate-50 rounded-lg">
+                          <div className="p-2 bg-muted rounded-lg">
                             <div className="text-lg font-bold" style={{ color: answerColors.notAnswered.primary }}>
                               {data.reduce((sum, item) => sum + parseInt(item.not_answered), 0)}
                             </div>
-                            <div className="text-xs text-slate-600">{t('notAnswered')}</div>
+                            <div className="text-xs text-muted-foreground">{t('notAnswered')}</div>
                           </div>
                         </div>
                       </div>

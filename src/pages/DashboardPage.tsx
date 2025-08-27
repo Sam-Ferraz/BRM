@@ -380,13 +380,13 @@ export default function DashboardPage() {
 
             {/* Appointments Analytics Chart */}
             <div className="mt-8">
-              <Card className="bg-gradient-to-br from-slate-50 to-white border-slate-200">
+              <Card className="bg-gradient-to-br from-slate-50 to-white dark:from-slate-900/50 dark:to-slate-800/50 border-slate-200 dark:border-slate-700 dark:backdrop-blur-sm dark:bg-slate-900/80">
                 <CardHeader className="pb-4">
-                  <CardTitle className="text-xl font-semibold text-slate-800 flex items-center gap-3">
-                    <div className="w-2 h-8 bg-gradient-to-b from-blue-500 to-purple-600 rounded-full"></div>
+                  <CardTitle className="text-xl font-semibold text-foreground flex items-center gap-3">
+                    <div className="w-2 h-8 bg-gradient-to-b from-blue-500 to-purple-600 dark:from-blue-400 dark:to-purple-400 rounded-full"></div>
                     {t('appointmentsLast7Days')}
                   </CardTitle>
-                  <p className="text-sm text-slate-600 mt-1">
+                  <p className="text-sm text-muted-foreground mt-1">
                     {t('appointmentsAnalyticsDescription')}
                   </p>
                 </CardHeader>
@@ -412,17 +412,17 @@ export default function DashboardPage() {
                       >
                         <defs>
                           <linearGradient id="answeredGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#10b981" stopOpacity={1} />
-                            <stop offset="100%" stopColor="#059669" stopOpacity={0.8} />
+                            <stop offset="0%" stopColor="hsl(var(--chart-2))" stopOpacity={1} />
+                            <stop offset="100%" stopColor="hsl(var(--chart-2))" stopOpacity={0.8} />
                           </linearGradient>
                           <linearGradient id="notAnsweredGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#ef4444" stopOpacity={1} />
-                            <stop offset="100%" stopColor="#dc2626" stopOpacity={0.8} />
+                            <stop offset="0%" stopColor="hsl(var(--destructive))" stopOpacity={1} />
+                            <stop offset="100%" stopColor="hsl(var(--destructive))" stopOpacity={0.8} />
                           </linearGradient>
                         </defs>
                         <CartesianGrid 
                           strokeDasharray="3 3" 
-                          stroke="#e2e8f0" 
+                          stroke="hsl(var(--border))" 
                           strokeOpacity={0.6}
                           horizontal={true}
                           vertical={false}
@@ -431,13 +431,13 @@ export default function DashboardPage() {
                           dataKey="date" 
                           axisLine={false}
                           tickLine={false}
-                          tick={{ fontSize: 12, fill: '#64748b' }}
+                          tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
                           tickMargin={8}
                         />
                         <YAxis 
                           axisLine={false}
                           tickLine={false}
-                          tick={{ fontSize: 12, fill: '#64748b' }}
+                          tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
                           tickMargin={2}
                           width={30}
                         />
@@ -450,10 +450,10 @@ export default function DashboardPage() {
                               const responseRate = total > 0 ? ((Number(answeredEntry?.value) || 0) / total * 100).toFixed(1) : '0.0'
                               
                               return (
-                                <div className="bg-white border border-slate-200 rounded-lg shadow-xl p-4 min-w-[200px]">
-                                  <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-100">
+                                <div className="bg-card border border-border rounded-lg shadow-xl p-4 min-w-[200px]">
+                                  <div className="flex items-center gap-2 mb-3 pb-2 border-b border-border">
                                     <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                                    <p className="font-semibold text-slate-800">{label}</p>
+                                    <p className="font-semibold text-foreground">{label}</p>
                                   </div>
                                   
                                   {payload.map((entry, index) => (
@@ -463,24 +463,24 @@ export default function DashboardPage() {
                                           className="w-3 h-3 rounded-full shadow-sm" 
                                           style={{ backgroundColor: entry.color }}
                                         ></div>
-                                        <span className="text-slate-600 text-sm">{entry.dataKey}</span>
+                                        <span className="text-muted-foreground text-sm">{entry.dataKey}</span>
                                       </div>
                                       <div className="flex items-center gap-2">
-                                        <span className="font-bold text-slate-800">{entry.value}</span>
-                                        <span className="text-xs text-slate-500">
+                                        <span className="font-bold text-foreground">{entry.value}</span>
+                                        <span className="text-xs text-muted-foreground">
                                           ({total > 0 ? ((Number(entry.value) || 0) / total * 100).toFixed(1) : '0.0'}%)
                                         </span>
                                       </div>
                                     </div>
                                   ))}
                                   
-                                  <div className="mt-3 pt-2 border-t border-slate-100">
+                                  <div className="mt-3 pt-2 border-t border-border">
                                     <div className="flex items-center justify-between text-sm">
-                                      <span className="text-slate-600 font-medium">{t('totalAppointments')}:</span>
+                                      <span className="text-muted-foreground font-medium">{t('totalAppointments')}:</span>
                                       <span className="font-bold text-blue-600">{total}</span>
                                     </div>
                                     <div className="flex items-center justify-between text-sm mt-1">
-                                      <span className="text-slate-600 font-medium">{t('responseRate')}:</span>
+                                      <span className="text-muted-foreground font-medium">{t('responseRate')}:</span>
                                       <span className={`font-bold ${parseFloat(responseRate) >= 50 ? 'text-emerald-600' : 'text-amber-600'}`}>
                                         {responseRate}%
                                       </span>
@@ -496,7 +496,7 @@ export default function DashboardPage() {
                           dataKey={t('answered')} 
                           fill="url(#answeredGradient)" 
                           radius={[6, 6, 0, 0]}
-                          stroke="#059669"
+                          stroke="hsl(var(--chart-2))"
                           strokeWidth={1}
                           style={{ cursor: 'pointer' }}
                         />
