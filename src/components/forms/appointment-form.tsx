@@ -33,8 +33,12 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
     scheduled_datetime: currentDateTime,
     description: "",
   })
+  const [errors, setErrors] = useState<{ [key: string]: string }>({})
 
   useEffect(() => {
+    // Clear errors when form opens/closes or changes mode
+    setErrors({})
+    
     if (appointment) {
       // Convert datetime from database to form format (YYYY-MM-DDTHH:mm)
       let formattedDateTime = currentDateTime
@@ -71,6 +75,22 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Clear previous errors
+    setErrors({})
+    
+    // Validate required fields
+    const newErrors: { [key: string]: string } = {}
+    
+    if (!formData.client.trim()) {
+      newErrors.client = t('clientRequired') || 'Client is required'
+    }
+    
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors)
+      return
+    }
+    
     onSubmit(formData)
   }
 
@@ -82,13 +102,18 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="client">{t('client')}</Label>
+            <Label htmlFor="client">
+              {t('client')} <span className="text-red-500">*</span>
+            </Label>
             <ClientSearch
               value={formData.client}
               onSelect={(clientName) => setFormData({ ...formData, client: clientName })}
               placeholder={t('selectClient')}
-              className="w-full"
+              className={`w-full ${errors.client ? 'ring-2 ring-red-500' : ''}`}
             />
+            {errors.client && (
+              <p className="text-sm text-red-500">{errors.client}</p>
+            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="type">{t('type')}</Label>
