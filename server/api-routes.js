@@ -82,6 +82,71 @@ export function createApiRoutes(app) {
       client.release()
     }
   })
+
+  // Appointments analytics by type - last 7 days
+  app.get('/api/appointments/analytics/by-type/last-7-days', authenticateToken, async (req, res) => {
+    const client = await pool.connect()
+    try {
+      // Ensure UTC timezone for this session
+      await client.query('SET TIMEZONE = \'UTC\'')
+      
+      const query = `
+        WITH date_series AS (
+          SELECT generate_series(
+            CURRENT_DATE - INTERVAL '6 days',
+            CURRENT_DATE,
+            INTERVAL '1 day'
+          )::date AS date
+        ),
+        appointment_types AS (
+          SELECT DISTINCT type FROM appointments
+        ),
+        appointments_data AS (
+          SELECT 
+            DATE(scheduled_datetime) as appointment_date,
+            type,
+            answered,
+            COUNT(*) as count
+          FROM appointments 
+          WHERE DATE(scheduled_datetime) >= CURRENT_DATE - INTERVAL '6 days'
+            AND DATE(scheduled_datetime) <= CURRENT_DATE
+          GROUP BY DATE(scheduled_datetime), type, answered
+        )
+        SELECT 
+          ds.date::text as date,
+          at.type,
+          COALESCE(SUM(CASE WHEN ad.answered = true THEN ad.count ELSE 0 END), 0) as answered,
+          COALESCE(SUM(CASE WHEN ad.answered = false THEN ad.count ELSE 0 END), 0) as not_answered
+        FROM date_series ds
+        CROSS JOIN appointment_types at
+        LEFT JOIN appointments_data ad ON ds.date = ad.appointment_date AND at.type = ad.type
+        GROUP BY ds.date, at.type
+        ORDER BY at.type, ds.date
+      `
+      
+      const result = await client.query(query)
+      
+      // Group results by type
+      const groupedByType = {}
+      result.rows.forEach(row => {
+        if (!groupedByType[row.type]) {
+          groupedByType[row.type] = []
+        }
+        groupedByType[row.type].push({
+          date: row.date,
+          answered: parseInt(row.answered),
+          not_answered: parseInt(row.not_answered)
+        })
+      })
+      
+      res.json({ data: groupedByType })
+    } catch (error) {
+      console.error('Error fetching appointments analytics by type:', error)
+      res.status(500).json({ error: 'Internal server error' })
+    } finally {
+      client.release()
+    }
+  })
   
   // Deals routes
   app.get('/api/deals', authenticateToken, async (req, res) => {

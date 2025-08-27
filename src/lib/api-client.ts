@@ -145,6 +145,10 @@ export interface AppointmentAnalytics {
   not_answered: number
 }
 
+export interface AppointmentAnalyticsByType {
+  [appointmentType: string]: AppointmentAnalytics[]
+}
+
 // API service methods
 export const api = {
   // Dashboard
@@ -260,6 +264,10 @@ export const api = {
 
     getAnalyticsLast7Days: async (): Promise<{ data: AppointmentAnalytics[] }> => {
       return apiClient.get<{ data: AppointmentAnalytics[] }>('/appointments/analytics/last-7-days')
+    },
+
+    getAnalyticsByTypeLast7Days: async (): Promise<{ data: AppointmentAnalyticsByType }> => {
+      return apiClient.get<{ data: AppointmentAnalyticsByType }>('/appointments/analytics/by-type/last-7-days')
     },
 
     create: async (data: Omit<Appointment, "id">): Promise<Appointment> => {
