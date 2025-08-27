@@ -15,15 +15,6 @@ import { ProductForm } from "@/components/forms/product-form"
 import { AppointmentForm } from "@/components/forms/appointment-form"
 import { api, AppointmentAnalytics, AppointmentAnalyticsByType } from "@/lib/api-client"
 
-// Mock data for charts
-const salesData = [
-  { month: "Jan", vendas: 12000, propostas: 8000 },
-  { month: "Fev", vendas: 15000, propostas: 12000 },
-  { month: "Mar", vendas: 18000, propostas: 15000 },
-  { month: "Abr", vendas: 22000, propostas: 18000 },
-  { month: "Mai", vendas: 25000, propostas: 20000 },
-  { month: "Jun", vendas: 28000, propostas: 22000 },
-]
 
 const getStatusData = (t: any) => [
   { name: t('closed'), value: 35, color: "#10b981" },
@@ -597,39 +588,6 @@ export default function DashboardPage() {
                     </div>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* Sales vs Proposals Chart */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">{t('salesVsProposals')}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ChartContainer
-                  config={{
-                    vendas: {
-                      label: "Vendas",
-                      color: "hsl(var(--chart-1))",
-                    },
-                    propostas: {
-                      label: "Propostas",
-                      color: "hsl(var(--chart-2))",
-                    },
-                  }}
-                  className="h-[300px]"
-                >
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={salesData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="month" />
-                      <YAxis />
-                      <ChartTooltip content={ChartTooltipContent as any} />
-                      <Bar dataKey="vendas" fill="var(--color-vendas)" />
-                      <Bar dataKey="propostas" fill="var(--color-propostas)" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </ChartContainer>
               </CardContent>
             </Card>
 
