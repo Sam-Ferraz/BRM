@@ -120,7 +120,9 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
             </Select>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="scheduled_datetime">{t('dateTime')}</Label>
+            <Label htmlFor="scheduled_datetime">
+              {t('dateTime')} <span className="text-red-500">*</span>
+            </Label>
             <Input
               id="scheduled_datetime"
               type="datetime-local"

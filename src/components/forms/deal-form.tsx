@@ -91,7 +91,9 @@ export function DealForm({ deal, open, onOpenChange, onSubmit, loading }: DealFo
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="valor">{t('value')}</Label>
+            <Label htmlFor="valor">
+              {t('value')} <span className="text-red-500">*</span>
+            </Label>
             <CurrencyInput
               id="valor"
               value={formData.value}
@@ -117,7 +119,9 @@ export function DealForm({ deal, open, onOpenChange, onSubmit, loading }: DealFo
             </Select>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="data">{t('date')}</Label>
+            <Label htmlFor="data">
+              {t('date')} <span className="text-red-500">*</span>
+            </Label>
             <Input
               id="data"
               type="date"

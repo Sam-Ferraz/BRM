@@ -104,7 +104,9 @@ export function SalesAgendaForm({ salesAgenda, open, onOpenChange, onSubmit, loa
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="titulo">{t('title')}</Label>
+            <Label htmlFor="titulo">
+              {t('title')} <span className="text-red-500">*</span>
+            </Label>
             <Input
               id="titulo"
               value={formData.title}
@@ -113,7 +115,9 @@ export function SalesAgendaForm({ salesAgenda, open, onOpenChange, onSubmit, loa
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="cliente">{t('client')}</Label>
+            <Label htmlFor="cliente">
+              {t('client')} <span className="text-red-500">*</span>
+            </Label>
             <Input
               id="cliente"
               value={formData.client}
@@ -136,7 +140,9 @@ export function SalesAgendaForm({ salesAgenda, open, onOpenChange, onSubmit, loa
             )}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="valor">{t('value')}</Label>
+            <Label htmlFor="valor">
+              {t('value')} <span className="text-red-500">*</span>
+            </Label>
             <CurrencyInput
               id="valor"
               value={formData.value}
@@ -161,7 +167,9 @@ export function SalesAgendaForm({ salesAgenda, open, onOpenChange, onSubmit, loa
             </Select>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="data">{t('date')}</Label>
+            <Label htmlFor="data">
+              {t('date')} <span className="text-red-500">*</span>
+            </Label>
             <Input
               id="data"
               type="date"

@@ -70,7 +70,9 @@ export function ClientForm({ client, initialName, open, onOpenChange, onSubmit, 
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="name">{t('name')}</Label>
+            <Label htmlFor="name">
+              {t('name')} <span className="text-red-500">*</span>
+            </Label>
             <Input
               id="name"
               value={formData.name}
