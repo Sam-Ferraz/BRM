@@ -38,6 +38,7 @@ export default function DashboardPage() {
     totalClients: 0,
     totalProducts: 0,
     totalAppointments: 0,
+    totalSalesAgenda: 0,
   })
   const [formStates, setFormStates] = useState({
     deal: false,
@@ -52,14 +53,46 @@ export default function DashboardPage() {
   const { toast } = useToast()
 
   useEffect(() => {
-    // Mock stats - in real app, fetch from API
-    setStats({
-      totalDeals: 24,
-      totalClients: 156,
-      totalProducts: 89,
-      totalAppointments: 42,
-    })
+    const fetchStats = async () => {
+      try {
+        const stats = await api.dashboard.getStats()
+        setStats({
+          totalDeals: stats.totalDeals,
+          totalClients: stats.totalClients,
+          totalProducts: stats.totalProducts,
+          totalAppointments: stats.totalAppointments,
+          totalSalesAgenda: stats.totalSalesAgenda,
+        })
+      } catch (error) {
+        console.error('Error fetching dashboard stats:', error)
+        // Keep default values on error
+        setStats({
+          totalDeals: 0,
+          totalClients: 0,
+          totalProducts: 0,
+          totalAppointments: 0,
+          totalSalesAgenda: 0,
+        })
+      }
+    }
+    
+    fetchStats()
   }, [])
+
+  const refreshStats = async () => {
+    try {
+      const stats = await api.dashboard.getStats()
+      setStats({
+        totalDeals: stats.totalDeals,
+        totalClients: stats.totalClients,
+        totalProducts: stats.totalProducts,
+        totalAppointments: stats.totalAppointments,
+        totalSalesAgenda: stats.totalSalesAgenda,
+      })
+    } catch (error) {
+      console.error('Error refreshing dashboard stats:', error)
+    }
+  }
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent | TouchEvent) => {
@@ -118,7 +151,7 @@ export default function DashboardPage() {
       })
       closeForm('deal')
       // Update stats
-      setStats(prev => ({ ...prev, totalDeals: prev.totalDeals + 1 }))
+      await refreshStats()
     } catch (error) {
       toast({
         title: t('errorMessages.dealCreationError'),
@@ -140,7 +173,7 @@ export default function DashboardPage() {
       })
       closeForm('client')
       // Update stats
-      setStats(prev => ({ ...prev, totalClients: prev.totalClients + 1 }))
+      await refreshStats()
     } catch (error) {
       toast({
         title: t('errorMessages.clientCreationError'),
@@ -162,7 +195,7 @@ export default function DashboardPage() {
       })
       closeForm('product')
       // Update stats
-      setStats(prev => ({ ...prev, totalProducts: prev.totalProducts + 1 }))
+      await refreshStats()
     } catch (error) {
       toast({
         title: t('errorMessages.productCreationError'),
@@ -184,7 +217,7 @@ export default function DashboardPage() {
       })
       closeForm('appointment')
       // Update stats
-      setStats(prev => ({ ...prev, totalAppointments: prev.totalAppointments + 1 }))
+      await refreshStats()
     } catch (error) {
       toast({
         title: t('errorMessages.serviceCreationError'),
@@ -311,7 +344,7 @@ export default function DashboardPage() {
                     <div className="p-2 bg-indigo-100 rounded-lg">
                       <FileText className="w-6 h-6 text-indigo-600" />
                     </div>
-                    <p className="text-2xl font-bold text-foreground ml-3">8</p>
+                    <p className="text-2xl font-bold text-foreground ml-3">{stats.totalSalesAgenda}</p>
                   </div>
                 </div>
               </CardContent>

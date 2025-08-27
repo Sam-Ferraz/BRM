@@ -125,8 +125,23 @@ export interface ApiResponse<T> {
   total: number
 }
 
+export interface DashboardStats {
+  totalDeals: number
+  totalClients: number
+  totalProducts: number
+  totalAppointments: number
+  totalSalesAgenda: number
+}
+
 // API service methods
 export const api = {
+  // Dashboard
+  dashboard: {
+    getStats: async (): Promise<DashboardStats> => {
+      return apiClient.get<DashboardStats>('/dashboard/stats')
+    },
+  },
+
   // Deals
   deals: {
     getAll: async (filters?: { search?: string; status?: string; sortBy?: string; sortOrder?: "asc" | "desc" }): Promise<ApiResponse<Deal>> => {

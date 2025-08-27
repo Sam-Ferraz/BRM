@@ -4,6 +4,40 @@ import { authenticateToken } from './auth.js'
 // Generic CRUD operations for database entities
 export function createApiRoutes(app) {
   
+  // Dashboard stats route
+  app.get('/api/dashboard/stats', authenticateToken, async (req, res) => {
+    const client = await pool.connect()
+    try {
+      // Get counts for all entities
+      const dealsQuery = 'SELECT COUNT(*) as count FROM deals'
+      const clientsQuery = 'SELECT COUNT(*) as count FROM clients'
+      const productsQuery = 'SELECT COUNT(*) as count FROM products'
+      const appointmentsQuery = 'SELECT COUNT(*) as count FROM appointments'
+      const salesAgendaQuery = 'SELECT COUNT(*) as count FROM sales_agenda'
+      
+      const [dealsResult, clientsResult, productsResult, appointmentsResult, salesAgendaResult] = await Promise.all([
+        client.query(dealsQuery),
+        client.query(clientsQuery),
+        client.query(productsQuery),
+        client.query(appointmentsQuery),
+        client.query(salesAgendaQuery)
+      ])
+      
+      res.json({
+        totalDeals: parseInt(dealsResult.rows[0].count),
+        totalClients: parseInt(clientsResult.rows[0].count),
+        totalProducts: parseInt(productsResult.rows[0].count),
+        totalAppointments: parseInt(appointmentsResult.rows[0].count),
+        totalSalesAgenda: parseInt(salesAgendaResult.rows[0].count)
+      })
+    } catch (error) {
+      console.error('Error fetching dashboard stats:', error)
+      res.status(500).json({ error: 'Internal server error' })
+    } finally {
+      client.release()
+    }
+  })
+  
   // Deals routes
   app.get('/api/deals', authenticateToken, async (req, res) => {
     const client = await pool.connect()
