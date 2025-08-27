@@ -209,10 +209,10 @@ const resources = {
       appointmentsAnalyticsDescription: 'Comparação de atendimentos respondidos vs não respondidos',
       today: 'Hoje',
       yesterday: 'Ontem',
-      totalAnswered: 'Total Respondidos',
-      totalNotAnswered: 'Total Não Respondidos',
-      totalAppointments: 'Total de Atendimentos',
-      responseRate: 'Taxa de Resposta',
+      totalAnswered: 'Respondidos',
+      totalNotAnswered: 'Não Respondidos',
+      totalAppointments: 'Total',
+      responseRate: 'Taxa',
       
       // Common actions
       success: 'Sucesso',
@@ -473,10 +473,10 @@ const resources = {
       appointmentsAnalyticsDescription: 'Comparison of answered vs not answered appointments',
       today: 'Today',
       yesterday: 'Yesterday',
-      totalAnswered: 'Total Answered',
-      totalNotAnswered: 'Total Not Answered',
-      totalAppointments: 'Total Appointments',
-      responseRate: 'Response Rate',
+      totalAnswered: 'Answered',
+      totalNotAnswered: 'Not Answered',
+      totalAppointments: 'Total',
+      responseRate: 'Rate',
       
       // Common actions
       success: 'Success',
@@ -737,10 +737,10 @@ const resources = {
       appointmentsAnalyticsDescription: 'Comparación de citas respondidas vs no respondidas',
       today: 'Hoy',
       yesterday: 'Ayer',
-      totalAnswered: 'Total Respondidas',
-      totalNotAnswered: 'Total No Respondidas',
-      totalAppointments: 'Total de Citas',
-      responseRate: 'Tasa de Respuesta',
+      totalAnswered: 'Respondidas',
+      totalNotAnswered: 'No Respondidas',
+      totalAppointments: 'Total',
+      responseRate: 'Tasa',
       
       // Common actions
       success: 'Éxito',
