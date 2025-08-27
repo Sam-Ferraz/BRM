@@ -261,117 +261,94 @@ export default function DashboardPage() {
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 mb-8">
-          <Link to="/deals">
-            <Card className="hover:shadow-md transition-shadow cursor-pointer">
-              <CardContent className="p-6">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-3 text-center">{t('deals')}</p>
-                  <div className="flex items-center justify-center">
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <Briefcase className="w-6 h-6 text-blue-600" />
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+          {/* Left side - Stats Cards */}
+          <div className="lg:col-span-3">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+              <Link to="/deals">
+                <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                  <CardContent className="p-6">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground mb-3 text-center">{t('deals')}</p>
+                      <div className="flex items-center justify-center">
+                        <div className="p-2 bg-blue-100 rounded-lg">
+                          <Briefcase className="w-6 h-6 text-blue-600" />
+                        </div>
+                        <p className="text-2xl font-bold text-foreground ml-3">{stats.totalDeals}</p>
+                      </div>
                     </div>
-                    <p className="text-2xl font-bold text-foreground ml-3">{stats.totalDeals}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
+                  </CardContent>
+                </Card>
+              </Link>
 
-          <Link to="/clients">
-            <Card className="hover:shadow-md transition-shadow cursor-pointer">
-              <CardContent className="p-6">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-3 text-center">{t('clients')}</p>
-                  <div className="flex items-center justify-center">
-                    <div className="p-2 bg-green-100 rounded-lg">
-                      <Users className="w-6 h-6 text-green-600" />
+              <Link to="/clients">
+                <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                  <CardContent className="p-6">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground mb-3 text-center">{t('clients')}</p>
+                      <div className="flex items-center justify-center">
+                        <div className="p-2 bg-green-100 rounded-lg">
+                          <Users className="w-6 h-6 text-green-600" />
+                        </div>
+                        <p className="text-2xl font-bold text-foreground ml-3">{stats.totalClients}</p>
+                      </div>
                     </div>
-                    <p className="text-2xl font-bold text-foreground ml-3">{stats.totalClients}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
+                  </CardContent>
+                </Card>
+              </Link>
 
-          <Link to="/products">
-            <Card className="hover:shadow-md transition-shadow cursor-pointer">
-              <CardContent className="p-6">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-3 text-center">{t('products')}</p>
-                  <div className="flex items-center justify-center">
-                    <div className="p-2 bg-orange-100 rounded-lg">
-                      <Package className="w-6 h-6 text-orange-600" />
+              <Link to="/products">
+                <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                  <CardContent className="p-6">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground mb-3 text-center">{t('products')}</p>
+                      <div className="flex items-center justify-center">
+                        <div className="p-2 bg-orange-100 rounded-lg">
+                          <Package className="w-6 h-6 text-orange-600" />
+                        </div>
+                        <p className="text-2xl font-bold text-foreground ml-3">{stats.totalProducts}</p>
+                      </div>
                     </div>
-                    <p className="text-2xl font-bold text-foreground ml-3">{stats.totalProducts}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
+                  </CardContent>
+                </Card>
+              </Link>
 
-          <Link to="/appointments">
-            <Card className="hover:shadow-md transition-shadow cursor-pointer">
-              <CardContent className="p-6">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-3 text-center">{t('services')}</p>
-                  <div className="flex items-center justify-center">
-                    <div className="p-2 bg-purple-100 rounded-lg">
-                      <HeadphonesIcon className="w-6 h-6 text-purple-600" />
+              <Link to="/appointments">
+                <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                  <CardContent className="p-6">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground mb-3 text-center">{t('services')}</p>
+                      <div className="flex items-center justify-center">
+                        <div className="p-2 bg-purple-100 rounded-lg">
+                          <HeadphonesIcon className="w-6 h-6 text-purple-600" />
+                        </div>
+                        <p className="text-2xl font-bold text-foreground ml-3">{stats.totalAppointments}</p>
+                      </div>
                     </div>
-                    <p className="text-2xl font-bold text-foreground ml-3">{stats.totalAppointments}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
+                  </CardContent>
+                </Card>
+              </Link>
 
-          <Link to="/sales-agenda">
-            <Card className="hover:shadow-md transition-shadow cursor-pointer">
-              <CardContent className="p-6">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-3 text-center">{t('salesAgenda')}</p>
-                  <div className="flex items-center justify-center">
-                    <div className="p-2 bg-indigo-100 rounded-lg">
-                      <FileText className="w-6 h-6 text-indigo-600" />
+              <Link to="/sales-agenda">
+                <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                  <CardContent className="p-6">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground mb-3 text-center">{t('salesAgenda')}</p>
+                      <div className="flex items-center justify-center">
+                        <div className="p-2 bg-indigo-100 rounded-lg">
+                          <FileText className="w-6 h-6 text-indigo-600" />
+                        </div>
+                        <p className="text-2xl font-bold text-foreground ml-3">{stats.totalSalesAgenda}</p>
+                      </div>
                     </div>
-                    <p className="text-2xl font-bold text-foreground ml-3">{stats.totalSalesAgenda}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-        </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            </div>
+          </div>
 
-        <div className="max-w-lg mx-auto">
-          {/* Sidebar */}
+          {/* Right side - Sidebar */}
           <div className="space-y-6">
-            {/* Settings */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">{t('settings')}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {settingsItems.map((item) => (
-                  <Link key={item.href} to={item.href}>
-                    <Button variant="ghost" className="w-full justify-start">
-                      <item.icon className="w-4 h-4 mr-2" />
-                      {item.title}
-                    </Button>
-                  </Link>
-                ))}
-                <Button 
-                  variant="ghost" 
-                  className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
-                  onClick={handleLogout}
-                >
-                  <LogOut className="w-4 h-4 mr-2" />
-                  {t('logout')}
-                </Button>
-              </CardContent>
-            </Card>
-
             {/* Performance Indicators */}
             <Card>
               <CardHeader>
@@ -397,6 +374,30 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
 
+            {/* Settings */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">{t('settings')}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {settingsItems.map((item) => (
+                  <Link key={item.href} to={item.href}>
+                    <Button variant="ghost" className="w-full justify-start">
+                      <item.icon className="w-4 h-4 mr-2" />
+                      {item.title}
+                    </Button>
+                  </Link>
+                ))}
+                <Button 
+                  variant="ghost" 
+                  className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
+                  onClick={handleLogout}
+                >
+                  <LogOut className="w-4 h-4 mr-2" />
+                  {t('logout')}
+                </Button>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>
