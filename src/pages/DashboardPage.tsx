@@ -13,7 +13,7 @@ import { DealForm } from "@/components/forms/deal-form"
 import { ClientForm } from "@/components/forms/client-form"
 import { ProductForm } from "@/components/forms/product-form"
 import { AppointmentForm } from "@/components/forms/appointment-form"
-import { api } from "@/lib/api-client"
+import { api, AppointmentAnalytics } from "@/lib/api-client"
 
 // Mock data for charts
 const salesData = [
@@ -31,6 +31,33 @@ const getStatusData = (t: any) => [
   { name: t('proposals'), value: 20, color: "#f59e0b" },
 ]
 
+const formatAppointmentAnalytics = (analytics: AppointmentAnalytics[], t: any) => {
+  return analytics.map(item => {
+    const date = new Date(item.date)
+    const today = new Date()
+    const yesterday = new Date()
+    yesterday.setDate(today.getDate() - 1)
+    
+    let dateLabel = ''
+    if (date.toDateString() === today.toDateString()) {
+      dateLabel = t('today') || 'Hoje'
+    } else if (date.toDateString() === yesterday.toDateString()) {
+      dateLabel = t('yesterday') || 'Ontem'
+    } else {
+      dateLabel = date.toLocaleDateString('pt-BR', { 
+        weekday: 'short',
+        day: '2-digit'
+      })
+    }
+    
+    return {
+      date: dateLabel,
+      [t('answered')]: parseInt(item.answered),
+      [t('notAnswered')]: parseInt(item.not_answered),
+    }
+  })
+}
+
 export default function DashboardPage() {
   const { t } = useTranslation()
   const [stats, setStats] = useState({
@@ -40,6 +67,7 @@ export default function DashboardPage() {
     totalAppointments: 0,
     totalSalesAgenda: 0,
   })
+  const [appointmentAnalytics, setAppointmentAnalytics] = useState<AppointmentAnalytics[]>([])
   const [formStates, setFormStates] = useState({
     deal: false,
     client: false,
@@ -53,9 +81,13 @@ export default function DashboardPage() {
   const { toast } = useToast()
 
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchData = async () => {
       try {
-        const stats = await api.dashboard.getStats()
+        const [stats, analytics] = await Promise.all([
+          api.dashboard.getStats(),
+          api.appointments.getAnalyticsLast7Days()
+        ])
+        
         setStats({
           totalDeals: stats.totalDeals,
           totalClients: stats.totalClients,
@@ -63,8 +95,10 @@ export default function DashboardPage() {
           totalAppointments: stats.totalAppointments,
           totalSalesAgenda: stats.totalSalesAgenda,
         })
+        
+        setAppointmentAnalytics(analytics.data)
       } catch (error) {
-        console.error('Error fetching dashboard stats:', error)
+        console.error('Error fetching dashboard data:', error)
         // Keep default values on error
         setStats({
           totalDeals: 0,
@@ -73,15 +107,20 @@ export default function DashboardPage() {
           totalAppointments: 0,
           totalSalesAgenda: 0,
         })
+        setAppointmentAnalytics([])
       }
     }
     
-    fetchStats()
+    fetchData()
   }, [])
 
   const refreshStats = async () => {
     try {
-      const stats = await api.dashboard.getStats()
+      const [stats, analytics] = await Promise.all([
+        api.dashboard.getStats(),
+        api.appointments.getAnalyticsLast7Days()
+      ])
+      
       setStats({
         totalDeals: stats.totalDeals,
         totalClients: stats.totalClients,
@@ -89,8 +128,10 @@ export default function DashboardPage() {
         totalAppointments: stats.totalAppointments,
         totalSalesAgenda: stats.totalSalesAgenda,
       })
+      
+      setAppointmentAnalytics(analytics.data)
     } catch (error) {
-      console.error('Error refreshing dashboard stats:', error)
+      console.error('Error refreshing dashboard data:', error)
     }
   }
 
@@ -353,85 +394,208 @@ export default function DashboardPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Charts */}
-          <div className="lg:col-span-2">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">{t('salesVsProposals')}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ChartContainer
-                    config={{
-                      vendas: {
-                        label: "Vendas",
-                        color: "hsl(var(--chart-1))",
-                      },
-                      propostas: {
-                        label: "Propostas",
-                        color: "hsl(var(--chart-2))",
-                      },
-                    }}
-                    className="h-[300px]"
-                  >
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={salesData}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="month" />
-                        <YAxis />
-                        <ChartTooltip content={ChartTooltipContent as any} />
-                        <Bar dataKey="vendas" fill="var(--color-vendas)" />
-                        <Bar dataKey="propostas" fill="var(--color-propostas)" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </ChartContainer>
-                </CardContent>
-              </Card>
+          {/* Charts Section */}
+          <div className="lg:col-span-2 space-y-8">
+            {/* Full Width Appointments Analytics Chart */}
+            <Card className="bg-gradient-to-br from-slate-50 to-white border-slate-200">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-xl font-semibold text-slate-800 flex items-center gap-3">
+                  <div className="w-2 h-8 bg-gradient-to-b from-blue-500 to-purple-600 rounded-full"></div>
+                  {t('appointmentsLast7Days')}
+                </CardTitle>
+                <p className="text-sm text-slate-600 mt-1">
+                  {t('appointmentsAnalyticsDescription')}
+                </p>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <ChartContainer
+                  config={{
+                    [t('answered')]: {
+                      label: t('answered'),
+                      color: "hsl(142, 76%, 36%)",
+                    },
+                    [t('notAnswered')]: {
+                      label: t('notAnswered'),
+                      color: "hsl(0, 84%, 60%)",
+                    },
+                  }}
+                  className="h-[350px]"
+                >
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart 
+                      data={formatAppointmentAnalytics(appointmentAnalytics, t)}
+                      margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+                      barCategoryGap="15%"
+                    >
+                      <defs>
+                        <linearGradient id="answeredGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#10b981" stopOpacity={1} />
+                          <stop offset="100%" stopColor="#059669" stopOpacity={0.8} />
+                        </linearGradient>
+                        <linearGradient id="notAnsweredGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#ef4444" stopOpacity={1} />
+                          <stop offset="100%" stopColor="#dc2626" stopOpacity={0.8} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid 
+                        strokeDasharray="3 3" 
+                        stroke="#e2e8f0" 
+                        strokeOpacity={0.6}
+                        horizontal={true}
+                        vertical={false}
+                      />
+                      <XAxis 
+                        dataKey="date" 
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 14, fill: '#64748b' }}
+                        tickMargin={10}
+                      />
+                      <YAxis 
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 14, fill: '#64748b' }}
+                        tickMargin={10}
+                      />
+                      <ChartTooltip 
+                        content={({ active, payload, label }) => {
+                          if (active && payload && payload.length) {
+                            const total = payload.reduce((sum, entry) => sum + (entry.value || 0), 0)
+                            const answeredEntry = payload.find(entry => entry.dataKey === t('answered'))
+                            const notAnsweredEntry = payload.find(entry => entry.dataKey === t('notAnswered'))
+                            const responseRate = total > 0 ? ((answeredEntry?.value || 0) / total * 100).toFixed(1) : '0.0'
+                            
+                            return (
+                              <div className="bg-white border border-slate-200 rounded-lg shadow-xl p-4 min-w-[200px]">
+                                <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-100">
+                                  <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                                  <p className="font-semibold text-slate-800">{label}</p>
+                                </div>
+                                
+                                {payload.map((entry, index) => (
+                                  <div key={index} className="flex items-center justify-between gap-4 mb-2">
+                                    <div className="flex items-center gap-2">
+                                      <div 
+                                        className="w-3 h-3 rounded-full shadow-sm" 
+                                        style={{ backgroundColor: entry.color }}
+                                      ></div>
+                                      <span className="text-slate-600 text-sm">{entry.dataKey}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-bold text-slate-800">{entry.value}</span>
+                                      <span className="text-xs text-slate-500">
+                                        ({total > 0 ? ((entry.value || 0) / total * 100).toFixed(1) : '0.0'}%)
+                                      </span>
+                                    </div>
+                                  </div>
+                                ))}
+                                
+                                <div className="mt-3 pt-2 border-t border-slate-100">
+                                  <div className="flex items-center justify-between text-sm">
+                                    <span className="text-slate-600 font-medium">{t('totalAppointments')}:</span>
+                                    <span className="font-bold text-blue-600">{total}</span>
+                                  </div>
+                                  <div className="flex items-center justify-between text-sm mt-1">
+                                    <span className="text-slate-600 font-medium">{t('responseRate')}:</span>
+                                    <span className={`font-bold ${parseFloat(responseRate) >= 50 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                      {responseRate}%
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            )
+                          }
+                          return null
+                        }}
+                      />
+                      <Bar 
+                        dataKey={t('answered')} 
+                        fill="url(#answeredGradient)" 
+                        radius={[6, 6, 0, 0]}
+                        stroke="#059669"
+                        strokeWidth={1}
+                      />
+                      <Bar 
+                        dataKey={t('notAnswered')} 
+                        fill="url(#notAnsweredGradient)" 
+                        radius={[6, 6, 0, 0]}
+                        stroke="#dc2626"
+                        strokeWidth={1}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
+                
+                {/* Summary Stats */}
+                <div className="mt-6 pt-6 border-t border-slate-200">
+                  <div className="grid grid-cols-3 gap-8 mb-6">
+                    <div className="text-center">
+                      <div className="text-3xl font-bold text-emerald-600">
+                        {appointmentAnalytics.reduce((sum, item) => sum + parseInt(item.answered), 0)}
+                      </div>
+                      <div className="text-sm text-slate-600 mt-1">{t('totalAnswered')}</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-3xl font-bold text-red-600">
+                        {appointmentAnalytics.reduce((sum, item) => sum + parseInt(item.not_answered), 0)}
+                      </div>
+                      <div className="text-sm text-slate-600 mt-1">{t('totalNotAnswered')}</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-3xl font-bold text-blue-600">
+                        {appointmentAnalytics.reduce((sum, item) => sum + parseInt(item.answered) + parseInt(item.not_answered), 0)}
+                      </div>
+                      <div className="text-sm text-slate-600 mt-1">{t('totalAppointments')}</div>
+                    </div>
+                  </div>
+                  
+                  {/* Legend */}
+                  <div className="flex justify-center gap-8">
+                    <div className="flex items-center gap-3">
+                      <div className="w-5 h-5 rounded bg-gradient-to-b from-emerald-500 to-emerald-600 border border-emerald-600"></div>
+                      <span className="text-sm font-medium text-slate-700">{t('answered')}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="w-5 h-5 rounded bg-gradient-to-b from-red-500 to-red-600 border border-red-600"></div>
+                      <span className="text-sm font-medium text-slate-700">{t('notAnswered')}</span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">{t('dealStatus')}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ChartContainer
-                    config={{
-                      fechados: {
-                        label: "Fechados",
-                        color: "#10b981",
-                      },
-                      andamento: {
-                        label: "Em Andamento",
-                        color: "#3b82f6",
-                      },
-                      propostas: {
-                        label: "Propostas",
-                        color: "#f59e0b",
-                      },
-                    }}
-                    className="h-[300px]"
-                  >
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={getStatusData(t)}
-                          cx="50%"
-                          cy="50%"
-                          outerRadius={80}
-                          fill="#8884d8"
-                          dataKey="value"
-                          label={({ name, value }) => `${name}: ${value}%`}
-                        >
-                          {getStatusData(t).map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Pie>
-                        <ChartTooltip content={ChartTooltipContent as any} />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </ChartContainer>
-                </CardContent>
-              </Card>
-            </div>
+            {/* Sales vs Proposals Chart */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">{t('salesVsProposals')}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ChartContainer
+                  config={{
+                    vendas: {
+                      label: "Vendas",
+                      color: "hsl(var(--chart-1))",
+                    },
+                    propostas: {
+                      label: "Propostas",
+                      color: "hsl(var(--chart-2))",
+                    },
+                  }}
+                  className="h-[300px]"
+                >
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={salesData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="month" />
+                      <YAxis />
+                      <ChartTooltip content={ChartTooltipContent as any} />
+                      <Bar dataKey="vendas" fill="var(--color-vendas)" />
+                      <Bar dataKey="propostas" fill="var(--color-propostas)" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Sidebar */}

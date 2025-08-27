@@ -37,6 +37,51 @@ export function createApiRoutes(app) {
       client.release()
     }
   })
+
+  // Appointments analytics route - last 7 days answered vs not answered
+  app.get('/api/appointments/analytics/last-7-days', authenticateToken, async (req, res) => {
+    const client = await pool.connect()
+    try {
+      // Ensure UTC timezone for this session
+      await client.query('SET TIMEZONE = \'UTC\'')
+      
+      const query = `
+        WITH date_series AS (
+          SELECT generate_series(
+            CURRENT_DATE - INTERVAL '6 days',
+            CURRENT_DATE,
+            INTERVAL '1 day'
+          )::date AS date
+        ),
+        appointments_data AS (
+          SELECT 
+            DATE(scheduled_datetime) as appointment_date,
+            answered,
+            COUNT(*) as count
+          FROM appointments 
+          WHERE DATE(scheduled_datetime) >= CURRENT_DATE - INTERVAL '6 days'
+            AND DATE(scheduled_datetime) <= CURRENT_DATE
+          GROUP BY DATE(scheduled_datetime), answered
+        )
+        SELECT 
+          ds.date::text as date,
+          COALESCE(SUM(CASE WHEN ad.answered = true THEN ad.count ELSE 0 END), 0) as answered,
+          COALESCE(SUM(CASE WHEN ad.answered = false THEN ad.count ELSE 0 END), 0) as not_answered
+        FROM date_series ds
+        LEFT JOIN appointments_data ad ON ds.date = ad.appointment_date
+        GROUP BY ds.date
+        ORDER BY ds.date
+      `
+      
+      const result = await client.query(query)
+      res.json({ data: result.rows })
+    } catch (error) {
+      console.error('Error fetching appointments analytics:', error)
+      res.status(500).json({ error: 'Internal server error' })
+    } finally {
+      client.release()
+    }
+  })
   
   // Deals routes
   app.get('/api/deals', authenticateToken, async (req, res) => {

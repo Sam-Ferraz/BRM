@@ -139,6 +139,12 @@ export interface DashboardStats {
   totalSalesAgenda: number
 }
 
+export interface AppointmentAnalytics {
+  date: string
+  answered: number
+  not_answered: number
+}
+
 // API service methods
 export const api = {
   // Dashboard
@@ -250,6 +256,10 @@ export const api = {
       
       const query = params.toString()
       return apiClient.get<ApiResponse<Appointment>>(`/appointments${query ? `?${query}` : ''}`)
+    },
+
+    getAnalyticsLast7Days: async (): Promise<{ data: AppointmentAnalytics[] }> => {
+      return apiClient.get<{ data: AppointmentAnalytics[] }>('/appointments/analytics/last-7-days')
     },
 
     create: async (data: Omit<Appointment, "id">): Promise<Appointment> => {

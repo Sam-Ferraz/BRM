@@ -205,6 +205,14 @@ const resources = {
       notAnswered: 'Não Respondido',
       answeredStatus: 'Status de Resposta',
       answeredStatusRequired: 'Status de resposta é obrigatório',
+      appointmentsLast7Days: 'Atendimentos - Últimos 7 Dias',
+      appointmentsAnalyticsDescription: 'Comparação de atendimentos respondidos vs não respondidos',
+      today: 'Hoje',
+      yesterday: 'Ontem',
+      totalAnswered: 'Total Respondidos',
+      totalNotAnswered: 'Total Não Respondidos',
+      totalAppointments: 'Total de Atendimentos',
+      responseRate: 'Taxa de Resposta',
       
       // Common actions
       success: 'Sucesso',
@@ -461,6 +469,14 @@ const resources = {
       notAnswered: 'Not Answered',
       answeredStatus: 'Response Status',
       answeredStatusRequired: 'Response status is required',
+      appointmentsLast7Days: 'Appointments - Last 7 Days',
+      appointmentsAnalyticsDescription: 'Comparison of answered vs not answered appointments',
+      today: 'Today',
+      yesterday: 'Yesterday',
+      totalAnswered: 'Total Answered',
+      totalNotAnswered: 'Total Not Answered',
+      totalAppointments: 'Total Appointments',
+      responseRate: 'Response Rate',
       
       // Common actions
       success: 'Success',
@@ -717,6 +733,14 @@ const resources = {
       notAnswered: 'No Respondido',
       answeredStatus: 'Estado de Respuesta',
       answeredStatusRequired: 'El estado de respuesta es obligatorio',
+      appointmentsLast7Days: 'Citas - Últimos 7 Días',
+      appointmentsAnalyticsDescription: 'Comparación de citas respondidas vs no respondidas',
+      today: 'Hoy',
+      yesterday: 'Ayer',
+      totalAnswered: 'Total Respondidas',
+      totalNotAnswered: 'Total No Respondidas',
+      totalAppointments: 'Total de Citas',
+      responseRate: 'Tasa de Respuesta',
       
       // Common actions
       success: 'Éxito',
