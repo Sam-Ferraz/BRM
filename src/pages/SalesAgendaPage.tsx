@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { ArrowLeft, Plus, Pencil, Trash2, Search, DollarSign, Calendar, User, Package } from "lucide-react"
+import { ArrowLeft, Plus, Pencil, Trash2, Search, Calendar, Package } from "lucide-react"
 import { api, type SalesAgenda } from "@/lib/api-client"
 import { SalesAgendaForm } from "@/components/forms/sales-agenda-form"
 import { useToast } from "@/hooks/use-toast"
@@ -242,21 +242,9 @@ export default function SalesAgendaPage() {
                     </TableHead>
                     <TableHead 
                       className="cursor-pointer" 
-                      onClick={() => handleSort("client")}
-                    >
-                      {t('client')} {sortBy === "client" && (sortOrder === "asc" ? "↑" : "↓")}
-                    </TableHead>
-                    <TableHead 
-                      className="cursor-pointer" 
                       onClick={() => handleSort("product_name")}
                     >
                       {t('product')} {sortBy === "product_name" && (sortOrder === "asc" ? "↑" : "↓")}
-                    </TableHead>
-                    <TableHead 
-                      className="cursor-pointer" 
-                      onClick={() => handleSort("value")}
-                    >
-                      {t('value')} {sortBy === "value" && (sortOrder === "asc" ? "↑" : "↓")}
                     </TableHead>
                     <TableHead 
                       className="cursor-pointer" 
@@ -279,20 +267,8 @@ export default function SalesAgendaPage() {
                       <TableCell className="font-medium">{agenda.title}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <User className="h-4 w-4 text-muted-foreground" />
-                          {agenda.client}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
                           <Package className="h-4 w-4 text-muted-foreground" />
                           {agenda.product_name || 'N/A'}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <DollarSign className="h-4 w-4 text-muted-foreground" />
-                          {agenda.value}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -328,7 +304,7 @@ export default function SalesAgendaPage() {
                   ))}
                   {salesAgendas.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
                         {t('noSalesAgendaFound')}
                       </TableCell>
                     </TableRow>

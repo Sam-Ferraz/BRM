@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import { CurrencyInput } from "@/components/ui/currency-input"
 import { ProductSearch } from "@/components/product-search"
 import type { SalesAgenda } from "@/lib/api-client"
 import { getCurrentDateForForm } from "@/lib/datetime"
@@ -26,9 +25,7 @@ export function SalesAgendaForm({ salesAgenda, open, onOpenChange, onSubmit, loa
   const { t } = useTranslation()
   const [formData, setFormData] = useState({
     title: "",
-    client: "",
     product_name: "",
-    value: "",
     date: getCurrentDateForForm(),
     status: "Ativa" as "Ativa" | "Concluída" | "Cancelada",
   })
@@ -57,18 +54,14 @@ export function SalesAgendaForm({ salesAgenda, open, onOpenChange, onSubmit, loa
       
       setFormData({
         title: salesAgenda.title || "",
-        client: salesAgenda.client || "",
         product_name: salesAgenda.product_name || "",
-        value: salesAgenda.value || "",
         date: formattedDate,
         status: (salesAgenda.status || "Ativa") as "Ativa" | "Concluída" | "Cancelada",
       })
     } else {
       setFormData({
         title: "",
-        client: "",
         product_name: "",
-        value: "",
         date: getCurrentDateForForm(),
         status: "Ativa" as "Ativa" | "Concluída" | "Cancelada",
       })
@@ -115,17 +108,6 @@ export function SalesAgendaForm({ salesAgenda, open, onOpenChange, onSubmit, loa
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="cliente">
-              {t('client')} <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="cliente"
-              value={formData.client}
-              onChange={(e) => setFormData({ ...formData, client: e.target.value })}
-              required
-            />
-          </div>
-          <div className="space-y-2">
             <Label htmlFor="product">
               {t('product')} <span className="text-red-500">*</span>
             </Label>
@@ -138,17 +120,6 @@ export function SalesAgendaForm({ salesAgenda, open, onOpenChange, onSubmit, loa
             {errors.product_name && (
               <p className="text-sm text-red-500">{errors.product_name}</p>
             )}
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="valor">
-              {t('value')} <span className="text-red-500">*</span>
-            </Label>
-            <CurrencyInput
-              id="valor"
-              value={formData.value}
-              onChange={(value) => setFormData({ ...formData, value })}
-              required
-            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="status">{t('status')}</Label>

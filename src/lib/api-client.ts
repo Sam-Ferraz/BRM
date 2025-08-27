@@ -112,10 +112,8 @@ export interface Product {
 export interface SalesAgenda {
   id: number
   title: string
-  client: string
   product_name: string
   product_id?: number
-  value: string
   date: string
   status: "Ativa" | "Concluída" | "Cancelada"
 }

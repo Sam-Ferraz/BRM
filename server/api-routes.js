@@ -463,6 +463,7 @@ export function createApiRoutes(app) {
     }
   })
 
+
   // Sales Agenda routes
   app.get('/api/sales-agenda', authenticateToken, async (req, res) => {
     const client = await pool.connect()
@@ -473,7 +474,7 @@ export function createApiRoutes(app) {
       let paramCount = 1
       
       if (search) {
-        query += ` AND (title ILIKE $${paramCount} OR client ILIKE $${paramCount} OR product_name ILIKE $${paramCount})`
+        query += ` AND (title ILIKE $${paramCount} OR product_name ILIKE $${paramCount})`
         params.push(`%${search}%`)
         paramCount++
       }
@@ -507,7 +508,7 @@ export function createApiRoutes(app) {
   app.post('/api/sales-agenda', authenticateToken, async (req, res) => {
     const client = await pool.connect()
     try {
-      const { title, client: clientName, product_name, product_id, value, date, status } = req.body
+      const { title, product_name, product_id, date, status } = req.body
       
       // Validate required fields
       if (!product_name) {
@@ -515,8 +516,8 @@ export function createApiRoutes(app) {
       }
       
       const result = await client.query(
-        'INSERT INTO sales_agenda (title, client, product_name, product_id, value, date, status) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
-        [title, clientName, product_name, product_id || null, value, date, status]
+        'INSERT INTO sales_agenda (title, product_name, product_id, date, status) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+        [title, product_name, product_id || null, date, status]
       )
       res.json(result.rows[0])
     } catch (error) {
@@ -531,7 +532,7 @@ export function createApiRoutes(app) {
     const client = await pool.connect()
     try {
       const { id } = req.params
-      const { title, client: clientName, product_name, product_id, value, date, status } = req.body
+      const { title, product_name, product_id, date, status } = req.body
       
       // Validate required fields
       if (!product_name) {
@@ -539,8 +540,8 @@ export function createApiRoutes(app) {
       }
       
       const result = await client.query(
-        'UPDATE sales_agenda SET title = $1, client = $2, product_name = $3, product_id = $4, value = $5, date = $6, status = $7, updated_at = CURRENT_TIMESTAMP WHERE id = $8 RETURNING *',
-        [title, clientName, product_name, product_id || null, value, date, status, id]
+        'UPDATE sales_agenda SET title = $1, product_name = $2, product_id = $3, date = $4, status = $5, updated_at = CURRENT_TIMESTAMP WHERE id = $6 RETURNING *',
+        [title, product_name, product_id || null, date, status, id]
       )
       if (result.rows.length === 0) {
         return res.status(404).json({ error: 'Sales agenda not found' })
