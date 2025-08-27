@@ -508,16 +508,19 @@ export function createApiRoutes(app) {
   app.post('/api/sales-agenda', authenticateToken, async (req, res) => {
     const client = await pool.connect()
     try {
-      const { title, product_name, product_id, date, status } = req.body
+      const { title, product_name, product_id, status } = req.body
       
       // Validate required fields
       if (!product_name) {
         return res.status(400).json({ error: 'Product name is required' })
       }
       
+      // Set current date automatically
+      const currentDate = new Date().toISOString().split('T')[0] // YYYY-MM-DD format
+      
       const result = await client.query(
         'INSERT INTO sales_agenda (title, product_name, product_id, date, status) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-        [title, product_name, product_id || null, date, status]
+        [title, product_name, product_id || null, currentDate, status]
       )
       res.json(result.rows[0])
     } catch (error) {
@@ -532,16 +535,17 @@ export function createApiRoutes(app) {
     const client = await pool.connect()
     try {
       const { id } = req.params
-      const { title, product_name, product_id, date, status } = req.body
+      const { title, product_name, product_id, status } = req.body
       
       // Validate required fields
       if (!product_name) {
         return res.status(400).json({ error: 'Product name is required' })
       }
       
+      // Don't update the date - it remains as originally created
       const result = await client.query(
-        'UPDATE sales_agenda SET title = $1, product_name = $2, product_id = $3, date = $4, status = $5, updated_at = CURRENT_TIMESTAMP WHERE id = $6 RETURNING *',
-        [title, product_name, product_id || null, date, status, id]
+        'UPDATE sales_agenda SET title = $1, product_name = $2, product_id = $3, status = $4, updated_at = CURRENT_TIMESTAMP WHERE id = $5 RETURNING *',
+        [title, product_name, product_id || null, status, id]
       )
       if (result.rows.length === 0) {
         return res.status(404).json({ error: 'Sales agenda not found' })

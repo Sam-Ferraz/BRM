@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { ArrowLeft, Plus, Pencil, Trash2, Search, Calendar, Package } from "lucide-react"
-import { api, type SalesAgenda } from "@/lib/api-client"
+import { api, type SalesAgenda, type SalesAgendaCreateInput } from "@/lib/api-client"
 import { SalesAgendaForm } from "@/components/forms/sales-agenda-form"
 import { useToast } from "@/hooks/use-toast"
 import { formatDate } from "@/lib/datetime"
@@ -83,7 +83,7 @@ export default function SalesAgendaPage() {
     fetchSalesAgendas()
   }, [fetchSalesAgendas])
 
-  const handleCreate = async (data: Omit<SalesAgenda, "id">) => {
+  const handleCreate = async (data: SalesAgendaCreateInput) => {
     try {
       setFormLoading(true)
       await api.salesAgenda.create(data)

@@ -118,6 +118,13 @@ export interface SalesAgenda {
   status: "Ativa" | "Concluída" | "Cancelada"
 }
 
+export interface SalesAgendaCreateInput {
+  title: string
+  product_name: string
+  product_id?: number
+  status: "Ativa" | "Concluída" | "Cancelada"
+}
+
 export interface ApiResponse<T> {
   data: T[]
   total: number

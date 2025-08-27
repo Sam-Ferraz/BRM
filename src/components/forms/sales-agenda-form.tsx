@@ -10,14 +10,13 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { ProductSearch } from "@/components/product-search"
-import type { SalesAgenda } from "@/lib/api-client"
-import { getCurrentDateForForm } from "@/lib/datetime"
+import type { SalesAgenda, SalesAgendaCreateInput } from "@/lib/api-client"
 
 interface SalesAgendaFormProps {
   salesAgenda?: SalesAgenda
   open: boolean
   onOpenChange: (open: boolean) => void
-  onSubmit: (data: Omit<SalesAgenda, "id"> | Partial<SalesAgenda>) => void
+  onSubmit: (data: SalesAgendaCreateInput | Partial<SalesAgenda>) => void
   loading?: boolean
 }
 
@@ -26,7 +25,6 @@ export function SalesAgendaForm({ salesAgenda, open, onOpenChange, onSubmit, loa
   const [formData, setFormData] = useState({
     title: "",
     product_name: "",
-    date: getCurrentDateForForm(),
     status: "Ativa" as "Ativa" | "Concluída" | "Cancelada",
   })
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
@@ -36,33 +34,15 @@ export function SalesAgendaForm({ salesAgenda, open, onOpenChange, onSubmit, loa
     setErrors({})
     
     if (salesAgenda) {
-      // Convert date from database to form format (YYYY-MM-DD)
-      let formattedDate = getCurrentDateForForm()
-      
-      if (salesAgenda.date) {
-        // If the date is in YYYY-MM-DD format, use it directly
-        if (/^\d{4}-\d{2}-\d{2}$/.test(salesAgenda.date)) {
-          formattedDate = salesAgenda.date
-        } else {
-          // Parse other formats (like dd/MM/yyyy)
-          const date = new Date(salesAgenda.date)
-          if (!isNaN(date.getTime())) {
-            formattedDate = date.toISOString().split('T')[0]
-          }
-        }
-      }
-      
       setFormData({
         title: salesAgenda.title || "",
         product_name: salesAgenda.product_name || "",
-        date: formattedDate,
         status: (salesAgenda.status || "Ativa") as "Ativa" | "Concluída" | "Cancelada",
       })
     } else {
       setFormData({
         title: "",
         product_name: "",
-        date: getCurrentDateForForm(),
         status: "Ativa" as "Ativa" | "Concluída" | "Cancelada",
       })
     }
@@ -136,18 +116,6 @@ export function SalesAgendaForm({ salesAgenda, open, onOpenChange, onSubmit, loa
                 <SelectItem value="Cancelada">{t('cancelled')}</SelectItem>
               </SelectContent>
             </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="data">
-              {t('date')} <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="data"
-              type="date"
-              value={formData.date}
-              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-              required
-            />
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
