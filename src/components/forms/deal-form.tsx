@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { CurrencyInput } from "@/components/ui/currency-input"
+import { ClientSearch } from "@/components/client-search"
 import type { Deal } from "@/lib/api-client"
 import { getCurrentDateForForm } from "@/lib/datetime"
 
@@ -82,12 +83,11 @@ export function DealForm({ deal, open, onOpenChange, onSubmit, loading }: DealFo
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="cliente">{t('client')}</Label>
-            <Input
-              id="cliente"
+            <ClientSearch
               value={formData.client}
-              onChange={(e) => setFormData({ ...formData, client: e.target.value })}
-              required
-              tabIndex={1}
+              onSelect={(clientName) => setFormData({ ...formData, client: clientName })}
+              placeholder={t('selectClient')}
+              className="w-full"
             />
           </div>
           <div className="space-y-2">
