@@ -65,6 +65,12 @@ const resources = {
       salesType: 'Vendas',
       consultingType: 'Consultoria',
       
+      // Appointment types
+      chatType: 'Chat',
+      callType: 'Ligação',
+      inPersonType: 'Presencial',
+      visitType: 'Visita',
+      
       // Messages
       successMessages: {
         dealCreated: 'Negócio criado com sucesso',
@@ -332,6 +338,12 @@ const resources = {
       salesType: 'Sales',
       consultingType: 'Consulting',
       
+      // Appointment types
+      chatType: 'Chat',
+      callType: 'Call',
+      inPersonType: 'In Person',
+      visitType: 'Visit',
+      
       // Messages
       successMessages: {
         dealCreated: 'Deal created successfully',
@@ -598,6 +610,12 @@ const resources = {
       supportType: 'Soporte',
       salesType: 'Ventas',
       consultingType: 'Consultoría',
+      
+      // Appointment types
+      chatType: 'Chat',
+      callType: 'Llamada',
+      inPersonType: 'Presencial',
+      visitType: 'Visita',
       
       // Messages
       successMessages: {

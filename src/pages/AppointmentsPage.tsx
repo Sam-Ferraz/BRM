@@ -167,12 +167,14 @@ export default function AppointmentsPage() {
 
   const getTipoBadgeVariant = (tipo: string) => {
     switch (tipo) {
-      case "Suporte":
+      case "chat":
         return "destructive"
-      case "Vendas":
+      case "call":
         return "default"
-      case "Consultoria":
+      case "in_person":
         return "secondary"
+      case "visit":
+        return "outline"
       default:
         return "outline"
     }
@@ -233,9 +235,10 @@ export default function AppointmentsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Todos">{t('allTypes')}</SelectItem>
-                  <SelectItem value="Suporte">{t('supportType')}</SelectItem>
-                  <SelectItem value="Vendas">{t('salesType')}</SelectItem>
-                  <SelectItem value="Consultoria">{t('consultingType')}</SelectItem>
+                  <SelectItem value="chat">{t('chatType')}</SelectItem>
+                  <SelectItem value="call">{t('callType')}</SelectItem>
+                  <SelectItem value="in_person">{t('inPersonType')}</SelectItem>
+                  <SelectItem value="visit">{t('visitType')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>

@@ -29,7 +29,7 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
   const currentDateTime = `${currentDate}T${currentTime}`
   const [formData, setFormData] = useState({
     client: "",
-    type: "Suporte" as "Suporte" | "Vendas" | "Consultoria",
+    type: "chat" as "chat" | "call" | "in_person" | "visit",
     status: "Pendente" as "Em Andamento" | "Concluído" | "Pendente",
     scheduled_datetime: currentDateTime,
     description: "",
@@ -59,7 +59,7 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
       
       setFormData({
         client: appointment.client || "",
-        type: (appointment.type || "Suporte") as "Suporte" | "Vendas" | "Consultoria",
+        type: (appointment.type || "chat") as "chat" | "call" | "in_person" | "visit",
         status: (appointment.status || "Pendente") as "Em Andamento" | "Concluído" | "Pendente",
         scheduled_datetime: formattedDateTime,
         description: appointment.description || "",
@@ -68,7 +68,7 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
     } else {
       setFormData({
         client: "",
-        type: "Suporte" as "Suporte" | "Vendas" | "Consultoria",
+        type: "chat" as "chat" | "call" | "in_person" | "visit",
         status: "Pendente" as "Em Andamento" | "Concluído" | "Pendente",
         scheduled_datetime: currentDateTime,
         description: "",
@@ -130,9 +130,10 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Suporte">{t('supportType')}</SelectItem>
-                <SelectItem value="Vendas">{t('salesType')}</SelectItem>
-                <SelectItem value="Consultoria">{t('consultingType')}</SelectItem>
+                <SelectItem value="chat">{t('chatType')}</SelectItem>
+                <SelectItem value="call">{t('callType')}</SelectItem>
+                <SelectItem value="in_person">{t('inPersonType')}</SelectItem>
+                <SelectItem value="visit">{t('visitType')}</SelectItem>
               </SelectContent>
             </Select>
           </div>

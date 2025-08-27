@@ -8,32 +8,14 @@ import { ChartContainer } from "@/components/ui/chart-simple"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from "recharts"
 import { useAuth } from "@/hooks/use-auth"
 import { api, AppointmentAnalytics, AppointmentAnalyticsByType } from "@/lib/api-client"
+import { formatDateForChart } from "@/lib/datetime"
 
 const formatAppointmentAnalytics = (analytics: AppointmentAnalytics[], t: any) => {
-  return analytics.map(item => {
-    const date = new Date(item.date)
-    const today = new Date()
-    const yesterday = new Date()
-    yesterday.setDate(today.getDate() - 1)
-    
-    let dateLabel = ''
-    if (date.toDateString() === today.toDateString()) {
-      dateLabel = t('today') || 'Hoje'
-    } else if (date.toDateString() === yesterday.toDateString()) {
-      dateLabel = t('yesterday') || 'Ontem'
-    } else {
-      dateLabel = date.toLocaleDateString('pt-BR', { 
-        weekday: 'short',
-        day: '2-digit'
-      })
-    }
-    
-    return {
-      date: dateLabel,
-      [t('answered')]: parseInt(item.answered),
-      [t('notAnswered')]: parseInt(item.not_answered),
-    }
-  })
+  return analytics.map(item => ({
+    date: formatDateForChart(item.date, t),
+    [t('answered')]: parseInt(item.answered),
+    [t('notAnswered')]: parseInt(item.not_answered),
+  }))
 }
 
 // Generate header colors for appointment types (for the type indicator)
@@ -62,6 +44,22 @@ const getAnswerColors = () => ({
     gradient: 'from-red-500 to-red-600'
   }
 })
+
+// Translate appointment types
+const getAppointmentTypeTranslation = (type: string, t: any) => {
+  switch (type) {
+    case 'chat':
+      return t('chatType')
+    case 'call':
+      return t('callType')
+    case 'in_person':
+      return t('inPersonType')
+    case 'visit':
+      return t('visitType')
+    default:
+      return type
+  }
+}
 
 export default function AnalyticsPage() {
   const { t } = useTranslation()
@@ -378,7 +376,7 @@ export default function AnalyticsPage() {
                             className={`w-4 h-4 rounded bg-gradient-to-b ${headerColor.gradient}`}
                           ></div>
                           <h3 className="text-lg font-semibold text-slate-700">
-                            {appointmentType}
+                            {getAppointmentTypeTranslation(appointmentType, t)}
                           </h3>
                         </div>
                         

@@ -94,7 +94,7 @@ export interface Client {
 export interface Appointment {
   id: number
   client: string
-  type: "Suporte" | "Vendas" | "Consultoria"
+  type: "chat" | "call" | "in_person" | "visit"
   status: "Em Andamento" | "Concluído" | "Pendente"
   scheduled_datetime: string
   description?: string

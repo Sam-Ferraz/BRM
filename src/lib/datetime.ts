@@ -1,8 +1,22 @@
 import { format, parseISO, isValid } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import i18n from './i18n'
 
 function getUserTimezone(): string {
   return localStorage.getItem('userTimezone') || 'America/Sao_Paulo'
+}
+
+function getDateLocale(): string {
+  switch (i18n.language) {
+    case 'pt-BR':
+      return 'pt-BR'
+    case 'en-US':
+      return 'en-US'
+    case 'es-ES':
+      return 'es-ES'
+    default:
+      return 'pt-BR'
+  }
 }
 
 export function formatDateTime(dateTimeStr: string, timezone?: string): string {
@@ -129,4 +143,31 @@ export function combineDateAndTime(date: string, time: string): string {
   }
   
   return `${dateOnly}T${timeFormatted}`
+}
+
+// Format date for chart display with locale support
+export function formatDateForChart(dateStr: string, t: any): string {
+  if (!dateStr) return ""
+  
+  try {
+    const date = new Date(dateStr)
+    const today = new Date()
+    const yesterday = new Date()
+    yesterday.setDate(today.getDate() - 1)
+    
+    // Check if it's today or yesterday
+    if (date.toDateString() === today.toDateString()) {
+      return t('today') || 'Today'
+    } else if (date.toDateString() === yesterday.toDateString()) {
+      return t('yesterday') || 'Yesterday'
+    } else {
+      // Use locale-aware date formatting for other dates
+      return date.toLocaleDateString(getDateLocale(), { 
+        weekday: 'short',
+        day: '2-digit'
+      })
+    }
+  } catch {
+    return dateStr
+  }
 }

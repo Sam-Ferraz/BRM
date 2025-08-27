@@ -14,32 +14,14 @@ import { ClientForm } from "@/components/forms/client-form"
 import { ProductForm } from "@/components/forms/product-form"
 import { AppointmentForm } from "@/components/forms/appointment-form"
 import { api, AppointmentAnalytics } from "@/lib/api-client"
+import { formatDateForChart } from "@/lib/datetime"
 
 const formatAppointmentAnalytics = (analytics: AppointmentAnalytics[], t: any) => {
-  return analytics.map(item => {
-    const date = new Date(item.date)
-    const today = new Date()
-    const yesterday = new Date()
-    yesterday.setDate(today.getDate() - 1)
-    
-    let dateLabel = ''
-    if (date.toDateString() === today.toDateString()) {
-      dateLabel = t('today') || 'Hoje'
-    } else if (date.toDateString() === yesterday.toDateString()) {
-      dateLabel = t('yesterday') || 'Ontem'
-    } else {
-      dateLabel = date.toLocaleDateString('pt-BR', { 
-        weekday: 'short',
-        day: '2-digit'
-      })
-    }
-    
-    return {
-      date: dateLabel,
-      [t('answered')]: parseInt(item.answered),
-      [t('notAnswered')]: parseInt(item.not_answered),
-    }
-  })
+  return analytics.map(item => ({
+    date: formatDateForChart(item.date, t),
+    [t('answered')]: parseInt(item.answered),
+    [t('notAnswered')]: parseInt(item.not_answered),
+  }))
 }
 
 
