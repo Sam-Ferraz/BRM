@@ -65,18 +65,30 @@ export function ClientSearch({
     }
   }, [open, loadClients])
 
-  // Handle mouse wheel scrolling in the command list
+  // Enable mouse wheel scrolling by adding wheel event handling
   useEffect(() => {
-    const commandList = commandListRef.current
-    if (commandList) {
-      const handleWheel = (e: WheelEvent) => {
-        e.stopPropagation()
-        commandList.scrollTop += e.deltaY
+    if (!open) return
+
+    const timeoutId = setTimeout(() => {
+      const commandList = commandListRef.current
+      if (commandList) {
+        // Force enable scroll behavior
+        commandList.style.overflowY = 'auto'
+        commandList.style.overscrollBehavior = 'contain'
+        
+        const handleWheel = (e: WheelEvent) => {
+          if (commandList.contains(e.target as Node)) {
+            // Allow native scrolling by not preventing default
+            e.stopPropagation()
+          }
+        }
+        
+        commandList.addEventListener('wheel', handleWheel, { passive: true })
+        return () => commandList.removeEventListener('wheel', handleWheel)
       }
-      
-      commandList.addEventListener('wheel', handleWheel, { passive: true })
-      return () => commandList.removeEventListener('wheel', handleWheel)
-    }
+    }, 50)
+
+    return () => clearTimeout(timeoutId)
   }, [open])
 
   const handleSearch = useCallback(
@@ -162,7 +174,7 @@ export function ClientSearch({
             value={searchValue}
             onValueChange={handleSearch}
           />
-          <CommandList ref={commandListRef} className="max-h-[200px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+          <CommandList ref={commandListRef} className="max-h-[200px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100" style={{ overscrollBehavior: 'contain' }}>
             {loading && (
               <CommandEmpty>{t('loading')}</CommandEmpty>
             )}
