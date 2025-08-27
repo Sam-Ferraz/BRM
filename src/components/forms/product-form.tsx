@@ -14,20 +14,21 @@ import type { Product } from "@/lib/api-client"
 
 interface ProductFormProps {
   product?: Product
+  initialName?: string
   open: boolean
   onOpenChange: (open: boolean) => void
   onSubmit: (data: Omit<Product, "id"> | Partial<Product>) => void
   loading?: boolean
 }
 
-export function ProductForm({ product, open, onOpenChange, onSubmit, loading }: ProductFormProps) {
+export function ProductForm({ product, initialName, open, onOpenChange, onSubmit, loading }: ProductFormProps) {
   const { t } = useTranslation()
   const [formData, setFormData] = useState({
-    nome: "",
-    preco: "",
-    categoria: "",
-    estoque: 0,
-    descricao: "",
+    name: "",
+    price: "",
+    category: "",
+    stock: 0,
+    description: "",
   })
 
   useEffect(() => {
@@ -41,17 +42,18 @@ export function ProductForm({ product, open, onOpenChange, onSubmit, loading }: 
       })
     } else {
       setFormData({
-        name: "",
+        name: initialName || "",
         price: "",
         category: "",
         stock: 0,
         description: "",
       })
     }
-  }, [product])
+  }, [product, initialName])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    e.stopPropagation()
     onSubmit(formData)
   }
 
@@ -63,9 +65,9 @@ export function ProductForm({ product, open, onOpenChange, onSubmit, loading }: 
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="nome">{t('name')}</Label>
+            <Label htmlFor="name">{t('name')}</Label>
             <Input
-              id="nome"
+              id="name"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               required
@@ -73,29 +75,27 @@ export function ProductForm({ product, open, onOpenChange, onSubmit, loading }: 
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="preco">{t('price')}</Label>
+            <Label htmlFor="price">{t('price')}</Label>
             <CurrencyInput
-              id="preco"
+              id="price"
               value={formData.price}
               onChange={(price) => setFormData({ ...formData, price })}
-              required
               tabIndex={2}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="categoria">{t('category')}</Label>
+            <Label htmlFor="category">{t('category')}</Label>
             <Input
-              id="categoria"
+              id="category"
               value={formData.category}
               onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-              required
               tabIndex={3}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="estoque">{t('stock')}</Label>
+            <Label htmlFor="stock">{t('stock')}</Label>
             <Input
-              id="estoque"
+              id="stock"
               type="number"
               value={formData.stock}
               onChange={(e) => setFormData({ ...formData, stock: Number.parseInt(e.target.value) || 0 })}
@@ -104,9 +104,9 @@ export function ProductForm({ product, open, onOpenChange, onSubmit, loading }: 
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="descricao">{t('description')}</Label>
+            <Label htmlFor="description">{t('description')}</Label>
             <Textarea
-              id="descricao"
+              id="description"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               rows={3}

@@ -113,7 +113,9 @@ export function ProductSearch({
   const handleProductFormSubmit = useCallback(async (productData: Omit<Product, "id">) => {
     try {
       setProductFormLoading(true)
+      console.log('Creating product with data:', productData)
       const newProduct = await api.products.create(productData)
+      console.log('Product created successfully:', newProduct)
       
       // Update the selected product immediately
       onSelect(newProduct.name)
@@ -126,6 +128,7 @@ export function ProductSearch({
       loadProducts()
     } catch (error) {
       console.error('Error creating product:', error)
+      // Don't rethrow the error to prevent it from bubbling up
     } finally {
       setProductFormLoading(false)
     }
@@ -135,6 +138,10 @@ export function ProductSearch({
     setShowProductForm(open)
     if (!open) {
       setSearchValue("")
+      // Small delay to prevent focus issues
+      setTimeout(() => {
+        // Optionally refocus on the search trigger
+      }, 100)
     }
   }
 
@@ -205,9 +212,11 @@ export function ProductSearch({
                     />
                     <div>
                       <div className="font-medium">{product.name}</div>
-                      {product.category && (
+                      {(product.category || product.price) && (
                         <div className="text-sm text-muted-foreground">
-                          {product.category} • {product.price}
+                          {product.category && product.price 
+                            ? `${product.category} • ${product.price}`
+                            : product.category || product.price}
                         </div>
                       )}
                     </div>
@@ -223,13 +232,15 @@ export function ProductSearch({
       </PopoverContent>
     </Popover>
 
-    <ProductForm
-      initialName={searchValue.trim()}
-      open={showProductForm}
-      onOpenChange={handleProductFormClose}
-      onSubmit={handleProductFormSubmit}
-      loading={productFormLoading}
-    />
+    {showProductForm && (
+      <ProductForm
+        initialName={searchValue.trim()}
+        open={showProductForm}
+        onOpenChange={handleProductFormClose}
+        onSubmit={handleProductFormSubmit}
+        loading={productFormLoading}
+      />
+    )}
     </div>
   )
 }

@@ -103,8 +103,8 @@ export interface Appointment {
 export interface Product {
   id: number
   name: string
-  price: string
-  category: string
+  price?: string
+  category?: string
   stock: number
   description?: string
 }
