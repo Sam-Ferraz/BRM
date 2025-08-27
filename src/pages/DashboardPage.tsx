@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Users, Briefcase, Package, HeadphonesIcon, Settings, LogOut, FileText, Plus } from "lucide-react"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart-simple"
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, PieChart, Pie, Cell } from "recharts"
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from "recharts"
 import { useAuth } from "@/hooks/use-auth"
 import { useToast } from "@/hooks/use-toast"
 import { DealForm } from "@/components/forms/deal-form"
@@ -458,13 +458,13 @@ export default function DashboardPage() {
                         tickMargin={2}
                         width={30}
                       />
-                      <ChartTooltip 
+                      <Tooltip 
+                        cursor={{ fill: 'rgba(59, 130, 246, 0.1)' }}
                         content={({ active, payload, label }) => {
                           if (active && payload && payload.length) {
-                            const total = payload.reduce((sum, entry) => sum + (entry.value || 0), 0)
+                            const total = payload.reduce((sum, entry) => sum + (Number(entry.value) || 0), 0)
                             const answeredEntry = payload.find(entry => entry.dataKey === t('answered'))
-                            const notAnsweredEntry = payload.find(entry => entry.dataKey === t('notAnswered'))
-                            const responseRate = total > 0 ? ((answeredEntry?.value || 0) / total * 100).toFixed(1) : '0.0'
+                            const responseRate = total > 0 ? ((Number(answeredEntry?.value) || 0) / total * 100).toFixed(1) : '0.0'
                             
                             return (
                               <div className="bg-white border border-slate-200 rounded-lg shadow-xl p-4 min-w-[200px]">
@@ -485,7 +485,7 @@ export default function DashboardPage() {
                                     <div className="flex items-center gap-2">
                                       <span className="font-bold text-slate-800">{entry.value}</span>
                                       <span className="text-xs text-slate-500">
-                                        ({total > 0 ? ((entry.value || 0) / total * 100).toFixed(1) : '0.0'}%)
+                                        ({total > 0 ? ((Number(entry.value) || 0) / total * 100).toFixed(1) : '0.0'}%)
                                       </span>
                                     </div>
                                   </div>
@@ -515,6 +515,7 @@ export default function DashboardPage() {
                         radius={[6, 6, 0, 0]}
                         stroke="#059669"
                         strokeWidth={1}
+                        style={{ cursor: 'pointer' }}
                       />
                       <Bar 
                         dataKey={t('notAnswered')} 
@@ -522,6 +523,7 @@ export default function DashboardPage() {
                         radius={[6, 6, 0, 0]}
                         stroke="#dc2626"
                         strokeWidth={1}
+                        style={{ cursor: 'pointer' }}
                       />
                     </BarChart>
                   </ResponsiveContainer>
