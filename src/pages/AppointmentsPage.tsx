@@ -180,6 +180,22 @@ export default function AppointmentsPage() {
     }
   }
 
+  // Translate appointment types
+  const getAppointmentTypeTranslation = (type: string) => {
+    switch (type) {
+      case 'chat':
+        return t('chatType')
+      case 'call':
+        return t('callType')
+      case 'in_person':
+        return t('inPersonType')
+      case 'visit':
+        return t('visitType')
+      default:
+        return type
+    }
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <header className="bg-card shadow-sm border-b">
@@ -279,7 +295,7 @@ export default function AppointmentsPage() {
                       </TableCell>
                       <TableCell>
                         <Badge variant={getTipoBadgeVariant(appointment.type)}>
-                          {appointment.type}
+                          {getAppointmentTypeTranslation(appointment.type)}
                         </Badge>
                       </TableCell>
                       <TableCell>
