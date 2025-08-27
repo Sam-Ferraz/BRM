@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:17
+    container_name: brm-postgres
+    environment:
+      POSTGRES_USER: brm_user
+      POSTGRES_PASSWORD: brm_password
+      POSTGRES_DB: brm_database
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d
+    restart: unless-stopped
+    networks:
+      - brm-network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  brm-network:
+    driver: bridge
