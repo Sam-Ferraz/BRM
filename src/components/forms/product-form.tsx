@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { CurrencyInput } from "@/components/ui/currency-input"
 import type { Product } from "@/lib/api-client"
 
 interface ProductFormProps {
@@ -73,11 +74,10 @@ export function ProductForm({ product, open, onOpenChange, onSubmit, loading }: 
           </div>
           <div className="space-y-2">
             <Label htmlFor="preco">{t('price')}</Label>
-            <Input
+            <CurrencyInput
               id="preco"
               value={formData.price}
-              onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-              placeholder={t('currencyPlaceholder')}
+              onChange={(price) => setFormData({ ...formData, price })}
               required
               tabIndex={2}
             />

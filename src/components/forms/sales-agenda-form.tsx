@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { CurrencyInput } from "@/components/ui/currency-input"
 import type { SalesAgenda } from "@/lib/api-client"
 import { getCurrentDateForForm } from "@/lib/datetime"
 
@@ -98,11 +99,10 @@ export function SalesAgendaForm({ salesAgenda, open, onOpenChange, onSubmit, loa
           </div>
           <div className="space-y-2">
             <Label htmlFor="valor">{t('value')}</Label>
-            <Input
+            <CurrencyInput
               id="valor"
               value={formData.value}
-              onChange={(e) => setFormData({ ...formData, value: e.target.value })}
-              placeholder={t('currencyPlaceholder')}
+              onChange={(value) => setFormData({ ...formData, value })}
               required
             />
           </div>
