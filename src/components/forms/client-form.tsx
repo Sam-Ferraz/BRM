@@ -12,13 +12,14 @@ import type { Client } from "@/lib/api-client"
 
 interface ClientFormProps {
   client?: Client
+  initialName?: string
   open: boolean
   onOpenChange: (open: boolean) => void
   onSubmit: (data: Omit<Client, "id"> | Partial<Client>) => void
   loading?: boolean
 }
 
-export function ClientForm({ client, open, onOpenChange, onSubmit, loading }: ClientFormProps) {
+export function ClientForm({ client, initialName, open, onOpenChange, onSubmit, loading }: ClientFormProps) {
   const { t } = useTranslation()
   const [formData, setFormData] = useState({
     name: "",
@@ -41,7 +42,7 @@ export function ClientForm({ client, open, onOpenChange, onSubmit, loading }: Cl
       })
     } else {
       setFormData({
-        name: "",
+        name: initialName || "",
         email: "",
         phone: "",
         city: "",
@@ -49,11 +50,16 @@ export function ClientForm({ client, open, onOpenChange, onSubmit, loading }: Cl
         company: "",
       })
     }
-  }, [client])
+  }, [client, initialName])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    e.stopPropagation()
     onSubmit(formData)
+  }
+
+  const handleOpenChange = (newOpen: boolean) => {
+    onOpenChange(newOpen)
   }
 
   return (

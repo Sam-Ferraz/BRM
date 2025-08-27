@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import type { Appointment } from "@/lib/api-client"
 import { getCurrentDateTimeForForm } from "@/lib/datetime"
+import { ClientSearch } from "@/components/client-search"
 
 interface AppointmentFormProps {
   appointment?: Appointment
@@ -82,12 +83,11 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="client">{t('client')}</Label>
-            <Input
-              id="client"
+            <ClientSearch
               value={formData.client}
-              onChange={(e) => setFormData({ ...formData, client: e.target.value })}
-              required
-              tabIndex={1}
+              onSelect={(clientName) => setFormData({ ...formData, client: clientName })}
+              placeholder={t('selectClient')}
+              className="w-full"
             />
           </div>
           <div className="space-y-2">
