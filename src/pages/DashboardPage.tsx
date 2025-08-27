@@ -304,17 +304,19 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Left side - Stats Cards */}
           <div className="lg:col-span-3">
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-6">
               <Link to="/deals">
                 <Card className="hover:shadow-md transition-shadow cursor-pointer">
-                  <CardContent className="p-6">
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground mb-3 text-center">{t('deals')}</p>
-                      <div className="flex items-center justify-center">
+                  <CardContent className="p-3 md:p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
                         <div className="p-2 bg-blue-100 rounded-lg">
                           <Briefcase className="w-6 h-6 text-blue-600" />
                         </div>
-                        <p className="text-2xl font-bold text-foreground ml-3">{stats.totalDeals}</p>
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">{t('deals')}</p>
+                          <p className="text-2xl font-bold text-foreground">{stats.totalDeals}</p>
+                        </div>
                       </div>
                     </div>
                   </CardContent>
@@ -323,14 +325,16 @@ export default function DashboardPage() {
 
               <Link to="/clients">
                 <Card className="hover:shadow-md transition-shadow cursor-pointer">
-                  <CardContent className="p-6">
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground mb-3 text-center">{t('clients')}</p>
-                      <div className="flex items-center justify-center">
+                  <CardContent className="p-3 md:p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
                         <div className="p-2 bg-green-100 rounded-lg">
                           <Users className="w-6 h-6 text-green-600" />
                         </div>
-                        <p className="text-2xl font-bold text-foreground ml-3">{stats.totalClients}</p>
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">{t('clients')}</p>
+                          <p className="text-2xl font-bold text-foreground">{stats.totalClients}</p>
+                        </div>
                       </div>
                     </div>
                   </CardContent>
@@ -339,14 +343,16 @@ export default function DashboardPage() {
 
               <Link to="/products">
                 <Card className="hover:shadow-md transition-shadow cursor-pointer">
-                  <CardContent className="p-6">
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground mb-3 text-center">{t('products')}</p>
-                      <div className="flex items-center justify-center">
+                  <CardContent className="p-3 md:p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
                         <div className="p-2 bg-orange-100 rounded-lg">
                           <Package className="w-6 h-6 text-orange-600" />
                         </div>
-                        <p className="text-2xl font-bold text-foreground ml-3">{stats.totalProducts}</p>
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">{t('products')}</p>
+                          <p className="text-2xl font-bold text-foreground">{stats.totalProducts}</p>
+                        </div>
                       </div>
                     </div>
                   </CardContent>
@@ -355,14 +361,16 @@ export default function DashboardPage() {
 
               <Link to="/appointments">
                 <Card className="hover:shadow-md transition-shadow cursor-pointer">
-                  <CardContent className="p-6">
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground mb-3 text-center">{t('services')}</p>
-                      <div className="flex items-center justify-center">
+                  <CardContent className="p-3 md:p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
                         <div className="p-2 bg-purple-100 rounded-lg">
                           <HeadphonesIcon className="w-6 h-6 text-purple-600" />
                         </div>
-                        <p className="text-2xl font-bold text-foreground ml-3">{stats.totalAppointments}</p>
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">{t('services')}</p>
+                          <p className="text-2xl font-bold text-foreground">{stats.totalAppointments}</p>
+                        </div>
                       </div>
                     </div>
                   </CardContent>
@@ -371,14 +379,16 @@ export default function DashboardPage() {
 
               <Link to="/sales-agenda">
                 <Card className="hover:shadow-md transition-shadow cursor-pointer">
-                  <CardContent className="p-6">
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground mb-3 text-center">{t('salesAgenda')}</p>
-                      <div className="flex items-center justify-center">
+                  <CardContent className="p-3 md:p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
                         <div className="p-2 bg-indigo-100 rounded-lg">
                           <FileText className="w-6 h-6 text-indigo-600" />
                         </div>
-                        <p className="text-2xl font-bold text-foreground ml-3">{stats.totalSalesAgenda}</p>
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">{t('salesAgenda')}</p>
+                          <p className="text-2xl font-bold text-foreground">{stats.totalSalesAgenda}</p>
+                        </div>
                       </div>
                     </div>
                   </CardContent>
