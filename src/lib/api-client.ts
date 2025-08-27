@@ -98,6 +98,7 @@ export interface Appointment {
   status: "Em Andamento" | "Concluído" | "Pendente"
   scheduled_datetime: string
   description?: string
+  answered: boolean
 }
 
 export interface Product {

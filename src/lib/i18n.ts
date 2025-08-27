@@ -203,6 +203,10 @@ const resources = {
       salesAgendaLoadError: 'Falha ao carregar pauta de vendas',
       productRequired: 'Produto é obrigatório',
       clientRequired: 'Cliente é obrigatório',
+      answered: 'Respondido',
+      notAnswered: 'Não Respondido',
+      answeredStatus: 'Status de Resposta',
+      answeredStatusRequired: 'Status de resposta é obrigatório',
       
       // Common actions
       success: 'Sucesso',
@@ -457,6 +461,10 @@ const resources = {
       salesAgendaLoadError: 'Failed to load sales agenda',
       productRequired: 'Product is required',
       clientRequired: 'Client is required',
+      answered: 'Answered',
+      notAnswered: 'Not Answered',
+      answeredStatus: 'Response Status',
+      answeredStatusRequired: 'Response status is required',
       
       // Common actions
       success: 'Success',
@@ -711,6 +719,10 @@ const resources = {
       salesAgendaLoadError: 'Error al cargar agenda de ventas',
       productRequired: 'El producto es obligatorio',
       clientRequired: 'El cliente es obligatorio',
+      answered: 'Respondido',
+      notAnswered: 'No Respondido',
+      answeredStatus: 'Estado de Respuesta',
+      answeredStatusRequired: 'El estado de respuesta es obligatorio',
       
       // Common actions
       success: 'Éxito',

@@ -254,6 +254,7 @@ export default function AppointmentsPage() {
                     </TableHead>
                     <TableHead>{t('type')}</TableHead>
                     <TableHead>{t('status')}</TableHead>
+                    <TableHead>{t('answeredStatus')}</TableHead>
                     <TableHead 
                       className="cursor-pointer" 
                       onClick={() => handleSort("scheduled_datetime")}
@@ -281,6 +282,14 @@ export default function AppointmentsPage() {
                       <TableCell>
                         <Badge variant={getStatusBadgeVariant(appointment.status)}>
                           {appointment.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge 
+                          variant={appointment.answered ? "default" : "destructive"}
+                          className={appointment.answered ? "bg-green-600 hover:bg-green-700" : ""}
+                        >
+                          {appointment.answered ? t('answered') : t('notAnswered')}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -327,7 +336,7 @@ export default function AppointmentsPage() {
                   ))}
                   {appointments.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                         {t('noServicesFound')}
                       </TableCell>
                     </TableRow>

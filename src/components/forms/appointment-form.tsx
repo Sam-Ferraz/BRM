@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import type { Appointment } from "@/lib/api-client"
 import { getCurrentDateTimeForForm } from "@/lib/datetime"
 import { ClientSearch } from "@/components/client-search"
+import { AnsweredStatusToggle } from "@/components/ui/answered-status-toggle"
 
 interface AppointmentFormProps {
   appointment?: Appointment
@@ -32,6 +33,7 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
     status: "Pendente" as "Em Andamento" | "Concluído" | "Pendente",
     scheduled_datetime: currentDateTime,
     description: "",
+    answered: undefined as boolean | undefined,
   })
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
 
@@ -61,6 +63,7 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
         status: (appointment.status || "Pendente") as "Em Andamento" | "Concluído" | "Pendente",
         scheduled_datetime: formattedDateTime,
         description: appointment.description || "",
+        answered: appointment.answered,
       })
     } else {
       setFormData({
@@ -69,6 +72,7 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
         status: "Pendente" as "Em Andamento" | "Concluído" | "Pendente",
         scheduled_datetime: currentDateTime,
         description: "",
+        answered: undefined,
       })
     }
   }, [appointment, currentDateTime, open])
@@ -84,6 +88,10 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
     
     if (!formData.client.trim()) {
       newErrors.client = t('clientRequired') || 'Client is required'
+    }
+    
+    if (formData.answered === undefined) {
+      newErrors.answered = t('answeredStatusRequired') || 'Response status is required'
     }
     
     if (Object.keys(newErrors).length > 0) {
@@ -158,20 +166,33 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
             />
           </div>
           <div className="space-y-2">
+            <Label htmlFor="answered">
+              {t('answeredStatus')} <span className="text-red-500">*</span>
+            </Label>
+            <AnsweredStatusToggle
+              value={formData.answered}
+              onChange={(answered) => setFormData({ ...formData, answered })}
+              className="w-full"
+            />
+            {errors.answered && (
+              <p className="text-sm text-red-500">{errors.answered}</p>
+            )}
+          </div>
+          <div className="space-y-2">
             <Label htmlFor="description">{t('description')}</Label>
             <Textarea
               id="description"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               rows={3}
-              tabIndex={5}
+              tabIndex={6}
             />
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} tabIndex={6}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} tabIndex={7}>
               {t('cancel')}
             </Button>
-            <Button type="submit" disabled={loading} tabIndex={7}>
+            <Button type="submit" disabled={loading} tabIndex={8}>
               {loading ? t('saving') : t('save')}
             </Button>
           </DialogFooter>

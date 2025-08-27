@@ -405,13 +405,13 @@ export function createApiRoutes(app) {
   app.post('/api/appointments', authenticateToken, async (req, res) => {
     const client = await pool.connect()
     try {
-      const { client: clientName, type, status, scheduled_datetime, description } = req.body
+      const { client: clientName, type, status, scheduled_datetime, description, answered } = req.body
       
       // Ensure UTC timezone for this session
       await client.query('SET TIMEZONE = \'UTC\'')
       const result = await client.query(
-        'INSERT INTO appointments (client, type, status, scheduled_datetime, description) VALUES ($1, $2, $3, $4::timestamp, $5) RETURNING *',
-        [clientName, type, status, scheduled_datetime, description]
+        'INSERT INTO appointments (client, type, status, scheduled_datetime, description, answered) VALUES ($1, $2, $3, $4::timestamp, $5, $6) RETURNING *',
+        [clientName, type, status, scheduled_datetime, description, answered]
       )
       res.json(result.rows[0])
     } catch (error) {
@@ -426,13 +426,13 @@ export function createApiRoutes(app) {
     const client = await pool.connect()
     try {
       const { id } = req.params
-      const { client: clientName, type, status, scheduled_datetime, description } = req.body
+      const { client: clientName, type, status, scheduled_datetime, description, answered } = req.body
       
       // Ensure UTC timezone for this session
       await client.query('SET TIMEZONE = \'UTC\'')
       const result = await client.query(
-        'UPDATE appointments SET client = $1, type = $2, status = $3, scheduled_datetime = $4::timestamp, description = $5, updated_at = CURRENT_TIMESTAMP WHERE id = $6 RETURNING *',
-        [clientName, type, status, scheduled_datetime, description, id]
+        'UPDATE appointments SET client = $1, type = $2, status = $3, scheduled_datetime = $4::timestamp, description = $5, answered = $6, updated_at = CURRENT_TIMESTAMP WHERE id = $7 RETURNING *',
+        [clientName, type, status, scheduled_datetime, description, answered, id]
       )
       if (result.rows.length === 0) {
         return res.status(404).json({ error: 'Appointment not found' })
@@ -462,6 +462,7 @@ export function createApiRoutes(app) {
       client.release()
     }
   })
+
 
 
   // Sales Agenda routes
