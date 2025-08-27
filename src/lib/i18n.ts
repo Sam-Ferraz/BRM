@@ -201,6 +201,7 @@ const resources = {
       salesAgendaUpdateError: 'Falha ao atualizar pauta de venda',
       salesAgendaDeleteError: 'Falha ao excluir pauta de venda',
       salesAgendaLoadError: 'Falha ao carregar pauta de vendas',
+      productRequired: 'Produto é obrigatório',
       
       // Common actions
       success: 'Sucesso',
@@ -453,6 +454,7 @@ const resources = {
       salesAgendaUpdateError: 'Failed to update sales agenda',
       salesAgendaDeleteError: 'Failed to delete sales agenda',
       salesAgendaLoadError: 'Failed to load sales agenda',
+      productRequired: 'Product is required',
       
       // Common actions
       success: 'Success',
@@ -705,6 +707,7 @@ const resources = {
       salesAgendaUpdateError: 'Error al actualizar agenda de ventas',
       salesAgendaDeleteError: 'Error al eliminar agenda de ventas',
       salesAgendaLoadError: 'Error al cargar agenda de ventas',
+      productRequired: 'El producto es obligatorio',
       
       // Common actions
       success: 'Éxito',

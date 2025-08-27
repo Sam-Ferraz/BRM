@@ -32,8 +32,12 @@ export function SalesAgendaForm({ salesAgenda, open, onOpenChange, onSubmit, loa
     date: getCurrentDateForForm(),
     status: "Ativa" as "Ativa" | "Concluída" | "Cancelada",
   })
+  const [errors, setErrors] = useState<{ [key: string]: string }>({})
 
   useEffect(() => {
+    // Clear errors when form opens/closes or changes mode
+    setErrors({})
+    
     if (salesAgenda) {
       // Convert date from database to form format (YYYY-MM-DD)
       let formattedDate = getCurrentDateForForm()
@@ -69,10 +73,26 @@ export function SalesAgendaForm({ salesAgenda, open, onOpenChange, onSubmit, loa
         status: "Ativa" as "Ativa" | "Concluída" | "Cancelada",
       })
     }
-  }, [salesAgenda])
+  }, [salesAgenda, open])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Clear previous errors
+    setErrors({})
+    
+    // Validate required fields
+    const newErrors: { [key: string]: string } = {}
+    
+    if (!formData.product_name.trim()) {
+      newErrors.product_name = t('productRequired') || 'Product is required'
+    }
+    
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors)
+      return
+    }
+    
     onSubmit(formData)
   }
 
@@ -102,13 +122,18 @@ export function SalesAgendaForm({ salesAgenda, open, onOpenChange, onSubmit, loa
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="product">{t('product')}</Label>
+            <Label htmlFor="product">
+              {t('product')} <span className="text-red-500">*</span>
+            </Label>
             <ProductSearch
               value={formData.product_name}
               onSelect={(productName) => setFormData({ ...formData, product_name: productName })}
               placeholder={t('selectProduct')}
-              className="w-full"
+              className={`w-full ${errors.product_name ? 'ring-2 ring-red-500' : ''}`}
             />
+            {errors.product_name && (
+              <p className="text-sm text-red-500">{errors.product_name}</p>
+            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="valor">{t('value')}</Label>
