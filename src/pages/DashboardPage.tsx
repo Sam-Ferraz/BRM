@@ -526,47 +526,6 @@ export default function DashboardPage() {
 
           {/* Right side - Sidebar */}
           <div className="space-y-6">
-            {/* Performance Indicators */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">{t('performanceIndicators')}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">{t('totalAppointments')} (7d)</span>
-                  <span className="font-semibold text-blue-600">
-                    {appointmentAnalytics.reduce((sum, item) => sum + parseInt(item.answered) + parseInt(item.not_answered), 0)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">{t('responseRate')} (7d)</span>
-                  <span className="font-semibold text-green-600">
-                    {(() => {
-                      const total = appointmentAnalytics.reduce((sum, item) => sum + parseInt(item.answered) + parseInt(item.not_answered), 0)
-                      const answered = appointmentAnalytics.reduce((sum, item) => sum + parseInt(item.answered), 0)
-                      return total > 0 ? `${((answered / total) * 100).toFixed(1)}%` : '0%'
-                    })()}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">{t('conversionRate')}</span>
-                  <span className="font-semibold text-green-600">68%</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">{t('averageTicket')}</span>
-                  <span className="font-semibold">R$ 15.240</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">{t('monthlyGoal')}</span>
-                  <span className="font-semibold text-blue-600">85%</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">{t('satisfaction')}</span>
-                  <span className="font-semibold text-yellow-600">4.8/5</span>
-                </div>
-              </CardContent>
-            </Card>
-
             {/* Settings */}
             <Card>
               <CardHeader>
