@@ -27,6 +27,7 @@ const resources = {
       services: 'Atendimentos',
       products: 'Imóveis',
       salesAgenda: 'Pauta de Vendas',
+      analytics: 'Análise',
       settings: 'Configurações',
       support: 'Suporte',
       
@@ -293,6 +294,7 @@ const resources = {
       services: 'Services',
       products: 'Real Estate',
       salesAgenda: 'Sales Agenda',
+      analytics: 'Analytics',
       settings: 'Settings',
       support: 'Support',
       
@@ -559,6 +561,7 @@ const resources = {
       services: 'Servicios',
       products: 'Inmuebles',
       salesAgenda: 'Agenda de Ventas',
+      analytics: 'Análisis',
       settings: 'Configuración',
       support: 'Soporte',
       
