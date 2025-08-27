@@ -398,7 +398,7 @@ export default function DashboardPage() {
           <div className="lg:col-span-2 space-y-8">
             {/* Full Width Appointments Analytics Chart */}
             <Card className="bg-gradient-to-br from-slate-50 to-white border-slate-200">
-              <CardHeader className="pb-4">
+              <CardHeader className="pb-4 px-3 sm:px-6">
                 <CardTitle className="text-xl font-semibold text-slate-800 flex items-center gap-3">
                   <div className="w-2 h-8 bg-gradient-to-b from-blue-500 to-purple-600 rounded-full"></div>
                   {t('appointmentsLast7Days')}
@@ -407,7 +407,7 @@ export default function DashboardPage() {
                   {t('appointmentsAnalyticsDescription')}
                 </p>
               </CardHeader>
-              <CardContent className="pt-0">
+              <CardContent className="pt-0 px-3 sm:px-6">
                 <ChartContainer
                   config={{
                     [t('answered')]: {
@@ -424,7 +424,7 @@ export default function DashboardPage() {
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart 
                       data={formatAppointmentAnalytics(appointmentAnalytics, t)}
-                      margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+                      margin={{ top: 20, right: 5, left: 0, bottom: 20 }}
                       barCategoryGap="15%"
                     >
                       <defs>
@@ -448,14 +448,15 @@ export default function DashboardPage() {
                         dataKey="date" 
                         axisLine={false}
                         tickLine={false}
-                        tick={{ fontSize: 14, fill: '#64748b' }}
-                        tickMargin={10}
+                        tick={{ fontSize: 12, fill: '#64748b' }}
+                        tickMargin={8}
                       />
                       <YAxis 
                         axisLine={false}
                         tickLine={false}
-                        tick={{ fontSize: 14, fill: '#64748b' }}
-                        tickMargin={10}
+                        tick={{ fontSize: 12, fill: '#64748b' }}
+                        tickMargin={2}
+                        width={30}
                       />
                       <ChartTooltip 
                         content={({ active, payload, label }) => {
@@ -527,37 +528,37 @@ export default function DashboardPage() {
                 </ChartContainer>
                 
                 {/* Summary Stats */}
-                <div className="mt-6 pt-6 border-t border-slate-200">
-                  <div className="grid grid-cols-3 gap-8 mb-6">
+                <div className="mt-4 pt-4 border-t border-slate-200">
+                  <div className="grid grid-cols-3 gap-4 sm:gap-8 mb-4 sm:mb-6">
                     <div className="text-center">
-                      <div className="text-3xl font-bold text-emerald-600">
+                      <div className="text-2xl sm:text-3xl font-bold text-emerald-600">
                         {appointmentAnalytics.reduce((sum, item) => sum + parseInt(item.answered), 0)}
                       </div>
-                      <div className="text-sm text-slate-600 mt-1">{t('totalAnswered')}</div>
+                      <div className="text-xs sm:text-sm text-slate-600 mt-1">{t('totalAnswered')}</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-3xl font-bold text-red-600">
+                      <div className="text-2xl sm:text-3xl font-bold text-red-600">
                         {appointmentAnalytics.reduce((sum, item) => sum + parseInt(item.not_answered), 0)}
                       </div>
-                      <div className="text-sm text-slate-600 mt-1">{t('totalNotAnswered')}</div>
+                      <div className="text-xs sm:text-sm text-slate-600 mt-1">{t('totalNotAnswered')}</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-3xl font-bold text-blue-600">
+                      <div className="text-2xl sm:text-3xl font-bold text-blue-600">
                         {appointmentAnalytics.reduce((sum, item) => sum + parseInt(item.answered) + parseInt(item.not_answered), 0)}
                       </div>
-                      <div className="text-sm text-slate-600 mt-1">{t('totalAppointments')}</div>
+                      <div className="text-xs sm:text-sm text-slate-600 mt-1">{t('totalAppointments')}</div>
                     </div>
                   </div>
                   
                   {/* Legend */}
-                  <div className="flex justify-center gap-8">
-                    <div className="flex items-center gap-3">
-                      <div className="w-5 h-5 rounded bg-gradient-to-b from-emerald-500 to-emerald-600 border border-emerald-600"></div>
-                      <span className="text-sm font-medium text-slate-700">{t('answered')}</span>
+                  <div className="flex justify-center gap-4 sm:gap-8">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <div className="w-4 h-4 sm:w-5 sm:h-5 rounded bg-gradient-to-b from-emerald-500 to-emerald-600 border border-emerald-600"></div>
+                      <span className="text-xs sm:text-sm font-medium text-slate-700">{t('answered')}</span>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <div className="w-5 h-5 rounded bg-gradient-to-b from-red-500 to-red-600 border border-red-600"></div>
-                      <span className="text-sm font-medium text-slate-700">{t('notAnswered')}</span>
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <div className="w-4 h-4 sm:w-5 sm:h-5 rounded bg-gradient-to-b from-red-500 to-red-600 border border-red-600"></div>
+                      <span className="text-xs sm:text-sm font-medium text-slate-700">{t('notAnswered')}</span>
                     </div>
                   </div>
                 </div>
