@@ -158,12 +158,16 @@ export default function DealsPage() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "Proposta":
-        return <Badge variant="secondary">{t('proposal')}</Badge>
-      case "Em Andamento":
-        return <Badge variant="default">{t('inProgress')}</Badge>
-      case "Fechado":
-        return <Badge variant="outline">{t('closed')}</Badge>
+      case "proposta":
+        return <Badge variant="secondary">{t('proposta')}</Badge>
+      case "venda_ganha":
+        return <Badge variant="default" className="bg-green-500">{t('vendaGanha')}</Badge>
+      case "descartado":
+        return <Badge variant="destructive">{t('descartado')}</Badge>
+      case "fechado":
+        return <Badge variant="outline">{t('fechado')}</Badge>
+      case "cancelado":
+        return <Badge variant="outline" className="bg-gray-500">{t('cancelado')}</Badge>
       default:
         return <Badge>{status}</Badge>
     }
@@ -171,9 +175,11 @@ export default function DealsPage() {
 
   const statusOptions = [
     { value: "Todos", label: t('allStatuses') },
-    { value: "Proposta", label: t('proposal') },
-    { value: "Em Andamento", label: t('inProgress') },
-    { value: "Fechado", label: t('closed') }
+    { value: "proposta", label: t('proposta') },
+    { value: "venda_ganha", label: t('vendaGanha') },
+    { value: "descartado", label: t('descartado') },
+    { value: "fechado", label: t('fechado') },
+    { value: "cancelado", label: t('cancelado') }
   ]
 
   return (

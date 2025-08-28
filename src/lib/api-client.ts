@@ -76,7 +76,7 @@ export interface Deal {
   id: number
   client: string
   value: string
-  status: "Em Andamento" | "Proposta" | "Fechado"
+  status: "proposta" | "venda_ganha" | "descartado" | "fechado" | "cancelado"
   date: string
   description?: string
 }

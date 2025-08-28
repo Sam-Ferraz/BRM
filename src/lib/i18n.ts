@@ -56,6 +56,13 @@ const resources = {
       closed: 'Fechados',
       inProgress: 'Em Andamento',
       
+      // Deal Status
+      proposta: 'Proposta',
+      vendaGanha: 'Venda Ganha', 
+      descartado: 'Descartado',
+      fechado: 'Fechado',
+      cancelado: 'Cancelado',
+      
       // Status
       active: 'Ativa',
       completed: 'Concluída',
@@ -336,6 +343,13 @@ const resources = {
       closed: 'Closed',
       inProgress: 'In Progress',
       
+      // Deal Status
+      proposta: 'Proposal',
+      vendaGanha: 'Won Sale',
+      descartado: 'Discarded', 
+      fechado: 'Closed',
+      cancelado: 'Cancelled',
+      
       // Status
       active: 'Active',
       completed: 'Completed',
@@ -615,6 +629,13 @@ const resources = {
       proposals: 'Propuestas',
       closed: 'Cerrados',
       inProgress: 'En Progreso',
+      
+      // Deal Status
+      proposta: 'Propuesta',
+      vendaGanha: 'Venta Ganada',
+      descartado: 'Descartado',
+      fechado: 'Cerrado', 
+      cancelado: 'Cancelado',
       
       // Status
       active: 'Activa',

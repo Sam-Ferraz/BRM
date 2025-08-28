@@ -28,7 +28,7 @@ export function DealForm({ deal, open, onOpenChange, onSubmit, loading }: DealFo
   const [formData, setFormData] = useState({
     client: "",
     value: "",
-    status: "Proposta" as "Em Andamento" | "Proposta" | "Fechado",
+    status: "proposta" as "proposta" | "venda_ganha" | "descartado" | "fechado" | "cancelado",
     date: getCurrentDateForForm(),
     description: "",
   })
@@ -112,9 +112,11 @@ export function DealForm({ deal, open, onOpenChange, onSubmit, loading }: DealFo
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Proposta">{t('proposal')}</SelectItem>
-                <SelectItem value="Em Andamento">{t('inProgress')}</SelectItem>
-                <SelectItem value="Fechado">{t('closed')}</SelectItem>
+                <SelectItem value="proposta">{t('proposta')}</SelectItem>
+                <SelectItem value="venda_ganha">{t('vendaGanha')}</SelectItem>
+                <SelectItem value="descartado">{t('descartado')}</SelectItem>
+                <SelectItem value="fechado">{t('fechado')}</SelectItem>
+                <SelectItem value="cancelado">{t('cancelado')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
