@@ -312,7 +312,15 @@ export default function ProductsPage() {
                         </div>
                       </TableCell>
                       <TableCell className="font-medium">{product.name}</TableCell>
-                      <TableCell>{product.price}</TableCell>
+                      <TableCell>
+                        {product.price ? 
+                          new Intl.NumberFormat('pt-BR', {
+                            style: 'currency',
+                            currency: 'BRL'
+                          }).format(product.price) 
+                          : '-'
+                        }
+                      </TableCell>
                       <TableCell>{product.category}</TableCell>
                       <TableCell>{product.stock}</TableCell>
                       <TableCell>{getStockStatus(product.stock)}</TableCell>
