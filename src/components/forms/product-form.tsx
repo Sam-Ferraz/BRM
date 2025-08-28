@@ -271,12 +271,13 @@ export function ProductForm({ product, initialName, open, onOpenChange, onSubmit
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[800px] max-h-[95vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>{product ? t('editProduct') : t('newProduct')}</DialogTitle>
           </DialogHeader>
           
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="flex-1 overflow-y-auto">
+            <form id="product-form" onSubmit={handleSubmit} className="space-y-6">
             {/* Basic Product Information */}
             <div className="grid grid-cols-1 gap-4">
               <div className="space-y-2">
@@ -340,7 +341,7 @@ export function ProductForm({ product, initialName, open, onOpenChange, onSubmit
             </div>
             
             {/* Image Management Section */}
-            {showImageUpload && (
+            {showImageUpload && product && (
               <div className="space-y-4 border-t pt-4">
                 <div className="flex items-center justify-between">
                   <Label className="text-base font-medium">Product Images</Label>
@@ -353,21 +354,21 @@ export function ProductForm({ product, initialName, open, onOpenChange, onSubmit
                     {/* Carousel Preview */}
                     <div className="w-full">
                       <ImageCarousel
-                        productId={product!.id}
+                        productId={product.id}
                         images={images}
-                        className="h-48"
+                        className="h-32"
                         showThumbnails={false}
                         onClick={openFullscreenCarousel}
                       />
                     </div>
                     
                     {/* Image Management Grid */}
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                       {images.map((image, index) => (
                         <div key={image.id} className="relative group">
                           <div className="aspect-square rounded-lg overflow-hidden border">
                             <img
-                              src={api.products.getImageUrl(product!.id, image.id)}
+                              src={api.products.getImageUrl(product.id, image.id)}
                               alt={image.alt_text || `Image ${index + 1}`}
                               className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
                               onClick={() => openFullscreenCarousel(index)}
@@ -440,7 +441,7 @@ export function ProductForm({ product, initialName, open, onOpenChange, onSubmit
                   {/* Multiple Image Previews */}
                   {imagePreviews.length > 0 && (
                     <div className="space-y-4">
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
                         {imagePreviews.map((preview, index) => (
                           <div key={index} className="relative group">
                             <div className="aspect-square rounded-lg overflow-hidden border">
@@ -534,15 +535,17 @@ export function ProductForm({ product, initialName, open, onOpenChange, onSubmit
               </div>
             )}
             
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} tabIndex={6}>
-                {t('cancel')}
-              </Button>
-              <Button type="submit" disabled={loading} tabIndex={7}>
-                {loading ? t('saving') : t('save')}
-              </Button>
-            </DialogFooter>
-          </form>
+            </form>
+          </div>
+          
+          <DialogFooter className="flex-shrink-0 border-t pt-4">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} tabIndex={6}>
+              {t('cancel')}
+            </Button>
+            <Button type="submit" disabled={loading} tabIndex={7} form="product-form">
+              {loading ? t('saving') : t('save')}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
