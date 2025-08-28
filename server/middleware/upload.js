@@ -21,13 +21,16 @@ const upload = multer({
   storage: storage,
   fileFilter: fileFilter,
   limits: {
-    fileSize: 20 * 1024 * 1024, // 20MB limit
-    files: 1, // Only allow one file per request
+    fileSize: 20 * 1024 * 1024, // 20MB limit per file
+    files: 10, // Allow up to 10 files per request
   }
 })
 
 // Middleware for single file upload
 export const uploadSingle = upload.single('image')
+
+// Middleware for multiple file uploads
+export const uploadMultiple = upload.array('images', 10) // Support up to 10 files
 
 // Error handling middleware for multer errors
 export const handleUploadErrors = (error, req, res, next) => {
@@ -39,7 +42,7 @@ export const handleUploadErrors = (error, req, res, next) => {
         })
       case 'LIMIT_FILE_COUNT':
         return res.status(400).json({ 
-          error: 'Too many files. Only one file is allowed.' 
+          error: 'Too many files. Maximum 10 files are allowed.' 
         })
       case 'LIMIT_UNEXPECTED_FILE':
         return res.status(400).json({ 
@@ -60,4 +63,4 @@ export const handleUploadErrors = (error, req, res, next) => {
   next()
 }
 
-export default { uploadSingle, handleUploadErrors }
+export default { uploadSingle, uploadMultiple, handleUploadErrors }

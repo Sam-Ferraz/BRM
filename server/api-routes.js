@@ -1,7 +1,7 @@
 import pool from './database.js'
 import { authenticateToken } from './auth.js'
 import s3Service from './services/s3-service.js'
-import { uploadSingle, handleUploadErrors } from './middleware/upload.js'
+import { uploadSingle, uploadMultiple, handleUploadErrors } from './middleware/upload.js'
 
 // Generic CRUD operations for database entities
 export function createApiRoutes(app) {
@@ -434,23 +434,25 @@ export function createApiRoutes(app) {
     try {
       const { id } = req.params
       
-      // Get product with image_url before deletion
+      // Check if product exists
       const productResult = await client.query('SELECT * FROM products WHERE id = $1', [id])
       if (productResult.rows.length === 0) {
         return res.status(404).json({ error: 'Product not found' })
       }
       
-      const product = productResult.rows[0]
+      // Get all product images before deletion
+      const imagesResult = await client.query('SELECT image_url FROM product_images WHERE product_id = $1', [id])
+      const imagePaths = imagesResult.rows.map(row => row.image_url)
       
-      // Delete from database
+      // Delete from database (CASCADE will handle product_images)
       const deleteResult = await client.query('DELETE FROM products WHERE id = $1 RETURNING *', [id])
       
-      // Clean up S3 image if it exists
-      if (product.image_url) {
+      // Clean up S3 images if they exist
+      if (imagePaths.length > 0) {
         try {
-          await s3Service.deleteFile(product.image_url)
+          await s3Service.deleteProductFiles(imagePaths)
         } catch (s3Error) {
-          console.error('Error deleting image from S3:', s3Error)
+          console.error('Error deleting images from S3:', s3Error)
           // Don't fail the product deletion if image cleanup fails
         }
       }
@@ -464,13 +466,41 @@ export function createApiRoutes(app) {
     }
   })
 
-  // Product Image routes
+  // Product Images routes (Multiple images support)
   
-  // Upload product image
-  app.post('/api/products/:id/image', authenticateToken, uploadSingle, handleUploadErrors, async (req, res) => {
+  // Get all images for a product
+  app.get('/api/products/:id/images', async (req, res) => {
     const client = await pool.connect()
     try {
       const { id } = req.params
+      
+      // Check if product exists
+      const productResult = await client.query('SELECT * FROM products WHERE id = $1', [id])
+      if (productResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Product not found' })
+      }
+      
+      // Get all images for the product
+      const imagesResult = await client.query(
+        'SELECT * FROM product_images WHERE product_id = $1 ORDER BY display_order ASC, created_at ASC',
+        [id]
+      )
+      
+      res.json({ images: imagesResult.rows })
+    } catch (error) {
+      console.error('Error getting product images:', error)
+      res.status(500).json({ error: 'Internal server error' })
+    } finally {
+      client.release()
+    }
+  })
+  
+  // Upload new image(s) for a product
+  app.post('/api/products/:id/images', authenticateToken, uploadSingle, handleUploadErrors, async (req, res) => {
+    const client = await pool.connect()
+    try {
+      const { id } = req.params
+      const { alt_text } = req.body
       
       // Check if product exists
       const productResult = await client.query('SELECT * FROM products WHERE id = $1', [id])
@@ -482,17 +512,19 @@ export function createApiRoutes(app) {
         return res.status(400).json({ error: 'No image file provided' })
       }
       
-      const product = productResult.rows[0]
+      // Get current image count and check if there's a thumbnail
+      const imageCountResult = await client.query(
+        'SELECT COUNT(*) as count, COALESCE(MAX(display_order), 0) as max_order FROM product_images WHERE product_id = $1',
+        [id]
+      )
+      const thumbnailResult = await client.query(
+        'SELECT COUNT(*) as count FROM product_images WHERE product_id = $1 AND is_thumbnail = TRUE',
+        [id]
+      )
       
-      // Delete existing image if it exists
-      if (product.image_url) {
-        try {
-          await s3Service.deleteFile(product.image_url)
-        } catch (error) {
-          console.error('Error deleting existing image:', error)
-          // Continue with upload even if deletion fails
-        }
-      }
+      const currentCount = parseInt(imageCountResult.rows[0].count)
+      const maxOrder = parseInt(imageCountResult.rows[0].max_order)
+      const hasThumbnail = parseInt(thumbnailResult.rows[0].count) > 0
       
       // Upload new image to S3
       const filePath = await s3Service.uploadFile(
@@ -502,15 +534,19 @@ export function createApiRoutes(app) {
         parseInt(id)
       )
       
-      // Update product with new image URL
-      const updateResult = await client.query(
-        'UPDATE products SET image_url = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *',
-        [filePath, id]
+      // Insert new image record
+      // Set as thumbnail if it's the first image
+      const isFirstImage = !hasThumbnail
+      const displayOrder = maxOrder + 1
+      
+      const insertResult = await client.query(
+        'INSERT INTO product_images (product_id, image_url, display_order, is_thumbnail, alt_text) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+        [id, filePath, displayOrder, isFirstImage, alt_text || req.file.originalname]
       )
       
       res.json({ 
-        success: true, 
-        product: updateResult.rows[0],
+        success: true,
+        image: insertResult.rows[0],
         message: 'Image uploaded successfully'
       })
     } catch (error) {
@@ -521,31 +557,112 @@ export function createApiRoutes(app) {
     }
   })
   
-  // Get product image
-  app.get('/api/products/:id/image', async (req, res) => {
+  // Upload multiple images for a product
+  app.post('/api/products/:id/images/bulk', authenticateToken, uploadMultiple, handleUploadErrors, async (req, res) => {
     const client = await pool.connect()
     try {
       const { id } = req.params
       
-      // Get product image URL
-      const result = await client.query('SELECT image_url FROM products WHERE id = $1', [id])
-      if (result.rows.length === 0) {
+      // Check if product exists
+      const productResult = await client.query('SELECT * FROM products WHERE id = $1', [id])
+      if (productResult.rows.length === 0) {
         return res.status(404).json({ error: 'Product not found' })
       }
       
-      const product = result.rows[0]
-      if (!product.image_url) {
-        return res.status(404).json({ error: 'No image found for this product' })
+      if (!req.files || req.files.length === 0) {
+        return res.status(400).json({ error: 'No image files provided' })
       }
       
+      // Get current image count and max order
+      const imageCountResult = await client.query(
+        'SELECT COUNT(*) as count, COALESCE(MAX(display_order), 0) as max_order FROM product_images WHERE product_id = $1',
+        [id]
+      )
+      const thumbnailResult = await client.query(
+        'SELECT COUNT(*) as count FROM product_images WHERE product_id = $1 AND is_thumbnail = TRUE',
+        [id]
+      )
+      
+      const currentCount = parseInt(imageCountResult.rows[0].count)
+      let maxOrder = parseInt(imageCountResult.rows[0].max_order)
+      const hasThumbnail = parseInt(thumbnailResult.rows[0].count) > 0
+      
+      const uploadedImages = []
+      const errors = []
+      
+      // Process each file
+      for (let i = 0; i < req.files.length; i++) {
+        const file = req.files[i]
+        try {
+          // Upload to S3
+          const filePath = await s3Service.uploadFile(
+            file.buffer,
+            file.originalname,
+            file.mimetype,
+            parseInt(id)
+          )
+          
+          // Insert into database
+          const isFirstImage = !hasThumbnail && uploadedImages.length === 0
+          const displayOrder = maxOrder + i + 1
+          
+          const insertResult = await client.query(
+            'INSERT INTO product_images (product_id, image_url, display_order, is_thumbnail, alt_text) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+            [id, filePath, displayOrder, isFirstImage, file.originalname]
+          )
+          
+          uploadedImages.push(insertResult.rows[0])
+        } catch (error) {
+          console.error(`Error uploading file ${file.originalname}:`, error)
+          errors.push({
+            filename: file.originalname,
+            error: error.message
+          })
+        }
+      }
+      
+      res.json({
+        success: true,
+        uploaded: uploadedImages.length,
+        total: req.files.length,
+        images: uploadedImages,
+        errors: errors,
+        message: `Successfully uploaded ${uploadedImages.length} out of ${req.files.length} images`
+      })
+    } catch (error) {
+      console.error('Error uploading product images:', error)
+      res.status(500).json({ error: error.message || 'Internal server error' })
+    } finally {
+      client.release()
+    }
+  })
+  
+  // Get individual image file
+  app.get('/api/products/:id/images/:imageId', async (req, res) => {
+    const client = await pool.connect()
+    try {
+      const { id, imageId } = req.params
+      
+      // Get image record
+      const result = await client.query(
+        'SELECT * FROM product_images WHERE id = $1 AND product_id = $2',
+        [imageId, id]
+      )
+      
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Image not found' })
+      }
+      
+      const image = result.rows[0]
+      
       // Stream image from S3
-      const fileData = await s3Service.getFile(product.image_url)
+      const fileData = await s3Service.getFile(image.image_url)
       
       // Set appropriate headers
       res.set({
         'Content-Type': fileData.contentType,
         'Content-Length': fileData.contentLength,
-        'Cache-Control': 'public, max-age=86400', // Cache for 24 hours
+        'Cache-Control': 'public, max-age=86400',
         'Last-Modified': fileData.lastModified
       })
       
@@ -562,40 +679,186 @@ export function createApiRoutes(app) {
     }
   })
   
-  // Delete product image
-  app.delete('/api/products/:id/image', authenticateToken, async (req, res) => {
+  // Update image (set as thumbnail, change order, update alt text)
+  app.put('/api/products/:id/images/:imageId', authenticateToken, async (req, res) => {
+    const client = await pool.connect()
+    try {
+      const { id, imageId } = req.params
+      const { is_thumbnail, display_order, alt_text } = req.body
+      
+      await client.query('BEGIN')
+      
+      // Check if image exists
+      const imageResult = await client.query(
+        'SELECT * FROM product_images WHERE id = $1 AND product_id = $2',
+        [imageId, id]
+      )
+      
+      if (imageResult.rows.length === 0) {
+        await client.query('ROLLBACK')
+        return res.status(404).json({ error: 'Image not found' })
+      }
+      
+      // If setting as thumbnail, remove thumbnail from other images
+      if (is_thumbnail === true) {
+        await client.query(
+          'UPDATE product_images SET is_thumbnail = FALSE WHERE product_id = $1 AND id != $2',
+          [id, imageId]
+        )
+      }
+      
+      // Build update query dynamically
+      const updates = []
+      const values = []
+      let valueIndex = 1
+      
+      if (is_thumbnail !== undefined) {
+        updates.push(`is_thumbnail = $${valueIndex++}`)
+        values.push(is_thumbnail)
+      }
+      
+      if (display_order !== undefined) {
+        updates.push(`display_order = $${valueIndex++}`)
+        values.push(display_order)
+      }
+      
+      if (alt_text !== undefined) {
+        updates.push(`alt_text = $${valueIndex++}`)
+        values.push(alt_text)
+      }
+      
+      if (updates.length === 0) {
+        await client.query('ROLLBACK')
+        return res.status(400).json({ error: 'No updates provided' })
+      }
+      
+      updates.push(`updated_at = CURRENT_TIMESTAMP`)
+      values.push(imageId, id)
+      
+      const updateQuery = `
+        UPDATE product_images 
+        SET ${updates.join(', ')} 
+        WHERE id = $${valueIndex++} AND product_id = $${valueIndex++}
+        RETURNING *
+      `
+      
+      const updateResult = await client.query(updateQuery, values)
+      
+      await client.query('COMMIT')
+      
+      res.json({
+        success: true,
+        image: updateResult.rows[0],
+        message: 'Image updated successfully'
+      })
+    } catch (error) {
+      await client.query('ROLLBACK')
+      console.error('Error updating product image:', error)
+      res.status(500).json({ error: error.message || 'Internal server error' })
+    } finally {
+      client.release()
+    }
+  })
+  
+  // Delete individual image
+  app.delete('/api/products/:id/images/:imageId', authenticateToken, async (req, res) => {
+    const client = await pool.connect()
+    try {
+      const { id, imageId } = req.params
+      
+      await client.query('BEGIN')
+      
+      // Get image record
+      const imageResult = await client.query(
+        'SELECT * FROM product_images WHERE id = $1 AND product_id = $2',
+        [imageId, id]
+      )
+      
+      if (imageResult.rows.length === 0) {
+        await client.query('ROLLBACK')
+        return res.status(404).json({ error: 'Image not found' })
+      }
+      
+      const image = imageResult.rows[0]
+      
+      // Delete from database
+      await client.query('DELETE FROM product_images WHERE id = $1', [imageId])
+      
+      // If this was the thumbnail, set the first remaining image as thumbnail
+      if (image.is_thumbnail) {
+        await client.query(`
+          UPDATE product_images 
+          SET is_thumbnail = TRUE 
+          WHERE product_id = $1 
+          AND id = (
+            SELECT id FROM product_images 
+            WHERE product_id = $1 
+            ORDER BY display_order ASC, created_at ASC 
+            LIMIT 1
+          )
+        `, [id])
+      }
+      
+      await client.query('COMMIT')
+      
+      // Delete from S3
+      try {
+        await s3Service.deleteFile(image.image_url)
+      } catch (s3Error) {
+        console.error('Error deleting image from S3:', s3Error)
+        // Don't fail the deletion if S3 cleanup fails
+      }
+      
+      res.json({
+        success: true,
+        message: 'Image deleted successfully'
+      })
+    } catch (error) {
+      await client.query('ROLLBACK')
+      console.error('Error deleting product image:', error)
+      res.status(500).json({ error: error.message || 'Internal server error' })
+    } finally {
+      client.release()
+    }
+  })
+  
+  // Get product thumbnail URL (for quick access)
+  app.get('/api/products/:id/thumbnail', async (req, res) => {
     const client = await pool.connect()
     try {
       const { id } = req.params
       
-      // Get product with image URL
-      const result = await client.query('SELECT * FROM products WHERE id = $1', [id])
-      if (result.rows.length === 0) {
-        return res.status(404).json({ error: 'Product not found' })
-      }
-      
-      const product = result.rows[0]
-      if (!product.image_url) {
-        return res.status(404).json({ error: 'No image found for this product' })
-      }
-      
-      // Delete image from S3
-      await s3Service.deleteFile(product.image_url)
-      
-      // Update product to remove image URL
-      const updateResult = await client.query(
-        'UPDATE products SET image_url = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *',
+      // Get thumbnail image
+      const result = await client.query(
+        'SELECT * FROM product_images WHERE product_id = $1 AND is_thumbnail = TRUE',
         [id]
       )
       
-      res.json({ 
-        success: true, 
-        product: updateResult.rows[0],
-        message: 'Image deleted successfully'
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'No thumbnail found' })
+      }
+      
+      const image = result.rows[0]
+      
+      // Stream image from S3
+      const fileData = await s3Service.getFile(image.image_url)
+      
+      // Set appropriate headers
+      res.set({
+        'Content-Type': fileData.contentType,
+        'Content-Length': fileData.contentLength,
+        'Cache-Control': 'public, max-age=86400',
+        'Last-Modified': fileData.lastModified
       })
+      
+      // Stream the file
+      fileData.body.pipe(res)
     } catch (error) {
-      console.error('Error deleting product image:', error)
-      res.status(500).json({ error: error.message || 'Internal server error' })
+      console.error('Error getting product thumbnail:', error)
+      if (error.message === 'File not found') {
+        return res.status(404).json({ error: 'Thumbnail not found' })
+      }
+      res.status(500).json({ error: 'Internal server error' })
     } finally {
       client.release()
     }

@@ -102,6 +102,17 @@ export interface Appointment {
   answered: boolean
 }
 
+export interface ProductImage {
+  id: number
+  product_id: number
+  image_url: string
+  display_order: number
+  is_thumbnail: boolean
+  alt_text?: string
+  created_at: string
+  updated_at: string
+}
+
 export interface Product {
   id: number
   name: string
@@ -109,7 +120,8 @@ export interface Product {
   category?: string
   stock: number
   description?: string
-  image_url?: string
+  images?: ProductImage[]
+  thumbnail?: ProductImage
 }
 
 export interface SalesAgenda {
@@ -243,12 +255,19 @@ export const api = {
       return apiClient.delete<{ success: boolean }>(`/products/${id}`)
     },
 
-    // Image management methods
-    uploadImage: async (id: number, imageFile: File): Promise<{ success: boolean; product: Product; message: string }> => {
+    // Multiple images management methods
+    getImages: async (id: number): Promise<{ images: ProductImage[] }> => {
+      return apiClient.get<{ images: ProductImage[] }>(`/products/${id}/images`)
+    },
+
+    uploadImage: async (id: number, imageFile: File, altText?: string): Promise<{ success: boolean; image: ProductImage; message: string }> => {
       const formData = new FormData()
       formData.append('image', imageFile)
+      if (altText) {
+        formData.append('alt_text', altText)
+      }
       
-      const response = await fetch(`/api/products/${id}/image`, {
+      const response = await fetch(`/api/products/${id}/images`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth-token')}`
@@ -271,12 +290,51 @@ export const api = {
       return response.json()
     },
 
-    getImageUrl: (id: number): string => {
-      return `/api/products/${id}/image`
+    uploadMultipleImages: async (id: number, imageFiles: File[]): Promise<{ success: boolean; uploaded: number; total: number; images: ProductImage[]; errors: any[]; message: string }> => {
+      const formData = new FormData()
+      
+      // Append all files with the same field name that multer expects
+      imageFiles.forEach((file) => {
+        formData.append('images', file)
+      })
+      
+      const response = await fetch(`/api/products/${id}/images/bulk`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth-token')}`
+        },
+        body: formData
+      })
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          localStorage.removeItem('auth-token')
+          localStorage.removeItem('auth-user')
+          window.location.href = '/'
+          throw new Error('Authentication required')
+        }
+        
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+        throw new Error(errorData.error || `HTTP ${response.status}`)
+      }
+
+      return response.json()
     },
 
-    deleteImage: async (id: number): Promise<{ success: boolean; product: Product; message: string }> => {
-      return apiClient.delete<{ success: boolean; product: Product; message: string }>(`/products/${id}/image`)
+    getImageUrl: (id: number, imageId: number): string => {
+      return `/api/products/${id}/images/${imageId}`
+    },
+
+    getThumbnailUrl: (id: number): string => {
+      return `/api/products/${id}/thumbnail`
+    },
+
+    updateImage: async (id: number, imageId: number, updates: { is_thumbnail?: boolean; display_order?: number; alt_text?: string }): Promise<{ success: boolean; image: ProductImage; message: string }> => {
+      return apiClient.put<{ success: boolean; image: ProductImage; message: string }>(`/products/${id}/images/${imageId}`, updates)
+    },
+
+    deleteImage: async (id: number, imageId: number): Promise<{ success: boolean; message: string }> => {
+      return apiClient.delete<{ success: boolean; message: string }>(`/products/${id}/images/${imageId}`)
     },
   },
 

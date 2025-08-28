@@ -143,21 +143,61 @@ class S3Service {
   }
 
   /**
+   * Delete multiple files from S3
+   * @param {string[]} filePaths - Array of S3 key paths to delete
+   * @returns {Promise<{success: string[], failed: string[]}>} Results
+   */
+  async deleteMultipleFiles(filePaths) {
+    const results = { success: [], failed: [] }
+    
+    for (const filePath of filePaths) {
+      try {
+        const success = await this.deleteFile(filePath)
+        if (success) {
+          results.success.push(filePath)
+        } else {
+          results.failed.push(filePath)
+        }
+      } catch (error) {
+        console.error(`Error deleting file ${filePath}:`, error)
+        results.failed.push(filePath)
+      }
+    }
+    
+    return results
+  }
+
+  /**
    * Delete all files for a specific product
-   * @param {number} productId - Product ID
+   * @param {string[]} imagePaths - Array of image paths to delete
    * @returns {Promise<boolean>} Success status
    */
-  async deleteProductFiles(productId) {
-    // For simplicity, we'll handle single image per product for now
-    // In the future, this could be extended to handle multiple images
-    try {
-      // This would require listing all files with the prefix and deleting them
-      // For now, we'll rely on the individual file deletion when the product is updated/deleted
+  async deleteProductFiles(imagePaths) {
+    if (!imagePaths || imagePaths.length === 0) {
       return true
+    }
+
+    try {
+      const results = await this.deleteMultipleFiles(imagePaths)
+      console.log(`Deleted ${results.success.length} files successfully`)
+      if (results.failed.length > 0) {
+        console.warn(`Failed to delete ${results.failed.length} files:`, results.failed)
+      }
+      return results.failed.length === 0
     } catch (error) {
       console.error('Error deleting product files:', error)
       return false
     }
+  }
+
+  /**
+   * Generate multiple unique filenames for batch upload
+   * @param {Array} files - Array of files with originalFilename
+   * @param {number} productId - Product ID
+   * @returns {Array} Array of S3 key paths
+   */
+  generateMultipleFilePaths(files, productId) {
+    return files.map(file => this.generateFilePath(file.originalFilename, productId))
   }
 
   /**
