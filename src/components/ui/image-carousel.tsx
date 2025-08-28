@@ -35,7 +35,7 @@ export function ImageCarousel({
   autoplay = false,
   onClick
 }: ImageCarouselProps) {
-  const options: EmblaOptionsType = { loop: true, duration: 200 }
+  const options: EmblaOptionsType = { loop: true, duration: 25 }
   const plugins = autoplay ? [Autoplay({ delay: 4000 })] : []
   
   const [emblaRef, emblaApi] = useEmblaCarousel(options, plugins)
@@ -168,7 +168,7 @@ export function FullscreenCarousel({
   open,
   onOpenChange
 }: FullscreenCarouselProps) {
-  const options: EmblaOptionsType = { loop: true, startIndex: initialIndex }
+  const options: EmblaOptionsType = { loop: true, startIndex: initialIndex, duration: 25 }
   const [emblaRef, emblaApi] = useEmblaCarousel(options)
   const [selectedIndex, setSelectedIndex] = useState(initialIndex)
 
