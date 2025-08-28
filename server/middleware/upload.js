@@ -1,0 +1,63 @@
+import multer from 'multer'
+import s3Service from '../services/s3-service.js'
+
+// Configure multer to store files in memory (not on disk)
+// We'll upload directly to S3 from memory
+const storage = multer.memoryStorage()
+
+// File filter to validate uploads
+const fileFilter = (req, file, cb) => {
+  try {
+    // Validate the file using our S3 service
+    s3Service.validateFile(file.originalname, file.mimetype, 0) // Size will be checked later
+    cb(null, true)
+  } catch (error) {
+    cb(error, false)
+  }
+}
+
+// Configure multer with options
+const upload = multer({
+  storage: storage,
+  fileFilter: fileFilter,
+  limits: {
+    fileSize: 20 * 1024 * 1024, // 20MB limit
+    files: 1, // Only allow one file per request
+  }
+})
+
+// Middleware for single file upload
+export const uploadSingle = upload.single('image')
+
+// Error handling middleware for multer errors
+export const handleUploadErrors = (error, req, res, next) => {
+  if (error instanceof multer.MulterError) {
+    switch (error.code) {
+      case 'LIMIT_FILE_SIZE':
+        return res.status(400).json({ 
+          error: 'File size too large. Maximum allowed size is 20MB.' 
+        })
+      case 'LIMIT_FILE_COUNT':
+        return res.status(400).json({ 
+          error: 'Too many files. Only one file is allowed.' 
+        })
+      case 'LIMIT_UNEXPECTED_FILE':
+        return res.status(400).json({ 
+          error: 'Unexpected field name. Use "image" as the field name.' 
+        })
+      default:
+        return res.status(400).json({ 
+          error: `Upload error: ${error.message}` 
+        })
+    }
+  } else if (error) {
+    // Custom validation errors from fileFilter
+    return res.status(400).json({ 
+      error: error.message 
+    })
+  }
+  
+  next()
+}
+
+export default { uploadSingle, handleUploadErrors }

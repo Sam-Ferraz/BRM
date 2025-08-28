@@ -1,5 +1,7 @@
 import pool from './database.js'
 import { authenticateToken } from './auth.js'
+import s3Service from './services/s3-service.js'
+import { uploadSingle, handleUploadErrors } from './middleware/upload.js'
 
 // Generic CRUD operations for database entities
 export function createApiRoutes(app) {
@@ -431,14 +433,169 @@ export function createApiRoutes(app) {
     const client = await pool.connect()
     try {
       const { id } = req.params
-      const result = await client.query('DELETE FROM products WHERE id = $1 RETURNING *', [id])
-      if (result.rows.length === 0) {
+      
+      // Get product with image_url before deletion
+      const productResult = await client.query('SELECT * FROM products WHERE id = $1', [id])
+      if (productResult.rows.length === 0) {
         return res.status(404).json({ error: 'Product not found' })
       }
+      
+      const product = productResult.rows[0]
+      
+      // Delete from database
+      const deleteResult = await client.query('DELETE FROM products WHERE id = $1 RETURNING *', [id])
+      
+      // Clean up S3 image if it exists
+      if (product.image_url) {
+        try {
+          await s3Service.deleteFile(product.image_url)
+        } catch (s3Error) {
+          console.error('Error deleting image from S3:', s3Error)
+          // Don't fail the product deletion if image cleanup fails
+        }
+      }
+      
       res.json({ success: true })
     } catch (error) {
       console.error('Error deleting product:', error)
       res.status(500).json({ error: 'Internal server error' })
+    } finally {
+      client.release()
+    }
+  })
+
+  // Product Image routes
+  
+  // Upload product image
+  app.post('/api/products/:id/image', authenticateToken, uploadSingle, handleUploadErrors, async (req, res) => {
+    const client = await pool.connect()
+    try {
+      const { id } = req.params
+      
+      // Check if product exists
+      const productResult = await client.query('SELECT * FROM products WHERE id = $1', [id])
+      if (productResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Product not found' })
+      }
+      
+      if (!req.file) {
+        return res.status(400).json({ error: 'No image file provided' })
+      }
+      
+      const product = productResult.rows[0]
+      
+      // Delete existing image if it exists
+      if (product.image_url) {
+        try {
+          await s3Service.deleteFile(product.image_url)
+        } catch (error) {
+          console.error('Error deleting existing image:', error)
+          // Continue with upload even if deletion fails
+        }
+      }
+      
+      // Upload new image to S3
+      const filePath = await s3Service.uploadFile(
+        req.file.buffer,
+        req.file.originalname,
+        req.file.mimetype,
+        parseInt(id)
+      )
+      
+      // Update product with new image URL
+      const updateResult = await client.query(
+        'UPDATE products SET image_url = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *',
+        [filePath, id]
+      )
+      
+      res.json({ 
+        success: true, 
+        product: updateResult.rows[0],
+        message: 'Image uploaded successfully'
+      })
+    } catch (error) {
+      console.error('Error uploading product image:', error)
+      res.status(500).json({ error: error.message || 'Internal server error' })
+    } finally {
+      client.release()
+    }
+  })
+  
+  // Get product image
+  app.get('/api/products/:id/image', async (req, res) => {
+    const client = await pool.connect()
+    try {
+      const { id } = req.params
+      
+      // Get product image URL
+      const result = await client.query('SELECT image_url FROM products WHERE id = $1', [id])
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Product not found' })
+      }
+      
+      const product = result.rows[0]
+      if (!product.image_url) {
+        return res.status(404).json({ error: 'No image found for this product' })
+      }
+      
+      // Stream image from S3
+      const fileData = await s3Service.getFile(product.image_url)
+      
+      // Set appropriate headers
+      res.set({
+        'Content-Type': fileData.contentType,
+        'Content-Length': fileData.contentLength,
+        'Cache-Control': 'public, max-age=86400', // Cache for 24 hours
+        'Last-Modified': fileData.lastModified
+      })
+      
+      // Stream the file
+      fileData.body.pipe(res)
+    } catch (error) {
+      console.error('Error getting product image:', error)
+      if (error.message === 'File not found') {
+        return res.status(404).json({ error: 'Image not found' })
+      }
+      res.status(500).json({ error: 'Internal server error' })
+    } finally {
+      client.release()
+    }
+  })
+  
+  // Delete product image
+  app.delete('/api/products/:id/image', authenticateToken, async (req, res) => {
+    const client = await pool.connect()
+    try {
+      const { id } = req.params
+      
+      // Get product with image URL
+      const result = await client.query('SELECT * FROM products WHERE id = $1', [id])
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Product not found' })
+      }
+      
+      const product = result.rows[0]
+      if (!product.image_url) {
+        return res.status(404).json({ error: 'No image found for this product' })
+      }
+      
+      // Delete image from S3
+      await s3Service.deleteFile(product.image_url)
+      
+      // Update product to remove image URL
+      const updateResult = await client.query(
+        'UPDATE products SET image_url = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *',
+        [id]
+      )
+      
+      res.json({ 
+        success: true, 
+        product: updateResult.rows[0],
+        message: 'Image deleted successfully'
+      })
+    } catch (error) {
+      console.error('Error deleting product image:', error)
+      res.status(500).json({ error: error.message || 'Internal server error' })
     } finally {
       client.release()
     }

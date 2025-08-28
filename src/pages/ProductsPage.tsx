@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { ArrowLeft, Plus, Pencil, Trash2, Search } from "lucide-react"
+import { ArrowLeft, Plus, Pencil, Trash2, Search, Image } from "lucide-react"
 import { api, type Product } from "@/lib/api-client"
 import { ProductForm } from "@/components/forms/product-form"
 import { useToast } from "@/hooks/use-toast"
@@ -243,6 +243,7 @@ export default function ProductsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Image</TableHead>
                     <TableHead 
                       className="cursor-pointer" 
                       onClick={() => handleSort("name")}
@@ -274,6 +275,23 @@ export default function ProductsPage() {
                 <TableBody>
                   {products.map((product) => (
                     <TableRow key={product.id}>
+                      <TableCell className="w-16">
+                        {product.image_url ? (
+                          <img
+                            src={api.products.getImageUrl(product.id)}
+                            alt={product.name}
+                            className="w-12 h-12 object-cover rounded-lg border"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement
+                              target.src = '/placeholder.svg'
+                            }}
+                          />
+                        ) : (
+                          <div className="w-12 h-12 bg-muted rounded-lg border flex items-center justify-center">
+                            <Image className="w-6 h-6 text-muted-foreground" />
+                          </div>
+                        )}
+                      </TableCell>
                       <TableCell className="font-medium">{product.name}</TableCell>
                       <TableCell>{product.price}</TableCell>
                       <TableCell>{product.category}</TableCell>
@@ -305,7 +323,7 @@ export default function ProductsPage() {
                   ))}
                   {products.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                         {t('noProductsFound')}
                       </TableCell>
                     </TableRow>
@@ -326,6 +344,16 @@ export default function ProductsPage() {
         }}
         onSubmit={editingProduct ? handleUpdate : handleCreate}
         loading={formLoading}
+        onProductUpdated={(updatedProduct) => {
+          // Update the products list with the updated product
+          setProducts(prev => 
+            prev.map(p => p.id === updatedProduct.id ? updatedProduct : p)
+          )
+          // Update the editing product if it's the same one
+          if (editingProduct?.id === updatedProduct.id) {
+            setEditingProduct(updatedProduct)
+          }
+        }}
       />
     </div>
   )

@@ -109,6 +109,7 @@ export interface Product {
   category?: string
   stock: number
   description?: string
+  image_url?: string
 }
 
 export interface SalesAgenda {
@@ -240,6 +241,42 @@ export const api = {
 
     delete: async (id: number): Promise<{ success: boolean }> => {
       return apiClient.delete<{ success: boolean }>(`/products/${id}`)
+    },
+
+    // Image management methods
+    uploadImage: async (id: number, imageFile: File): Promise<{ success: boolean; product: Product; message: string }> => {
+      const formData = new FormData()
+      formData.append('image', imageFile)
+      
+      const response = await fetch(`/api/products/${id}/image`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth-token')}`
+        },
+        body: formData
+      })
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          localStorage.removeItem('auth-token')
+          localStorage.removeItem('auth-user')
+          window.location.href = '/'
+          throw new Error('Authentication required')
+        }
+        
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+        throw new Error(errorData.error || `HTTP ${response.status}`)
+      }
+
+      return response.json()
+    },
+
+    getImageUrl: (id: number): string => {
+      return `/api/products/${id}/image`
+    },
+
+    deleteImage: async (id: number): Promise<{ success: boolean; product: Product; message: string }> => {
+      return apiClient.delete<{ success: boolean; product: Product; message: string }>(`/products/${id}/image`)
     },
   },
 

@@ -20,6 +20,7 @@
     "schema:dump": "./scripts/dump-schema.sh"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.878.0",
     "@hookform/resolvers": "^3.9.1",
     "@radix-ui/react-accordion": "latest",
     "@radix-ui/react-alert-dialog": "latest",
@@ -62,6 +63,7 @@
     "input-otp": "latest",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.454.0",
+    "multer": "^2.0.2",
     "pg": "^8.13.1",
     "react": "^18.3.1",
     "react-day-picker": "latest",
@@ -74,6 +76,7 @@
     "sonner": "latest",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
+    "uuid": "^11.1.0",
     "vaul": "latest",
     "zod": "^3.24.1"
   },
@@ -83,11 +86,13 @@
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
     "@types/jsonwebtoken": "^9.0.7",
+    "@types/multer": "^2.0.0",
     "@types/node": "^22",
     "@types/pg": "^8.11.10",
     "@types/puppeteer": "^5.4.7",
     "@types/react": "^18.3.17",
     "@types/react-dom": "^18.3.5",
+    "@types/uuid": "^10.0.0",
     "@typescript-eslint/eslint-plugin": "^8.15.0",
     "@typescript-eslint/parser": "^8.15.0",
     "@vitejs/plugin-react": "^4.3.4",
