@@ -116,7 +116,7 @@ export interface ProductImage {
 export interface Product {
   id: number
   name: string
-  price?: string
+  price?: number
   category?: string
   stock: number
   description?: string

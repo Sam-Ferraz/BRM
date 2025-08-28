@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils"
 
 interface CurrencyInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange' | 'value'> {
   value?: string | number
-  onChange?: (value: string) => void
+  onChange?: (value: number | null) => void
   currency?: string
 }
 
@@ -17,9 +17,9 @@ const formatCentsToBRLDisplay = (cents: number): string => {
   })
 }
 
-// Convert cents to API format (123456 -> "1234.56")
-const formatCentsToAPI = (cents: number): string => {
-  return (cents / 100).toFixed(2)
+// Convert cents to API format (123456 -> 1234.56)
+const formatCentsToAPI = (cents: number): number => {
+  return Math.round(cents) / 100
 }
 
 // Extract numeric cents from input (remove all non-digits)
@@ -30,8 +30,9 @@ const extractCentsFromInput = (input: string): number => {
 
 // Convert API value to cents for internal use
 const apiValueToCents = (apiValue: string | number): number => {
-  if (!apiValue) return 0
+  if (!apiValue || apiValue === "" || apiValue === "0" || apiValue === 0) return 0
   const numValue = typeof apiValue === 'string' ? parseFloat(apiValue) : apiValue
+  if (isNaN(numValue)) return 0
   return Math.round(numValue * 100)
 }
 
@@ -58,7 +59,7 @@ const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
       
       // Send formatted value to parent (API format)
       if (newCents === 0) {
-        onChange?.("")
+        onChange?.(null)
       } else {
         onChange?.(formatCentsToAPI(newCents))
       }

@@ -33,7 +33,7 @@ export function ProductForm({ product, initialName, open, onOpenChange, onSubmit
   
   const [formData, setFormData] = useState({
     name: "",
-    price: "",
+    price: null as number | null,
     category: "",
     stock: 0,
     description: "",
@@ -60,7 +60,7 @@ export function ProductForm({ product, initialName, open, onOpenChange, onSubmit
     if (product) {
       setFormData({
         name: product.name || "",
-        price: product.price || "",
+        price: product.price || null,
         category: product.category || "",
         stock: product.stock || 0,
         description: product.description || "",
@@ -70,7 +70,7 @@ export function ProductForm({ product, initialName, open, onOpenChange, onSubmit
     } else {
       setFormData({
         name: initialName || "",
-        price: "",
+        price: null,
         category: "",
         stock: 0,
         description: "",

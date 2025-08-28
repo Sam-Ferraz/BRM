@@ -35,7 +35,7 @@ export function ImageCarousel({
   autoplay = false,
   onClick
 }: ImageCarouselProps) {
-  const options: EmblaOptionsType = { loop: true }
+  const options: EmblaOptionsType = { loop: true, duration: 200 }
   const plugins = autoplay ? [Autoplay({ delay: 4000 })] : []
   
   const [emblaRef, emblaApi] = useEmblaCarousel(options, plugins)
