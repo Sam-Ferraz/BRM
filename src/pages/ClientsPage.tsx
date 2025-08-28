@@ -217,6 +217,7 @@ export default function ClientsPage() {
                       {t('city')} {sortBy === "city" && (sortOrder === "asc" ? "↑" : "↓")}
                     </TableHead>
                     <TableHead>{t('company')}</TableHead>
+                    <TableHead>{t('origin')}</TableHead>
                     <TableHead className="text-right">{t('actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -248,6 +249,19 @@ export default function ClientsPage() {
                             <Building className="h-4 w-4 text-muted-foreground" />
                             <Badge variant="outline">{client.company}</Badge>
                           </div>
+                        ) : (
+                          "-"
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {client.origin ? (
+                          <Badge variant="secondary">
+                            {t(client.origin === 'online_lead' ? 'onlineLead' : 
+                              client.origin === 'own_portfolio' ? 'ownPortfolio' : 
+                              client.origin === 'duty_shift' ? 'dutyShift' : 
+                              client.origin === 'referral' ? 'referral' : 
+                              'streetClient')}
+                          </Badge>
                         ) : (
                           "-"
                         )}

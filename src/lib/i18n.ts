@@ -17,6 +17,7 @@ const resources = {
       edit: 'Editar',
       create: 'Criar',
       search: 'Pesquisar',
+      select: 'Selecionar',
       filter: 'Filtrar',
       actions: 'Ações',
       
@@ -229,6 +230,12 @@ const resources = {
       
       // Form Labels and Fields
       address: 'Endereço',
+      origin: 'Origem',
+      onlineLead: 'Lead Online',
+      ownPortfolio: 'Carteira Própria',
+      dutyShift: 'Plantão',
+      referral: 'Indicação',
+      streetClient: 'Cliente Rua',
       hour: 'Hora',
       saving: 'Salvando...',
       pending: 'Pendente',
@@ -290,6 +297,7 @@ const resources = {
       edit: 'Edit',
       create: 'Create',
       search: 'Search',
+      select: 'Select',
       filter: 'Filter',
       actions: 'Actions',
       
@@ -502,6 +510,12 @@ const resources = {
       
       // Form Labels and Fields
       address: 'Address',
+      origin: 'Origin',
+      onlineLead: 'Online Lead',
+      ownPortfolio: 'Own Portfolio',
+      dutyShift: 'Duty Shift',
+      referral: 'Referral',
+      streetClient: 'Street Client',
       hour: 'Hour',
       saving: 'Saving...',
       pending: 'Pending',
@@ -563,6 +577,7 @@ const resources = {
       edit: 'Editar',
       create: 'Crear',
       search: 'Buscar',
+      select: 'Seleccionar',
       filter: 'Filtrar',
       actions: 'Acciones',
       
@@ -775,6 +790,12 @@ const resources = {
       
       // Form Labels and Fields
       address: 'Dirección',
+      origin: 'Origen',
+      onlineLead: 'Lead Online',
+      ownPortfolio: 'Cartera Propia',
+      dutyShift: 'Guardia',
+      referral: 'Referencia',
+      streetClient: 'Cliente Callejero',
       hour: 'Hora',
       saving: 'Guardando...',
       pending: 'Pendiente',

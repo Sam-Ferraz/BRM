@@ -89,6 +89,7 @@ export interface Client {
   city: string
   address?: string
   company?: string
+  origin?: 'online_lead' | 'own_portfolio' | 'duty_shift' | 'referral' | 'street_client'
 }
 
 export interface Appointment {

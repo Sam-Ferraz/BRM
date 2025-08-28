@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import type { Client } from "@/lib/api-client"
 
@@ -28,6 +29,7 @@ export function ClientForm({ client, initialName, open, onOpenChange, onSubmit, 
     city: "",
     address: "",
     company: "",
+    origin: "" as Client['origin'],
   })
 
   useEffect(() => {
@@ -39,6 +41,7 @@ export function ClientForm({ client, initialName, open, onOpenChange, onSubmit, 
         city: client.city || "",
         address: client.address || "",
         company: client.company || "",
+        origin: client.origin || "",
       })
     } else {
       setFormData({
@@ -48,6 +51,7 @@ export function ClientForm({ client, initialName, open, onOpenChange, onSubmit, 
         city: "",
         address: "",
         company: "",
+        origin: "",
       })
     }
   }, [client, initialName, open])
@@ -127,11 +131,26 @@ export function ClientForm({ client, initialName, open, onOpenChange, onSubmit, 
               tabIndex={6}
             />
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="origin">{t('origin')}</Label>
+            <Select value={formData.origin || ''} onValueChange={(value) => setFormData({ ...formData, origin: value as Client['origin'] })}>
+              <SelectTrigger tabIndex={7}>
+                <SelectValue placeholder={`${t('select')} ${t('origin').toLowerCase()}...`} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="online_lead">{t('onlineLead')}</SelectItem>
+                <SelectItem value="own_portfolio">{t('ownPortfolio')}</SelectItem>
+                <SelectItem value="duty_shift">{t('dutyShift')}</SelectItem>
+                <SelectItem value="referral">{t('referral')}</SelectItem>
+                <SelectItem value="street_client">{t('streetClient')}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} tabIndex={7}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} tabIndex={8}>
               {t('cancel')}
             </Button>
-            <Button type="submit" disabled={loading} tabIndex={8}>
+            <Button type="submit" disabled={loading} tabIndex={9}>
               {loading ? t('saving') : t('save')}
             </Button>
           </DialogFooter>

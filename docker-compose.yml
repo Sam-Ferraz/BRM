@@ -18,6 +18,26 @@ services:
     networks:
       - brm-network
 
+  flyway:
+    image: flyway/flyway:11.11.1
+    container_name: brm-flyway
+    depends_on:
+      - postgres
+    environment:
+      - FLYWAY_URL=jdbc:postgresql://postgres:5432/brm_database
+      - FLYWAY_USER=brm_user
+      - FLYWAY_PASSWORD=brm_password
+      - FLYWAY_SCHEMAS=public
+      - FLYWAY_CONNECT_RETRIES=60
+      - FLYWAY_CONNECT_RETRIES_INTERVAL=1
+    volumes:
+      - ./db/migrations:/flyway/sql
+      - ./flyway.conf:/flyway/conf/flyway.conf
+    networks:
+      - brm-network
+    profiles:
+      - migration
+
 volumes:
   postgres_data:
     driver: local

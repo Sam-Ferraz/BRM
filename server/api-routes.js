@@ -282,10 +282,10 @@ export function createApiRoutes(app) {
   app.post('/api/clients', authenticateToken, async (req, res) => {
     const client = await pool.connect()
     try {
-      const { name, email, phone, city, address, company } = req.body
+      const { name, email, phone, city, address, company, origin } = req.body
       const result = await client.query(
-        'INSERT INTO clients (name, email, phone, city, address, company) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-        [name, email, phone, city, address, company]
+        'INSERT INTO clients (name, email, phone, city, address, company, origin) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
+        [name, email, phone, city, address, company, origin]
       )
       res.json(result.rows[0])
     } catch (error) {
@@ -300,10 +300,10 @@ export function createApiRoutes(app) {
     const client = await pool.connect()
     try {
       const { id } = req.params
-      const { name, email, phone, city, address, company } = req.body
+      const { name, email, phone, city, address, company, origin } = req.body
       const result = await client.query(
-        'UPDATE clients SET name = $1, email = $2, phone = $3, city = $4, address = $5, company = $6, updated_at = CURRENT_TIMESTAMP WHERE id = $7 RETURNING *',
-        [name, email, phone, city, address, company, id]
+        'UPDATE clients SET name = $1, email = $2, phone = $3, city = $4, address = $5, company = $6, origin = $7, updated_at = CURRENT_TIMESTAMP WHERE id = $8 RETURNING *',
+        [name, email, phone, city, address, company, origin, id]
       )
       if (result.rows.length === 0) {
         return res.status(404).json({ error: 'Client not found' })
