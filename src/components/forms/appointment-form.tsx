@@ -11,9 +11,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import type { Appointment } from "@/lib/api-client"
-import { getCurrentDateTimeForForm } from "@/lib/datetime"
+import { getCurrentDateTimeForForm, convertFromAppToLocal, convertFromLocalToApp } from "@/lib/datetime"
 import { ClientSearch } from "@/components/client-search"
 import { AnsweredStatusToggle } from "@/components/ui/answered-status-toggle"
+import { useTimezone } from "@/hooks/use-timezone"
 
 interface AppointmentFormProps {
   appointment?: Appointment
@@ -25,6 +26,7 @@ interface AppointmentFormProps {
 
 export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loading }: AppointmentFormProps) {
   const { t } = useTranslation()
+  const currentTimezone = useTimezone()
   const { date: currentDate, time: currentTime } = getCurrentDateTimeForForm()
   const currentDateTime = `${currentDate}T${currentTime}`
   const [formData, setFormData] = useState({
@@ -46,15 +48,8 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
       let formattedDateTime = currentDateTime
       
       if (appointment.scheduled_datetime) {
-        // Parse the datetime from database
-        const date = new Date(appointment.scheduled_datetime)
-        // Format as YYYY-MM-DDTHH:mm for datetime-local input
-        const year = date.getFullYear()
-        const month = String(date.getMonth() + 1).padStart(2, '0')
-        const day = String(date.getDate()).padStart(2, '0')
-        const hours = String(date.getHours()).padStart(2, '0')
-        const minutes = String(date.getMinutes()).padStart(2, '0')
-        formattedDateTime = `${year}-${month}-${day}T${hours}:${minutes}`
+        // Convert from stored timezone to user's configured timezone for form input
+        formattedDateTime = convertFromAppToLocal(appointment.scheduled_datetime, currentTimezone)
       }
       
       setFormData({
@@ -75,7 +70,15 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
         answered: undefined,
       })
     }
-  }, [appointment, currentDateTime, open])
+  }, [appointment, currentDateTime, open, currentTimezone])
+  
+  // Update datetime format when timezone changes
+  useEffect(() => {
+    if (appointment?.scheduled_datetime) {
+      const formattedDateTime = convertFromAppToLocal(appointment.scheduled_datetime, currentTimezone)
+      setFormData(prev => ({ ...prev, scheduled_datetime: formattedDateTime }))
+    }
+  }, [currentTimezone, appointment?.scheduled_datetime])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -99,7 +102,13 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
       return
     }
     
-    onSubmit(formData)
+    // Convert datetime from user's configured timezone to app timezone before sending to server
+    const dataToSubmit = {
+      ...formData,
+      scheduled_datetime: convertFromLocalToApp(formData.scheduled_datetime, currentTimezone)
+    }
+    
+    onSubmit(dataToSubmit)
   }
 
   return (
