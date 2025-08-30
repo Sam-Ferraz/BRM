@@ -341,18 +341,28 @@ export function createApiRoutes(app) {
     const client = await pool.connect()
     try {
       const { search, category, stock, sortBy, sortOrder } = req.query
-      let query = 'SELECT * FROM products WHERE 1=1'
+      let query = `
+        SELECT 
+          p.*,
+          CASE 
+            WHEN pi.id IS NOT NULL THEN true 
+            ELSE false 
+          END as has_thumbnail
+        FROM products p
+        LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_thumbnail = TRUE
+        WHERE 1=1
+      `
       let params = []
       let paramCount = 1
       
       if (search) {
-        query += ` AND (name ILIKE $${paramCount} OR category ILIKE $${paramCount})`
+        query += ` AND (p.name ILIKE $${paramCount} OR p.category ILIKE $${paramCount})`
         params.push(`%${search}%`)
         paramCount++
       }
       
       if (category && category !== 'All') {
-        query += ` AND category = $${paramCount}`
+        query += ` AND p.category = $${paramCount}`
         params.push(category)
         paramCount++
       }
@@ -360,13 +370,13 @@ export function createApiRoutes(app) {
       if (stock) {
         switch (stock) {
           case 'In Stock':
-            query += ` AND stock > 10`
+            query += ` AND p.stock > 10`
             break
           case 'Low Stock':
-            query += ` AND stock > 0 AND stock <= 10`
+            query += ` AND p.stock > 0 AND p.stock <= 10`
             break
           case 'Out of Stock':
-            query += ` AND stock = 0`
+            query += ` AND p.stock = 0`
             break
         }
       }
@@ -375,10 +385,10 @@ export function createApiRoutes(app) {
         const validColumns = ['name', 'price', 'category', 'stock']
         if (validColumns.includes(sortBy)) {
           const order = sortOrder === 'desc' ? 'DESC' : 'ASC'
-          query += ` ORDER BY ${sortBy} ${order}`
+          query += ` ORDER BY p.${sortBy} ${order}`
         }
       } else {
-        query += ' ORDER BY name ASC'
+        query += ' ORDER BY p.name ASC'
       }
       
       const result = await client.query(query, params)

@@ -122,6 +122,7 @@ export interface Product {
   description?: string
   images?: ProductImage[]
   thumbnail?: ProductImage
+  has_thumbnail: boolean
 }
 
 export interface SalesAgenda {

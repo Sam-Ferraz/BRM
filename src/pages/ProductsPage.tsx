@@ -283,32 +283,38 @@ export default function ProductsPage() {
                             setIsFormOpen(true)
                           }}
                         >
-                          <img
-                            src={api.products.getThumbnailUrl(product.id)}
-                            alt={product.name}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement
-                              target.style.display = 'none'
-                              // Show fallback icon
-                              const parent = target.parentElement
-                              if (parent && !parent.querySelector('.fallback-icon')) {
-                                const icon = document.createElement('div')
-                                icon.className = 'fallback-icon'
-                                icon.innerHTML = '<svg class="w-6 h-6 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m4 16 4.586-4.586a2 2 0 0 1 2.828 0L16 16m-2-2 1.586-1.586a2 2 0 0 1 2.828 0L20 14m-6-6h.01M6 20h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z"></path></svg>'
-                                parent.appendChild(icon)
-                              }
-                            }}
-                            onLoad={(e) => {
-                              // Remove fallback icon if image loads successfully
-                              const target = e.target as HTMLImageElement
-                              const parent = target.parentElement
-                              const fallback = parent?.querySelector('.fallback-icon')
-                              if (fallback) {
-                                fallback.remove()
-                              }
-                            }}
-                          />
+                          {product.has_thumbnail ? (
+                            <img
+                              src={api.products.getThumbnailUrl(product.id)}
+                              alt={product.name}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement
+                                target.style.display = 'none'
+                                // Show fallback icon
+                                const parent = target.parentElement
+                                if (parent && !parent.querySelector('.fallback-icon')) {
+                                  const icon = document.createElement('div')
+                                  icon.className = 'fallback-icon'
+                                  icon.innerHTML = '<svg class="w-6 h-6 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m4 16 4.586-4.586a2 2 0 0 1 2.828 0L16 16m-2-2 1.586-1.586a2 2 0 0 1 2.828 0L20 14m-6-6h.01M6 20h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z"></path></svg>'
+                                  parent.appendChild(icon)
+                                }
+                              }}
+                              onLoad={(e) => {
+                                // Remove fallback icon if image loads successfully
+                                const target = e.target as HTMLImageElement
+                                const parent = target.parentElement
+                                const fallback = parent?.querySelector('.fallback-icon')
+                                if (fallback) {
+                                  fallback.remove()
+                                }
+                              }}
+                            />
+                          ) : (
+                            <svg className="w-6 h-6 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m4 16 4.586-4.586a2 2 0 0 1 2.828 0L16 16m-2-2 1.586-1.586a2 2 0 0 1 2.828 0L20 14m-6-6h.01M6 20h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z" />
+                            </svg>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell className="font-medium">{product.name}</TableCell>
