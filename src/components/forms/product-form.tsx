@@ -43,8 +43,6 @@ export function ProductForm({ product, initialName, open, onOpenChange, onSubmit
   const [images, setImages] = useState<ProductImage[]>([])
   const [imageUploading, setImageUploading] = useState(false)
   const [showImageUpload, setShowImageUpload] = useState(false)
-  const [imageFiles, setImageFiles] = useState<File[]>([])
-  const [imagePreviews, setImagePreviews] = useState<string[]>([])
   const [fullscreenCarousel, setFullscreenCarousel] = useState<{ open: boolean; initialIndex: number }>({ open: false, initialIndex: 0 })
 
   const loadProductImages = async (productId: number) => {
@@ -80,12 +78,10 @@ export function ProductForm({ product, initialName, open, onOpenChange, onSubmit
     }
     
     // Reset image state when dialog opens/closes
-    setImageFiles([])
-    setImagePreviews([])
     setImageUploading(false)
   }, [product, initialName, open])
 
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(e.target.files || [])
     if (selectedFiles.length === 0) return
 
@@ -93,7 +89,6 @@ export function ProductForm({ product, initialName, open, onOpenChange, onSubmit
     const maxSize = 20 * 1024 * 1024 // 20MB
 
     const validFiles: File[] = []
-    const previews: string[] = []
 
     // Validate each file
     selectedFiles.forEach((file) => {
@@ -120,76 +115,58 @@ export function ProductForm({ product, initialName, open, onOpenChange, onSubmit
 
     if (validFiles.length === 0) return
 
-    setImageFiles(validFiles)
-    
-    // Create previews for all valid files
-    validFiles.forEach((file, index) => {
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        const result = e.target?.result as string
-        setImagePreviews(prev => {
-          const newPreviews = [...prev]
-          newPreviews[index] = result
-          return newPreviews
-        })
-      }
-      reader.readAsDataURL(file)
-    })
-  }
-
-  const handleImageUpload = async () => {
-    if (imageFiles.length === 0 || !product) return
-
-    try {
-      setImageUploading(true)
-      
-      let result
-      if (imageFiles.length === 1) {
-        // Single upload
-        result = await api.products.uploadImage(product.id, imageFiles[0], imageFiles[0].name)
-        toast({
-          title: t('success'),
-          description: result.message || 'Image uploaded successfully',
-        })
-      } else {
-        // Multiple upload
-        result = await api.products.uploadMultipleImages(product.id, imageFiles)
+    // Auto-upload immediately after validation
+    if (product) {
+      try {
+        setImageUploading(true)
         
-        if (result.errors && result.errors.length > 0) {
-          toast({
-            title: 'Partial Upload',
-            description: `${result.uploaded} of ${result.total} images uploaded successfully. ${result.errors.length} failed.`,
-            variant: "default",
-          })
-        } else {
+        let result
+        if (validFiles.length === 1) {
+          // Single upload
+          result = await api.products.uploadImage(product.id, validFiles[0], validFiles[0].name)
           toast({
             title: t('success'),
-            description: result.message || `${result.uploaded} images uploaded successfully`,
+            description: result.message || 'Image uploaded successfully',
           })
+        } else {
+          // Multiple upload
+          result = await api.products.uploadMultipleImages(product.id, validFiles)
+          
+          if (result.errors && result.errors.length > 0) {
+            toast({
+              title: 'Partial Upload',
+              description: `${result.uploaded} of ${result.total} images uploaded successfully. ${result.errors.length} failed.`,
+              variant: "default",
+            })
+          } else {
+            toast({
+              title: t('success'),
+              description: result.message || `${result.uploaded} images uploaded successfully`,
+            })
+          }
         }
+        
+        // Reload images
+        await loadProductImages(product.id)
+        
+        // Reset file input
+        if (fileInputRef.current) {
+          fileInputRef.current.value = ''
+        }
+        
+      } catch (error) {
+        console.error('Error uploading images:', error)
+        toast({
+          title: t('error'),
+          description: error instanceof Error ? error.message : 'Failed to upload images',
+          variant: "destructive",
+        })
+      } finally {
+        setImageUploading(false)
       }
-      
-      // Reload images
-      await loadProductImages(product.id)
-      
-      // Reset image state
-      setImageFiles([])
-      setImagePreviews([])
-      if (fileInputRef.current) {
-        fileInputRef.current.value = ''
-      }
-      
-    } catch (error) {
-      console.error('Error uploading images:', error)
-      toast({
-        title: t('error'),
-        description: error instanceof Error ? error.message : 'Failed to upload images',
-        variant: "destructive",
-      })
-    } finally {
-      setImageUploading(false)
     }
   }
+
 
   const handleImageDelete = async (imageId: number) => {
     if (!product) return
@@ -245,18 +222,6 @@ export function ProductForm({ product, initialName, open, onOpenChange, onSubmit
     }
   }
 
-  const clearImageSelection = () => {
-    setImageFiles([])
-    setImagePreviews([])
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ''
-    }
-  }
-
-  const removeImagePreview = (index: number) => {
-    setImageFiles(prev => prev.filter((_, i) => i !== index))
-    setImagePreviews(prev => prev.filter((_, i) => i !== index))
-  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -436,101 +401,44 @@ export function ProductForm({ product, initialName, open, onOpenChange, onSubmit
                 
                 {/* Image Upload Section */}
                 <div className="space-y-4 border-t pt-4">
-                  <Label>Add New Image</Label>
+                  <Label>Add New Images</Label>
                   
-                  {/* Multiple Image Previews */}
-                  {imagePreviews.length > 0 && (
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
-                        {imagePreviews.map((preview, index) => (
-                          <div key={index} className="relative group">
-                            <div className="aspect-square rounded-lg overflow-hidden border">
-                              <img
-                                src={preview}
-                                alt={`Preview ${index + 1}`}
-                                className="w-full h-full object-cover"
-                              />
-                            </div>
-                            <Button
-                              type="button"
-                              variant="destructive"
-                              size="sm"
-                              className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0"
-                              onClick={() => removeImagePreview(index)}
-                            >
-                              <X className="h-3 w-3" />
-                            </Button>
-                            <Badge variant="secondary" className="absolute bottom-2 left-2">
-                              {imageFiles[index]?.name.substring(0, 10)}
-                              {imageFiles[index]?.name.length > 10 ? '...' : ''}
-                            </Badge>
-                          </div>
-                        ))}
+                  <div className="space-y-2">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleImageSelect}
+                      className="hidden"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={imageUploading}
+                      className="w-full h-24 border-dashed border-2 hover:border-primary"
+                    >
+                      <div className="flex flex-col items-center gap-2">
+                        {imageUploading ? (
+                          <>
+                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                            <span className="text-sm">Uploading...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="h-6 w-6 text-muted-foreground" />
+                            <span className="text-sm text-muted-foreground">
+                              Click to select and upload images
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              JPG, PNG, WebP, GIF (max 20MB each)
+                            </span>
+                          </>
+                        )}
                       </div>
-                      
-                      <div className="flex gap-2">
-                        <Button
-                          type="button"
-                          onClick={handleImageUpload}
-                          disabled={imageUploading}
-                          size="sm"
-                        >
-                          {imageUploading 
-                            ? 'Uploading...' 
-                            : `Upload ${imageFiles.length} Image${imageFiles.length !== 1 ? 's' : ''}`
-                          }
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={clearImageSelection}
-                          size="sm"
-                        >
-                          Clear All
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Upload Button */}
-                  {imagePreviews.length === 0 && (
-                    <div className="space-y-2">
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        onChange={handleImageSelect}
-                        className="hidden"
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={imageUploading}
-                        className="w-full h-24 border-dashed border-2 hover:border-primary"
-                      >
-                        <div className="flex flex-col items-center gap-2">
-                          {imageUploading ? (
-                            <>
-                              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-                              <span className="text-sm">Uploading...</span>
-                            </>
-                          ) : (
-                            <>
-                              <Upload className="h-6 w-6 text-muted-foreground" />
-                              <span className="text-sm text-muted-foreground">
-                                Click to select images
-                              </span>
-                              <span className="text-xs text-muted-foreground">
-                                JPG, PNG, WebP, GIF (max 20MB)
-                              </span>
-                            </>
-                          )}
-                        </div>
-                      </Button>
-                    </div>
-                  )}
+                    </Button>
+                  </div>
                 </div>
               </div>
             )}
