@@ -311,7 +311,7 @@ Resources:
   BrmDataBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: sa1-brm-data
+      BucketName: !Sub "${AppName}-${Environment}-data-${AWS::AccountId}"
       VersioningConfiguration:
         Status: Enabled
       PublicAccessBlockConfiguration:
@@ -348,7 +348,7 @@ Resources:
             MaxAge: 3000
       Tags:
         - Key: Name
-          Value: sa1-brm-data
+          Value: !Sub "${AppName}-${Environment}-data"
         - Key: Environment
           Value: !Ref Environment
         - Key: Purpose
@@ -410,7 +410,7 @@ Resources:
             - Name: AWS_REGION
               Value: !Ref AWS::Region
             - Name: AWS_S3_BUCKET
-              Value: sa1-brm-data
+              Value: !Ref BrmDataBucket
           LogConfiguration:
             LogDriver: awslogs
             Options:
