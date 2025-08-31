@@ -13,13 +13,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { ArrowLeft, Plus, Pencil, Trash2, Search, Image } from "lucide-react"
 import { api, type Product } from "@/lib/api-client"
 import { ProductForm } from "@/components/forms/product-form"
@@ -32,8 +25,6 @@ export default function ProductsPage() {
   const [loading, setLoading] = useState(true)
   const [formLoading, setFormLoading] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
-  const [categoryFilter, setCategoryFilter] = useState("Todos")
-  const [stockFilter, setStockFilter] = useState("Todos")
   const [sortBy, setSortBy] = useState("")
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc")
   
@@ -60,8 +51,6 @@ export default function ProductsPage() {
       const filters: any = {}
       
       if (searchTerm) filters.search = searchTerm
-      if (categoryFilter !== "Todos") filters.category = categoryFilter
-      if (stockFilter !== "Todos") filters.stock = stockFilter
       if (sortBy) {
         filters.sortBy = sortBy
         filters.sortOrder = sortOrder
@@ -78,7 +67,7 @@ export default function ProductsPage() {
     } finally {
       setLoading(false)
     }
-  }, [searchTerm, categoryFilter, stockFilter, sortBy, sortOrder, toast, t])
+  }, [searchTerm, sortBy, sortOrder, toast, t])
 
   useEffect(() => {
     fetchProducts()
@@ -166,13 +155,6 @@ export default function ProductsPage() {
     return <Badge variant="default">{t('inStock')}</Badge>
   }
 
-  const categories = [
-    { value: "Todos", label: t('allCategories') },
-    { value: "Eletrônicos", label: "Eletrônicos" },
-    { value: "Casa", label: "Casa" },
-    { value: "Esportes", label: "Esportes" },
-    { value: "Livros", label: "Livros" }
-  ]
 
   return (
     <div className="min-h-screen bg-background">
@@ -202,39 +184,14 @@ export default function ProductsPage() {
             <CardTitle>{t('productsManagement')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder={t('searchProducts')}
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder={t('category')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((category) => (
-                    <SelectItem key={category.value} value={category.value}>
-                      {category.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={stockFilter} onValueChange={setStockFilter}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder={t('stock')} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Todos">{t('allCategories')}</SelectItem>
-                  <SelectItem value="Em Estoque">{t('inStock')}</SelectItem>
-                  <SelectItem value="Baixo Estoque">{t('lowStock')}</SelectItem>
-                  <SelectItem value="Sem Estoque">{t('outOfStock')}</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="relative">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder={t('searchProducts')}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9"
+              />
             </div>
 
             {loading ? (
