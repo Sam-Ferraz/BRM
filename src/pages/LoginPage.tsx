@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { useAuth } from "@/hooks/use-auth"
 import { LanguageSelector } from "@/components/language-selector"
+import { useMobileDetection } from "@/lib/mobile-utils"
 import { toast } from "sonner"
 import { Eye, EyeOff } from "lucide-react"
 
@@ -17,6 +18,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const { login, isAuthenticated } = useAuth()
+  const isMobile = useMobileDetection()
   const navigate = useNavigate()
   const location = useLocation()
   const emailRef = useRef<HTMLInputElement>(null)
@@ -30,11 +32,11 @@ export default function LoginPage() {
   }, [isAuthenticated, navigate, from])
 
   useEffect(() => {
-    // Auto-focus email field when component mounts
-    if (emailRef.current) {
+    // Auto-focus email field when component mounts, but not on mobile to prevent keyboard popup
+    if (emailRef.current && !isMobile) {
       emailRef.current.focus()
     }
-  }, [])
+  }, [isMobile])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()

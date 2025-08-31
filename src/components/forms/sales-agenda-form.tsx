@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { ProductSearch } from "@/components/product-search"
 import type { SalesAgenda, SalesAgendaCreateInput } from "@/lib/api-client"
+import { useMobileDetection } from "@/lib/mobile-utils"
 
 interface SalesAgendaFormProps {
   salesAgenda?: SalesAgenda
@@ -22,6 +23,7 @@ interface SalesAgendaFormProps {
 
 export function SalesAgendaForm({ salesAgenda, open, onOpenChange, onSubmit, loading }: SalesAgendaFormProps) {
   const { t } = useTranslation()
+  const isMobile = useMobileDetection()
   const [formData, setFormData] = useState({
     title: "",
     product_name: "",
@@ -71,7 +73,12 @@ export function SalesAgendaForm({ salesAgenda, open, onOpenChange, onSubmit, loa
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent 
+        className="sm:max-w-[425px]"
+        {...(isMobile && {
+          onOpenAutoFocus: (e) => e.preventDefault()
+        })}
+      >
         <DialogHeader>
           <DialogTitle>{salesAgenda ? t('editSalesAgenda') : t('newSalesAgenda')}</DialogTitle>
         </DialogHeader>

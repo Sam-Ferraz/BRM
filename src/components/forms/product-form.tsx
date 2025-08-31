@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge"
 import { ImageCarousel, FullscreenCarousel } from "@/components/ui/image-carousel"
 import { Upload, X, Image as ImageIcon, Star, Trash2, Eye } from "lucide-react"
 import { api, type Product, type ProductImage } from "@/lib/api-client"
+import { useMobileDetection } from "@/lib/mobile-utils"
 import { useToast } from "@/hooks/use-toast"
 
 interface ProductFormProps {
@@ -28,6 +29,7 @@ interface ProductFormProps {
 
 export function ProductForm({ product, initialName, open, onOpenChange, onSubmit, loading, onProductUpdated }: ProductFormProps) {
   const { t } = useTranslation()
+  const isMobile = useMobileDetection()
   const { toast } = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null)
   
@@ -233,7 +235,12 @@ export function ProductForm({ product, initialName, open, onOpenChange, onSubmit
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[800px] max-h-[95vh] flex flex-col">
+        <DialogContent 
+          className="sm:max-w-[800px] max-h-[95vh] flex flex-col"
+          {...(isMobile && {
+            onOpenAutoFocus: (e) => e.preventDefault()
+          })}
+        >
           <DialogHeader>
             <DialogTitle>{product ? t('editProduct') : t('newProduct')}</DialogTitle>
           </DialogHeader>
@@ -251,7 +258,7 @@ export function ProductForm({ product, initialName, open, onOpenChange, onSubmit
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   required
-                  tabIndex={1}
+                  {...(!isMobile && { tabIndex: 1 })}
                 />
               </div>
               
@@ -261,7 +268,7 @@ export function ProductForm({ product, initialName, open, onOpenChange, onSubmit
                   id="price"
                   value={formData.price}
                   onChange={(price) => setFormData({ ...formData, price })}
-                  tabIndex={2}
+                  {...(!isMobile && { tabIndex: 2 })}
                 />
               </div>
               
@@ -271,7 +278,7 @@ export function ProductForm({ product, initialName, open, onOpenChange, onSubmit
                   id="category"
                   value={formData.category}
                   onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  tabIndex={3}
+                  {...(!isMobile && { tabIndex: 3 })}
                 />
               </div>
               
@@ -282,7 +289,7 @@ export function ProductForm({ product, initialName, open, onOpenChange, onSubmit
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   rows={3}
-                  tabIndex={5}
+                  {...(!isMobile && { tabIndex: 5 })}
                 />
               </div>
             </div>
@@ -418,10 +425,10 @@ export function ProductForm({ product, initialName, open, onOpenChange, onSubmit
           </div>
           
           <DialogFooter className="flex-shrink-0 border-t pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} tabIndex={6}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} {...(!isMobile && { tabIndex: 6 })}>
               {t('cancel')}
             </Button>
-            <Button type="submit" disabled={loading} tabIndex={7} form="product-form">
+            <Button type="submit" disabled={loading} {...(!isMobile && { tabIndex: 7 })} form="product-form">
               {loading ? t('saving') : t('save')}
             </Button>
           </DialogFooter>

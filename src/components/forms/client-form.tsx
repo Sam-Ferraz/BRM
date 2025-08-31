@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import type { Client } from "@/lib/api-client"
+import { useMobileDetection } from "@/lib/mobile-utils"
 
 interface ClientFormProps {
   client?: Client
@@ -22,6 +23,7 @@ interface ClientFormProps {
 
 export function ClientForm({ client, initialName, open, onOpenChange, onSubmit, loading }: ClientFormProps) {
   const { t } = useTranslation()
+  const isMobile = useMobileDetection()
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -68,7 +70,12 @@ export function ClientForm({ client, initialName, open, onOpenChange, onSubmit, 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent 
+        className="sm:max-w-[425px]"
+        {...(isMobile && {
+          onOpenAutoFocus: (e) => e.preventDefault()
+        })}
+      >
         <DialogHeader>
           <DialogTitle>{client ? t('editClient') : t('newClient')}</DialogTitle>
         </DialogHeader>
@@ -82,7 +89,7 @@ export function ClientForm({ client, initialName, open, onOpenChange, onSubmit, 
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               required
-              tabIndex={1}
+              {...(!isMobile && { tabIndex: 1 })}
             />
           </div>
           <div className="space-y-2">
@@ -92,7 +99,7 @@ export function ClientForm({ client, initialName, open, onOpenChange, onSubmit, 
               type="email"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              tabIndex={2}
+              {...(!isMobile && { tabIndex: 2 })}
             />
           </div>
           <div className="space-y-2">
@@ -101,7 +108,7 @@ export function ClientForm({ client, initialName, open, onOpenChange, onSubmit, 
               id="phone"
               value={formData.phone}
               onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              tabIndex={3}
+              {...(!isMobile && { tabIndex: 3 })}
             />
           </div>
           <div className="space-y-2">
@@ -110,7 +117,7 @@ export function ClientForm({ client, initialName, open, onOpenChange, onSubmit, 
               id="city"
               value={formData.city}
               onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-              tabIndex={4}
+              {...(!isMobile && { tabIndex: 4 })}
             />
           </div>
           <div className="space-y-2">
@@ -119,7 +126,7 @@ export function ClientForm({ client, initialName, open, onOpenChange, onSubmit, 
               id="address"
               value={formData.address}
               onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              tabIndex={5}
+              {...(!isMobile && { tabIndex: 5 })}
             />
           </div>
           <div className="space-y-2">
@@ -128,13 +135,13 @@ export function ClientForm({ client, initialName, open, onOpenChange, onSubmit, 
               id="company"
               value={formData.company}
               onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-              tabIndex={6}
+              {...(!isMobile && { tabIndex: 6 })}
             />
           </div>
           <div className="space-y-2">
             <Label htmlFor="origin">{t('origin')}</Label>
             <Select value={formData.origin || ''} onValueChange={(value) => setFormData({ ...formData, origin: value as Client['origin'] })}>
-              <SelectTrigger tabIndex={7}>
+              <SelectTrigger {...(!isMobile && { tabIndex: 7 })}>
                 <SelectValue placeholder={`${t('select')} ${t('origin').toLowerCase()}...`} />
               </SelectTrigger>
               <SelectContent>
@@ -147,10 +154,10 @@ export function ClientForm({ client, initialName, open, onOpenChange, onSubmit, 
             </Select>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} tabIndex={8}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} {...(!isMobile && { tabIndex: 8 })}>
               {t('cancel')}
             </Button>
-            <Button type="submit" disabled={loading} tabIndex={9}>
+            <Button type="submit" disabled={loading} {...(!isMobile && { tabIndex: 9 })}>
               {loading ? t('saving') : t('save')}
             </Button>
           </DialogFooter>

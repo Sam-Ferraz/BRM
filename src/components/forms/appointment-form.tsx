@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import type { Appointment } from "@/lib/api-client"
+import { useMobileDetection } from "@/lib/mobile-utils"
 import { getCurrentDateTimeForForm, convertFromAppToLocal, convertFromLocalToApp } from "@/lib/datetime"
 import { ClientSearch } from "@/components/client-search"
 import { AnsweredStatusToggle } from "@/components/ui/answered-status-toggle"
@@ -26,6 +27,7 @@ interface AppointmentFormProps {
 
 export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loading }: AppointmentFormProps) {
   const { t } = useTranslation()
+  const isMobile = useMobileDetection()
   const currentTimezone = useTimezone()
   const { date: currentDate, time: currentTime } = getCurrentDateTimeForForm()
   const currentDateTime = `${currentDate}T${currentTime}`
@@ -113,7 +115,12 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent 
+        className="sm:max-w-[425px]"
+        {...(isMobile && {
+          onOpenAutoFocus: (e) => e.preventDefault()
+        })}
+      >
         <DialogHeader>
           <DialogTitle>{appointment ? t('editAppointment') : t('newAppointment')}</DialogTitle>
         </DialogHeader>
@@ -135,7 +142,7 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
           <div className="space-y-2">
             <Label htmlFor="type">{t('type')}</Label>
             <Select value={formData.type} onValueChange={(value) => setFormData({ ...formData, type: value as any })}>
-              <SelectTrigger tabIndex={2}>
+              <SelectTrigger {...(!isMobile && { tabIndex: 2 })}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -152,7 +159,7 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
               value={formData.status}
               onValueChange={(value) => setFormData({ ...formData, status: value as any })}
             >
-              <SelectTrigger tabIndex={3}>
+              <SelectTrigger {...(!isMobile && { tabIndex: 3 })}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -172,7 +179,7 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
               value={formData.scheduled_datetime}
               onChange={(e) => setFormData({ ...formData, scheduled_datetime: e.target.value })}
               required
-              tabIndex={4}
+              {...(!isMobile && { tabIndex: 4 })}
             />
           </div>
           <div className="space-y-2">
@@ -195,14 +202,14 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               rows={3}
-              tabIndex={6}
+              {...(!isMobile && { tabIndex: 6 })}
             />
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} tabIndex={7}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} {...(!isMobile && { tabIndex: 7 })}>
               {t('cancel')}
             </Button>
-            <Button type="submit" disabled={loading} tabIndex={8}>
+            <Button type="submit" disabled={loading} {...(!isMobile && { tabIndex: 8 })}>
               {loading ? t('saving') : t('save')}
             </Button>
           </DialogFooter>

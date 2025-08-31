@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { CurrencyInput } from "@/components/ui/currency-input"
 import { ClientSearch } from "@/components/client-search"
 import type { Deal } from "@/lib/api-client"
+import { useMobileDetection } from "@/lib/mobile-utils"
 import { getCurrentDateForForm } from "@/lib/datetime"
 
 interface DealFormProps {
@@ -25,6 +26,7 @@ interface DealFormProps {
 
 export function DealForm({ deal, open, onOpenChange, onSubmit, loading }: DealFormProps) {
   const { t } = useTranslation()
+  const isMobile = useMobileDetection()
   const [formData, setFormData] = useState({
     client: "",
     value: "",
@@ -76,7 +78,12 @@ export function DealForm({ deal, open, onOpenChange, onSubmit, loading }: DealFo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent 
+        className="sm:max-w-[425px]"
+        {...(isMobile && {
+          onOpenAutoFocus: (e) => e.preventDefault()
+        })}
+      >
         <DialogHeader>
           <DialogTitle>{deal ? t('editDeal') : t('newDeal')}</DialogTitle>
         </DialogHeader>
@@ -99,7 +106,7 @@ export function DealForm({ deal, open, onOpenChange, onSubmit, loading }: DealFo
               value={formData.value}
               onChange={(value) => setFormData({ ...formData, value })}
               required
-              tabIndex={2}
+              {...(!isMobile && { tabIndex: 2 })}
             />
           </div>
           <div className="space-y-2">
@@ -108,7 +115,7 @@ export function DealForm({ deal, open, onOpenChange, onSubmit, loading }: DealFo
               value={formData.status}
               onValueChange={(value) => setFormData({ ...formData, status: value as any })}
             >
-              <SelectTrigger tabIndex={3}>
+              <SelectTrigger {...(!isMobile && { tabIndex: 3 })}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -130,7 +137,7 @@ export function DealForm({ deal, open, onOpenChange, onSubmit, loading }: DealFo
               value={formData.date}
               onChange={(e) => setFormData({ ...formData, date: e.target.value })}
               required
-              tabIndex={4}
+              {...(!isMobile && { tabIndex: 4 })}
             />
           </div>
           <div className="space-y-2">
@@ -140,14 +147,14 @@ export function DealForm({ deal, open, onOpenChange, onSubmit, loading }: DealFo
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               rows={3}
-              tabIndex={5}
+              {...(!isMobile && { tabIndex: 5 })}
             />
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} tabIndex={6}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} {...(!isMobile && { tabIndex: 6 })}>
               {t('cancel')}
             </Button>
-            <Button type="submit" disabled={loading} tabIndex={7}>
+            <Button type="submit" disabled={loading} {...(!isMobile && { tabIndex: 7 })}>
               {loading ? t('saving') : t('save')}
             </Button>
           </DialogFooter>
