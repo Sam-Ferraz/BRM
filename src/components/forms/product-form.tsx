@@ -316,17 +316,6 @@ export function ProductForm({ product, initialName, open, onOpenChange, onSubmit
                 {/* Current Images Display */}
                 {images.length > 0 && (
                   <div className="space-y-4">
-                    {/* Carousel Preview */}
-                    <div className="w-full">
-                      <ImageCarousel
-                        productId={product.id}
-                        images={images}
-                        className="h-32"
-                        showThumbnails={false}
-                        onClick={openFullscreenCarousel}
-                      />
-                    </div>
-                    
                     {/* Image Management Grid */}
                     <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                       {images.map((image, index) => (
