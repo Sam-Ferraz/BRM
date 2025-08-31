@@ -270,7 +270,14 @@ export default function DealsPage() {
                 </TableHeader>
                 <TableBody>
                   {deals.map((deal) => (
-                    <TableRow key={deal.id}>
+                    <TableRow 
+                      key={deal.id}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => {
+                        setEditingDeal(deal)
+                        setIsFormOpen(true)
+                      }}
+                    >
                       <TableCell className="font-medium">{deal.client}</TableCell>
                       <TableCell>{deal.value}</TableCell>
                       <TableCell>{getStatusBadge(deal.status)}</TableCell>
@@ -288,7 +295,8 @@ export default function DealsPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation()
                               setEditingDeal(deal)
                               setIsFormOpen(true)
                             }}
@@ -298,7 +306,10 @@ export default function DealsPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleDelete(deal.id)}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleDelete(deal.id)
+                            }}
                             className="text-red-600 hover:text-red-700"
                           >
                             <Trash2 className="w-4 h-4" />

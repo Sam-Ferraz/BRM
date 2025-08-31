@@ -286,7 +286,14 @@ export default function AppointmentsPage() {
                 </TableHeader>
                 <TableBody>
                   {appointments.map((appointment) => (
-                    <TableRow key={appointment.id}>
+                    <TableRow 
+                      key={appointment.id}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => {
+                        setEditingAppointment(appointment)
+                        setIsFormOpen(true)
+                      }}
+                    >
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
                           <User className="h-4 w-4 text-muted-foreground" />
@@ -334,7 +341,8 @@ export default function AppointmentsPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation()
                               setEditingAppointment(appointment)
                               setIsFormOpen(true)
                             }}
@@ -344,7 +352,10 @@ export default function AppointmentsPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleDelete(appointment.id)}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleDelete(appointment.id)
+                            }}
                             className="text-red-600 hover:text-red-700"
                           >
                             <Trash2 className="w-4 h-4" />

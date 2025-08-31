@@ -223,7 +223,14 @@ export default function ClientsPage() {
                 </TableHeader>
                 <TableBody>
                   {clients.map((client) => (
-                    <TableRow key={client.id}>
+                    <TableRow 
+                      key={client.id}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => {
+                        setEditingClient(client)
+                        setIsFormOpen(true)
+                      }}
+                    >
                       <TableCell className="font-medium">{client.name}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -271,7 +278,8 @@ export default function ClientsPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation()
                               setEditingClient(client)
                               setIsFormOpen(true)
                             }}
@@ -281,7 +289,10 @@ export default function ClientsPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleDelete(client.id)}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleDelete(client.id)
+                            }}
                             className="text-red-600 hover:text-red-700"
                           >
                             <Trash2 className="w-4 h-4" />

@@ -231,11 +231,19 @@ export default function ProductsPage() {
                 </TableHeader>
                 <TableBody>
                   {products.map((product) => (
-                    <TableRow key={product.id}>
+                    <TableRow 
+                      key={product.id}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => {
+                        setEditingProduct(product)
+                        setIsFormOpen(true)
+                      }}
+                    >
                       <TableCell className="w-16">
                         <div 
                           className="w-12 h-12 rounded-lg border cursor-pointer hover:opacity-80 transition-opacity overflow-hidden bg-muted flex items-center justify-center"
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation()
                             setEditingProduct(product)
                             setIsFormOpen(true)
                           }}
@@ -292,7 +300,8 @@ export default function ProductsPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation()
                               setEditingProduct(product)
                               setIsFormOpen(true)
                             }}
@@ -302,7 +311,10 @@ export default function ProductsPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleDelete(product.id)}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleDelete(product.id)
+                            }}
                             className="text-red-600 hover:text-red-700"
                           >
                             <Trash2 className="w-4 h-4" />

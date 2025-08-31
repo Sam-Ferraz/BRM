@@ -263,7 +263,14 @@ export default function SalesAgendaPage() {
                 </TableHeader>
                 <TableBody>
                   {salesAgendas.map((agenda) => (
-                    <TableRow key={agenda.id}>
+                    <TableRow 
+                      key={agenda.id}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => {
+                        setEditingSalesAgenda(agenda)
+                        setIsFormOpen(true)
+                      }}
+                    >
                       <TableCell className="font-medium">{agenda.title}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -283,7 +290,8 @@ export default function SalesAgendaPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation()
                               setEditingSalesAgenda(agenda)
                               setIsFormOpen(true)
                             }}
@@ -293,7 +301,10 @@ export default function SalesAgendaPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleDelete(agenda.id)}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleDelete(agenda.id)
+                            }}
                             className="text-red-600 hover:text-red-700"
                           >
                             <Trash2 className="w-4 h-4" />
