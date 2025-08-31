@@ -321,11 +321,11 @@ Resources:
                   - s3:PutObject
                   - s3:DeleteObject
                   - s3:PutObjectAcl
-                Resource: !Sub "${BrmDataBucket}/*"
+                Resource: !Sub "arn:aws:s3:::${BrmDataBucket}/*"
               - Effect: Allow
                 Action:
                   - s3:ListBucket
-                Resource: !Ref BrmDataBucket
+                Resource: !Sub "arn:aws:s3:::${BrmDataBucket}"
       Tags:
         - Key: Name
           Value: !Sub ${AppName}-${Environment}-task-role
