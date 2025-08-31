@@ -340,7 +340,7 @@ export function createApiRoutes(app) {
   app.get('/api/products', authenticateToken, async (req, res) => {
     const client = await pool.connect()
     try {
-      const { search, category, stock, sortBy, sortOrder } = req.query
+      const { search, category, sortBy, sortOrder } = req.query
       let query = `
         SELECT 
           p.*,
@@ -367,22 +367,9 @@ export function createApiRoutes(app) {
         paramCount++
       }
       
-      if (stock) {
-        switch (stock) {
-          case 'In Stock':
-            query += ` AND p.stock > 10`
-            break
-          case 'Low Stock':
-            query += ` AND p.stock > 0 AND p.stock <= 10`
-            break
-          case 'Out of Stock':
-            query += ` AND p.stock = 0`
-            break
-        }
-      }
       
       if (sortBy) {
-        const validColumns = ['name', 'price', 'category', 'stock']
+        const validColumns = ['name', 'price', 'category']
         if (validColumns.includes(sortBy)) {
           const order = sortOrder === 'desc' ? 'DESC' : 'ASC'
           query += ` ORDER BY p.${sortBy} ${order}`
@@ -404,10 +391,10 @@ export function createApiRoutes(app) {
   app.post('/api/products', authenticateToken, async (req, res) => {
     const client = await pool.connect()
     try {
-      const { name, price, category, stock, description } = req.body
+      const { name, price, category, description } = req.body
       const result = await client.query(
-        'INSERT INTO products (name, price, category, stock, description) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-        [name, price, category, stock, description]
+        'INSERT INTO products (name, price, category, description) VALUES ($1, $2, $3, $4) RETURNING *',
+        [name, price, category, description]
       )
       res.json(result.rows[0])
     } catch (error) {
@@ -422,10 +409,10 @@ export function createApiRoutes(app) {
     const client = await pool.connect()
     try {
       const { id } = req.params
-      const { name, price, category, stock, description } = req.body
+      const { name, price, category, description } = req.body
       const result = await client.query(
-        'UPDATE products SET name = $1, price = $2, category = $3, stock = $4, description = $5, updated_at = CURRENT_TIMESTAMP WHERE id = $6 RETURNING *',
-        [name, price, category, stock, description, id]
+        'UPDATE products SET name = $1, price = $2, category = $3, description = $4, updated_at = CURRENT_TIMESTAMP WHERE id = $5 RETURNING *',
+        [name, price, category, description, id]
       )
       if (result.rows.length === 0) {
         return res.status(404).json({ error: 'Product not found' })

@@ -146,14 +146,6 @@ export default function ProductsPage() {
     }
   }
 
-  const getStockStatus = (stock: number) => {
-    if (stock === 0) {
-      return <Badge variant="destructive">{t('outOfStock')}</Badge>
-    } else if (stock <= 10) {
-      return <Badge variant="secondary">{t('lowStock')}</Badge>
-    }
-    return <Badge variant="default">{t('inStock')}</Badge>
-  }
 
 
   return (
@@ -219,13 +211,6 @@ export default function ProductsPage() {
                     >
                       {t('category')} {sortBy === "category" && (sortOrder === "asc" ? "↑" : "↓")}
                     </TableHead>
-                    <TableHead 
-                      className="cursor-pointer" 
-                      onClick={() => handleSort("stock")}
-                    >
-                      {t('stock')} {sortBy === "stock" && (sortOrder === "asc" ? "↑" : "↓")}
-                    </TableHead>
-                    <TableHead>{t('status')}</TableHead>
                     <TableHead className="text-right">{t('actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -293,8 +278,6 @@ export default function ProductsPage() {
                         }
                       </TableCell>
                       <TableCell>{product.category}</TableCell>
-                      <TableCell>{product.stock}</TableCell>
-                      <TableCell>{getStockStatus(product.stock)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <Button
@@ -325,7 +308,7 @@ export default function ProductsPage() {
                   ))}
                   {products.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                         {t('noProductsFound')}
                       </TableCell>
                     </TableRow>

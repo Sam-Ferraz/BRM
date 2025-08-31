@@ -35,7 +35,6 @@ export function ProductForm({ product, initialName, open, onOpenChange, onSubmit
     name: "",
     price: null as number | null,
     category: "",
-    stock: 0,
     description: "",
   })
   
@@ -60,7 +59,6 @@ export function ProductForm({ product, initialName, open, onOpenChange, onSubmit
         name: product.name || "",
         price: product.price || null,
         category: product.category || "",
-        stock: product.stock || 0,
         description: product.description || "",
       })
       setShowImageUpload(true)
@@ -70,7 +68,6 @@ export function ProductForm({ product, initialName, open, onOpenChange, onSubmit
         name: initialName || "",
         price: null,
         category: "",
-        stock: 0,
         description: "",
       })
       setShowImageUpload(false)
@@ -258,29 +255,14 @@ export function ProductForm({ product, initialName, open, onOpenChange, onSubmit
                 />
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="price">{t('price')}</Label>
-                  <CurrencyInput
-                    id="price"
-                    value={formData.price}
-                    onChange={(price) => setFormData({ ...formData, price })}
-                    tabIndex={2}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="stock">
-                    {t('stock')} <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    id="stock"
-                    type="number"
-                    value={formData.stock}
-                    onChange={(e) => setFormData({ ...formData, stock: Number.parseInt(e.target.value) || 0 })}
-                    required
-                    tabIndex={4}
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="price">{t('price')}</Label>
+                <CurrencyInput
+                  id="price"
+                  value={formData.price}
+                  onChange={(price) => setFormData({ ...formData, price })}
+                  tabIndex={2}
+                />
               </div>
               
               <div className="space-y-2">
