@@ -29,7 +29,8 @@
       "Bash(npx tsc:*)",
       "Bash(for route in deals clients appointments products sales-agenda)",
       "Bash(do echo -n \"$route: \")",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(export AWS_DEFAULT_REGION=sa-east-1)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

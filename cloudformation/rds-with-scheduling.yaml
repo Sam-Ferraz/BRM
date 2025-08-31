@@ -1,0 +1,219 @@
+# Add RDS instance with scheduled start/stop to your CloudFormation template
+
+  # Add these parameters to your existing parameters section:
+  DBInstanceClass:
+    Type: String
+    Default: db.t4g.micro  # Cheapest option
+    AllowedValues: [db.t4g.micro, db.t4g.small, db.t3.micro, db.t3.small]
+    Description: RDS instance class for cost optimization
+    
+  DBAllocatedStorage:
+    Type: Number
+    Default: 20
+    MinValue: 20
+    MaxValue: 100
+    Description: Database allocated storage in GB
+
+  # Add these resources to your Resources section:
+  
+  # Database Subnet Group (required for RDS in VPC)
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupName: !Sub ${AppName}-${Environment}-db-subnet-group
+      DBSubnetGroupDescription: Subnet group for RDS database
+      SubnetIds:
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
+      Tags:
+        - Key: Name
+          Value: !Sub ${AppName}-${Environment}-db-subnet-group
+        - Key: Environment
+          Value: !Ref Environment
+
+  # Security Group for RDS
+  DBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for RDS database
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId: !Ref ECSSecurityGroup
+          Description: Allow ECS tasks to connect to database
+      Tags:
+        - Key: Name
+          Value: !Sub ${AppName}-${Environment}-db-sg
+        - Key: Environment
+          Value: !Ref Environment
+
+  # RDS PostgreSQL Instance
+  BrmDatabase:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceIdentifier: !Sub ${AppName}-${Environment}-db
+      DBInstanceClass: !Ref DBInstanceClass
+      Engine: postgres
+      EngineVersion: '15.8'
+      MasterUsername: !Ref DBUser
+      MasterUserPassword: !Ref DBPassword
+      DBName: !Ref DBName
+      AllocatedStorage: !Ref DBAllocatedStorage
+      StorageType: gp3
+      StorageEncrypted: true
+      VPCSecurityGroups:
+        - !Ref DBSecurityGroup
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      BackupRetentionPeriod: 7
+      PreferredBackupWindow: "03:00-04:00"  # During downtime
+      PreferredMaintenanceWindow: "sun:04:00-sun:05:00"  # During downtime
+      DeletionProtection: false  # Enable in production
+      MultiAZ: false  # Single AZ for cost savings
+      PubliclyAccessible: false
+      AutoMinorVersionUpgrade: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${AppName}-${Environment}-database
+        - Key: Environment
+          Value: !Ref Environment
+
+  # Lambda function for RDS scheduling (start/stop)
+  RDSSchedulingLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "${AppName}-${Environment}-rds-scheduling"
+      Runtime: python3.9
+      Handler: index.lambda_handler
+      Role: !GetAtt RDSSchedulingLambdaRole.Arn
+      Code:
+        ZipFile: |
+          import boto3
+          import json
+          
+          def lambda_handler(event, context):
+              rds_client = boto3.client('rds')
+              
+              db_identifier = event['dbIdentifier']
+              action = event['action']  # 'start' or 'stop'
+              
+              try:
+                  if action == 'stop':
+                      response = rds_client.stop_db_instance(
+                          DBInstanceIdentifier=db_identifier
+                      )
+                      message = f'Successfully stopped RDS instance {db_identifier}'
+                  elif action == 'start':
+                      response = rds_client.start_db_instance(
+                          DBInstanceIdentifier=db_identifier
+                      )
+                      message = f'Successfully started RDS instance {db_identifier}'
+                  else:
+                      raise ValueError(f'Invalid action: {action}')
+                  
+                  print(message)
+                  return {
+                      'statusCode': 200,
+                      'body': json.dumps(message)
+                  }
+              except Exception as e:
+                  error_msg = f"Error {action}ing RDS instance: {str(e)}"
+                  print(error_msg)
+                  return {
+                      'statusCode': 500,
+                      'body': json.dumps(error_msg)
+                  }
+      Timeout: 60
+      Tags:
+        - Key: Name
+          Value: !Sub ${AppName}-${Environment}-rds-scheduling
+        - Key: Environment
+          Value: !Ref Environment
+
+  # IAM Role for RDS Scheduling Lambda
+  RDSSchedulingLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${AppName}-${Environment}-rds-scheduling-lambda-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: RDSSchedulingPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - rds:StopDBInstance
+                  - rds:StartDBInstance
+                  - rds:DescribeDBInstances
+                Resource: !Sub "arn:aws:rds:${AWS::Region}:${AWS::AccountId}:db:${AppName}-${Environment}-db"
+      Tags:
+        - Key: Name
+          Value: !Sub ${AppName}-${Environment}-rds-scheduling-lambda-role
+        - Key: Environment
+          Value: !Ref Environment
+
+  # Stop RDS at night
+  RDSStopRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub "${AppName}-${Environment}-rds-stop"
+      Description: "Stop RDS instance at night to save costs"
+      ScheduleExpression: "cron(0 2 * * ? *)"  # 2:00 AM UTC (same as ECS)
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt RDSSchedulingLambda.Arn
+          Id: RDSStopTarget
+          Input: !Sub |
+            {
+              "dbIdentifier": "${AppName}-${Environment}-db",
+              "action": "stop"
+            }
+
+  # Start RDS in the morning
+  RDSStartRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub "${AppName}-${Environment}-rds-start"
+      Description: "Start RDS instance in the morning"
+      ScheduleExpression: "cron(55 11 * * ? *)"  # 11:55 AM UTC (5 min before ECS starts)
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt RDSSchedulingLambda.Arn
+          Id: RDSStartTarget
+          Input: !Sub |
+            {
+              "dbIdentifier": "${AppName}-${Environment}-db",
+              "action": "start"
+            }
+
+  # Lambda permissions for EventBridge (RDS)
+  RDSLambdaPermissionStop:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref RDSSchedulingLambda
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt RDSStopRule.Arn
+
+  RDSLambdaPermissionStart:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref RDSSchedulingLambda
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt RDSStartRule.Arn
+
+  # Update environment variables in ECS task to use RDS
+  # Replace the DB_HOST environment variable with:
+  # - Name: DB_HOST
+  #   Value: !GetAtt BrmDatabase.Endpoint.Address

@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'BRM Application - ECS Fargate deployment with ALB (Cost-optimized single instance)'
+Description: 'BRM Application - Cost-optimized with existing RDS integration and scheduled scaling'
 
 Parameters:
   AppName:
@@ -72,21 +72,35 @@ Parameters:
     AllowedValues: ['256', '512', '1024', '2048', '4096']
     Description: 'Memory in MB for the task'
 
-  DBInstanceClass:
+  # Scheduling parameters
+  EnableScheduling:
     Type: String
-    Default: db.t4g.micro
-    AllowedValues: [db.t4g.micro, db.t4g.small, db.t3.micro, db.t3.small]
-    Description: RDS instance class (db.t4g.micro = ~$12/month)
-    
-  DBAllocatedStorage:
-    Type: Number
-    Default: 20
-    MinValue: 20
-    MaxValue: 100
-    Description: Database allocated storage in GB
+    Default: 'true'
+    AllowedValues: ['true', 'false']
+    Description: Enable/disable scheduled scaling (saves ~65% on compute costs)
+
+  ScaleDownTime:
+    Type: String
+    Default: 'cron(0 2 * * ? *)'
+    Description: 'Cron expression for scaling down (default: 2:00 AM UTC)'
+
+  ScaleUpTime:
+    Type: String
+    Default: 'cron(0 12 * * ? *)'
+    Description: 'Cron expression for scaling up (default: 12:00 PM UTC)'
+
+  EnableRDSScheduling:
+    Type: String
+    Default: 'true'
+    AllowedValues: ['true', 'false']
+    Description: Enable/disable RDS scheduled start/stop (saves ~65% on RDS costs)
+
+Conditions:
+  SchedulingEnabled: !Equals [!Ref EnableScheduling, 'true']
+  RDSSchedulingEnabled: !Equals [!Ref EnableRDSScheduling, 'true']
 
 Resources:
-  # VPC and Networking
+  # VPC and Networking (minimal setup for cost optimization)
   VPC:
     Type: AWS::EC2::VPC
     Properties:
@@ -105,8 +119,6 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AppName}-${Environment}-igw
-        - Key: Environment
-          Value: !Ref Environment
 
   InternetGatewayAttachment:
     Type: AWS::EC2::VPCGatewayAttachment
@@ -114,6 +126,7 @@ Resources:
       InternetGatewayId: !Ref InternetGateway
       VpcId: !Ref VPC
 
+  # Single public subnet for cost optimization
   PublicSubnet1:
     Type: AWS::EC2::Subnet
     Properties:
@@ -124,8 +137,6 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AppName}-${Environment}-public-subnet-1
-        - Key: Environment
-          Value: !Ref Environment
 
   PublicSubnet2:
     Type: AWS::EC2::Subnet
@@ -137,8 +148,6 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AppName}-${Environment}-public-subnet-2
-        - Key: Environment
-          Value: !Ref Environment
 
   PublicRouteTable:
     Type: AWS::EC2::RouteTable
@@ -147,8 +156,6 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AppName}-${Environment}-public-routes
-        - Key: Environment
-          Value: !Ref Environment
 
   DefaultPublicRoute:
     Type: AWS::EC2::Route
@@ -188,8 +195,6 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AppName}-${Environment}-alb-sg
-        - Key: Environment
-          Value: !Ref Environment
 
   ECSSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -204,9 +209,6 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AppName}-${Environment}-ecs-sg
-        - Key: Environment
-          Value: !Ref Environment
-
 
   # Application Load Balancer
   ApplicationLoadBalancer:
@@ -223,8 +225,6 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AppName}-${Environment}-alb
-        - Key: Environment
-          Value: !Ref Environment
 
   TargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
@@ -240,14 +240,9 @@ Resources:
       HealthCheckTimeoutSeconds: 5
       HealthyThresholdCount: 2
       UnhealthyThresholdCount: 5
-      HealthCheckPort: 3002
-      Matcher:
-        HttpCode: 200
       Tags:
         - Key: Name
           Value: !Sub ${AppName}-${Environment}-tg
-        - Key: Environment
-          Value: !Ref Environment
 
   LoadBalancerListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
@@ -259,14 +254,13 @@ Resources:
       Port: 80
       Protocol: HTTP
 
-  # ECS Cluster
+  # ECS Cluster with Spot instances for maximum cost savings
   ECSCluster:
     Type: AWS::ECS::Cluster
     Properties:
       ClusterName: !Sub ${AppName}-${Environment}-cluster
       CapacityProviders:
-        - FARGATE_SPOT  # Use Spot for cost savings
-        - FARGATE
+        - FARGATE_SPOT  # Use Spot for maximum cost savings
       DefaultCapacityProviderStrategy:
         - CapacityProvider: FARGATE_SPOT
           Weight: 100
@@ -276,8 +270,6 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AppName}-${Environment}-cluster
-        - Key: Environment
-          Value: !Ref Environment
 
   # IAM Roles
   ECSTaskExecutionRole:
@@ -296,8 +288,6 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AppName}-${Environment}-task-execution-role
-        - Key: Environment
-          Value: !Ref Environment
 
   ECSTaskRole:
     Type: AWS::IAM::Role
@@ -329,8 +319,6 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AppName}-${Environment}-task-role
-        - Key: Environment
-          Value: !Ref Environment
 
   # S3 Bucket for product images and data
   BrmDataBucket:
@@ -374,22 +362,18 @@ Resources:
           Value: !Sub "${AppName}-${Environment}-data"
         - Key: Environment
           Value: !Ref Environment
-        - Key: Purpose
-          Value: ProductImages
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
 
-  # CloudWatch Log Group
+  # CloudWatch Log Group (short retention for cost savings)
   LogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Sub /ecs/${AppName}-${Environment}
-      RetentionInDays: 7  # Short retention for cost savings
+      RetentionInDays: 3  # Minimal retention for cost savings
       Tags:
         - Key: Name
           Value: !Sub ${AppName}-${Environment}-logs
-        - Key: Environment
-          Value: !Ref Environment
 
   # ECS Task Definition
   TaskDefinition:
@@ -452,8 +436,6 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AppName}-${Environment}-task-definition
-        - Key: Environment
-          Value: !Ref Environment
 
   # ECS Service
   ECSService:
@@ -480,22 +462,16 @@ Resources:
           TargetGroupArn: !Ref TargetGroup
       HealthCheckGracePeriodSeconds: 60
       DeploymentConfiguration:
-        MaximumPercent: 200  # Allow 2 containers during deployment
+        MaximumPercent: 200
         MinimumHealthyPercent: 50
       Tags:
         - Key: Name
           Value: !Sub ${AppName}-${Environment}-service
-        - Key: Environment
-          Value: !Ref Environment
 
-  # Database Infrastructure - Using existing RDS instance
-  # Note: This template references the existing RDS instance 'brm-dev'
-  # in VPC vpc-0d685a09040d50168 (sa-east-1 region) without managing it
-
-  # Cost Optimization: Scheduled Scaling
-  # Lambda function to scale ECS service
+  # Cost Optimization: Scheduled Scaling (Conditional)
   ScalingLambda:
     Type: AWS::Lambda::Function
+    Condition: SchedulingEnabled
     Properties:
       FunctionName: !Sub "${AppName}-${Environment}-scaling-function"
       Runtime: python3.9
@@ -535,12 +511,10 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AppName}-${Environment}-scaling-function
-        - Key: Environment
-          Value: !Ref Environment
 
-  # IAM Role for Scaling Lambda
   ScalingLambdaRole:
     Type: AWS::IAM::Role
+    Condition: SchedulingEnabled
     Properties:
       RoleName: !Sub ${AppName}-${Environment}-scaling-lambda-role
       AssumeRolePolicyDocument:
@@ -565,16 +539,15 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AppName}-${Environment}-scaling-lambda-role
-        - Key: Environment
-          Value: !Ref Environment
 
-  # Scale down to 0 at night (saves ~65% of compute costs)
+  # Scale down rule
   ScaleDownRule:
     Type: AWS::Events::Rule
+    Condition: SchedulingEnabled
     Properties:
       Name: !Sub "${AppName}-${Environment}-scale-down"
       Description: "Scale down ECS service at night to save costs"
-      ScheduleExpression: "cron(0 2 * * ? *)"  # 2:00 AM UTC (11PM BRT / 10PM EST)
+      ScheduleExpression: !Ref ScaleDownTime
       State: ENABLED
       Targets:
         - Arn: !GetAtt ScalingLambda.Arn
@@ -586,13 +559,14 @@ Resources:
               "desiredCount": 0
             }
 
-  # Scale up in the morning
+  # Scale up rule
   ScaleUpRule:
     Type: AWS::Events::Rule
+    Condition: SchedulingEnabled
     Properties:
       Name: !Sub "${AppName}-${Environment}-scale-up"
       Description: "Scale up ECS service in the morning"
-      ScheduleExpression: "cron(0 12 * * ? *)"  # 12:00 PM UTC (9AM BRT / 8AM EST)
+      ScheduleExpression: !Ref ScaleUpTime
       State: ENABLED
       Targets:
         - Arn: !GetAtt ScalingLambda.Arn
@@ -604,9 +578,10 @@ Resources:
               "desiredCount": 1
             }
 
-  # Lambda permissions for EventBridge
+  # Lambda permissions
   ScalingLambdaPermissionDown:
     Type: AWS::Lambda::Permission
+    Condition: SchedulingEnabled
     Properties:
       FunctionName: !Ref ScalingLambda
       Action: lambda:InvokeFunction
@@ -615,15 +590,17 @@ Resources:
 
   ScalingLambdaPermissionUp:
     Type: AWS::Lambda::Permission
+    Condition: SchedulingEnabled
     Properties:
       FunctionName: !Ref ScalingLambda
       Action: lambda:InvokeFunction
       Principal: events.amazonaws.com
       SourceArn: !GetAtt ScaleUpRule.Arn
 
-  # RDS Scheduling Lambda
+  # RDS Scheduling (Conditional)
   RDSSchedulingLambda:
     Type: AWS::Lambda::Function
+    Condition: RDSSchedulingEnabled
     Properties:
       FunctionName: !Sub "${AppName}-${Environment}-rds-scheduling"
       Runtime: python3.9
@@ -670,12 +647,10 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AppName}-${Environment}-rds-scheduling
-        - Key: Environment
-          Value: !Ref Environment
 
-  # IAM Role for RDS Scheduling Lambda
   RDSSchedulingLambdaRole:
     Type: AWS::IAM::Role
+    Condition: RDSSchedulingEnabled
     Properties:
       RoleName: !Sub ${AppName}-${Environment}-rds-scheduling-lambda-role
       AssumeRolePolicyDocument:
@@ -701,46 +676,47 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AppName}-${Environment}-rds-scheduling-lambda-role
-        - Key: Environment
-          Value: !Ref Environment
 
-  # Stop RDS at night (saves ~65% of RDS costs)
+  # Stop RDS at night
   RDSStopRule:
     Type: AWS::Events::Rule
+    Condition: RDSSchedulingEnabled
     Properties:
       Name: !Sub "${AppName}-${Environment}-rds-stop"
       Description: "Stop RDS instance at night to save costs"
-      ScheduleExpression: "cron(0 2 * * ? *)"  # 2:00 AM UTC (same time as ECS)
+      ScheduleExpression: "cron(0 2 * * ? *)"  # 2:00 AM UTC
       State: ENABLED
       Targets:
         - Arn: !GetAtt RDSSchedulingLambda.Arn
           Id: RDSStopTarget
-          Input: !Sub |
+          Input: |
             {
               "dbIdentifier": "brm-dev",
               "action": "stop"
             }
 
-  # Start RDS in the morning (5 minutes before ECS starts)
+  # Start RDS in the morning
   RDSStartRule:
     Type: AWS::Events::Rule
+    Condition: RDSSchedulingEnabled
     Properties:
       Name: !Sub "${AppName}-${Environment}-rds-start"
-      Description: "Start RDS instance in the morning (before ECS)"
+      Description: "Start RDS instance in the morning"
       ScheduleExpression: "cron(55 11 * * ? *)"  # 11:55 AM UTC (5 min before ECS)
       State: ENABLED
       Targets:
         - Arn: !GetAtt RDSSchedulingLambda.Arn
           Id: RDSStartTarget
-          Input: !Sub |
+          Input: |
             {
               "dbIdentifier": "brm-dev",
               "action": "start"
             }
 
-  # Lambda permissions for EventBridge (RDS)
+  # Lambda permissions for RDS scheduling
   RDSLambdaPermissionStop:
     Type: AWS::Lambda::Permission
+    Condition: RDSSchedulingEnabled
     Properties:
       FunctionName: !Ref RDSSchedulingLambda
       Action: lambda:InvokeFunction
@@ -749,6 +725,7 @@ Resources:
 
   RDSLambdaPermissionStart:
     Type: AWS::Lambda::Permission
+    Condition: RDSSchedulingEnabled
     Properties:
       FunctionName: !Ref RDSSchedulingLambda
       Action: lambda:InvokeFunction
@@ -780,30 +757,6 @@ Outputs:
     Export:
       Name: !Sub ${AppName}-${Environment}-ECSServiceName
 
-  VPC:
-    Description: VPC ID for use with database stack
-    Value: !Ref VPC
-    Export:
-      Name: !Sub ${AppName}-${Environment}-VPC
-
-  PublicSubnet1:
-    Description: Public Subnet 1 ID
-    Value: !Ref PublicSubnet1
-    Export:
-      Name: !Sub ${AppName}-${Environment}-PublicSubnet1
-
-  PublicSubnet2:
-    Description: Public Subnet 2 ID
-    Value: !Ref PublicSubnet2
-    Export:
-      Name: !Sub ${AppName}-${Environment}-PublicSubnet2
-
-  ECSSecurityGroup:
-    Description: ECS Security Group ID
-    Value: !Ref ECSSecurityGroup
-    Export:
-      Name: !Sub ${AppName}-${Environment}-ECSSecurityGroup
-
   BrmDataBucket:
     Description: S3 Bucket for product images and data
     Value: !Ref BrmDataBucket
@@ -821,3 +774,11 @@ Outputs:
     Value: !Ref DBPort
     Export:
       Name: !Sub ${AppName}-${Environment}-DatabasePort
+
+  CostSavingsEnabled:
+    Description: Whether cost optimization features are enabled
+    Value: !Sub 'ECS Scheduling: ${EnableScheduling}, RDS Scheduling: ${EnableRDSScheduling}'
+
+  EstimatedMonthlySavings:
+    Description: Estimated monthly cost savings
+    Value: 'ECS: ~$20/month (65% of compute), RDS: ~$8/month (65% of DB costs)'

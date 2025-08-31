@@ -1,0 +1,53 @@
+# Serverless alternative - Lambda + API Gateway (saves 80-90%)
+# Note: Would require code refactoring
+
+Resources:
+  # API Gateway (much cheaper than ALB)
+  ApiGateway:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: !Sub "${AppName}-${Environment}-api"
+      Description: "BRM API"
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+
+  # Lambda Function (pay per request)
+  BrmLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "${AppName}-${Environment}-function"
+      Runtime: nodejs18.x
+      Handler: index.handler
+      Code:
+        ZipFile: |
+          exports.handler = async (event) => {
+            return {
+              statusCode: 200,
+              body: JSON.stringify('Hello from Lambda!')
+            };
+          };
+      MemorySize: 512  # Can be adjusted based on needs
+      Timeout: 30
+      Environment:
+        Variables:
+          DB_HOST: !Ref DBHost
+          DB_NAME: !Ref DBName
+          # ... other env vars
+
+  # API Gateway Integration
+  ApiGatewayIntegration:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ResourceId: !GetAtt ApiGateway.RootResourceId
+      HttpMethod: ANY
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${BrmLambda.Arn}/invocations"
+
+# Cost comparison:
+# Current ECS: ~$25-40/month
+# Lambda alternative: ~$1-5/month (for typical usage)

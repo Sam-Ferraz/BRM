@@ -89,6 +89,10 @@ jobs:
               DBPassword=${{ secrets.DB_PASSWORD }} \
               JWTSecret=${{ secrets.JWT_SECRET }} \
               JWTExpiresIn=${{ vars.JWT_EXPIRES_IN }} \
+              TaskCpu=${{ vars.TASK_CPU || '256' }} \
+              TaskMemory=${{ vars.TASK_MEMORY || '512' }} \
+              DBInstanceClass=${{ vars.DB_INSTANCE_CLASS || 'db.t4g.micro' }} \
+              DBAllocatedStorage=${{ vars.DB_ALLOCATED_STORAGE || '20' }} \
             --capabilities CAPABILITY_NAMED_IAM \
             --region ${{ env.AWS_REGION }} \
             --no-fail-on-empty-changeset

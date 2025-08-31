@@ -1,0 +1,53 @@
+# Add scheduled scaling to shut down at night (save ~65% on compute)
+  # Scale down to 0 at night (saves money for personal projects)
+  ScaleDownRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub "${AppName}-${Environment}-scale-down"
+      Description: "Scale down ECS service at night"
+      ScheduleExpression: "cron(0 23 * * ? *)"  # 23:00 UTC (8PM EST / 11PM BRT)
+      State: ENABLED
+      Targets:
+        - Arn: !Sub "arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:service/${ECSCluster}/${ECSService}"
+          Id: ScaleDownTarget
+          EcsParameters:
+            TaskDefinitionArn: !Ref TaskDefinition
+          RoleArn: !GetAtt EventsRole.Arn
+          Input: '{"desiredCount": 0}'
+
+  # Scale up in the morning  
+  ScaleUpRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub "${AppName}-${Environment}-scale-up"
+      Description: "Scale up ECS service in the morning"
+      ScheduleExpression: "cron(0 12 * * ? *)"  # 12:00 UTC (9AM EST / 9AM BRT)
+      State: ENABLED
+      Targets:
+        - Arn: !Sub "arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:service/${ECSCluster}/${ECSService}"
+          Id: ScaleUpTarget
+          EcsParameters:
+            TaskDefinitionArn: !Ref TaskDefinition
+          RoleArn: !GetAtt EventsRole.Arn
+          Input: '{"desiredCount": 1}'
+
+  # IAM Role for EventBridge to scale ECS
+  EventsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: ECSScalingPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ecs:UpdateService
+                Resource: !Sub "arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:service/${ECSCluster}/${ECSService}"
