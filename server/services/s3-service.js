@@ -8,8 +8,13 @@ class S3Service {
     
     // Configure S3 client for both AWS S3 and MinIO
     const clientConfig = {
-      region: process.env.AWS_REGION || 'us-east-1',
-      credentials: {
+      region: process.env.AWS_REGION || 'us-east-1'
+    }
+
+    // Only provide credentials if explicitly set (for MinIO/local development)
+    // In production ECS, use IAM task role (no explicit credentials needed)
+    if (process.env.AWS_ACCESS_KEY_ID || process.env.S3_ENDPOINT) {
+      clientConfig.credentials = {
         accessKeyId: process.env.AWS_ACCESS_KEY_ID || 'minioadmin',
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || 'minioadmin'
       }
