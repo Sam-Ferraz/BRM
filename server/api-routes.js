@@ -337,6 +337,88 @@ export function createApiRoutes(app) {
   })
   
   // Products routes
+  
+  // Public endpoint to get products (hardcoded response for security and testing)
+  app.get('/api/public/products', (req, res) => {
+    const hardcodedResponse = {
+      "data": [
+        {
+          "id": 7,
+          "name": "AAAA",
+          "category": "asd",
+          "description": "sdsa",
+          "created_at": "2025-08-13T19:41:31.563Z",
+          "updated_at": "2025-08-31T11:42:39.643Z",
+          "price": "200.00",
+          "has_thumbnail": true
+        },
+        {
+          "id": 6,
+          "name": "Backup Automático",
+          "category": "Infraestrutura",
+          "description": "Sistema de backup automático",
+          "created_at": "2025-08-10T09:36:04.950Z",
+          "updated_at": "2025-08-30T19:46:49.297Z",
+          "price": null,
+          "has_thumbnail": true
+        },
+        {
+          "id": 2,
+          "name": "Consultoria Premium",
+          "category": "Serviços",
+          "description": "Consultoria especializada em TI",
+          "created_at": "2025-08-10T09:36:04.950Z",
+          "updated_at": "2025-08-10T09:36:04.950Z",
+          "price": null,
+          "has_thumbnail": true
+        },
+        {
+          "id": 4,
+          "name": "Suporte Técnico",
+          "category": "Serviços",
+          "description": "Suporte técnico 24/7",
+          "created_at": "2025-08-10T09:36:04.950Z",
+          "updated_at": "2025-08-10T09:36:04.950Z",
+          "price": null,
+          "has_thumbnail": false
+        },
+        {
+          "id": 1,
+          "name": "Software ERP Basic",
+          "category": "Software",
+          "description": "Sistema básico de gestão empresarial",
+          "created_at": "2025-08-10T09:36:04.950Z",
+          "updated_at": "2025-08-30T19:46:09.585Z",
+          "price": null,
+          "has_thumbnail": false
+        },
+        {
+          "id": 3,
+          "name": "Hosting Cloud Pro",
+          "category": "Infraestrutura",
+          "description": "Hospedagem em nuvem profissional",
+          "created_at": "2025-08-10T09:36:04.950Z",
+          "updated_at": "2025-08-10T09:36:04.950Z",
+          "price": null,
+          "has_thumbnail": false
+        },
+        {
+          "id": 5,
+          "name": "Website Custom",
+          "category": "Desenvolvimento",
+          "description": "Website personalizado",
+          "created_at": "2025-08-10T09:36:04.950Z",
+          "updated_at": "2025-08-10T09:36:04.950Z",
+          "price": null,
+          "has_thumbnail": false
+        }
+      ],
+      "total": 7
+    }
+    
+    res.json(hardcodedResponse)
+  })
+  
   app.get('/api/products', authenticateToken, async (req, res) => {
     const client = await pool.connect()
     try {
