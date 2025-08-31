@@ -193,20 +193,20 @@ export function FullscreenCarousel({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-screen-lg w-full h-[90vh] p-0 bg-black">
+      <DialogContent className="max-w-screen-xl w-full h-screen sm:h-[95vh] p-0 bg-black/95 backdrop-blur-sm border-0">
         <div className="relative h-full flex flex-col">
           {/* Close button */}
           <Button
             variant="ghost"
             size="icon"
-            className="absolute right-4 top-4 z-10 text-white hover:bg-white/20"
+            className="absolute right-2 top-2 sm:right-4 sm:top-4 z-20 text-white hover:bg-white/20 backdrop-blur-sm bg-black/30 rounded-full h-10 w-10 sm:h-12 sm:w-12"
             onClick={() => onOpenChange(false)}
           >
-            <X className="h-4 w-4" />
+            <X className="h-5 w-5 sm:h-6 sm:w-6" />
           </Button>
 
           {/* Image counter */}
-          <div className="absolute left-4 top-4 z-10 bg-black/50 text-white px-2 py-1 rounded text-sm">
+          <div className="absolute left-2 top-2 sm:left-4 sm:top-4 z-20 bg-black/60 backdrop-blur-sm text-white px-3 py-2 rounded-full text-sm font-medium">
             {selectedIndex + 1} / {images.length}
           </div>
 
@@ -214,11 +214,11 @@ export function FullscreenCarousel({
           <div className="flex-1 overflow-hidden" ref={emblaRef}>
             <div className="flex h-full">
               {images.map((image, index) => (
-                <div key={image.id} className="flex-[0_0_100%] min-w-0 relative flex items-center justify-center">
+                <div key={image.id} className="flex-[0_0_100%] min-w-0 relative flex items-center justify-center p-4 sm:p-8">
                   <img
                     src={api.products.getImageUrl(productId, image.id)}
                     alt={image.alt_text || `Product image ${index + 1}`}
-                    className="max-w-full max-h-full object-contain"
+                    className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
                     onError={(e) => {
                       const target = e.target as HTMLImageElement
                       target.src = '/placeholder.svg'
@@ -235,39 +235,41 @@ export function FullscreenCarousel({
               <Button
                 variant="ghost"
                 size="icon"
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-white hover:bg-white/20 h-12 w-12"
+                className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 text-white hover:bg-white/20 backdrop-blur-sm bg-black/30 rounded-full h-12 w-12 sm:h-14 sm:w-14 transition-all duration-200 hover:scale-110"
                 onClick={() => emblaApi?.scrollPrev()}
               >
-                <ChevronLeft className="h-6 w-6" />
+                <ChevronLeft className="h-6 w-6 sm:h-7 sm:w-7" />
               </Button>
               <Button
                 variant="ghost"
                 size="icon"
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-white hover:bg-white/20 h-12 w-12"
+                className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 text-white hover:bg-white/20 backdrop-blur-sm bg-black/30 rounded-full h-12 w-12 sm:h-14 sm:w-14 transition-all duration-200 hover:scale-110"
                 onClick={() => emblaApi?.scrollNext()}
               >
-                <ChevronRight className="h-6 w-6" />
+                <ChevronRight className="h-6 w-6 sm:h-7 sm:w-7" />
               </Button>
             </>
           )}
 
           {/* Bottom thumbnails */}
           {images.length > 1 && (
-            <div className="p-4 bg-black/80">
-              <div className="flex gap-2 justify-center overflow-x-auto max-w-full">
+            <div className="p-2 sm:p-4 bg-gradient-to-t from-black/90 to-transparent backdrop-blur-sm">
+              <div className="flex gap-2 sm:gap-3 justify-center overflow-x-auto max-w-full scrollbar-hide">
                 {images.map((image, index) => (
                   <button
                     key={image.id}
                     className={cn(
-                      "flex-shrink-0 w-16 h-16 rounded overflow-hidden border-2 transition-colors",
-                      index === selectedIndex ? "border-white" : "border-white/30"
+                      "flex-shrink-0 w-12 h-12 sm:w-16 sm:h-16 rounded-lg overflow-hidden border-2 transition-all duration-200 hover:scale-105",
+                      index === selectedIndex 
+                        ? "border-white shadow-lg shadow-white/20 scale-110" 
+                        : "border-white/30 hover:border-white/60"
                     )}
                     onClick={() => emblaApi?.scrollTo(index)}
                   >
                     <img
                       src={api.products.getImageUrl(productId, image.id)}
                       alt={image.alt_text || `Thumbnail ${index + 1}`}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover transition-opacity duration-200 hover:opacity-80"
                       onError={(e) => {
                         const target = e.target as HTMLImageElement
                         target.src = '/placeholder.svg'
