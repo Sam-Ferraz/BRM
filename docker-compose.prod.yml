@@ -1,7 +1,6 @@
 services:
   postgres:
     image: postgres:17-alpine
-    container_name: brm-postgres-prod
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: brm_muito_loko_birl
@@ -11,7 +10,6 @@ services:
       - "5432:5432"
     volumes:
       - brm_postgres_data:/var/lib/postgresql/data
-    restart: always
     networks:
       - brm-prod-network
     healthcheck:
@@ -20,13 +18,18 @@ services:
       timeout: 10s
       retries: 5
       start_period: 30s
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
 
   app:
     build:
       context: /root/Repos/brm
       dockerfile: Dockerfile
       target: production
-    container_name: brm-app-prod
     depends_on:
       postgres:
         condition: service_healthy
@@ -36,7 +39,6 @@ services:
       - "3001:3002"  # Map to 3001 on host, 3002 in container
     volumes:
       - /root/brm/uploads:/app/uploads  # For file uploads if needed
-    restart: always
     networks:
       - brm-prod-network
     healthcheck:
@@ -44,12 +46,23 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 60s
+      start_period: 30s
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 30s
+        order: start-first
+        failure_action: rollback
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
 
   # Migration service (run when needed)
   flyway:
     image: flyway/flyway:11.11.1
-    container_name: brm-flyway-prod
     depends_on:
       postgres:
         condition: service_healthy
@@ -68,6 +81,10 @@ services:
     profiles:
       - migration
     command: migrate
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: none
 
 volumes:
   brm_postgres_data:
@@ -79,5 +96,5 @@ volumes:
 
 networks:
   brm-prod-network:
-    external: true
-    name: brm-prod-network
+    driver: overlay
+    attachable: true
