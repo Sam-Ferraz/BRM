@@ -1,0 +1,84 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: brm-postgres-prod
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: brm_muito_loko_birl
+      POSTGRES_DB: brm
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - brm_postgres_data:/var/lib/postgresql/data
+    restart: always
+    networks:
+      - brm-prod-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d brm"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  app:
+    build:
+      context: /root/Repos/brm
+      dockerfile: Dockerfile
+      target: production
+    container_name: brm-app-prod
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - /root/brm/production.env
+    ports:
+      - "3001:3002"  # Map to 3001 on host, 3002 in container
+    volumes:
+      - /root/brm/uploads:/app/uploads  # For file uploads if needed
+    restart: always
+    networks:
+      - brm-prod-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Migration service (run when needed)
+  flyway:
+    image: flyway/flyway:11.11.1
+    container_name: brm-flyway-prod
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - FLYWAY_URL=jdbc:postgresql://postgres:5432/brm
+      - FLYWAY_USER=postgres
+      - FLYWAY_PASSWORD=brm_muito_loko_birl
+      - FLYWAY_SCHEMAS=public
+      - FLYWAY_CONNECT_RETRIES=60
+      - FLYWAY_CONNECT_RETRIES_INTERVAL=1
+    volumes:
+      - /root/Repos/brm/db/migrations:/flyway/sql
+      - /root/Repos/brm/flyway.conf:/flyway/conf/flyway.conf
+    networks:
+      - brm-prod-network
+    profiles:
+      - migration
+
+volumes:
+  brm_postgres_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /root/brm/data/postgres
+
+networks:
+  brm-prod-network:
+    driver: bridge
+    name: brm-prod-network
