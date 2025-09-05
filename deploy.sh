@@ -41,6 +41,16 @@ if [ ! -f "package.json" ] || [ ! -f "docker-compose.prod.yml" ]; then
     exit 1
 fi
 
+# Copy production environment file to repository
+if [ -f "/root/brm/production.env" ]; then
+    print_status "Copying production.env to repository"
+    cp /root/brm/production.env .env
+    print_success "Production environment file copied"
+else
+    print_error "Production environment file not found at /root/brm/production.env"
+    exit 1
+fi
+
 # Step 1: Fetch latest trunk
 print_status "Fetching latest code from trunk..."
 git fetch origin
@@ -48,9 +58,19 @@ git checkout trunk
 git pull origin trunk
 print_success "Code updated to latest trunk"
 
-# Step 2: Run database migrations
+# Step 2: Create network if it doesn't exist
+print_status "Ensuring Docker network exists..."
+if ! docker network ls | grep -q "brm-prod-network"; then
+    print_status "Creating brm-prod-network..."
+    docker network create brm-prod-network
+    print_success "Network brm-prod-network created"
+else
+    print_status "Network brm-prod-network already exists"
+fi
+
+# Step 3: Run database migrations
 print_status "Running database migrations..."
-docker-compose -f docker-compose.prod.yml --profile migration up flyway --remove-orphans
+docker compose -f docker-compose.prod.yml --profile migration up flyway --remove-orphans
 if [ $? -eq 0 ]; then
     print_success "Database migrations completed"
 else
@@ -58,13 +78,13 @@ else
     exit 1
 fi
 
-# Step 3: Stop existing containers
+# Step 4: Stop existing containers
 print_status "Stopping existing containers..."
-docker-compose -f docker-compose.prod.yml down
+docker compose -f docker-compose.prod.yml down
 
-# Step 4: Rebuild Docker image
+# Step 5: Rebuild Docker image
 print_status "Rebuilding Docker image..."
-docker-compose -f docker-compose.prod.yml build --no-cache app
+docker compose -f docker-compose.prod.yml build --no-cache app
 if [ $? -eq 0 ]; then
     print_success "Docker image rebuilt successfully"
 else
@@ -72,9 +92,9 @@ else
     exit 1
 fi
 
-# Step 5: Start new containers
+# Step 6: Start new containers
 print_status "Starting new containers..."
-docker-compose -f docker-compose.prod.yml up -d
+docker compose -f docker-compose.prod.yml up -d
 if [ $? -eq 0 ]; then
     print_success "New containers started successfully"
 else
@@ -82,20 +102,20 @@ else
     exit 1
 fi
 
-# Step 6: Wait for health checks
+# Step 7: Wait for health checks
 print_status "Waiting for services to be healthy..."
 sleep 30
 
 # Check if app is healthy
-if docker-compose -f docker-compose.prod.yml ps app | grep -q "healthy"; then
+if docker compose -f docker-compose.prod.yml ps app | grep -q "healthy"; then
     print_success "Application is healthy and running"
 else
     print_warning "Application may not be fully healthy yet. Check logs with: docker-compose -f docker-compose.prod.yml logs app"
 fi
 
-# Step 7: Show status
+# Step 8: Show status
 print_status "Deployment completed! Service status:"
-docker-compose -f docker-compose.prod.yml ps
+docker compose -f docker-compose.prod.yml ps
 
 echo ""
 print_success "🎉 BRM deployment completed successfully!"

@@ -60,6 +60,10 @@ COPY --chown=nodejs:nodejs package*.json ./
 COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
 COPY --from=builder --chown=nodejs:nodejs /app/server ./server
 
+# Environment file is provided via docker-compose env_file
+
+
+
 # Expose port
 EXPOSE 3002
 
