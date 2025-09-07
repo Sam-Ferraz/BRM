@@ -67,10 +67,6 @@ COPY --from=builder --chown=nodejs:nodejs /app/server ./server
 # Expose port
 EXPOSE 3002
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
-  CMD curl -f http://localhost:3002/health || exit 1
-
 # Start the application with dumb-init
 ENTRYPOINT ["dumb-init", "--"]
 CMD ["node", "server/index.js"]
