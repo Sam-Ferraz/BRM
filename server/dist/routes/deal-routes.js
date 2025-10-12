@@ -1,0 +1,64 @@
+import { Router } from 'express';
+import { authenticateToken } from '../middleware/auth.js';
+export function createDealRoutes(dealService) {
+    const router = Router();
+    router.get('/', authenticateToken, async (req, res) => {
+        try {
+            const filters = {
+                search: req.query.search,
+                status: req.query.status,
+                sortBy: req.query.sortBy,
+                sortOrder: req.query.sortOrder
+            };
+            const result = await dealService.getAllDeals(filters);
+            res.json(result);
+        }
+        catch (error) {
+            console.error('Error in get deals route:', error);
+            res.status(500).json({ error: 'Internal server error' });
+        }
+    });
+    router.post('/', authenticateToken, async (req, res) => {
+        try {
+            const { client, value, status, date, description } = req.body;
+            const deal = await dealService.createDeal({ client, value, status, date, description });
+            res.json(deal);
+        }
+        catch (error) {
+            console.error('Error in create deal route:', error);
+            res.status(500).json({ error: 'Internal server error' });
+        }
+    });
+    router.put('/:id', authenticateToken, async (req, res) => {
+        try {
+            const id = parseInt(req.params.id);
+            const { client, value, status, date, description } = req.body;
+            const deal = await dealService.updateDeal(id, { client, value, status, date, description });
+            res.json(deal);
+        }
+        catch (error) {
+            console.error('Error in update deal route:', error);
+            if (error instanceof Error && error.message === 'Deal not found') {
+                res.status(404).json({ error: 'Deal not found' });
+                return;
+            }
+            res.status(500).json({ error: 'Internal server error' });
+        }
+    });
+    router.delete('/:id', authenticateToken, async (req, res) => {
+        try {
+            const id = parseInt(req.params.id);
+            const result = await dealService.deleteDeal(id);
+            res.json(result);
+        }
+        catch (error) {
+            console.error('Error in delete deal route:', error);
+            if (error instanceof Error && error.message === 'Deal not found') {
+                res.status(404).json({ error: 'Deal not found' });
+                return;
+            }
+            res.status(500).json({ error: 'Internal server error' });
+        }
+    });
+    return router;
+}

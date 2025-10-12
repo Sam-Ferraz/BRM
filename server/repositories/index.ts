@@ -1,0 +1,7 @@
+export { BaseRepository } from './base-repository.js'
+export { UserRepository } from './user-repository.js'
+export { DealRepository } from './deal-repository.js'
+export { ClientRepository } from './client-repository.js'
+export { ProductRepository } from './product-repository.js'
+export { AppointmentRepository } from './appointment-repository.js'
+export { SalesAgendaRepository } from './sales-agenda-repository.js'

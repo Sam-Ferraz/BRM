@@ -1,38 +1,7 @@
 {
   "permissions": {
-    "allow": [
-      "Bash(mkdir:*)",
-      "Bash(xcopy:*)",
-      "Bash(robocopy:*)",
-      "Bash(copy:*)",
-      "Bash(dir \"C:\\Users\\Eduardo Garcia\\Documents\\Repos\\brm\\components\\ui\")",
-      "Bash(cp:*)",
-      "Bash(npm install)",
-      "Bash(npm run build:*)",
-      "Bash(rm:*)",
-      "Bash(mv:*)",
-      "Bash(npm run setup-db:*)",
-      "Bash(node:*)",
-      "Bash(npm run server:*)",
-      "Bash(curl:*)",
-      "Bash(npm run dev:*)",
-      "Bash(npm run lint)",
-      "Bash(npm run lint:*)",
-      "Bash(npx eslint:*)",
-      "Bash(docker:*)",
-      "Bash(make:*)",
-      "Bash(aws:*)",
-      "Bash(./deploy.sh)",
-      "Bash(sudo systemctl start:*)",
-      "Bash(sudo systemctl:*)",
-      "Bash(npm install:*)",
-      "Bash(npx tsc:*)",
-      "Bash(for route in deals clients appointments products sales-agenda)",
-      "Bash(do echo -n \"$route: \")",
-      "Bash(done)",
-      "Bash(export AWS_DEFAULT_REGION=sa-east-1)"
-    ],
-    "deny": [],
+    "allow": ["Bash"],
+    "deny": ["Bash(git commit:*)"],
     "defaultMode": "acceptEdits"
   }
 }
