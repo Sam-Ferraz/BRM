@@ -37,9 +37,11 @@ This is a comprehensive CRM application that manages customers, deals, products,
 - 🧭 React Router for navigation
 
 **Backend:**
-- 🟢 Node.js + Express
+- 🟢 Node.js + Express + TypeScript
 - 🐘 PostgreSQL database (AWS RDS)
 - 🔐 JWT authentication
+- 🏗️ Layered architecture (Repository/Service/Route)
+- 🧪 Jest testing framework
 - 🐳 Docker containerization
 
 **Infrastructure:**
@@ -93,15 +95,22 @@ See [Setup Guide](.github/SETUP.md) for detailed configuration steps.
 npm install
 
 # Start both servers (recommended)
-# Terminal 1: Start backend server
+# Terminal 1: Start TypeScript backend server
 npm run server:dev
 
 # Terminal 2: Start frontend development server  
 npm run dev
 
 # Or start servers individually:
-npm run server     # Backend (production mode)
-npm run dev        # Frontend only
+npm run server         # Backend (production mode)
+npm run server:build   # Build TypeScript backend
+npm run dev           # Frontend only
+
+# Backend testing and development
+npm run server:test           # Run backend tests
+npm run server:test:watch     # Run tests in watch mode
+npm run server:test:coverage  # Run tests with coverage
+npm run server:clean         # Clean build artifacts
 
 # Build for production
 npm run build

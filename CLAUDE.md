@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a **Business Relationship Management (BRM)** system - a comprehensive CRM application built with **Vite + React**. It manages customers, deals, products, service tickets, and sales agendas with a modern React/TypeScript stack.
 
-**Architecture**: Vite + React frontend with Node.js/Express backend, PostgreSQL database, JWT authentication, shadcn/ui components, TailwindCSS styling.
+**Architecture**: Vite + React frontend with TypeScript Node.js/Express backend, PostgreSQL database, JWT authentication, shadcn/ui components, TailwindCSS styling. Backend follows layered architecture with Repository/Service/Route pattern and comprehensive testing.
 
 ## Development Commands
 
@@ -19,6 +19,17 @@ npm run server
 
 # Backend server (development mode with watch)
 npm run server:dev
+
+# Build TypeScript backend
+npm run server:build
+
+# Clean backend build artifacts
+npm run server:clean
+
+# Backend testing
+npm run server:test           # Run tests
+npm run server:test:watch     # Run tests in watch mode
+npm run server:test:coverage  # Run tests with coverage
 
 # Start both servers (recommended for development)
 # Terminal 1: npm run server:dev
@@ -57,11 +68,17 @@ Do not commit those credentials anywhere. Just use it on dev testing.
 
 ## Key Architecture Patterns
 
-### Data Layer
-- **Backend API**: Express.js server with PostgreSQL database (`server/` directory)
-- **Authentication**: JWT-based auth with bcrypt password hashing (`server/auth.js`)
-- **Database**: PostgreSQL with connection pooling (`server/database.js`)
-- **API Endpoints**: RESTful APIs for all entities (`server/api-routes.js`)
+### Data Layer (TypeScript Backend)
+- **Backend API**: TypeScript Express.js server with PostgreSQL database (`server/` directory)
+- **Repository Layer**: Data access layer with dedicated repository classes (`server/repositories/`)
+  - `BaseRepository` - Abstract base with connection management and transactions
+  - `UserRepository`, `DealRepository`, `ClientRepository`, `ProductRepository`, `AppointmentRepository`, `SalesAgendaRepository`
+- **Service Layer**: Business logic layer with dependency injection (`server/services/`)
+  - `AuthService`, `DashboardService`, `DealService`, `ClientService`, `ProductService`, `AppointmentService`, `SalesAgendaService`
+- **Route Layer**: Clean route handlers with TypeScript types (`server/routes/`)
+- **Authentication**: JWT-based auth with bcrypt password hashing (`server/services/auth-service.ts`)
+- **Database**: PostgreSQL with connection pooling (`server/database.ts`)
+- **Testing**: Jest with mocked repositories for business logic testing (`server/__tests__/`)
 - **Frontend API**: Client-side API wrapper in `src/lib/api-client.ts` for frontend data operations
 - **Entities**: Deal (deals), Client (customers), Appointment (service tickets), Product (products), SalesAgenda (sales agenda), Users
 
@@ -120,11 +137,20 @@ Do not commit those credentials anywhere. Just use it on dev testing.
 - `src/App.tsx` - Main App component with React Router setup and protected routes
 - `vite.config.ts` - Vite configuration with path aliases
 
-**Backend:**
-- `server/index.js` - Express server setup and route definitions
-- `server/auth.js` - JWT authentication logic with bcrypt
-- `server/database.js` - PostgreSQL connection and database utilities
-- `server/api-routes.js` - RESTful API endpoints for business entities
+**Backend (TypeScript):**
+- `server/index.ts` - Express server setup with dependency injection
+- `server/types/index.ts` - TypeScript type definitions for all entities
+- `server/repositories/` - Data access layer
+  - `base-repository.ts` - Abstract base with connection management
+  - `user-repository.ts`, `deal-repository.ts`, `client-repository.ts`, etc.
+- `server/services/` - Business logic layer
+  - `auth-service.ts` - JWT authentication logic with bcrypt
+  - `dashboard-service.ts`, `deal-service.ts`, `client-service.ts`, etc.
+- `server/routes/` - Route handlers with TypeScript types
+  - `auth-routes.ts`, `deal-routes.ts`, `client-routes.ts`, etc.
+- `server/middleware/` - Express middleware (auth, upload, etc.)
+- `server/database.ts` - PostgreSQL connection and database utilities
+- `server/__tests__/` - Jest tests with mocked repositories
 
 **Development Tools:**
 - `dev-tools/test-browser.js` - Puppeteer browser automation test script
@@ -158,13 +184,18 @@ Do not commit those credentials anywhere. Just use it on dev testing.
 - **Date Formatting**: Uses date-fns with Brazil locale (dd/MM/yyyy format)
 - **Timezone Support**: User-selectable timezone in configuration page, defaults to São Paulo, persisted in localStorage
 
-**Backend:**
-- **Database**: PostgreSQL with connection pooling
+**Backend (TypeScript):**
+- **Language**: Full TypeScript with strict typing and ES modules
+- **Architecture**: Layered architecture with Repository/Service/Route pattern
+- **Database**: PostgreSQL with connection pooling and transaction support
 - **Database Migrations**: Flyway with Docker integration for schema versioning
 - **Authentication**: JWT tokens with configurable expiration
 - **Security**: bcrypt password hashing, CORS configuration
+- **Testing**: Jest framework with mocked repositories for unit testing
+- **Dependency Injection**: Services injected into routes for testability
 - **Environment**: Configurable via environment variables
-- **API**: RESTful design with proper error handling
+- **API**: RESTful design with proper error handling and TypeScript types
+- **Build**: TypeScript compilation to JavaScript with source maps
 
 **Development & Testing:**
 - **Puppeteer**: Headless browser automation for UI testing (devDependencies only)
@@ -177,7 +208,12 @@ Do not commit those credentials anywhere. Just use it on dev testing.
 1. User enters credentials on `/` (login page)
 2. Frontend validates email format and required fields
 3. POST request to `/api/auth/login` with credentials
-4. Backend verifies credentials against PostgreSQL users table
+4. **TypeScript Backend**: 
+   - Route handler (`auth-routes.ts`) receives request
+   - Calls `AuthService.loginUser()` with credentials
+   - `AuthService` uses `UserRepository.findByEmail()` to get user
+   - Password verification with bcrypt
+   - JWT token generation if credentials valid
 5. On success: JWT token generated and returned with user data
 6. Frontend stores token in localStorage and sets auth context
 7. Protected routes check authentication status via context
@@ -237,3 +273,54 @@ The project uses **Flyway** for database schema management with Docker integrati
 - **Avoid breaking migrations**: When removing a used column, first add the new column, update the code, then plan a future migration to remove the old column
 - **Update this documentation**: When learning about new patterns, tools, or implementation details that will speed up future work or reduce token usage, update this CLAUDE.md file immediately to preserve the knowledge
 - use english as default for development (variables, file names, columns, tables, etc)
+
+## TypeScript Backend Architecture
+
+The backend has been converted to TypeScript with a proper layered architecture:
+
+### Repository Layer (`server/repositories/`)
+**Purpose**: Data access layer that handles all database operations
+- `BaseRepository` - Abstract class with connection management and transaction support
+- Entity repositories: `UserRepository`, `DealRepository`, `ClientRepository`, `ProductRepository`, `AppointmentRepository`, `SalesAgendaRepository`
+- **Benefits**: Database queries are centralized, consistent error handling, easy to mock for testing
+
+### Service Layer (`server/services/`)
+**Purpose**: Business logic layer that orchestrates data operations and implements business rules
+- `AuthService` - Authentication logic (login, register, token management)
+- `DashboardService` - Aggregates stats from multiple repositories
+- Entity services: `DealService`, `ClientService`, `ProductService`, `AppointmentService`, `SalesAgendaService`
+- **Benefits**: Business logic is separated from HTTP concerns, fully testable with mocked repositories
+
+### Route Layer (`server/routes/`)
+**Purpose**: HTTP request/response handling with proper TypeScript types
+- Clean route handlers that delegate to services
+- TypeScript interfaces for request/response types
+- Centralized error handling
+- Authentication middleware integration
+
+### Testing Strategy
+- **Unit Tests**: Jest tests for service layer with mocked repositories
+- **Mocking**: Repository interfaces are mocked to test business logic in isolation
+- **Test Files**: Located in `server/__tests__/services/`
+- **Coverage**: Focus on business logic testing rather than database integration
+
+### Development Workflow
+```bash
+# Development with hot reload
+npm run server:dev
+
+# Build TypeScript
+npm run server:build
+
+# Run tests
+npm run server:test
+
+# Test with coverage
+npm run server:test:coverage
+```
+
+### Type Safety Benefits
+- **Compile-time checks**: Catch errors before runtime
+- **IntelliSense**: Better IDE support and auto-completion
+- **Refactoring safety**: Rename operations are safe across the codebase
+- **API contracts**: Clear interfaces between layers
