@@ -267,17 +267,23 @@ export function formatTime(timeStr: string): string {
   }
 }
 
-export function getCurrentDateTimeForForm(): { date: string; time: string } {
-  const now = new Date()
-  
+export function getCurrentDateTimeForForm(timezone?: string): { date: string; time: string } {
+  const targetTimezone = timezone || getUserTimezone()
+  const localized = formatDateForTimezone(new Date(), targetTimezone)
+  const [datePart, timePartWithSeconds] = localized.split('T')
+  const timePart = timePartWithSeconds ? timePartWithSeconds.slice(0, 5) : '00:00'
+
   return {
-    date: format(now, "yyyy-MM-dd"),
-    time: format(now, "HH:mm")
+    date: datePart,
+    time: timePart
   }
 }
 
-export function getCurrentDateForForm(): string {
-  return format(new Date(), "yyyy-MM-dd")
+export function getCurrentDateForForm(timezone?: string): string {
+  const targetTimezone = timezone || getUserTimezone()
+  const localized = formatDateForTimezone(new Date(), targetTimezone)
+  const [datePart] = localized.split('T')
+  return datePart
 }
 
 export function combineDateAndTime(date: string, time: string): string {

@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,6 +15,7 @@ import { ClientSearch } from "@/components/client-search"
 import type { Deal } from "@/lib/api-client"
 import { useMobileDetection } from "@/lib/mobile-utils"
 import { getCurrentDateForForm } from "@/lib/datetime"
+import { useTimezone } from "@/hooks/use-timezone"
 
 interface DealFormProps {
   deal?: Deal
@@ -27,18 +28,20 @@ interface DealFormProps {
 export function DealForm({ deal, open, onOpenChange, onSubmit, loading }: DealFormProps) {
   const { t } = useTranslation()
   const isMobile = useMobileDetection()
+  const currentTimezone = useTimezone()
+  const currentDate = useMemo(() => getCurrentDateForForm(currentTimezone), [currentTimezone])
   const [formData, setFormData] = useState({
     client: "",
     value: "",
     status: "proposta" as "proposta" | "venda_ganha" | "descartado" | "fechado" | "cancelado",
-    date: getCurrentDateForForm(),
+    date: currentDate,
     description: "",
   })
 
   useEffect(() => {
     if (deal) {
       // Convert date from database to form format (YYYY-MM-DD)
-      let formattedDate = getCurrentDateForForm()
+      let formattedDate = currentDate
       
       if (deal.date) {
         // If the date is in YYYY-MM-DD format, use it directly
@@ -65,11 +68,11 @@ export function DealForm({ deal, open, onOpenChange, onSubmit, loading }: DealFo
         client: "",
         value: "",
         status: "Proposta" as "Em Andamento" | "Proposta" | "Fechado",
-        date: getCurrentDateForForm(),
+        date: currentDate,
         description: "",
       })
     }
-  }, [deal, open])
+  }, [deal, open, currentDate])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()

@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -29,8 +29,11 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
   const { t } = useTranslation()
   const isMobile = useMobileDetection()
   const currentTimezone = useTimezone()
-  const { date: currentDate, time: currentTime } = getCurrentDateTimeForForm()
-  const currentDateTime = `${currentDate}T${currentTime}`
+  const { date: currentDate, time: currentTime } = useMemo(
+    () => getCurrentDateTimeForForm(currentTimezone),
+    [currentTimezone]
+  )
+  const currentDateTime = useMemo(() => `${currentDate}T${currentTime}`, [currentDate, currentTime])
   const [formData, setFormData] = useState({
     client: "",
     type: "chat" as "chat" | "call" | "in_person" | "visit",
