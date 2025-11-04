@@ -2,6 +2,11 @@ import { format, parseISO, isValid } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import i18n from './i18n'
 
+const APP_DEFAULT_TIMEZONE = 'America/Sao_Paulo'
+const APP_STORAGE_TIMEZONE = 'UTC'
+
+const timeZoneFormatterCache = new Map<string, Intl.DateTimeFormat>()
+
 function getUserTimezone(): string {
   return localStorage.getItem('userTimezone') || 'America/Sao_Paulo'
 }
@@ -17,6 +22,134 @@ function getDateLocale(): string {
     default:
       return 'pt-BR'
   }
+}
+
+function getTimeZoneFormatter(timeZone: string): Intl.DateTimeFormat {
+  if (!timeZoneFormatterCache.has(timeZone)) {
+    timeZoneFormatterCache.set(
+      timeZone,
+      new Intl.DateTimeFormat('en-US', {
+        timeZone,
+        hour12: false,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      })
+    )
+  }
+
+  return timeZoneFormatterCache.get(timeZone)!
+}
+
+function getTimeZoneOffsetForDate(date: Date, timeZone: string): number {
+  const formatter = getTimeZoneFormatter(timeZone)
+  const parts = formatter.formatToParts(date)
+  let year = date.getUTCFullYear()
+  let month = date.getUTCMonth() + 1
+  let day = date.getUTCDate()
+  let hour = date.getUTCHours()
+  let minute = date.getUTCMinutes()
+  let second = date.getUTCSeconds()
+
+  for (const part of parts) {
+    if (part.type === 'literal') continue
+    const numericValue = Number(part.value)
+    switch (part.type) {
+      case 'year':
+        year = numericValue
+        break
+      case 'month':
+        month = numericValue
+        break
+      case 'day':
+        day = numericValue
+        break
+      case 'hour':
+        hour = numericValue
+        break
+      case 'minute':
+        minute = numericValue
+        break
+      case 'second':
+        second = numericValue
+        break
+      default:
+        break
+    }
+  }
+
+  const zonedTime = Date.UTC(year, month - 1, day, hour, minute, second)
+  return zonedTime - date.getTime()
+}
+
+function parseDateTimeWithoutTimezone(dateTime: string): {
+  year: number
+  month: number
+  day: number
+  hour: number
+  minute: number
+  second: number
+} | null {
+  const [datePart, timePart] = dateTime.split('T')
+  if (!datePart || !timePart) return null
+
+  const [yearStr, monthStr, dayStr] = datePart.split('-')
+  const timeSegments = timePart.split(':')
+  if (timeSegments.length < 2) return null
+
+  const [hourStr, minuteStr, secondStrWithFraction] = timeSegments
+  const [secondStr] = (secondStrWithFraction || '').split('.')
+
+  const year = Number(yearStr)
+  const month = Number(monthStr)
+  const day = Number(dayStr)
+  const hour = Number(hourStr)
+  const minute = Number(minuteStr)
+  const second = secondStr ? Number(secondStr) : 0
+
+  const allNumbers = [year, month, day, hour, minute, second]
+  if (allNumbers.some(Number.isNaN)) {
+    return null
+  }
+
+  return { year, month, day, hour, minute, second }
+}
+
+function createDateInTimeZone(
+  parts: { year: number; month: number; day: number; hour: number; minute: number; second: number },
+  timeZone: string
+): Date {
+  const { year, month, day, hour, minute, second } = parts
+  const naiveUtcDate = new Date(Date.UTC(year, month - 1, day, hour, minute, second))
+
+  let offset = getTimeZoneOffsetForDate(naiveUtcDate, timeZone)
+  let adjustedDate = new Date(naiveUtcDate.getTime() - offset)
+
+  const recalculatedOffset = getTimeZoneOffsetForDate(adjustedDate, timeZone)
+  if (recalculatedOffset !== offset) {
+    adjustedDate = new Date(naiveUtcDate.getTime() - recalculatedOffset)
+  }
+
+  return adjustedDate
+}
+
+function formatDateForTimezone(date: Date, timeZone: string): string {
+  const formatter = new Intl.DateTimeFormat('sv-SE', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  })
+
+  const [datePart, timePart] = formatter.format(date).split(' ')
+  return `${datePart}T${timePart}`
 }
 
 export function formatDateTime(dateTimeStr: string, timezone?: string): string {
@@ -37,8 +170,13 @@ export function formatDateTime(dateTimeStr: string, timezone?: string): string {
         // Has timezone info, parse directly
         date = parseISO(cleanedDateTimeStr)
       } else {
-        // No timezone info, assume it's UTC (from database storage)
-        date = new Date(cleanedDateTimeStr + 'Z')
+        const parsed = parseDateTimeWithoutTimezone(cleanedDateTimeStr)
+        if (parsed) {
+          date = createDateInTimeZone(parsed, APP_STORAGE_TIMEZONE)
+        } else {
+          // Fallback to interpreting as UTC
+          date = new Date(cleanedDateTimeStr + 'Z')
+        }
       }
     } else {
       // For "YYYY-MM-DD" format, create date in UTC
@@ -77,8 +215,13 @@ export function formatDate(dateStr: string, timezone?: string): string {
         // Has timezone info, parse directly
         date = parseISO(dateStr)
       } else {
-        // No timezone info, assume it's UTC (from database storage)
-        date = new Date(dateStr + 'Z')
+        const parsed = parseDateTimeWithoutTimezone(dateStr)
+        if (parsed) {
+          date = createDateInTimeZone(parsed, APP_STORAGE_TIMEZONE)
+        } else {
+          // No timezone info, assume it's UTC
+          date = new Date(dateStr + 'Z')
+        }
       }
     } else {
       // For "YYYY-MM-DD" format, create date in UTC
@@ -167,23 +310,23 @@ export function convertFromAppToLocal(appDateTime: string, userTimezone?: string
     // Use the user's configured timezone
     const timezone = userTimezone || getUserTimezone()
     
-    // Parse the datetime from storage (assumed to be in São Paulo timezone)
-    const appDate = new Date(appDateTime)
+    const hasExplicitTimezone = /([+-]\d{2}:\d{2}|Z)$/i.test(appDateTime)
+    let appDate: Date
+    if (hasExplicitTimezone) {
+      // ISO string with timezone information
+      appDate = new Date(appDateTime)
+    } else {
+      const parsed = parseDateTimeWithoutTimezone(appDateTime)
+      if (parsed) {
+        // Interpret storage timestamps (without timezone) using the configured storage timezone
+        appDate = createDateInTimeZone(parsed, APP_STORAGE_TIMEZONE)
+      } else {
+        appDate = new Date(appDateTime)
+      }
+    }
     
-    // Convert to user's timezone using Intl.DateTimeFormat
-    const userTimeString = new Intl.DateTimeFormat('sv-SE', {
-      timeZone: timezone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
-    }).format(appDate)
-    
-    // Format for datetime-local input
-    const [datePart, timePart] = userTimeString.split(' ')
-    return `${datePart}T${timePart}`
+    const localized = formatDateForTimezone(appDate, timezone)
+    return localized.slice(0, 16)
   } catch {
     return appDateTime
   }
@@ -197,20 +340,13 @@ export function convertFromLocalToApp(localDateTime: string, userTimezone?: stri
     // Use the user's configured timezone
     const timezone = userTimezone || getUserTimezone()
     
-    // Parse the datetime-local input as if it's in the user's timezone
-    // We need to create a proper date object that represents this time in the user's timezone
+    const parsed = parseDateTimeWithoutTimezone(localDateTime)
+    if (!parsed) return localDateTime
+
+    const userDate = createDateInTimeZone(parsed, timezone)
+    const storageFormatted = formatDateForTimezone(userDate, APP_STORAGE_TIMEZONE)
     
-    // Create a temporary date to get timezone offset
-    const tempDate = new Date()
-    const userOffset = new Date(tempDate.toLocaleString('sv-SE', { timeZone: timezone })).getTime() - 
-                       new Date(tempDate.toLocaleString('sv-SE', { timeZone: 'UTC' })).getTime()
-    
-    // Parse the local datetime and adjust for timezone
-    const localDate = new Date(localDateTime)
-    const adjustedDate = new Date(localDate.getTime() - userOffset)
-    
-    // Return ISO string for storage
-    return adjustedDate.toISOString().slice(0, 19)
+    return storageFormatted
   } catch {
     return localDateTime
   }
