@@ -6,6 +6,7 @@ services:
       POSTGRES_PASSWORD: brm_muito_loko_birl
       POSTGRES_DB: brm
       POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+      TZ: UTC
     ports:
       - "5432:5432"
     volumes:
@@ -35,6 +36,8 @@ services:
         condition: service_healthy
     env_file:
       - /root/brm/production.env
+    environment:
+      TZ: UTC
     ports:
       - "3001:3002"  # Map to 3001 on host, 3002 in container
     volumes:
