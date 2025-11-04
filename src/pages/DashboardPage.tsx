@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { Link } from "react-router-dom"
 import { useTranslation } from "react-i18next"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -15,6 +15,7 @@ import { ProductForm } from "@/components/forms/product-form"
 import { AppointmentForm } from "@/components/forms/appointment-form"
 import { api, AppointmentAnalytics } from "@/lib/api-client"
 import { formatDateForChart } from "@/lib/datetime"
+import { useTimezone } from "@/hooks/use-timezone"
 
 const formatAppointmentAnalytics = (analytics: AppointmentAnalytics[], t: any) => {
   return analytics.map(item => ({
@@ -46,62 +47,47 @@ export default function DashboardPage() {
   const fabRef = useRef<HTMLDivElement>(null)
   const { user, logout } = useAuth()
   const { toast } = useToast()
+  const timezone = useTimezone()
+
+  const defaultStats = {
+    totalDeals: 0,
+    totalClients: 0,
+    totalProducts: 0,
+    totalAppointments: 0,
+    totalSalesAgenda: 0,
+  }
+
+  const refreshStats = useCallback(async () => {
+    const [statsData, analytics] = await Promise.all([
+      api.dashboard.getStats(),
+      api.appointments.getAnalyticsLast7Days(timezone)
+    ])
+
+    setStats({
+      totalDeals: statsData.totalDeals,
+      totalClients: statsData.totalClients,
+      totalProducts: statsData.totalProducts,
+      totalAppointments: statsData.totalAppointments,
+      totalSalesAgenda: statsData.totalSalesAgenda,
+    })
+
+    setAppointmentAnalytics(analytics.data)
+  }, [timezone])
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [stats, analytics] = await Promise.all([
-          api.dashboard.getStats(),
-          api.appointments.getAnalyticsLast7Days()
-        ])
-        
-        setStats({
-          totalDeals: stats.totalDeals,
-          totalClients: stats.totalClients,
-          totalProducts: stats.totalProducts,
-          totalAppointments: stats.totalAppointments,
-          totalSalesAgenda: stats.totalSalesAgenda,
-        })
-        
-        setAppointmentAnalytics(analytics.data)
-        
+        await refreshStats()
       } catch (error) {
         console.error('Error fetching dashboard data:', error)
         // Keep default values on error
-        setStats({
-          totalDeals: 0,
-          totalClients: 0,
-          totalProducts: 0,
-          totalAppointments: 0,
-          totalSalesAgenda: 0,
-        })
+        setStats(defaultStats)
         setAppointmentAnalytics([])
       }
     }
     
     fetchData()
-  }, [])
-
-  const refreshStats = async () => {
-    try {
-      const [stats, analytics] = await Promise.all([
-        api.dashboard.getStats(),
-        api.appointments.getAnalyticsLast7Days()
-      ])
-      
-      setStats({
-        totalDeals: stats.totalDeals,
-        totalClients: stats.totalClients,
-        totalProducts: stats.totalProducts,
-        totalAppointments: stats.totalAppointments,
-        totalSalesAgenda: stats.totalSalesAgenda,
-      })
-      
-      setAppointmentAnalytics(analytics.data)
-    } catch (error) {
-      console.error('Error refreshing dashboard data:', error)
-    }
-  }
+  }, [refreshStats])
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent | TouchEvent) => {

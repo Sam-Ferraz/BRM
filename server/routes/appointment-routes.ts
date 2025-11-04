@@ -4,6 +4,17 @@ import { authenticateToken, AuthenticatedRequest } from '../middleware/auth.js'
 
 export function createAppointmentRoutes(appointmentService: AppointmentService): Router {
   const router = Router()
+  const DEFAULT_TIMEZONE = 'America/Sao_Paulo'
+
+  const isValidTimezone = (value: unknown): value is string => {
+    if (typeof value !== 'string') return false
+    try {
+      Intl.DateTimeFormat('en-US', { timeZone: value })
+      return true
+    } catch {
+      return false
+    }
+  }
 
   router.get('/', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
@@ -82,7 +93,8 @@ export function createAppointmentRoutes(appointmentService: AppointmentService):
   // Analytics routes
   router.get('/analytics/last-7-days', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      const result = await appointmentService.getLast7DaysAnalytics()
+      const timezone = isValidTimezone(req.query.timezone) ? req.query.timezone : DEFAULT_TIMEZONE
+      const result = await appointmentService.getLast7DaysAnalytics(timezone)
       res.json(result)
     } catch (error) {
       console.error('Error in appointments analytics route:', error)
@@ -92,7 +104,8 @@ export function createAppointmentRoutes(appointmentService: AppointmentService):
 
   router.get('/analytics/by-type/last-7-days', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      const result = await appointmentService.getLast7DaysAnalyticsByType()
+      const timezone = isValidTimezone(req.query.timezone) ? req.query.timezone : DEFAULT_TIMEZONE
+      const result = await appointmentService.getLast7DaysAnalyticsByType(timezone)
       res.json(result)
     } catch (error) {
       console.error('Error in appointments analytics by type route:', error)

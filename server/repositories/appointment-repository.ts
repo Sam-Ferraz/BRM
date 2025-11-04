@@ -98,40 +98,51 @@ export class AppointmentRepository extends BaseRepository {
     }
   }
 
-  async getLast7DaysAnalytics(): Promise<AppointmentAnalytics[]> {
+  async getLast7DaysAnalytics(timezone: string): Promise<AppointmentAnalytics[]> {
     const client = await this.getClient()
     try {
       await client.query('SET TIMEZONE = \'UTC\'')
       
       const query = `
-        WITH date_series AS (
-          SELECT generate_series(
-            (CURRENT_DATE - INTERVAL '6 days')::date,
-            CURRENT_DATE::date,
-            INTERVAL '1 day'
-          )::date AS date
+        WITH timezone_params AS (
+          SELECT $1::text AS timezone
+        ),
+        local_bounds AS (
+          SELECT 
+            ((now() AT TIME ZONE 'UTC') AT TIME ZONE timezone)::date AS today_local,
+            timezone
+          FROM timezone_params
+        ),
+        date_series AS (
+          SELECT 
+            generate_series(
+              (SELECT today_local FROM local_bounds) - INTERVAL '6 days',
+              (SELECT today_local FROM local_bounds),
+              INTERVAL '1 day'
+            )::date AS date
         ),
         appointments_data AS (
           SELECT 
-            DATE(scheduled_datetime AT TIME ZONE 'UTC' AT TIME ZONE $1) as appointment_date,
+            DATE(scheduled_datetime AT TIME ZONE 'UTC' AT TIME ZONE lb.timezone) AS appointment_date,
             answered,
-            COUNT(*) as count
-          FROM appointments 
-          WHERE DATE(scheduled_datetime AT TIME ZONE 'UTC' AT TIME ZONE $1) >= (CURRENT_DATE - INTERVAL '6 days')::date
-            AND DATE(scheduled_datetime AT TIME ZONE 'UTC' AT TIME ZONE $1) <= CURRENT_DATE::date
-          GROUP BY DATE(scheduled_datetime AT TIME ZONE 'UTC' AT TIME ZONE $1), answered
+            COUNT(*) AS count
+          FROM appointments
+          JOIN local_bounds lb ON TRUE
+          WHERE DATE(scheduled_datetime AT TIME ZONE 'UTC' AT TIME ZONE lb.timezone) BETWEEN 
+            lb.today_local - INTERVAL '6 days' AND lb.today_local
+          GROUP BY appointment_date, answered
         )
         SELECT 
-          ds.date::text as date,
-          COALESCE(SUM(CASE WHEN ad.answered = true THEN ad.count ELSE 0 END), 0) as answered,
-          COALESCE(SUM(CASE WHEN ad.answered = false THEN ad.count ELSE 0 END), 0) as not_answered
+          ds.date::text AS date,
+          COALESCE(SUM(CASE WHEN ad.answered = true THEN ad.count ELSE 0 END), 0) AS answered,
+          COALESCE(SUM(CASE WHEN ad.answered = false THEN ad.count ELSE 0 END), 0) AS not_answered
         FROM date_series ds
         LEFT JOIN appointments_data ad ON ds.date = ad.appointment_date
         GROUP BY ds.date
         ORDER BY ds.date;
       `
       
-      const result = await client.query(query, ['America/Sao_Paulo'])
+      const result = await client.query(query, [timezone])
       return result.rows.map(row => ({
         date: row.date,
         answered: parseInt(row.answered),
@@ -142,47 +153,57 @@ export class AppointmentRepository extends BaseRepository {
     }
   }
 
-  async getLast7DaysAnalyticsByType(): Promise<Record<string, AppointmentAnalytics[]>> {
+  async getLast7DaysAnalyticsByType(timezone: string): Promise<Record<string, AppointmentAnalytics[]>> {
     const client = await this.getClient()
     try {
       // Ensure UTC timezone
       await client.query('SET TIMEZONE = \'UTC\'')
       
       const query = `
-        WITH date_series AS (
-          SELECT generate_series(
-            CURRENT_DATE - INTERVAL '6 days',
-            CURRENT_DATE,
-            INTERVAL '1 day'
-          )::date AS date
+        WITH timezone_params AS (
+          SELECT $1::text AS timezone
+        ),
+        local_bounds AS (
+          SELECT 
+            ((now() AT TIME ZONE 'UTC') AT TIME ZONE timezone)::date AS today_local,
+            timezone
+          FROM timezone_params
+        ),
+        date_series AS (
+          SELECT 
+            generate_series(
+              (SELECT today_local FROM local_bounds) - INTERVAL '6 days',
+              (SELECT today_local FROM local_bounds),
+              INTERVAL '1 day'
+            )::date AS date
         ),
         appointment_types AS (
           SELECT DISTINCT type FROM appointments
         ),
         appointments_data AS (
           SELECT 
-            DATE(scheduled_datetime) as appointment_date,
+            DATE(scheduled_datetime AT TIME ZONE 'UTC' AT TIME ZONE lb.timezone) AS appointment_date,
             type,
             answered,
-            COUNT(*) as count
-          FROM appointments 
-          WHERE DATE(scheduled_datetime) >= CURRENT_DATE - INTERVAL '6 days'
-            AND DATE(scheduled_datetime) <= CURRENT_DATE
-          GROUP BY DATE(scheduled_datetime), type, answered
+            COUNT(*) AS count
+          FROM appointments
+          JOIN local_bounds lb ON TRUE
+          WHERE DATE(scheduled_datetime AT TIME ZONE 'UTC' AT TIME ZONE lb.timezone) BETWEEN 
+            lb.today_local - INTERVAL '6 days' AND lb.today_local
+          GROUP BY appointment_date, type, answered
         )
         SELECT 
-          ds.date::text as date,
+          ds.date::text AS date,
           at.type,
-          COALESCE(SUM(CASE WHEN ad.answered = true THEN ad.count ELSE 0 END), 0) as answered,
-          COALESCE(SUM(CASE WHEN ad.answered = false THEN ad.count ELSE 0 END), 0) as not_answered
+          COALESCE(SUM(CASE WHEN ad.answered = true THEN ad.count ELSE 0 END), 0) AS answered,
+          COALESCE(SUM(CASE WHEN ad.answered = false THEN ad.count ELSE 0 END), 0) AS not_answered
         FROM date_series ds
         CROSS JOIN appointment_types at
         LEFT JOIN appointments_data ad ON ds.date = ad.appointment_date AND at.type = ad.type
-        GROUP BY ds.date, at.type
         ORDER BY at.type, ds.date
       `
       
-      const result = await client.query(query)
+      const result = await client.query(query, [timezone])
       
       // Group results by type
       const groupedByType: Record<string, AppointmentAnalytics[]> = {}

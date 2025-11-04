@@ -62,9 +62,9 @@ export class AppointmentService {
     }
   }
 
-  async getLast7DaysAnalytics(): Promise<{ data: AppointmentAnalytics[] }> {
+  async getLast7DaysAnalytics(timezone: string): Promise<{ data: AppointmentAnalytics[] }> {
     try {
-      const analytics = await this.appointmentRepository.getLast7DaysAnalytics()
+      const analytics = await this.appointmentRepository.getLast7DaysAnalytics(timezone)
       return { data: analytics }
     } catch (error) {
       console.error('Error fetching appointments analytics:', error)
@@ -72,9 +72,9 @@ export class AppointmentService {
     }
   }
 
-  async getLast7DaysAnalyticsByType(): Promise<{ data: Record<string, AppointmentAnalytics[]> }> {
+  async getLast7DaysAnalyticsByType(timezone: string): Promise<{ data: Record<string, AppointmentAnalytics[]> }> {
     try {
-      const analytics = await this.appointmentRepository.getLast7DaysAnalyticsByType()
+      const analytics = await this.appointmentRepository.getLast7DaysAnalyticsByType(timezone)
       return { data: analytics }
     } catch (error) {
       console.error('Error fetching appointments analytics by type:', error)

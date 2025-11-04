@@ -9,6 +9,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Toolti
 import { useAuth } from "@/hooks/use-auth"
 import { api, AppointmentAnalytics, AppointmentAnalyticsByType } from "@/lib/api-client"
 import { formatDateForChart } from "@/lib/datetime"
+import { useTimezone } from "@/hooks/use-timezone"
 
 const formatAppointmentAnalytics = (analytics: AppointmentAnalytics[], t: any) => {
   return analytics.map(item => ({
@@ -64,6 +65,7 @@ const getAppointmentTypeTranslation = (type: string, t: any) => {
 export default function AnalyticsPage() {
   const { t } = useTranslation()
   const { user } = useAuth()
+  const timezone = useTimezone()
   const [appointmentAnalytics, setAppointmentAnalytics] = useState<AppointmentAnalytics[]>([])
   const [appointmentAnalyticsByType, setAppointmentAnalyticsByType] = useState<AppointmentAnalyticsByType>({})
   const [loading, setLoading] = useState(true)
@@ -73,8 +75,8 @@ export default function AnalyticsPage() {
       try {
         setLoading(true)
         const [analytics, analyticsByType] = await Promise.all([
-          api.appointments.getAnalyticsLast7Days(),
-          api.appointments.getAnalyticsByTypeLast7Days()
+          api.appointments.getAnalyticsLast7Days(timezone),
+          api.appointments.getAnalyticsByTypeLast7Days(timezone)
         ])
         
         setAppointmentAnalytics(analytics.data)
@@ -89,7 +91,7 @@ export default function AnalyticsPage() {
     }
     
     fetchData()
-  }, [])
+  }, [timezone])
 
   if (loading) {
     return (

@@ -356,12 +356,18 @@ export const api = {
       return apiClient.get<ApiResponse<Appointment>>(`/appointments${query ? `?${query}` : ''}`)
     },
 
-    getAnalyticsLast7Days: async (): Promise<{ data: AppointmentAnalytics[] }> => {
-      return apiClient.get<{ data: AppointmentAnalytics[] }>('/appointments/analytics/last-7-days')
+    getAnalyticsLast7Days: async (timezone?: string): Promise<{ data: AppointmentAnalytics[] }> => {
+      const params = new URLSearchParams()
+      if (timezone) params.append('timezone', timezone)
+      const query = params.toString()
+      return apiClient.get<{ data: AppointmentAnalytics[] }>(`/appointments/analytics/last-7-days${query ? `?${query}` : ''}`)
     },
 
-    getAnalyticsByTypeLast7Days: async (): Promise<{ data: AppointmentAnalyticsByType }> => {
-      return apiClient.get<{ data: AppointmentAnalyticsByType }>('/appointments/analytics/by-type/last-7-days')
+    getAnalyticsByTypeLast7Days: async (timezone?: string): Promise<{ data: AppointmentAnalyticsByType }> => {
+      const params = new URLSearchParams()
+      if (timezone) params.append('timezone', timezone)
+      const query = params.toString()
+      return apiClient.get<{ data: AppointmentAnalyticsByType }>(`/appointments/analytics/by-type/last-7-days${query ? `?${query}` : ''}`)
     },
 
     create: async (data: Omit<Appointment, "id">): Promise<Appointment> => {
