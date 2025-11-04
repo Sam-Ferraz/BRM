@@ -101,26 +101,25 @@ export class AppointmentRepository extends BaseRepository {
   async getLast7DaysAnalytics(): Promise<AppointmentAnalytics[]> {
     const client = await this.getClient()
     try {
-      // Ensure UTC timezone
       await client.query('SET TIMEZONE = \'UTC\'')
       
       const query = `
         WITH date_series AS (
           SELECT generate_series(
-            CURRENT_DATE - INTERVAL '6 days',
-            CURRENT_DATE,
+            (CURRENT_DATE - INTERVAL '6 days')::date,
+            CURRENT_DATE::date,
             INTERVAL '1 day'
           )::date AS date
         ),
         appointments_data AS (
           SELECT 
-            DATE(scheduled_datetime) as appointment_date,
+            DATE(scheduled_datetime AT TIME ZONE 'UTC' AT TIME ZONE $1) as appointment_date,
             answered,
             COUNT(*) as count
           FROM appointments 
-          WHERE DATE(scheduled_datetime) >= CURRENT_DATE - INTERVAL '6 days'
-            AND DATE(scheduled_datetime) <= CURRENT_DATE
-          GROUP BY DATE(scheduled_datetime), answered
+          WHERE DATE(scheduled_datetime AT TIME ZONE 'UTC' AT TIME ZONE $1) >= (CURRENT_DATE - INTERVAL '6 days')::date
+            AND DATE(scheduled_datetime AT TIME ZONE 'UTC' AT TIME ZONE $1) <= CURRENT_DATE::date
+          GROUP BY DATE(scheduled_datetime AT TIME ZONE 'UTC' AT TIME ZONE $1), answered
         )
         SELECT 
           ds.date::text as date,
@@ -129,10 +128,10 @@ export class AppointmentRepository extends BaseRepository {
         FROM date_series ds
         LEFT JOIN appointments_data ad ON ds.date = ad.appointment_date
         GROUP BY ds.date
-        ORDER BY ds.date
+        ORDER BY ds.date;
       `
       
-      const result = await client.query(query)
+      const result = await client.query(query, ['America/Sao_Paulo'])
       return result.rows.map(row => ({
         date: row.date,
         answered: parseInt(row.answered),
