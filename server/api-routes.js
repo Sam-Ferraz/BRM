@@ -41,29 +41,56 @@ export function createApiRoutes(app) {
   })
 
   // Appointments analytics route - last 7 days answered vs not answered
+  const DEFAULT_TIMEZONE = 'America/Sao_Paulo'
+
+  const resolveTimezone = (value) => {
+    if (typeof value !== 'string') return DEFAULT_TIMEZONE
+    try {
+      Intl.DateTimeFormat('en-US', { timeZone: value })
+      return value
+    } catch {
+      return DEFAULT_TIMEZONE
+    }
+  }
+
   app.get('/api/appointments/analytics/last-7-days', authenticateToken, async (req, res) => {
     const client = await pool.connect()
     try {
       // Ensure UTC timezone for this session
       await client.query('SET TIMEZONE = \'UTC\'')
+      const timezone = resolveTimezone(req.query.timezone)
       
       const query = `
-        WITH date_series AS (
-          SELECT generate_series(
-            CURRENT_DATE - INTERVAL '6 days',
-            CURRENT_DATE,
-            INTERVAL '1 day'
-          )::date AS date
+        WITH timezone_params AS (
+          SELECT COALESCE(
+            (SELECT name FROM pg_timezone_names WHERE name = $1),
+            'UTC'
+          ) AS timezone
+        ),
+        local_bounds AS (
+          SELECT 
+            timezone(timezone, now())::date AS today_local,
+            timezone
+          FROM timezone_params
+        ),
+        date_series AS (
+          SELECT 
+            generate_series(
+              (SELECT today_local FROM local_bounds) - INTERVAL '6 days',
+              (SELECT today_local FROM local_bounds),
+              INTERVAL '1 day'
+            )::date AS date
         ),
         appointments_data AS (
           SELECT 
-            DATE(scheduled_datetime) as appointment_date,
+            timezone(lb.timezone, scheduled_datetime AT TIME ZONE 'UTC')::date AS appointment_date,
             answered,
             COUNT(*) as count
-          FROM appointments 
-          WHERE DATE(scheduled_datetime) >= CURRENT_DATE - INTERVAL '6 days'
-            AND DATE(scheduled_datetime) <= CURRENT_DATE
-          GROUP BY DATE(scheduled_datetime), answered
+          FROM appointments
+          JOIN local_bounds lb ON TRUE
+          WHERE timezone(lb.timezone, scheduled_datetime AT TIME ZONE 'UTC')::date BETWEEN 
+            lb.today_local - INTERVAL '6 days' AND lb.today_local
+          GROUP BY appointment_date, answered
         )
         SELECT 
           ds.date::text as date,
@@ -75,7 +102,7 @@ export function createApiRoutes(app) {
         ORDER BY ds.date
       `
       
-      const result = await client.query(query)
+      const result = await client.query(query, [timezone])
       res.json({ data: result.rows })
     } catch (error) {
       console.error('Error fetching appointments analytics:', error)
@@ -91,28 +118,43 @@ export function createApiRoutes(app) {
     try {
       // Ensure UTC timezone for this session
       await client.query('SET TIMEZONE = \'UTC\'')
+      const timezone = resolveTimezone(req.query.timezone)
       
       const query = `
-        WITH date_series AS (
-          SELECT generate_series(
-            CURRENT_DATE - INTERVAL '6 days',
-            CURRENT_DATE,
-            INTERVAL '1 day'
-          )::date AS date
+        WITH timezone_params AS (
+          SELECT COALESCE(
+            (SELECT name FROM pg_timezone_names WHERE name = $1),
+            'UTC'
+          ) AS timezone
+        ),
+        local_bounds AS (
+          SELECT 
+            timezone(timezone, now())::date AS today_local,
+            timezone
+          FROM timezone_params
+        ),
+        date_series AS (
+          SELECT 
+            generate_series(
+              (SELECT today_local FROM local_bounds) - INTERVAL '6 days',
+              (SELECT today_local FROM local_bounds),
+              INTERVAL '1 day'
+            )::date AS date
         ),
         appointment_types AS (
           SELECT DISTINCT type FROM appointments
         ),
         appointments_data AS (
           SELECT 
-            DATE(scheduled_datetime) as appointment_date,
+            timezone(lb.timezone, scheduled_datetime AT TIME ZONE 'UTC')::date AS appointment_date,
             type,
             answered,
             COUNT(*) as count
-          FROM appointments 
-          WHERE DATE(scheduled_datetime) >= CURRENT_DATE - INTERVAL '6 days'
-            AND DATE(scheduled_datetime) <= CURRENT_DATE
-          GROUP BY DATE(scheduled_datetime), type, answered
+          FROM appointments
+          JOIN local_bounds lb ON TRUE
+          WHERE timezone(lb.timezone, scheduled_datetime AT TIME ZONE 'UTC')::date BETWEEN 
+            lb.today_local - INTERVAL '6 days' AND lb.today_local
+          GROUP BY appointment_date, type, answered
         )
         SELECT 
           ds.date::text as date,
@@ -126,7 +168,7 @@ export function createApiRoutes(app) {
         ORDER BY at.type, ds.date
       `
       
-      const result = await client.query(query)
+      const result = await client.query(query, [timezone])
       
       // Group results by type
       const groupedByType = {}
