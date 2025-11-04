@@ -211,6 +211,7 @@ export class AppointmentRepository extends BaseRepository {
       // Group results by type
       const groupedByType: Record<string, AppointmentAnalytics[]> = {}
       result.rows.forEach(row => {
+        if (!row.type) return
         if (!groupedByType[row.type]) {
           groupedByType[row.type] = []
         }
