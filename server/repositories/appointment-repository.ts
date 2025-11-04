@@ -105,11 +105,14 @@ export class AppointmentRepository extends BaseRepository {
       
       const query = `
         WITH timezone_params AS (
-          SELECT $1::text AS timezone
+          SELECT COALESCE(
+            (SELECT name FROM pg_timezone_names WHERE name = $1),
+            'UTC'
+          ) AS timezone
         ),
         local_bounds AS (
           SELECT 
-            ((now() AT TIME ZONE 'UTC') AT TIME ZONE timezone)::date AS today_local,
+            timezone(timezone, now())::date AS today_local,
             timezone
           FROM timezone_params
         ),
@@ -123,12 +126,12 @@ export class AppointmentRepository extends BaseRepository {
         ),
         appointments_data AS (
           SELECT 
-            DATE(scheduled_datetime AT TIME ZONE 'UTC' AT TIME ZONE lb.timezone) AS appointment_date,
+            timezone(lb.timezone, scheduled_datetime AT TIME ZONE 'UTC')::date AS appointment_date,
             answered,
             COUNT(*) AS count
           FROM appointments
           JOIN local_bounds lb ON TRUE
-          WHERE DATE(scheduled_datetime AT TIME ZONE 'UTC' AT TIME ZONE lb.timezone) BETWEEN 
+          WHERE timezone(lb.timezone, scheduled_datetime AT TIME ZONE 'UTC')::date BETWEEN 
             lb.today_local - INTERVAL '6 days' AND lb.today_local
           GROUP BY appointment_date, answered
         )
@@ -160,12 +163,15 @@ export class AppointmentRepository extends BaseRepository {
       await client.query('SET TIMEZONE = \'UTC\'')
       
       const query = `
-        WITH timezone_params AS (
-          SELECT $1::text AS timezone
+          WITH timezone_params AS (
+          SELECT COALESCE(
+            (SELECT name FROM pg_timezone_names WHERE name = $1),
+            'UTC'
+          ) AS timezone
         ),
         local_bounds AS (
           SELECT 
-            ((now() AT TIME ZONE 'UTC') AT TIME ZONE timezone)::date AS today_local,
+            timezone(timezone, now())::date AS today_local,
             timezone
           FROM timezone_params
         ),
@@ -177,30 +183,27 @@ export class AppointmentRepository extends BaseRepository {
               INTERVAL '1 day'
             )::date AS date
         ),
-        appointment_types AS (
-          SELECT DISTINCT type FROM appointments
-        ),
         appointments_data AS (
           SELECT 
-            DATE(scheduled_datetime AT TIME ZONE 'UTC' AT TIME ZONE lb.timezone) AS appointment_date,
-            type,
+            timezone(lb.timezone, scheduled_datetime AT TIME ZONE 'UTC')::date AS appointment_date,
             answered,
+            type,
             COUNT(*) AS count
           FROM appointments
           JOIN local_bounds lb ON TRUE
-          WHERE DATE(scheduled_datetime AT TIME ZONE 'UTC' AT TIME ZONE lb.timezone) BETWEEN 
+          WHERE timezone(lb.timezone, scheduled_datetime AT TIME ZONE 'UTC')::date BETWEEN 
             lb.today_local - INTERVAL '6 days' AND lb.today_local
-          GROUP BY appointment_date, type, answered
+          GROUP BY appointment_date, answered, type
         )
         SELECT 
           ds.date::text AS date,
-          at.type,
+          ad.type,
           COALESCE(SUM(CASE WHEN ad.answered = true THEN ad.count ELSE 0 END), 0) AS answered,
           COALESCE(SUM(CASE WHEN ad.answered = false THEN ad.count ELSE 0 END), 0) AS not_answered
         FROM date_series ds
-        CROSS JOIN appointment_types at
-        LEFT JOIN appointments_data ad ON ds.date = ad.appointment_date AND at.type = ad.type
-        ORDER BY at.type, ds.date
+        LEFT JOIN appointments_data ad ON ds.date = ad.appointment_date
+        GROUP BY ds.date, ad.type
+        ORDER BY ds.date;
       `
       
       const result = await client.query(query, [timezone])
