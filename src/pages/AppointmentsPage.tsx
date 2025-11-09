@@ -27,7 +27,6 @@ export default function AppointmentsPage() {
   const [loading, setLoading] = useState(true)
   const [formLoading, setFormLoading] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState("Todos")
   const [typeFilter, setTypeFilter] = useState("Todos")
   const [sortBy, setSortBy] = useState("")
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc")
@@ -55,7 +54,6 @@ export default function AppointmentsPage() {
       const filters: any = {}
       
       if (searchTerm) filters.search = searchTerm
-      if (statusFilter && statusFilter !== "Todos") filters.status = statusFilter
       if (typeFilter && typeFilter !== "Todos") filters.type = typeFilter
       if (sortBy) {
         filters.sortBy = sortBy
@@ -73,7 +71,7 @@ export default function AppointmentsPage() {
     } finally {
       setLoading(false)
     }
-  }, [searchTerm, statusFilter, typeFilter, sortBy, sortOrder, toast, t])
+  }, [searchTerm, typeFilter, sortBy, sortOrder, toast, t])
 
   useEffect(() => {
     fetchAppointments()
@@ -152,19 +150,6 @@ export default function AppointmentsPage() {
     }
   }
 
-  const getStatusBadgeVariant = (status: string) => {
-    switch (status) {
-      case "Concluído":
-        return "default"
-      case "Em Andamento":
-        return "secondary"
-      case "Pendente":
-        return "destructive"
-      default:
-        return "outline"
-    }
-  }
-
   const getTipoBadgeVariant = (tipo: string) => {
     switch (tipo) {
       case "chat":
@@ -234,17 +219,6 @@ export default function AppointmentsPage() {
                   className="pl-9"
                 />
               </div>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-full sm:w-40">
-                  <SelectValue placeholder={t('status')} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Todos">{t('allStatuses')}</SelectItem>
-                  <SelectItem value="Pendente">Pendente</SelectItem>
-                  <SelectItem value="Em Andamento">{t('inProgress')}</SelectItem>
-                  <SelectItem value="Concluído">{t('completed')}</SelectItem>
-                </SelectContent>
-              </Select>
               <Select value={typeFilter} onValueChange={setTypeFilter}>
                 <SelectTrigger className="w-full sm:w-40">
                   <SelectValue placeholder={t('type')} />
@@ -272,7 +246,6 @@ export default function AppointmentsPage() {
                       {t('client')} {sortBy === "client" && (sortOrder === "asc" ? "↑" : "↓")}
                     </TableHead>
                     <TableHead>{t('type')}</TableHead>
-                    <TableHead>{t('status')}</TableHead>
                     <TableHead>{t('answeredStatus')}</TableHead>
                     <TableHead 
                       className="cursor-pointer" 
@@ -303,11 +276,6 @@ export default function AppointmentsPage() {
                       <TableCell>
                         <Badge variant={getTipoBadgeVariant(appointment.type)}>
                           {getAppointmentTypeTranslation(appointment.type)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={getStatusBadgeVariant(appointment.status)}>
-                          {appointment.status}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -366,7 +334,7 @@ export default function AppointmentsPage() {
                   ))}
                   {appointments.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                         {t('noServicesFound')}
                       </TableCell>
                     </TableRow>

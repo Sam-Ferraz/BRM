@@ -57,10 +57,9 @@ export interface ProductImage {
 export interface Appointment {
   id: number
   client: string
-  type: 'Suporte' | 'Vendas' | 'Consultoria'
-  status: string
+  type: 'chat' | 'call' | 'in_person' | 'visit'
   scheduled_datetime: string
-  description: string
+  description?: string | null
   answered: boolean
   created_at?: Date
   updated_at?: Date

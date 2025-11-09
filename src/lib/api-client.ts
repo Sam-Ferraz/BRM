@@ -96,7 +96,6 @@ export interface Appointment {
   id: number
   client: string
   type: "chat" | "call" | "in_person" | "visit"
-  status: "Em Andamento" | "Concluído" | "Pendente"
   scheduled_datetime: string
   description?: string
   answered: boolean
@@ -340,14 +339,12 @@ export const api = {
   appointments: {
     getAll: async (filters?: {
       search?: string
-      status?: string
       type?: string
       sortBy?: string
       sortOrder?: "asc" | "desc"
     }): Promise<ApiResponse<Appointment>> => {
       const params = new URLSearchParams()
       if (filters?.search) params.append('search', filters.search)
-      if (filters?.status) params.append('status', filters.status)
       if (filters?.type) params.append('type', filters.type)
       if (filters?.sortBy) params.append('sortBy', filters.sortBy)
       if (filters?.sortOrder) params.append('sortOrder', filters.sortOrder)

@@ -20,7 +20,6 @@ export function createAppointmentRoutes(appointmentService: AppointmentService):
     try {
       const filters = {
         search: req.query.search as string,
-        status: req.query.status as string,
         type: req.query.type as string,
         sortBy: req.query.sortBy as string,
         sortOrder: req.query.sortOrder as 'asc' | 'desc'
@@ -36,11 +35,10 @@ export function createAppointmentRoutes(appointmentService: AppointmentService):
 
   router.post('/', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      const { client, type, status, scheduled_datetime, description, answered } = req.body
+      const { client, type, scheduled_datetime, description, answered } = req.body
       const appointment = await appointmentService.createAppointment({
         client,
         type,
-        status,
         scheduled_datetime,
         description,
         answered
@@ -55,11 +53,10 @@ export function createAppointmentRoutes(appointmentService: AppointmentService):
   router.put('/:id', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const id = parseInt(req.params.id)
-      const { client, type, status, scheduled_datetime, description, answered } = req.body
+      const { client, type, scheduled_datetime, description, answered } = req.body
       const appointment = await appointmentService.updateAppointment(id, {
         client,
         type,
-        status,
         scheduled_datetime,
         description,
         answered

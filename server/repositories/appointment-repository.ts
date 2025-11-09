@@ -8,7 +8,7 @@ export class AppointmentRepository extends BaseRepository {
       // Ensure UTC timezone
       await client.query('SET TIMEZONE = \'UTC\'')
       
-      const { search, status, type, sortBy, sortOrder } = filters
+      const { search, type, sortBy, sortOrder } = filters
       let query = 'SELECT * FROM appointments WHERE 1=1'
       const params: any[] = []
       let paramCount = 1
@@ -19,12 +19,6 @@ export class AppointmentRepository extends BaseRepository {
         paramCount++
       }
 
-      if (status && status !== 'All') {
-        query += ` AND status = $${paramCount}`
-        params.push(status)
-        paramCount++
-      }
-
       if (type && type !== 'All') {
         query += ` AND type = $${paramCount}`
         params.push(type)
@@ -32,7 +26,7 @@ export class AppointmentRepository extends BaseRepository {
       }
 
       if (sortBy) {
-        const validColumns = ['client', 'type', 'status', 'scheduled_datetime']
+        const validColumns = ['client', 'type', 'scheduled_datetime']
         if (validColumns.includes(sortBy)) {
           const order = sortOrder === 'desc' ? 'DESC' : 'ASC'
           query += ` ORDER BY ${sortBy} ${order}`
@@ -54,8 +48,8 @@ export class AppointmentRepository extends BaseRepository {
       // Ensure UTC timezone
       await client.query('SET TIMEZONE = \'UTC\'')
       const result = await client.query(
-        'INSERT INTO appointments (client, type, status, scheduled_datetime, description, answered) VALUES ($1, $2, $3, $4::timestamp, $5, $6) RETURNING *',
-        [appointment.client, appointment.type, appointment.status, appointment.scheduled_datetime, appointment.description, appointment.answered]
+        'INSERT INTO appointments (client, type, scheduled_datetime, description, answered) VALUES ($1, $2, $3::timestamp, $4, $5) RETURNING *',
+        [appointment.client, appointment.type, appointment.scheduled_datetime, appointment.description, appointment.answered]
       )
       return result.rows[0]
     } finally {
@@ -69,8 +63,8 @@ export class AppointmentRepository extends BaseRepository {
       // Ensure UTC timezone
       await client.query('SET TIMEZONE = \'UTC\'')
       const result = await client.query(
-        'UPDATE appointments SET client = $1, type = $2, status = $3, scheduled_datetime = $4::timestamp, description = $5, answered = $6, updated_at = CURRENT_TIMESTAMP WHERE id = $7 RETURNING *',
-        [appointment.client, appointment.type, appointment.status, appointment.scheduled_datetime, appointment.description, appointment.answered, id]
+        'UPDATE appointments SET client = $1, type = $2, scheduled_datetime = $3::timestamp, description = $4, answered = $5, updated_at = CURRENT_TIMESTAMP WHERE id = $6 RETURNING *',
+        [appointment.client, appointment.type, appointment.scheduled_datetime, appointment.description, appointment.answered, id]
       )
       return result.rows.length > 0 ? result.rows[0] : null
     } finally {

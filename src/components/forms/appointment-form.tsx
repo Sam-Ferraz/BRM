@@ -35,11 +35,10 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
   )
   const currentDateTime = useMemo(() => `${currentDate}T${currentTime}`, [currentDate, currentTime])
   const [formData, setFormData] = useState({
-    client: "",
-    type: "chat" as "chat" | "call" | "in_person" | "visit",
-    status: "Pendente" as "Em Andamento" | "Concluído" | "Pendente",
     scheduled_datetime: currentDateTime,
     description: "",
+    client: "",
+    type: "chat" as "chat" | "call" | "in_person" | "visit",
     answered: undefined as boolean | undefined,
   })
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
@@ -58,20 +57,18 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
       }
       
       setFormData({
-        client: appointment.client || "",
-        type: (appointment.type || "chat") as "chat" | "call" | "in_person" | "visit",
-        status: (appointment.status || "Pendente") as "Em Andamento" | "Concluído" | "Pendente",
         scheduled_datetime: formattedDateTime,
         description: appointment.description || "",
+        client: appointment.client || "",
+        type: (appointment.type || "chat") as "chat" | "call" | "in_person" | "visit",
         answered: appointment.answered,
       })
     } else {
       setFormData({
-        client: "",
-        type: "chat" as "chat" | "call" | "in_person" | "visit",
-        status: "Pendente" as "Em Andamento" | "Concluído" | "Pendente",
         scheduled_datetime: currentDateTime,
         description: "",
+        client: "",
+        type: "chat" as "chat" | "call" | "in_person" | "visit",
         answered: undefined,
       })
     }
@@ -129,6 +126,29 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
+            <Label htmlFor="scheduled_datetime">
+              {t('dateTime')} <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              id="scheduled_datetime"
+              type="datetime-local"
+              value={formData.scheduled_datetime}
+              onChange={(e) => setFormData({ ...formData, scheduled_datetime: e.target.value })}
+              required
+              {...(!isMobile && { tabIndex: 1 })}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="description">{t('description')}</Label>
+            <Textarea
+              id="description"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              rows={3}
+              {...(!isMobile && { tabIndex: 2 })}
+            />
+          </div>
+          <div className="space-y-2">
             <Label htmlFor="client">
               {t('client')} <span className="text-red-500">*</span>
             </Label>
@@ -145,7 +165,7 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
           <div className="space-y-2">
             <Label htmlFor="type">{t('type')}</Label>
             <Select value={formData.type} onValueChange={(value) => setFormData({ ...formData, type: value as any })}>
-              <SelectTrigger {...(!isMobile && { tabIndex: 2 })}>
+              <SelectTrigger {...(!isMobile && { tabIndex: 3 })}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -155,35 +175,6 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
                 <SelectItem value="visit">{t('visitType')}</SelectItem>
               </SelectContent>
             </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="status">{t('status')}</Label>
-            <Select
-              value={formData.status}
-              onValueChange={(value) => setFormData({ ...formData, status: value as any })}
-            >
-              <SelectTrigger {...(!isMobile && { tabIndex: 3 })}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Pendente">{t('pending')}</SelectItem>
-                <SelectItem value="Em Andamento">{t('inProgress')}</SelectItem>
-                <SelectItem value="Concluído">{t('completed')}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="scheduled_datetime">
-              {t('dateTime')} <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="scheduled_datetime"
-              type="datetime-local"
-              value={formData.scheduled_datetime}
-              onChange={(e) => setFormData({ ...formData, scheduled_datetime: e.target.value })}
-              required
-              {...(!isMobile && { tabIndex: 4 })}
-            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="answered">
@@ -198,21 +189,11 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
               <p className="text-sm text-red-500">{errors.answered}</p>
             )}
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="description">{t('description')}</Label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              rows={3}
-              {...(!isMobile && { tabIndex: 6 })}
-            />
-          </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} {...(!isMobile && { tabIndex: 7 })}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} {...(!isMobile && { tabIndex: 5 })}>
               {t('cancel')}
             </Button>
-            <Button type="submit" disabled={loading} {...(!isMobile && { tabIndex: 8 })}>
+            <Button type="submit" disabled={loading} {...(!isMobile && { tabIndex: 6 })}>
               {loading ? t('saving') : t('save')}
             </Button>
           </DialogFooter>
