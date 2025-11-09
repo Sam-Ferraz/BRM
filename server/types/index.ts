@@ -11,10 +11,16 @@ export interface User {
 export interface Deal {
   id: number
   client: string
-  value: string
-  status: 'Em Andamento' | 'Proposta' | 'Fechado'
-  date: string
-  description: string
+  origin_date: string
+  description?: string | null
+  client_phone?: string | null
+  client_origin?: 'online_lead' | 'own_portfolio' | 'duty_shift' | 'referral' | 'street_client' | null
+  purpose?: 'investment' | 'recreation' | 'both' | null
+  deal_type?: 'purchase' | 'purchase_exchange' | 'exchange' | null
+  gsv: string
+  property_name?: string | null
+  temperature?: 'warm' | 'mild' | 'cold' | null
+  status: 'service' | 'visit_foreseen' | 'visit_done' | 'proposal' | 'sold' | 'discarded'
   created_at?: Date
   updated_at?: Date
 }

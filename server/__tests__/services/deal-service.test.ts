@@ -23,25 +23,37 @@ describe('DealService', () => {
       {
         id: 1,
         client: 'Test Client',
-        value: '1000.00',
-        status: 'Em Andamento',
-        date: '2025-01-15',
-        description: 'Test deal'
+        origin_date: '2025-01-15',
+        description: 'Test deal',
+        client_phone: '123456789',
+        client_origin: 'online_lead',
+        purpose: 'investment',
+        deal_type: 'purchase',
+        gsv: '1000.00',
+        property_name: 'Property A',
+        temperature: 'warm',
+        status: 'service'
       },
       {
         id: 2,
         client: 'Another Client',
-        value: '2000.00',
-        status: 'Fechado',
-        date: '2025-01-16',
-        description: 'Another deal'
+        origin_date: '2025-01-16',
+        description: 'Another deal',
+        client_phone: '987654321',
+        client_origin: 'own_portfolio',
+        purpose: 'recreation',
+        deal_type: 'purchase_exchange',
+        gsv: '2000.00',
+        property_name: 'Property B',
+        temperature: 'mild',
+        status: 'sold'
       }
     ]
 
     it('should return all deals with filters', async () => {
       // Arrange
       mockDealRepository.findAll.mockResolvedValue(mockDeals)
-      const filters = { search: 'test', status: 'Em Andamento' }
+      const filters = { search: 'test', status: 'service' }
 
       // Act
       const result = await dealService.getAllDeals(filters)
@@ -62,12 +74,18 @@ describe('DealService', () => {
   })
 
   describe('createDeal', () => {
-    const newDealData = {
+    const newDealData: Omit<Deal, 'id' | 'created_at' | 'updated_at'> = {
       client: 'New Client',
-      value: '3000.00',
-      status: 'Proposta' as const,
-      date: '2025-01-17',
-      description: 'New deal'
+      origin_date: '2025-01-17',
+      description: 'New deal',
+      client_phone: '5551234',
+      client_origin: 'referral',
+      purpose: 'both',
+      deal_type: 'exchange',
+      gsv: '3000.00',
+      property_name: 'Property C',
+      temperature: 'cold',
+      status: 'proposal'
     }
 
     const createdDeal: Deal = {
@@ -97,12 +115,18 @@ describe('DealService', () => {
   })
 
   describe('updateDeal', () => {
-    const updateData = {
+    const updateData: Omit<Deal, 'id' | 'created_at' | 'updated_at'> = {
       client: 'Updated Client',
-      value: '4000.00',
-      status: 'Fechado' as const,
-      date: '2025-01-18',
-      description: 'Updated deal'
+      origin_date: '2025-01-18',
+      description: 'Updated deal',
+      client_phone: '0001111',
+      client_origin: 'duty_shift',
+      purpose: 'investment',
+      deal_type: 'purchase',
+      gsv: '4000.00',
+      property_name: 'Property D',
+      temperature: 'warm',
+      status: 'sold'
     }
 
     const updatedDeal: Deal = {

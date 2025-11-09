@@ -156,30 +156,47 @@ export default function DealsPage() {
     }
   }
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: Deal['status']) => {
     switch (status) {
-      case "proposta":
-        return <Badge variant="secondary">{t('proposta')}</Badge>
-      case "venda_ganha":
-        return <Badge variant="default" className="bg-green-500">{t('vendaGanha')}</Badge>
-      case "descartado":
-        return <Badge variant="destructive">{t('descartado')}</Badge>
-      case "fechado":
-        return <Badge variant="outline">{t('fechado')}</Badge>
-      case "cancelado":
-        return <Badge variant="outline" className="bg-gray-500">{t('cancelado')}</Badge>
+      case "service":
+        return <Badge variant="secondary">{t('dealStatusService')}</Badge>
+      case "visit_foreseen":
+        return <Badge variant="outline" className="bg-amber-100 text-amber-900">{t('dealStatusVisitForeseen')}</Badge>
+      case "visit_done":
+        return <Badge variant="outline" className="bg-blue-100 text-blue-900">{t('dealStatusVisitDone')}</Badge>
+      case "proposal":
+        return <Badge variant="default">{t('dealStatusProposal')}</Badge>
+      case "sold":
+        return <Badge variant="default" className="bg-green-500">{t('dealStatusSold')}</Badge>
+      case "discarded":
+        return <Badge variant="destructive">{t('dealStatusDiscarded')}</Badge>
       default:
         return <Badge>{status}</Badge>
     }
   }
 
+  const getTemperatureBadge = (temperature?: Deal['temperature']) => {
+    if (!temperature) return '-'
+    switch (temperature) {
+      case 'warm':
+        return <Badge variant="default" className="bg-orange-500">{t('temperatureWarm')}</Badge>
+      case 'mild':
+        return <Badge variant="outline">{t('temperatureMild')}</Badge>
+      case 'cold':
+        return <Badge variant="secondary">{t('temperatureCold')}</Badge>
+      default:
+        return temperature
+    }
+  }
+
   const statusOptions = [
     { value: "Todos", label: t('allStatuses') },
-    { value: "proposta", label: t('proposta') },
-    { value: "venda_ganha", label: t('vendaGanha') },
-    { value: "descartado", label: t('descartado') },
-    { value: "fechado", label: t('fechado') },
-    { value: "cancelado", label: t('cancelado') }
+    { value: "service", label: t('dealStatusService') },
+    { value: "visit_foreseen", label: t('dealStatusVisitForeseen') },
+    { value: "visit_done", label: t('dealStatusVisitDone') },
+    { value: "proposal", label: t('dealStatusProposal') },
+    { value: "sold", label: t('dealStatusSold') },
+    { value: "discarded", label: t('dealStatusDiscarded') },
   ]
 
   return (
@@ -248,9 +265,9 @@ export default function DealsPage() {
                     </TableHead>
                     <TableHead 
                       className="cursor-pointer" 
-                      onClick={() => handleSort("value")}
+                      onClick={() => handleSort("gsv")}
                     >
-                      {t('value')} {sortBy === "value" && (sortOrder === "asc" ? "↑" : "↓")}
+                      {t('gsv')} {sortBy === "gsv" && (sortOrder === "asc" ? "↑" : "↓")}
                     </TableHead>
                     <TableHead 
                       className="cursor-pointer" 
@@ -258,12 +275,14 @@ export default function DealsPage() {
                     >
                       {t('status')} {sortBy === "status" && (sortOrder === "asc" ? "↑" : "↓")}
                     </TableHead>
+                    <TableHead>{t('temperature')}</TableHead>
                     <TableHead 
                       className="cursor-pointer" 
-                      onClick={() => handleSort("date")}
+                      onClick={() => handleSort("origin_date")}
                     >
-                      {t('date')} {sortBy === "date" && (sortOrder === "asc" ? "↑" : "↓")}
+                      {t('originDate')} {sortBy === "origin_date" && (sortOrder === "asc" ? "↑" : "↓")}
                     </TableHead>
+                    <TableHead>{t('property')}</TableHead>
                     <TableHead>{t('description')}</TableHead>
                     <TableHead className="text-right">{t('actions')}</TableHead>
                   </TableRow>
@@ -279,13 +298,23 @@ export default function DealsPage() {
                       }}
                     >
                       <TableCell className="font-medium">{deal.client}</TableCell>
-                      <TableCell>{deal.value}</TableCell>
+                      <TableCell>{deal.gsv || '-'}</TableCell>
                       <TableCell>{getStatusBadge(deal.status)}</TableCell>
+                      <TableCell>{getTemperatureBadge(deal.temperature)}</TableCell>
                       <TableCell>
                         <ReactiveDateTime 
-                          value={deal.date}
+                          value={deal.origin_date}
                           type="date"
                         />
+                      </TableCell>
+                      <TableCell>
+                        {deal.property_name ? (
+                          <span className="text-sm text-muted-foreground truncate max-w-32 block">
+                            {deal.property_name}
+                          </span>
+                        ) : (
+                          "-"
+                        )}
                       </TableCell>
                       <TableCell className="max-w-xs truncate">
                         {deal.description || "-"}
@@ -320,7 +349,7 @@ export default function DealsPage() {
                   ))}
                   {deals.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                         {t('noDealsFound')}
                       </TableCell>
                     </TableRow>

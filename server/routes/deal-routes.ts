@@ -24,8 +24,35 @@ export function createDealRoutes(dealService: DealService): Router {
 
   router.post('/', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      const { client, value, status, date, description } = req.body
-      const deal = await dealService.createDeal({ client, value, status, date, description })
+      const {
+        client,
+        origin_date,
+        description,
+        client_phone,
+        client_origin,
+        purpose,
+        deal_type,
+        gsv,
+        property_name,
+        temperature,
+        status,
+      } = req.body
+
+      const payload = {
+        client,
+        origin_date,
+        description,
+        client_phone,
+        client_origin,
+        purpose,
+        deal_type,
+        gsv,
+        property_name,
+        temperature,
+        status: status || 'service',
+      }
+
+      const deal = await dealService.createDeal(payload)
       res.json(deal)
     } catch (error) {
       console.error('Error in create deal route:', error)
@@ -36,8 +63,35 @@ export function createDealRoutes(dealService: DealService): Router {
   router.put('/:id', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const id = parseInt(req.params.id)
-      const { client, value, status, date, description } = req.body
-      const deal = await dealService.updateDeal(id, { client, value, status, date, description })
+      const {
+        client,
+        origin_date,
+        description,
+        client_phone,
+        client_origin,
+        purpose,
+        deal_type,
+        gsv,
+        property_name,
+        temperature,
+        status,
+      } = req.body
+
+      const payload = {
+        client,
+        origin_date,
+        description,
+        client_phone,
+        client_origin,
+        purpose,
+        deal_type,
+        gsv,
+        property_name,
+        temperature,
+        status: status || 'service',
+      }
+
+      const deal = await dealService.updateDeal(id, payload)
       res.json(deal)
     } catch (error) {
       console.error('Error in update deal route:', error)

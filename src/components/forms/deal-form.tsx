@@ -12,7 +12,9 @@ import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { CurrencyInput } from "@/components/ui/currency-input"
 import { ClientSearch } from "@/components/client-search"
-import type { Deal } from "@/lib/api-client"
+import { ProductSearch } from "@/components/product-search"
+import type { Deal, Client } from "@/lib/api-client"
+import { api } from "@/lib/api-client"
 import { useMobileDetection } from "@/lib/mobile-utils"
 import { getCurrentDateForForm } from "@/lib/datetime"
 import { useTimezone } from "@/hooks/use-timezone"
@@ -30,59 +32,177 @@ export function DealForm({ deal, open, onOpenChange, onSubmit, loading }: DealFo
   const isMobile = useMobileDetection()
   const currentTimezone = useTimezone()
   const currentDate = useMemo(() => getCurrentDateForForm(currentTimezone), [currentTimezone])
-  const [formData, setFormData] = useState({
-    client: "",
-    value: "",
-    status: "proposta" as "proposta" | "venda_ganha" | "descartado" | "fechado" | "cancelado",
-    date: currentDate,
+  type ClientOriginValue = Exclude<Deal['client_origin'], null | undefined>
+  type PurposeValue = Exclude<Deal['purpose'], null | undefined>
+  type DealTypeValue = Exclude<Deal['deal_type'], null | undefined>
+  type TemperatureValue = Exclude<Deal['temperature'], null | undefined>
+  type DealStatusValue = Deal['status']
+
+  type DealFormState = {
+    origin_date: string
+    description: string
+    client: string
+    client_phone: string
+    client_origin: ClientOriginValue
+    purpose: PurposeValue
+    deal_type: DealTypeValue
+    gsv: string
+    property_name: string
+    temperature: TemperatureValue
+    status: DealStatusValue
+  }
+
+  const [formData, setFormData] = useState<DealFormState>({
+    origin_date: currentDate,
     description: "",
+    client: "",
+    client_phone: "",
+    client_origin: "online_lead",
+    purpose: "investment",
+    deal_type: "purchase",
+    gsv: "",
+    property_name: "",
+    temperature: "warm",
+    status: "service",
   })
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
   useEffect(() => {
+    setErrors({})
     if (deal) {
-      // Convert date from database to form format (YYYY-MM-DD)
       let formattedDate = currentDate
-      
-      if (deal.date) {
-        // If the date is in YYYY-MM-DD format, use it directly
-        if (/^\d{4}-\d{2}-\d{2}$/.test(deal.date)) {
-          formattedDate = deal.date
+      if (deal.origin_date) {
+        if (/^\d{4}-\d{2}-\d{2}$/.test(deal.origin_date)) {
+          formattedDate = deal.origin_date
         } else {
-          // Parse other formats (like dd/MM/yyyy)
-          const date = new Date(deal.date)
-          if (!isNaN(date.getTime())) {
-            formattedDate = date.toISOString().split('T')[0]
+          const parsedDate = new Date(deal.origin_date)
+          if (!isNaN(parsedDate.getTime())) {
+            formattedDate = parsedDate.toISOString().split('T')[0]
           }
         }
       }
-      
+
       setFormData({
-        client: deal.client || "",
-        value: deal.value || "",
-        status: (deal.status || "Proposta") as "Em Andamento" | "Proposta" | "Fechado",
-        date: formattedDate,
+        origin_date: formattedDate,
         description: deal.description || "",
+        client: deal.client || "",
+        client_phone: deal.client_phone || "",
+        client_origin: (deal.client_origin || 'online_lead') as ClientOriginValue,
+        purpose: (deal.purpose || 'investment') as PurposeValue,
+        deal_type: (deal.deal_type || 'purchase') as DealTypeValue,
+        gsv: deal.gsv || "",
+        property_name: deal.property_name || "",
+        temperature: (deal.temperature || 'warm') as TemperatureValue,
+        status: (deal.status || 'service') as DealStatusValue,
       })
     } else {
       setFormData({
-        client: "",
-        value: "",
-        status: "Proposta" as "Em Andamento" | "Proposta" | "Fechado",
-        date: currentDate,
+        origin_date: currentDate,
         description: "",
+        client: "",
+        client_phone: "",
+        client_origin: 'online_lead',
+        purpose: 'investment',
+        deal_type: 'purchase',
+        gsv: "",
+        property_name: "",
+        temperature: 'warm',
+        status: 'service',
       })
     }
   }, [deal, open, currentDate])
 
+  useEffect(() => {
+    if (!formData.client || formData.client_phone) {
+      return
+    }
+
+    let isMounted = true
+
+    const fetchClientPhone = async () => {
+      try {
+        const response = await api.clients.getAll({ search: formData.client })
+        const matchedClient = response.data.find((client: Client) => client.name === formData.client)
+        if (isMounted) {
+          setFormData(prev => ({ ...prev, client_phone: matchedClient?.phone || '' }))
+        }
+      } catch (error) {
+        console.error('Error fetching client phone:', error)
+      }
+    }
+
+    fetchClientPhone()
+
+    return () => {
+      isMounted = false
+    }
+  }, [formData.client, formData.client_phone])
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    setErrors({})
+    const newErrors: Record<string, string> = {}
+
+    if (!formData.origin_date) {
+      newErrors.origin_date = t('originDate') || 'Origin date is required'
+    }
+
+    if (!formData.client.trim()) {
+      newErrors.client = t('clientRequired') || 'Client is required'
+    }
+
+    const gsvValue = typeof formData.gsv === 'string' ? formData.gsv : String(formData.gsv || '')
+    if (!gsvValue.trim()) {
+      newErrors.gsv = `${t('gsv') || 'GSV'} is required`
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors)
+      return
+    }
+
     onSubmit(formData)
   }
+
+  const clientOriginOptions: { value: ClientOriginValue; label: string }[] = [
+    { value: 'online_lead', label: t('onlineLead') },
+    { value: 'own_portfolio', label: t('clientBase') || t('ownPortfolio') },
+    { value: 'duty_shift', label: t('dutyShift') },
+    { value: 'referral', label: t('referral') },
+    { value: 'street_client', label: t('streetClient') },
+  ]
+
+  const purposeOptions: { value: PurposeValue; label: string }[] = [
+    { value: 'investment', label: t('purposeInvestment') },
+    { value: 'recreation', label: t('purposeRecreation') },
+    { value: 'both', label: t('purposeBoth') },
+  ]
+
+  const dealTypeOptions: { value: DealTypeValue; label: string }[] = [
+    { value: 'purchase', label: t('dealTypePurchase') },
+    { value: 'purchase_exchange', label: t('dealTypePurchaseExchange') },
+    { value: 'exchange', label: t('dealTypeExchange') },
+  ]
+
+  const temperatureOptions: { value: TemperatureValue; label: string }[] = [
+    { value: 'warm', label: t('temperatureWarm') },
+    { value: 'mild', label: t('temperatureMild') },
+    { value: 'cold', label: t('temperatureCold') },
+  ]
+
+  const statusOptions: { value: DealStatusValue; label: string }[] = [
+    { value: 'service', label: t('dealStatusService') },
+    { value: 'visit_foreseen', label: t('dealStatusVisitForeseen') },
+    { value: 'visit_done', label: t('dealStatusVisitDone') },
+    { value: 'proposal', label: t('dealStatusProposal') },
+    { value: 'sold', label: t('dealStatusSold') },
+    { value: 'discarded', label: t('dealStatusDiscarded') },
+  ]
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
-        className="sm:max-w-[425px]"
+        className="sm:max-w-[620px]"
         {...(isMobile && {
           onOpenAutoFocus: (e) => e.preventDefault()
         })}
@@ -90,78 +210,198 @@ export function DealForm({ deal, open, onOpenChange, onSubmit, loading }: DealFo
         <DialogHeader>
           <DialogTitle>{deal ? t('editDeal') : t('newDeal')}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="max-h-[70vh] overflow-y-auto pr-2">
+        <form onSubmit={handleSubmit} className="space-y-4 pb-4">
           <div className="space-y-2">
-            <Label htmlFor="cliente">{t('client')}</Label>
+            <Label htmlFor="origin_date">
+              {t('originDate')} <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              id="origin_date"
+              type="date"
+              value={formData.origin_date}
+              onChange={(e) => setFormData({ ...formData, origin_date: e.target.value })}
+              required
+            />
+            {errors.origin_date && (
+              <p className="text-sm text-red-500">{errors.origin_date}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="description">{t('description')}</Label>
+            <Textarea
+              id="description"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              rows={3}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="client">{t('client')}</Label>
             <ClientSearch
               value={formData.client}
-              onSelect={(clientName) => setFormData({ ...formData, client: clientName })}
+              onSelect={(clientName) => {
+                setFormData({ ...formData, client: clientName, client_phone: '' })
+              }}
+              onClientSelect={(client: Client) => {
+                setFormData(prev => ({ ...prev, client_phone: client.phone || '' }))
+              }}
               placeholder={t('selectClient')}
+              className={`w-full ${errors.client ? 'ring-2 ring-red-500' : ''}`}
+            />
+            {errors.client && (
+              <p className="text-sm text-red-500">{errors.client}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="client_phone">{t('clientPhone')}</Label>
+            <Input
+              id="client_phone"
+              value={formData.client_phone}
+              placeholder={t('noPhoneAvailable') || ''}
+              readOnly
+              className="bg-muted"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="client_origin">{t('clientOrigin')}</Label>
+            <Select
+              value={formData.client_origin}
+              onValueChange={(value) => setFormData({ ...formData, client_origin: value as ClientOriginValue })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {clientOriginOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="purpose">{t('purpose')}</Label>
+            <Select
+              value={formData.purpose}
+              onValueChange={(value) => setFormData({ ...formData, purpose: value as PurposeValue })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {purposeOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="deal_type">{t('dealType')}</Label>
+            <Select
+              value={formData.deal_type}
+              onValueChange={(value) => setFormData({ ...formData, deal_type: value as DealTypeValue })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {dealTypeOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="gsv">
+              {t('gsv')} <span className="text-red-500">*</span>
+            </Label>
+            <CurrencyInput
+              id="gsv"
+              value={formData.gsv}
+              onChange={(value) =>
+                setFormData({
+                  ...formData,
+                  gsv: typeof value === 'string' ? value : (value !== undefined && value !== null ? String(value) : '')
+                })
+              }
+              required
+            />
+            {errors.gsv && (
+              <p className="text-sm text-red-500">{errors.gsv}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="property_name">{t('property')}</Label>
+            <ProductSearch
+              value={formData.property_name}
+              onSelect={(propertyName) => setFormData({ ...formData, property_name: propertyName })}
+              placeholder={t('selectProduct')}
               className="w-full"
             />
           </div>
+
           <div className="space-y-2">
-            <Label htmlFor="valor">
-              {t('value')} <span className="text-red-500">*</span>
-            </Label>
-            <CurrencyInput
-              id="valor"
-              value={formData.value}
-              onChange={(value) => setFormData({ ...formData, value })}
-              required
-              {...(!isMobile && { tabIndex: 2 })}
-            />
+            <Label htmlFor="temperature">{t('temperature')}</Label>
+            <Select
+              value={formData.temperature}
+              onValueChange={(value) => setFormData({ ...formData, temperature: value as TemperatureValue })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {temperatureOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
+
           <div className="space-y-2">
             <Label htmlFor="status">{t('status')}</Label>
             <Select
               value={formData.status}
-              onValueChange={(value) => setFormData({ ...formData, status: value as any })}
+              onValueChange={(value) => setFormData({ ...formData, status: value as DealStatusValue })}
             >
-              <SelectTrigger {...(!isMobile && { tabIndex: 3 })}>
+              <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="proposta">{t('proposta')}</SelectItem>
-                <SelectItem value="venda_ganha">{t('vendaGanha')}</SelectItem>
-                <SelectItem value="descartado">{t('descartado')}</SelectItem>
-                <SelectItem value="fechado">{t('fechado')}</SelectItem>
-                <SelectItem value="cancelado">{t('cancelado')}</SelectItem>
+                {statusOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="data">
-              {t('date')} <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="data"
-              type="date"
-              value={formData.date}
-              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-              required
-              {...(!isMobile && { tabIndex: 4 })}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="descricao">{t('description')}</Label>
-            <Textarea
-              id="descricao"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              rows={3}
-              {...(!isMobile && { tabIndex: 5 })}
-            />
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} {...(!isMobile && { tabIndex: 6 })}>
+
+          <DialogFooter className="pt-2">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               {t('cancel')}
             </Button>
-            <Button type="submit" disabled={loading} {...(!isMobile && { tabIndex: 7 })}>
+            <Button type="submit" disabled={loading}>
               {loading ? t('saving') : t('save')}
             </Button>
           </DialogFooter>
         </form>
+        </div>
       </DialogContent>
     </Dialog>
   )

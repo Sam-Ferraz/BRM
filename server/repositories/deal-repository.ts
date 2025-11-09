@@ -23,13 +23,13 @@ export class DealRepository extends BaseRepository {
       }
 
       if (sortBy) {
-        const validColumns = ['client', 'value', 'status', 'date']
+        const validColumns = ['client', 'gsv', 'status', 'origin_date']
         if (validColumns.includes(sortBy)) {
           const order = sortOrder === 'desc' ? 'DESC' : 'ASC'
           query += ` ORDER BY ${sortBy} ${order}`
         }
       } else {
-        query += ' ORDER BY created_at DESC'
+        query += ' ORDER BY origin_date DESC NULLS LAST'
       }
 
       const result = await client.query(query, params)
@@ -43,8 +43,32 @@ export class DealRepository extends BaseRepository {
     const client = await this.getClient()
     try {
       const result = await client.query(
-        'INSERT INTO deals (client, value, status, date, description) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-        [deal.client, deal.value, deal.status, deal.date, deal.description]
+        `INSERT INTO deals (
+          client,
+          origin_date,
+          description,
+          client_phone,
+          client_origin,
+          purpose,
+          deal_type,
+          gsv,
+          property_name,
+          temperature,
+          status
+        ) VALUES ($1, $2::date, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
+        [
+          deal.client,
+          deal.origin_date || null,
+          deal.description || null,
+          deal.client_phone || null,
+          deal.client_origin || null,
+          deal.purpose || null,
+          deal.deal_type || null,
+          deal.gsv,
+          deal.property_name || null,
+          deal.temperature || null,
+          deal.status,
+        ]
       )
       return result.rows[0]
     } finally {
@@ -56,8 +80,34 @@ export class DealRepository extends BaseRepository {
     const client = await this.getClient()
     try {
       const result = await client.query(
-        'UPDATE deals SET client = $1, value = $2, status = $3, date = $4, description = $5, updated_at = CURRENT_TIMESTAMP WHERE id = $6 RETURNING *',
-        [deal.client, deal.value, deal.status, deal.date, deal.description, id]
+        `UPDATE deals SET
+          client = $1,
+          origin_date = $2::date,
+          description = $3,
+          client_phone = $4,
+          client_origin = $5,
+          purpose = $6,
+          deal_type = $7,
+          gsv = $8,
+          property_name = $9,
+          temperature = $10,
+          status = $11,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = $12 RETURNING *`,
+        [
+          deal.client,
+          deal.origin_date || null,
+          deal.description || null,
+          deal.client_phone || null,
+          deal.client_origin || null,
+          deal.purpose || null,
+          deal.deal_type || null,
+          deal.gsv,
+          deal.property_name || null,
+          deal.temperature || null,
+          deal.status,
+          id,
+        ]
       )
       return result.rows.length > 0 ? result.rows[0] : null
     } finally {

@@ -75,10 +75,16 @@ export const apiClient = new ApiClient()
 export interface Deal {
   id: number
   client: string
-  value: string
-  status: "proposta" | "venda_ganha" | "descartado" | "fechado" | "cancelado"
-  date: string
+  origin_date: string
   description?: string
+  client_phone?: string
+  client_origin?: 'online_lead' | 'own_portfolio' | 'duty_shift' | 'referral' | 'street_client'
+  purpose?: 'investment' | 'recreation' | 'both'
+  deal_type?: 'purchase' | 'purchase_exchange' | 'exchange'
+  gsv: string
+  property_name?: string
+  temperature?: 'warm' | 'mild' | 'cold'
+  status: 'service' | 'visit_foreseen' | 'visit_done' | 'proposal' | 'sold' | 'discarded'
 }
 
 export interface Client {
