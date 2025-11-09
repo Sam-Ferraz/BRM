@@ -10,7 +10,8 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import type { Appointment } from "@/lib/api-client"
+import type { Appointment, Client } from "@/lib/api-client"
+import { api } from "@/lib/api-client"
 import { useMobileDetection } from "@/lib/mobile-utils"
 import { getCurrentDateTimeForForm, convertFromAppToLocal, convertFromLocalToApp } from "@/lib/datetime"
 import { ClientSearch } from "@/components/client-search"
@@ -41,6 +42,7 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
     type: "chat" as "chat" | "call" | "in_person" | "visit",
     answered: undefined as boolean | undefined,
   })
+  const [selectedClientPhone, setSelectedClientPhone] = useState<string | null>(null)
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
 
   useEffect(() => {
@@ -63,6 +65,7 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
         type: (appointment.type || "chat") as "chat" | "call" | "in_person" | "visit",
         answered: appointment.answered,
       })
+      setSelectedClientPhone(null)
     } else {
       setFormData({
         scheduled_datetime: currentDateTime,
@@ -71,6 +74,7 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
         type: "chat" as "chat" | "call" | "in_person" | "visit",
         answered: undefined,
       })
+      setSelectedClientPhone(null)
     }
   }, [appointment, currentDateTime, open, currentTimezone])
   
@@ -81,6 +85,40 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
       setFormData(prev => ({ ...prev, scheduled_datetime: formattedDateTime }))
     }
   }, [currentTimezone, appointment?.scheduled_datetime])
+
+  useEffect(() => {
+    if (!formData.client) {
+      setSelectedClientPhone(null)
+      return
+    }
+
+    if (selectedClientPhone !== null) {
+      return
+    }
+
+    let isMounted = true
+
+    const fetchClientPhone = async () => {
+      try {
+        const response = await api.clients.getAll({ search: formData.client })
+        const matchedClient = response.data.find((client) => client.name === formData.client)
+        if (isMounted) {
+          setSelectedClientPhone(matchedClient?.phone ?? '')
+        }
+      } catch (error) {
+        console.error('Error fetching client phone:', error)
+        if (isMounted) {
+          setSelectedClientPhone('')
+        }
+      }
+    }
+
+    fetchClientPhone()
+
+    return () => {
+      isMounted = false
+    }
+  }, [formData.client, selectedClientPhone])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -154,7 +192,13 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
             </Label>
             <ClientSearch
               value={formData.client}
-              onSelect={(clientName) => setFormData({ ...formData, client: clientName })}
+              onSelect={(clientName) => {
+                setFormData({ ...formData, client: clientName })
+                setSelectedClientPhone(null)
+              }}
+              onClientSelect={(client: Client) => {
+                setSelectedClientPhone(client.phone ?? '')
+              }}
               placeholder={t('selectClient')}
               className={`w-full ${errors.client ? 'ring-2 ring-red-500' : ''}`}
             />
@@ -162,6 +206,17 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
               <p className="text-sm text-red-500">{errors.client}</p>
             )}
           </div>
+          {formData.client && (
+            <div className="space-y-2">
+              <Label htmlFor="client_phone">{t('phone')}</Label>
+              <Input
+                id="client_phone"
+                value={selectedClientPhone || t('noPhoneAvailable')}
+                readOnly
+                className="bg-muted"
+              />
+            </div>
+          )}
           <div className="space-y-2">
             <Label htmlFor="type">{t('type')}</Label>
             <Select value={formData.type} onValueChange={(value) => setFormData({ ...formData, type: value as any })}>

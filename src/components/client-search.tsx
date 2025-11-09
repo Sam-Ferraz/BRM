@@ -25,6 +25,7 @@ import { ClientForm } from "@/components/forms/client-form"
 interface ClientSearchProps {
   value?: string
   onSelect: (clientName: string) => void
+  onClientSelect?: (client: Client) => void
   placeholder?: string
   disabled?: boolean
   className?: string
@@ -33,6 +34,7 @@ interface ClientSearchProps {
 export function ClientSearch({
   value,
   onSelect,
+  onClientSelect,
   placeholder,
   disabled,
   className,
@@ -117,6 +119,7 @@ export function ClientSearch({
       
       // Update the selected client immediately
       onSelect(newClient.name)
+      onClientSelect?.(newClient)
       
       // Close the client form and clear search
       setShowClientForm(false)
@@ -138,8 +141,9 @@ export function ClientSearch({
     }
   }
 
-  const handleSelectClient = (clientName: string) => {
-    onSelect(clientName)
+  const handleSelectClient = (client: Client) => {
+    onSelect(client.name)
+    onClientSelect?.(client)
     setOpen(false)
     setSearchValue("")
   }
@@ -195,7 +199,7 @@ export function ClientSearch({
                   <CommandItem
                     key={client.id}
                     value={client.name}
-                    onSelect={() => handleSelectClient(client.name)}
+                    onSelect={() => handleSelectClient(client)}
                   >
                     <Check
                       className={cn(
