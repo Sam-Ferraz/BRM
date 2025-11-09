@@ -48,8 +48,15 @@ export class AppointmentRepository extends BaseRepository {
       // Ensure UTC timezone
       await client.query('SET TIMEZONE = \'UTC\'')
       const result = await client.query(
-        'INSERT INTO appointments (client, type, scheduled_datetime, description, answered) VALUES ($1, $2, $3::timestamp, $4, $5) RETURNING *',
-        [appointment.client, appointment.type, appointment.scheduled_datetime, appointment.description, appointment.answered]
+        'INSERT INTO appointments (client, type, scheduled_datetime, description, answered, property_name) VALUES ($1, $2, $3::timestamp, $4, $5, $6) RETURNING *',
+        [
+          appointment.client,
+          appointment.type,
+          appointment.scheduled_datetime,
+          appointment.description,
+          appointment.answered,
+          appointment.property_name ?? null
+        ]
       )
       return result.rows[0]
     } finally {
@@ -63,8 +70,16 @@ export class AppointmentRepository extends BaseRepository {
       // Ensure UTC timezone
       await client.query('SET TIMEZONE = \'UTC\'')
       const result = await client.query(
-        'UPDATE appointments SET client = $1, type = $2, scheduled_datetime = $3::timestamp, description = $4, answered = $5, updated_at = CURRENT_TIMESTAMP WHERE id = $6 RETURNING *',
-        [appointment.client, appointment.type, appointment.scheduled_datetime, appointment.description, appointment.answered, id]
+        'UPDATE appointments SET client = $1, type = $2, scheduled_datetime = $3::timestamp, description = $4, answered = $5, property_name = $6, updated_at = CURRENT_TIMESTAMP WHERE id = $7 RETURNING *',
+        [
+          appointment.client,
+          appointment.type,
+          appointment.scheduled_datetime,
+          appointment.description,
+          appointment.answered,
+          appointment.property_name ?? null,
+          id
+        ]
       )
       return result.rows.length > 0 ? result.rows[0] : null
     } finally {

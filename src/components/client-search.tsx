@@ -132,7 +132,7 @@ export function ClientSearch({
     } finally {
       setClientFormLoading(false)
     }
-  }, [onSelect, loadClients])
+  }, [onSelect, onClientSelect, loadClients])
 
   const handleClientFormClose = (open: boolean) => {
     setShowClientForm(open)

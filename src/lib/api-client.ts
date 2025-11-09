@@ -99,6 +99,7 @@ export interface Appointment {
   scheduled_datetime: string
   description?: string
   answered: boolean
+  property_name?: string | null
 }
 
 export interface ProductImage {

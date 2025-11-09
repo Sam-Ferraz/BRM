@@ -35,13 +35,15 @@ export function createAppointmentRoutes(appointmentService: AppointmentService):
 
   router.post('/', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      const { client, type, scheduled_datetime, description, answered } = req.body
+      const { client, type, scheduled_datetime, description, answered, property_name } = req.body
+      const normalizedPropertyName = type === 'visit' ? property_name : null
       const appointment = await appointmentService.createAppointment({
         client,
         type,
         scheduled_datetime,
         description,
-        answered
+        answered,
+        property_name: normalizedPropertyName
       })
       res.json(appointment)
     } catch (error) {
@@ -53,13 +55,15 @@ export function createAppointmentRoutes(appointmentService: AppointmentService):
   router.put('/:id', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const id = parseInt(req.params.id)
-      const { client, type, scheduled_datetime, description, answered } = req.body
+      const { client, type, scheduled_datetime, description, answered, property_name } = req.body
+      const normalizedPropertyName = type === 'visit' ? property_name : null
       const appointment = await appointmentService.updateAppointment(id, {
         client,
         type,
         scheduled_datetime,
         description,
-        answered
+        answered,
+        property_name: normalizedPropertyName
       })
       res.json(appointment)
     } catch (error) {

@@ -61,6 +61,7 @@ export interface Appointment {
   scheduled_datetime: string
   description?: string | null
   answered: boolean
+  property_name?: string | null
   created_at?: Date
   updated_at?: Date
 }

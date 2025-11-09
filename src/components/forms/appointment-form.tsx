@@ -15,6 +15,7 @@ import { api } from "@/lib/api-client"
 import { useMobileDetection } from "@/lib/mobile-utils"
 import { getCurrentDateTimeForForm, convertFromAppToLocal, convertFromLocalToApp } from "@/lib/datetime"
 import { ClientSearch } from "@/components/client-search"
+import { ProductSearch } from "@/components/product-search"
 import { AnsweredStatusToggle } from "@/components/ui/answered-status-toggle"
 import { useTimezone } from "@/hooks/use-timezone"
 
@@ -41,6 +42,7 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
     client: "",
     type: "chat" as "chat" | "call" | "in_person" | "visit",
     answered: undefined as boolean | undefined,
+    property_name: "",
   })
   const [selectedClientPhone, setSelectedClientPhone] = useState<string | null>(null)
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
@@ -64,6 +66,7 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
         client: appointment.client || "",
         type: (appointment.type || "chat") as "chat" | "call" | "in_person" | "visit",
         answered: appointment.answered,
+        property_name: appointment.property_name || "",
       })
       setSelectedClientPhone(null)
     } else {
@@ -73,6 +76,7 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
         client: "",
         type: "chat" as "chat" | "call" | "in_person" | "visit",
         answered: undefined,
+        property_name: "",
       })
       setSelectedClientPhone(null)
     }
@@ -85,6 +89,12 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
       setFormData(prev => ({ ...prev, scheduled_datetime: formattedDateTime }))
     }
   }, [currentTimezone, appointment?.scheduled_datetime])
+
+  useEffect(() => {
+    if (formData.type !== 'visit' && formData.property_name) {
+      setFormData(prev => ({ ...prev, property_name: "" }))
+    }
+  }, [formData.type])
 
   useEffect(() => {
     if (!formData.client) {
@@ -136,6 +146,10 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
     if (formData.answered === undefined) {
       newErrors.answered = t('answeredStatusRequired') || 'Response status is required'
     }
+
+    if (formData.type === 'visit' && !formData.property_name.trim()) {
+      newErrors.property_name = t('productRequired') || 'Property is required'
+    }
     
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors)
@@ -145,6 +159,7 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
     // Convert datetime from user's configured timezone to app timezone before sending to server
     const dataToSubmit = {
       ...formData,
+      property_name: formData.type === 'visit' ? formData.property_name : null,
       scheduled_datetime: convertFromLocalToApp(formData.scheduled_datetime, currentTimezone)
     }
     
@@ -219,7 +234,16 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
           )}
           <div className="space-y-2">
             <Label htmlFor="type">{t('type')}</Label>
-            <Select value={formData.type} onValueChange={(value) => setFormData({ ...formData, type: value as any })}>
+            <Select
+              value={formData.type}
+              onValueChange={(value) =>
+                setFormData(prev => ({
+                  ...prev,
+                  type: value as any,
+                  property_name: value === 'visit' ? prev.property_name : ""
+                }))
+              }
+            >
               <SelectTrigger {...(!isMobile && { tabIndex: 3 })}>
                 <SelectValue />
               </SelectTrigger>
@@ -227,10 +251,26 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
                 <SelectItem value="chat">{t('chatType')}</SelectItem>
                 <SelectItem value="call">{t('callType')}</SelectItem>
                 <SelectItem value="in_person">{t('inPersonType')}</SelectItem>
-                <SelectItem value="visit">{t('visitType')}</SelectItem>
+              <SelectItem value="visit">{t('visitType')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
+          {formData.type === 'visit' && (
+            <div className="space-y-2">
+              <Label htmlFor="property_name">
+                {t('product')} <span className="text-red-500">*</span>
+              </Label>
+              <ProductSearch
+                value={formData.property_name}
+                onSelect={(productName) => setFormData({ ...formData, property_name: productName })}
+                placeholder={t('selectProduct')}
+                className={`w-full ${errors.property_name ? 'ring-2 ring-red-500' : ''}`}
+              />
+              {errors.property_name && (
+                <p className="text-sm text-red-500">{errors.property_name}</p>
+              )}
+            </div>
+          )}
           <div className="space-y-2">
             <Label htmlFor="answered">
               {t('answeredStatus')} <span className="text-red-500">*</span>

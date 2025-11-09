@@ -246,6 +246,7 @@ export default function AppointmentsPage() {
                       {t('client')} {sortBy === "client" && (sortOrder === "asc" ? "↑" : "↓")}
                     </TableHead>
                     <TableHead>{t('type')}</TableHead>
+                    <TableHead>{t('product')}</TableHead>
                     <TableHead>{t('answeredStatus')}</TableHead>
                     <TableHead 
                       className="cursor-pointer" 
@@ -277,6 +278,15 @@ export default function AppointmentsPage() {
                         <Badge variant={getTipoBadgeVariant(appointment.type)}>
                           {getAppointmentTypeTranslation(appointment.type)}
                         </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {appointment.property_name ? (
+                          <span className="text-sm text-muted-foreground truncate max-w-32 block">
+                            {appointment.property_name}
+                          </span>
+                        ) : (
+                          "-"
+                        )}
                       </TableCell>
                       <TableCell>
                         <Badge 
@@ -334,7 +344,7 @@ export default function AppointmentsPage() {
                   ))}
                   {appointments.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                         {t('noServicesFound')}
                       </TableCell>
                     </TableRow>
