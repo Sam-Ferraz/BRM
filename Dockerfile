@@ -41,8 +41,17 @@ RUN --mount=type=cache,target=/root/.npm \
 # Production stage
 FROM node:18-alpine AS production
 
-# Install dumb-init and curl for proper signal handling and health checks
-RUN apk add --no-cache dumb-init curl
+# Install dumb-init, curl, and tar for helper tooling
+RUN apk add --no-cache dumb-init curl tar
+
+# Install Flyway CLI (used for in-container migrations)
+ARG FLYWAY_VERSION=11.17.0
+RUN curl -L "https://download.red-gate.com/maven/release/com/redgate/flyway/flyway-commandline/${FLYWAY_VERSION}/flyway-commandline-${FLYWAY_VERSION}-linux-x64.tar.gz" \
+    -o /tmp/flyway.tar.gz \
+ && tar -xzf /tmp/flyway.tar.gz -C /opt \
+ && mv /opt/flyway-${FLYWAY_VERSION} /opt/flyway \
+ && ln -s /opt/flyway/flyway /usr/local/bin/flyway \
+ && rm /tmp/flyway.tar.gz
 
 # Create app directory and user FIRST
 RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
@@ -59,6 +68,8 @@ COPY --from=prod-deps --chown=nodejs:nodejs /app/node_modules ./node_modules
 COPY --chown=nodejs:nodejs package*.json ./
 COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
 COPY --from=builder --chown=nodejs:nodejs /app/server ./server
+COPY --chown=nodejs:nodejs flyway.conf ./flyway.conf
+COPY --chown=nodejs:nodejs db/migrations ./db/migrations
 
 # Environment file is provided via docker-compose env_file
 
