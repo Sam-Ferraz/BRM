@@ -41,8 +41,8 @@ RUN --mount=type=cache,target=/root/.npm \
 # Production stage
 FROM node:18-alpine AS production
 
-# Install dumb-init, curl, and tar for helper tooling
-RUN apk add --no-cache dumb-init curl tar
+# Install dumb-init, curl, tar, and bash (Flyway wrapper uses bash)
+RUN apk add --no-cache dumb-init curl tar bash
 
 # Install Flyway CLI (used for in-container migrations)
 ARG FLYWAY_VERSION=11.17.0
