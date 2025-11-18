@@ -41,8 +41,8 @@ RUN --mount=type=cache,target=/root/.npm \
 # Production stage
 FROM node:18-alpine AS production
 
-# Install dumb-init, curl, tar, and bash (Flyway wrapper uses bash)
-RUN apk add --no-cache dumb-init curl tar bash
+# Install dumb-init, curl, tar, bash (Flyway wrapper uses bash), glibc compat libs, and system JRE for Flyway
+RUN apk add --no-cache dumb-init curl tar bash libc6-compat gcompat openjdk17-jre-headless
 
 # Install Flyway CLI (used for in-container migrations)
 ARG FLYWAY_VERSION=11.17.0
@@ -52,6 +52,12 @@ RUN curl -L "https://download.red-gate.com/maven/release/com/redgate/flyway/flyw
  && mv /opt/flyway-${FLYWAY_VERSION} /opt/flyway \
  && ln -s /opt/flyway/flyway /usr/local/bin/flyway \
  && rm /tmp/flyway.tar.gz
+
+# Remove bundled JRE to force usage of system OpenJDK
+RUN rm -rf /opt/flyway/jre
+
+ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk
+ENV PATH=${JAVA_HOME}/bin:${PATH}
 
 # Create app directory and user FIRST
 RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
