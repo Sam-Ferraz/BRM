@@ -146,6 +146,21 @@ export default function ProductsPage() {
     }
   }
 
+  const categoryLabelMap: Record<string, string> = {
+    apartment: 'categoryApartment',
+    house: 'categoryHouse',
+    penthouse: 'categoryPenthouse',
+    land: 'categoryLand',
+    studio: 'categoryStudio',
+    flat: 'categoryFlat',
+  }
+
+  const getCategoryLabel = (value?: string) => {
+    if (!value) return '-'
+    const key = categoryLabelMap[value]
+    return key ? t(key) : value
+  }
+
 
 
   return (
@@ -273,11 +288,11 @@ export default function ProductsPage() {
                           new Intl.NumberFormat('pt-BR', {
                             style: 'currency',
                             currency: 'BRL'
-                          }).format(product.price) 
-                          : '-'
-                        }
-                      </TableCell>
-                      <TableCell>{product.category}</TableCell>
+                      }).format(product.price) 
+                      : '-'
+                    }
+                  </TableCell>
+                  <TableCell>{getCategoryLabel(product.category)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <Button

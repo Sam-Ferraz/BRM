@@ -217,6 +217,12 @@ const resources = {
       productUpdateError: 'Falha ao atualizar imóvel',
       productDeleteError: 'Falha ao excluir imóvel',
       productLoadError: 'Falha ao carregar imóveis',
+      categoryApartment: 'Apartamento',
+      categoryHouse: 'Casa',
+      categoryPenthouse: 'Cobertura',
+      categoryLand: 'Terreno',
+      categoryStudio: 'Estúdio',
+      categoryFlat: 'Flat',
       
       // Sales Agenda Page
       salesAgendaTitle: 'Pauta de Vendas',
@@ -525,6 +531,12 @@ const resources = {
       productUpdateError: 'Failed to update property',
       productDeleteError: 'Failed to delete property',
       productLoadError: 'Failed to load properties',
+      categoryApartment: 'Apartment',
+      categoryHouse: 'House',
+      categoryPenthouse: 'Penthouse',
+      categoryLand: 'Land',
+      categoryStudio: 'Studio',
+      categoryFlat: 'Flat',
       
       // Sales Agenda Page
       salesAgendaTitle: 'Sales Agenda',
@@ -833,6 +845,12 @@ const resources = {
       productUpdateError: 'Error al actualizar inmueble',
       productDeleteError: 'Error al eliminar inmueble',
       productLoadError: 'Error al cargar inmuebles',
+      categoryApartment: 'Apartamento',
+      categoryHouse: 'Casa',
+      categoryPenthouse: 'Ático',
+      categoryLand: 'Terreno',
+      categoryStudio: 'Estudio',
+      categoryFlat: 'Flat',
       
       // Sales Agenda Page
       salesAgendaTitle: 'Agenda de Ventas',

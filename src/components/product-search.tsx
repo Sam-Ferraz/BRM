@@ -155,6 +155,21 @@ export function ProductSearch({
   const showCreateNew = searchValue.trim() && 
     !products.some(product => product.name.toLowerCase() === searchValue.toLowerCase())
 
+  const categoryLabelMap: Record<string, string> = {
+    apartment: 'categoryApartment',
+    house: 'categoryHouse',
+    penthouse: 'categoryPenthouse',
+    land: 'categoryLand',
+    studio: 'categoryStudio',
+    flat: 'categoryFlat',
+  }
+
+  const getCategoryLabel = (category?: string) => {
+    if (!category) return ''
+    const key = categoryLabelMap[category]
+    return key ? t(key) : category
+  }
+
   return (
     <div>
     <Popover open={open} onOpenChange={setOpen}>
@@ -215,8 +230,8 @@ export function ProductSearch({
                       {(product.category || product.price) && (
                         <div className="text-sm text-muted-foreground">
                           {product.category && product.price 
-                            ? `${product.category} • ${product.price}`
-                            : product.category || product.price}
+                            ? `${getCategoryLabel(product.category)} • ${product.price}`
+                            : getCategoryLabel(product.category) || product.price}
                         </div>
                       )}
                     </div>
