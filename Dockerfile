@@ -23,8 +23,8 @@ COPY package*.json ./
 # Copy source code
 COPY . .
 
-# Build the application
-RUN npm run build
+# Build the application (client + server)
+RUN npm run build && npm run server:build
 
 # Production dependencies stage
 FROM node:18-alpine AS prod-deps
@@ -84,6 +84,6 @@ COPY --chown=nodejs:nodejs db/migrations ./db/migrations
 # Expose port
 EXPOSE 3002
 
-# Start the application with dumb-init
+# Start the application with dumb-init (use built server output)
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["node", "server/index.js"]
+CMD ["node", "server/dist/index.js"]
