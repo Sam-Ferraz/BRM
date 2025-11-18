@@ -31,7 +31,7 @@ export function ClientForm({ client, initialName, open, onOpenChange, onSubmit, 
     city: "",
     address: "",
     company: "",
-    origin: "" as Client['origin'],
+    origin: "online_lead" as Client['origin'],
   })
 
   useEffect(() => {
@@ -43,7 +43,7 @@ export function ClientForm({ client, initialName, open, onOpenChange, onSubmit, 
         city: client.city || "",
         address: client.address || "",
         company: client.company || "",
-        origin: client.origin || "",
+        origin: (client.origin || "online_lead") as Client['origin'],
       })
     } else {
       setFormData({
@@ -53,7 +53,7 @@ export function ClientForm({ client, initialName, open, onOpenChange, onSubmit, 
         city: "",
         address: "",
         company: "",
-        origin: "",
+        origin: "online_lead",
       })
     }
   }, [client, initialName, open])
