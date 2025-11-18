@@ -14,7 +14,7 @@ export function createProductRoutes(productService: ProductService): Router {
         {
           "id": 7,
           "name": "AAAA",
-          "category": "asd",
+          "type": "asd",
           "description": "sdsa",
           "created_at": "2025-08-13T19:41:31.563Z",
           "updated_at": "2025-08-31T11:42:39.643Z",
@@ -24,7 +24,7 @@ export function createProductRoutes(productService: ProductService): Router {
         {
           "id": 6,
           "name": "Backup Automático",
-          "category": "Infraestrutura",
+          "type": "Infraestrutura",
           "description": "Sistema de backup automático",
           "created_at": "2025-08-10T09:36:04.950Z",
           "updated_at": "2025-08-30T19:46:49.297Z",
@@ -34,7 +34,7 @@ export function createProductRoutes(productService: ProductService): Router {
         {
           "id": 2,
           "name": "Consultoria Premium",
-          "category": "Serviços",
+          "type": "Serviços",
           "description": "Consultoria especializada em TI",
           "created_at": "2025-08-10T09:36:04.950Z",
           "updated_at": "2025-08-10T09:36:04.950Z",
@@ -44,7 +44,7 @@ export function createProductRoutes(productService: ProductService): Router {
         {
           "id": 4,
           "name": "Suporte Técnico",
-          "category": "Serviços",
+          "type": "Serviços",
           "description": "Suporte técnico 24/7",
           "created_at": "2025-08-10T09:36:04.950Z",
           "updated_at": "2025-08-10T09:36:04.950Z",
@@ -54,7 +54,7 @@ export function createProductRoutes(productService: ProductService): Router {
         {
           "id": 1,
           "name": "Software ERP Basic",
-          "category": "Software",
+          "type": "Software",
           "description": "Sistema básico de gestão empresarial",
           "created_at": "2025-08-10T09:36:04.950Z",
           "updated_at": "2025-08-30T19:46:09.585Z",
@@ -64,7 +64,7 @@ export function createProductRoutes(productService: ProductService): Router {
         {
           "id": 3,
           "name": "Hosting Cloud Pro",
-          "category": "Infraestrutura",
+          "type": "Infraestrutura",
           "description": "Hospedagem em nuvem profissional",
           "created_at": "2025-08-10T09:36:04.950Z",
           "updated_at": "2025-08-10T09:36:04.950Z",
@@ -74,7 +74,7 @@ export function createProductRoutes(productService: ProductService): Router {
         {
           "id": 5,
           "name": "Website Custom",
-          "category": "Desenvolvimento",
+          "type": "Desenvolvimento",
           "description": "Website personalizado",
           "created_at": "2025-08-10T09:36:04.950Z",
           "updated_at": "2025-08-10T09:36:04.950Z",
@@ -92,7 +92,7 @@ export function createProductRoutes(productService: ProductService): Router {
     try {
       const filters = {
         search: req.query.search as string,
-        category: req.query.category as string,
+        type: req.query.type as string,
         sortBy: req.query.sortBy as string,
         sortOrder: req.query.sortOrder as 'asc' | 'desc'
       }
@@ -107,8 +107,8 @@ export function createProductRoutes(productService: ProductService): Router {
 
   router.post('/', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      const { name, price, category, description } = req.body
-      const product = await productService.createProduct({ name, price, category, description })
+      const { name, price, type, description } = req.body
+      const product = await productService.createProduct({ name, price, type, description })
       res.json(product)
     } catch (error) {
       console.error('Error in create product route:', error)
@@ -119,8 +119,8 @@ export function createProductRoutes(productService: ProductService): Router {
   router.put('/:id', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const id = parseInt(req.params.id)
-      const { name, price, category, description } = req.body
-      const product = await productService.updateProduct(id, { name, price, category, description })
+      const { name, price, type, description } = req.body
+      const product = await productService.updateProduct(id, { name, price, type, description })
       res.json(product)
     } catch (error) {
       console.error('Error in update product route:', error)

@@ -33,20 +33,20 @@ export function ProductForm({ product, initialName, open, onOpenChange, onSubmit
   const isMobile = useMobileDetection()
   const { toast } = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null)
-  type CategoryValue = 'apartment' | 'house' | 'penthouse' | 'land' | 'studio' | 'flat'
-  const categoryOptions: { value: CategoryValue; label: string }[] = [
-    { value: 'apartment', label: t('categoryApartment') },
-    { value: 'house', label: t('categoryHouse') },
-    { value: 'penthouse', label: t('categoryPenthouse') },
-    { value: 'land', label: t('categoryLand') },
-    { value: 'studio', label: t('categoryStudio') },
-    { value: 'flat', label: t('categoryFlat') },
+  type PropertyTypeValue = 'apartment' | 'house' | 'penthouse' | 'land' | 'studio' | 'flat'
+  const propertyTypeOptions: { value: PropertyTypeValue; label: string }[] = [
+    { value: 'apartment', label: t('propertyTypeApartment') },
+    { value: 'house', label: t('propertyTypeHouse') },
+    { value: 'penthouse', label: t('propertyTypePenthouse') },
+    { value: 'land', label: t('propertyTypeLand') },
+    { value: 'studio', label: t('propertyTypeStudio') },
+    { value: 'flat', label: t('propertyTypeFlat') },
   ]
   
   const [formData, setFormData] = useState({
     name: "",
     price: null as number | null,
-    category: "apartment" as CategoryValue,
+    type: "apartment" as PropertyTypeValue,
     description: "",
   })
   
@@ -70,7 +70,7 @@ export function ProductForm({ product, initialName, open, onOpenChange, onSubmit
       setFormData({
         name: product.name || "",
         price: product.price || null,
-        category: (product.category as CategoryValue) || "apartment",
+        type: (product.type as PropertyTypeValue) || "apartment",
         description: product.description || "",
       })
       setShowImageUpload(true)
@@ -79,7 +79,7 @@ export function ProductForm({ product, initialName, open, onOpenChange, onSubmit
       setFormData({
         name: initialName || "",
         price: null,
-        category: "apartment",
+        type: "apartment",
         description: "",
       })
       setShowImageUpload(false)
@@ -283,16 +283,16 @@ export function ProductForm({ product, initialName, open, onOpenChange, onSubmit
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="category">{t('category')}</Label>
+                <Label htmlFor="type">{t('propertyType')}</Label>
                 <Select
-                  value={formData.category}
-                  onValueChange={(value) => setFormData({ ...formData, category: value as CategoryValue })}
+                  value={formData.type}
+                  onValueChange={(value) => setFormData({ ...formData, type: value as PropertyTypeValue })}
                 >
                   <SelectTrigger {...(!isMobile && { tabIndex: 3 })}>
                     <SelectValue placeholder={t('select')} />
                   </SelectTrigger>
                   <SelectContent>
-                    {categoryOptions.map((option) => (
+                    {propertyTypeOptions.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
                         {option.label}
                       </SelectItem>

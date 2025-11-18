@@ -5,7 +5,7 @@ export class ProductRepository extends BaseRepository {
   async findAll(filters: QueryFilters = {}): Promise<Product[]> {
     const client = await this.getClient()
     try {
-      const { search, category, sortBy, sortOrder } = filters
+      const { search, type, sortBy, sortOrder } = filters
       let query = `
         SELECT 
           p.*,
@@ -21,19 +21,19 @@ export class ProductRepository extends BaseRepository {
       let paramCount = 1
 
       if (search) {
-        query += ` AND (p.name ILIKE $${paramCount} OR p.category ILIKE $${paramCount})`
+        query += ` AND (p.name ILIKE $${paramCount} OR p.type ILIKE $${paramCount})`
         params.push(`%${search}%`)
         paramCount++
       }
 
-      if (category && category !== 'All') {
-        query += ` AND p.category = $${paramCount}`
-        params.push(category)
+      if (type && type !== 'All') {
+        query += ` AND p.type = $${paramCount}`
+        params.push(type)
         paramCount++
       }
 
       if (sortBy) {
-        const validColumns = ['name', 'price', 'category']
+        const validColumns = ['name', 'price', 'type']
         if (validColumns.includes(sortBy)) {
           const order = sortOrder === 'desc' ? 'DESC' : 'ASC'
           query += ` ORDER BY p.${sortBy} ${order}`
@@ -63,8 +63,8 @@ export class ProductRepository extends BaseRepository {
     const client = await this.getClient()
     try {
       const result = await client.query(
-        'INSERT INTO products (name, price, category, description) VALUES ($1, $2, $3, $4) RETURNING *',
-        [product.name, product.price, product.category, product.description]
+        'INSERT INTO products (name, price, type, description) VALUES ($1, $2, $3, $4) RETURNING *',
+        [product.name, product.price, product.type, product.description]
       )
       return result.rows[0]
     } finally {
@@ -76,8 +76,8 @@ export class ProductRepository extends BaseRepository {
     const client = await this.getClient()
     try {
       const result = await client.query(
-        'UPDATE products SET name = $1, price = $2, category = $3, description = $4, updated_at = CURRENT_TIMESTAMP WHERE id = $5 RETURNING *',
-        [product.name, product.price, product.category, product.description, id]
+        'UPDATE products SET name = $1, price = $2, type = $3, description = $4, updated_at = CURRENT_TIMESTAMP WHERE id = $5 RETURNING *',
+        [product.name, product.price, product.type, product.description, id]
       )
       return result.rows.length > 0 ? result.rows[0] : null
     } finally {

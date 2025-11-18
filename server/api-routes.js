@@ -395,7 +395,7 @@ export function createApiRoutes(app) {
         {
           "id": 7,
           "name": "AAAA",
-          "category": "asd",
+          "type": "asd",
           "description": "sdsa",
           "created_at": "2025-08-13T19:41:31.563Z",
           "updated_at": "2025-08-31T11:42:39.643Z",
@@ -405,7 +405,7 @@ export function createApiRoutes(app) {
         {
           "id": 6,
           "name": "Backup Automático",
-          "category": "Infraestrutura",
+          "type": "Infraestrutura",
           "description": "Sistema de backup automático",
           "created_at": "2025-08-10T09:36:04.950Z",
           "updated_at": "2025-08-30T19:46:49.297Z",
@@ -415,7 +415,7 @@ export function createApiRoutes(app) {
         {
           "id": 2,
           "name": "Consultoria Premium",
-          "category": "Serviços",
+          "type": "Serviços",
           "description": "Consultoria especializada em TI",
           "created_at": "2025-08-10T09:36:04.950Z",
           "updated_at": "2025-08-10T09:36:04.950Z",
@@ -425,7 +425,7 @@ export function createApiRoutes(app) {
         {
           "id": 4,
           "name": "Suporte Técnico",
-          "category": "Serviços",
+          "type": "Serviços",
           "description": "Suporte técnico 24/7",
           "created_at": "2025-08-10T09:36:04.950Z",
           "updated_at": "2025-08-10T09:36:04.950Z",
@@ -435,7 +435,7 @@ export function createApiRoutes(app) {
         {
           "id": 1,
           "name": "Software ERP Basic",
-          "category": "Software",
+          "type": "Software",
           "description": "Sistema básico de gestão empresarial",
           "created_at": "2025-08-10T09:36:04.950Z",
           "updated_at": "2025-08-30T19:46:09.585Z",
@@ -445,7 +445,7 @@ export function createApiRoutes(app) {
         {
           "id": 3,
           "name": "Hosting Cloud Pro",
-          "category": "Infraestrutura",
+          "type": "Infraestrutura",
           "description": "Hospedagem em nuvem profissional",
           "created_at": "2025-08-10T09:36:04.950Z",
           "updated_at": "2025-08-10T09:36:04.950Z",
@@ -455,7 +455,7 @@ export function createApiRoutes(app) {
         {
           "id": 5,
           "name": "Website Custom",
-          "category": "Desenvolvimento",
+          "type": "Desenvolvimento",
           "description": "Website personalizado",
           "created_at": "2025-08-10T09:36:04.950Z",
           "updated_at": "2025-08-10T09:36:04.950Z",
@@ -472,7 +472,7 @@ export function createApiRoutes(app) {
   app.get('/api/products', authenticateToken, async (req, res) => {
     const client = await pool.connect()
     try {
-      const { search, category, sortBy, sortOrder } = req.query
+      const { search, type, sortBy, sortOrder } = req.query
       let query = `
         SELECT 
           p.*,
@@ -488,20 +488,20 @@ export function createApiRoutes(app) {
       let paramCount = 1
       
       if (search) {
-        query += ` AND (p.name ILIKE $${paramCount} OR p.category ILIKE $${paramCount})`
+        query += ` AND (p.name ILIKE $${paramCount} OR p.type ILIKE $${paramCount})`
         params.push(`%${search}%`)
         paramCount++
       }
       
-      if (category && category !== 'All') {
-        query += ` AND p.category = $${paramCount}`
-        params.push(category)
+      if (type && type !== 'All') {
+        query += ` AND p.type = $${paramCount}`
+        params.push(type)
         paramCount++
       }
       
       
       if (sortBy) {
-        const validColumns = ['name', 'price', 'category']
+        const validColumns = ['name', 'price', 'type']
         if (validColumns.includes(sortBy)) {
           const order = sortOrder === 'desc' ? 'DESC' : 'ASC'
           query += ` ORDER BY p.${sortBy} ${order}`
@@ -523,10 +523,10 @@ export function createApiRoutes(app) {
   app.post('/api/products', authenticateToken, async (req, res) => {
     const client = await pool.connect()
     try {
-      const { name, price, category, description } = req.body
+      const { name, price, type, description } = req.body
       const result = await client.query(
-        'INSERT INTO products (name, price, category, description) VALUES ($1, $2, $3, $4) RETURNING *',
-        [name, price, category, description]
+        'INSERT INTO products (name, price, type, description) VALUES ($1, $2, $3, $4) RETURNING *',
+        [name, price, type, description]
       )
       res.json(result.rows[0])
     } catch (error) {
@@ -541,10 +541,10 @@ export function createApiRoutes(app) {
     const client = await pool.connect()
     try {
       const { id } = req.params
-      const { name, price, category, description } = req.body
+      const { name, price, type, description } = req.body
       const result = await client.query(
-        'UPDATE products SET name = $1, price = $2, category = $3, description = $4, updated_at = CURRENT_TIMESTAMP WHERE id = $5 RETURNING *',
-        [name, price, category, description, id]
+        'UPDATE products SET name = $1, price = $2, type = $3, description = $4, updated_at = CURRENT_TIMESTAMP WHERE id = $5 RETURNING *',
+        [name, price, type, description, id]
       )
       if (result.rows.length === 0) {
         return res.status(404).json({ error: 'Product not found' })

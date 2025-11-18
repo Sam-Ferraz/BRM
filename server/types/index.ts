@@ -42,7 +42,7 @@ export interface Product {
   id: number
   name: string
   price: string | null
-  category: string
+  type: string
   description: string
   has_thumbnail?: boolean
   created_at?: Date
@@ -116,7 +116,6 @@ export interface QueryFilters {
   search?: string
   status?: string
   type?: string
-  category?: string
   sortBy?: string
   sortOrder?: 'asc' | 'desc'
 }

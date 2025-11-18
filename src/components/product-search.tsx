@@ -155,19 +155,19 @@ export function ProductSearch({
   const showCreateNew = searchValue.trim() && 
     !products.some(product => product.name.toLowerCase() === searchValue.toLowerCase())
 
-  const categoryLabelMap: Record<string, string> = {
-    apartment: 'categoryApartment',
-    house: 'categoryHouse',
-    penthouse: 'categoryPenthouse',
-    land: 'categoryLand',
-    studio: 'categoryStudio',
-    flat: 'categoryFlat',
+  const propertyTypeLabelMap: Record<string, string> = {
+    apartment: 'propertyTypeApartment',
+    house: 'propertyTypeHouse',
+    penthouse: 'propertyTypePenthouse',
+    land: 'propertyTypeLand',
+    studio: 'propertyTypeStudio',
+    flat: 'propertyTypeFlat',
   }
 
-  const getCategoryLabel = (category?: string) => {
-    if (!category) return ''
-    const key = categoryLabelMap[category]
-    return key ? t(key) : category
+  const getTypeLabel = (type?: string) => {
+    if (!type) return ''
+    const key = propertyTypeLabelMap[type]
+    return key ? t(key) : type
   }
 
   return (
@@ -227,11 +227,11 @@ export function ProductSearch({
                     />
                     <div>
                       <div className="font-medium">{product.name}</div>
-                      {(product.category || product.price) && (
+                      {(product.type || product.price) && (
                         <div className="text-sm text-muted-foreground">
-                          {product.category && product.price 
-                            ? `${getCategoryLabel(product.category)} • ${product.price}`
-                            : getCategoryLabel(product.category) || product.price}
+                          {product.type && product.price 
+                            ? `${getTypeLabel(product.type)} • ${product.price}`
+                            : getTypeLabel(product.type) || product.price}
                         </div>
                       )}
                     </div>

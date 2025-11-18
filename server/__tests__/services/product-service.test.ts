@@ -24,7 +24,7 @@ describe('ProductService', () => {
         id: 1,
         name: 'Test Product',
         price: '100.00',
-        category: 'Software',
+        type: 'Software',
         description: 'Test product description',
         has_thumbnail: true
       },
@@ -32,7 +32,7 @@ describe('ProductService', () => {
         id: 2,
         name: 'Another Product',
         price: '200.00',
-        category: 'Hardware',
+        type: 'Hardware',
         description: 'Another product description',
         has_thumbnail: false
       }
@@ -41,7 +41,7 @@ describe('ProductService', () => {
     it('should return all products with filters', async () => {
       // Arrange
       mockProductRepository.findAll.mockResolvedValue(mockProducts)
-      const filters = { search: 'test', category: 'Software' }
+      const filters = { search: 'test', type: 'Software' }
 
       // Act
       const result = await productService.getAllProducts(filters)
@@ -65,7 +65,7 @@ describe('ProductService', () => {
     const newProductData = {
       name: 'New Product',
       price: '300.00',
-      category: 'Services',
+      type: 'Services',
       description: 'New product description'
     }
 
@@ -101,7 +101,7 @@ describe('ProductService', () => {
       id: 1,
       name: 'Test Product',
       price: '100.00',
-      category: 'Software',
+      type: 'Software',
       description: 'Test product description'
     }
 
@@ -137,7 +137,7 @@ describe('ProductService', () => {
       id: 1,
       name: 'Test Product',
       price: '100.00',
-      category: 'Software',
+      type: 'Software',
       description: 'Test product description'
     }
 
@@ -181,7 +181,7 @@ describe('ProductService', () => {
       id: 1,
       name: 'Test Product',
       price: '100.00',
-      category: 'Software',
+      type: 'Software',
       description: 'Test product description'
     }
 

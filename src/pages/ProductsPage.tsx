@@ -146,18 +146,18 @@ export default function ProductsPage() {
     }
   }
 
-  const categoryLabelMap: Record<string, string> = {
-    apartment: 'categoryApartment',
-    house: 'categoryHouse',
-    penthouse: 'categoryPenthouse',
-    land: 'categoryLand',
-    studio: 'categoryStudio',
-    flat: 'categoryFlat',
+  const typeLabelMap: Record<string, string> = {
+    apartment: 'propertyTypeApartment',
+    house: 'propertyTypeHouse',
+    penthouse: 'propertyTypePenthouse',
+    land: 'propertyTypeLand',
+    studio: 'propertyTypeStudio',
+    flat: 'propertyTypeFlat',
   }
 
-  const getCategoryLabel = (value?: string) => {
+  const getTypeLabel = (value?: string) => {
     if (!value) return '-'
-    const key = categoryLabelMap[value]
+    const key = typeLabelMap[value]
     return key ? t(key) : value
   }
 
@@ -222,9 +222,9 @@ export default function ProductsPage() {
                     </TableHead>
                     <TableHead 
                       className="cursor-pointer" 
-                      onClick={() => handleSort("category")}
+                      onClick={() => handleSort("type")}
                     >
-                      {t('category')} {sortBy === "category" && (sortOrder === "asc" ? "↑" : "↓")}
+                      {t('propertyType')} {sortBy === "type" && (sortOrder === "asc" ? "↑" : "↓")}
                     </TableHead>
                     <TableHead className="text-right">{t('actions')}</TableHead>
                   </TableRow>
@@ -292,7 +292,7 @@ export default function ProductsPage() {
                       : '-'
                     }
                   </TableCell>
-                  <TableCell>{getCategoryLabel(product.category)}</TableCell>
+                      <TableCell>{getTypeLabel(product.type)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <Button
