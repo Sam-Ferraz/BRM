@@ -236,10 +236,11 @@ export function createApiRoutes(app) {
   app.post('/api/deals', authenticateToken, async (req, res) => {
     const client = await pool.connect()
     try {
-      const { client: clientName, value, status, date, description } = req.body
+      const { client: clientName, gsv, status, origin_date, description } = req.body
       const result = await client.query(
-        'INSERT INTO deals (client, value, status, date, description) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-        [clientName, value, status, date, description]
+        `INSERT INTO deals (client, gsv, status, origin_date, description)
+         VALUES ($1, $2, $3, $4::date, $5) RETURNING *`,
+        [clientName, gsv, status, origin_date, description]
       )
       res.json(result.rows[0])
     } catch (error) {
@@ -254,10 +255,17 @@ export function createApiRoutes(app) {
     const client = await pool.connect()
     try {
       const { id } = req.params
-      const { client: clientName, value, status, date, description } = req.body
+      const { client: clientName, gsv, status, origin_date, description } = req.body
       const result = await client.query(
-        'UPDATE deals SET client = $1, value = $2, status = $3, date = $4, description = $5, updated_at = CURRENT_TIMESTAMP WHERE id = $6 RETURNING *',
-        [clientName, value, status, date, description, id]
+        `UPDATE deals
+         SET client = $1,
+             gsv = $2,
+             status = $3,
+             origin_date = $4::date,
+             description = $5,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $6 RETURNING *`,
+        [clientName, gsv, status, origin_date, description, id]
       )
       if (result.rows.length === 0) {
         return res.status(404).json({ error: 'Deal not found' })

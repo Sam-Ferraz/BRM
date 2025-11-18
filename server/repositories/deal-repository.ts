@@ -11,7 +11,8 @@ export class DealRepository extends BaseRepository {
       let paramCount = 1
 
       if (search) {
-        query += ` AND (client ILIKE $${paramCount} OR value ILIKE $${paramCount})`
+        // Search by client name or gsv (cast to text for partial match)
+        query += ` AND (client ILIKE $${paramCount} OR gsv::text ILIKE $${paramCount})`
         params.push(`%${search}%`)
         paramCount++
       }
