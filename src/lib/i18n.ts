@@ -223,6 +223,9 @@ const resources = {
       propertyTypeLand: 'Terreno',
       propertyTypeStudio: 'Estúdio',
       propertyTypeFlat: 'Flat',
+      propertyCategory: 'Categoria',
+      propertyCategoryOffPlan: 'Imóvel na planta',
+      propertyCategoryCompleted: 'Imóvel pronto',
       
       // Sales Agenda Page
       salesAgendaTitle: 'Pauta de Vendas',
@@ -537,6 +540,9 @@ const resources = {
       propertyTypeLand: 'Land',
       propertyTypeStudio: 'Studio',
       propertyTypeFlat: 'Flat',
+      propertyCategory: 'Category',
+      propertyCategoryOffPlan: 'Off-plan',
+      propertyCategoryCompleted: 'Completed',
       
       // Sales Agenda Page
       salesAgendaTitle: 'Sales Agenda',
@@ -851,6 +857,9 @@ const resources = {
       propertyTypeLand: 'Terreno',
       propertyTypeStudio: 'Estudio',
       propertyTypeFlat: 'Flat',
+      propertyCategory: 'Categoría',
+      propertyCategoryOffPlan: 'Inmueble en plano',
+      propertyCategoryCompleted: 'Inmueble listo',
       
       // Sales Agenda Page
       salesAgendaTitle: 'Agenda de Ventas',

@@ -34,6 +34,7 @@ export function ProductForm({ product, initialName, open, onOpenChange, onSubmit
   const { toast } = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null)
   type PropertyTypeValue = 'apartment' | 'house' | 'penthouse' | 'land' | 'studio' | 'flat'
+  type PropertyCategoryValue = 'off-plan' | 'completed'
   const propertyTypeOptions: { value: PropertyTypeValue; label: string }[] = [
     { value: 'apartment', label: t('propertyTypeApartment') },
     { value: 'house', label: t('propertyTypeHouse') },
@@ -42,11 +43,16 @@ export function ProductForm({ product, initialName, open, onOpenChange, onSubmit
     { value: 'studio', label: t('propertyTypeStudio') },
     { value: 'flat', label: t('propertyTypeFlat') },
   ]
+  const propertyCategoryOptions: { value: PropertyCategoryValue; label: string }[] = [
+    { value: 'off-plan', label: t('propertyCategoryOffPlan') },
+    { value: 'completed', label: t('propertyCategoryCompleted') },
+  ]
   
   const [formData, setFormData] = useState({
     name: "",
     price: null as number | null,
     type: "apartment" as PropertyTypeValue,
+    category: "off-plan" as PropertyCategoryValue,
     description: "",
   })
   
@@ -71,6 +77,7 @@ export function ProductForm({ product, initialName, open, onOpenChange, onSubmit
         name: product.name || "",
         price: product.price || null,
         type: (product.type as PropertyTypeValue) || "apartment",
+        category: (product.category as PropertyCategoryValue) || "off-plan",
         description: product.description || "",
       })
       setShowImageUpload(true)
@@ -80,6 +87,7 @@ export function ProductForm({ product, initialName, open, onOpenChange, onSubmit
         name: initialName || "",
         price: null,
         type: "apartment",
+        category: "off-plan",
         description: "",
       })
       setShowImageUpload(false)
@@ -293,6 +301,25 @@ export function ProductForm({ product, initialName, open, onOpenChange, onSubmit
                   </SelectTrigger>
                   <SelectContent>
                     {propertyTypeOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="category">{t('propertyCategory')}</Label>
+                <Select
+                  value={formData.category}
+                  onValueChange={(value) => setFormData({ ...formData, category: value as PropertyCategoryValue })}
+                >
+                  <SelectTrigger {...(!isMobile && { tabIndex: 4 })}>
+                    <SelectValue placeholder={t('select')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {propertyCategoryOptions.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
                         {option.label}
                       </SelectItem>

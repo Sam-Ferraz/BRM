@@ -161,6 +161,17 @@ export default function ProductsPage() {
     return key ? t(key) : value
   }
 
+  const categoryLabelMap: Record<string, string> = {
+    'off-plan': 'propertyCategoryOffPlan',
+    'completed': 'propertyCategoryCompleted',
+  }
+
+  const getCategoryLabel = (value?: string) => {
+    if (!value) return '-'
+    const key = categoryLabelMap[value]
+    return key ? t(key) : value
+  }
+
 
 
   return (
@@ -225,6 +236,12 @@ export default function ProductsPage() {
                       onClick={() => handleSort("type")}
                     >
                       {t('propertyType')} {sortBy === "type" && (sortOrder === "asc" ? "↑" : "↓")}
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer" 
+                      onClick={() => handleSort("category")}
+                    >
+                      {t('propertyCategory')} {sortBy === "category" && (sortOrder === "asc" ? "↑" : "↓")}
                     </TableHead>
                     <TableHead className="text-right">{t('actions')}</TableHead>
                   </TableRow>
@@ -292,7 +309,8 @@ export default function ProductsPage() {
                       : '-'
                     }
                   </TableCell>
-                      <TableCell>{getTypeLabel(product.type)}</TableCell>
+                  <TableCell>{getTypeLabel(product.type)}</TableCell>
+                  <TableCell>{getCategoryLabel(product.category)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <Button

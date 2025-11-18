@@ -25,6 +25,7 @@ describe('ProductService', () => {
         name: 'Test Product',
         price: '100.00',
         type: 'Software',
+        category: 'completed',
         description: 'Test product description',
         has_thumbnail: true
       },
@@ -33,6 +34,7 @@ describe('ProductService', () => {
         name: 'Another Product',
         price: '200.00',
         type: 'Hardware',
+        category: 'completed',
         description: 'Another product description',
         has_thumbnail: false
       }
@@ -66,6 +68,7 @@ describe('ProductService', () => {
       name: 'New Product',
       price: '300.00',
       type: 'Services',
+      category: 'completed' as const,
       description: 'New product description'
     }
 
@@ -102,6 +105,7 @@ describe('ProductService', () => {
       name: 'Test Product',
       price: '100.00',
       type: 'Software',
+      category: 'completed',
       description: 'Test product description'
     }
 
@@ -138,6 +142,7 @@ describe('ProductService', () => {
       name: 'Test Product',
       price: '100.00',
       type: 'Software',
+      category: 'completed',
       description: 'Test product description'
     }
 
@@ -182,6 +187,7 @@ describe('ProductService', () => {
       name: 'Test Product',
       price: '100.00',
       type: 'Software',
+      category: 'completed',
       description: 'Test product description'
     }
 

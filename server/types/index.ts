@@ -43,6 +43,7 @@ export interface Product {
   name: string
   price: string | null
   type: string
+  category: 'off-plan' | 'completed'
   description: string
   has_thumbnail?: boolean
   created_at?: Date
@@ -116,6 +117,7 @@ export interface QueryFilters {
   search?: string
   status?: string
   type?: string
+  category?: string
   sortBy?: string
   sortOrder?: 'asc' | 'desc'
 }

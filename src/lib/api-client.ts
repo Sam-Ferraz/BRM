@@ -124,6 +124,7 @@ export interface Product {
   name: string
   price?: number
   type?: string
+  category?: 'off-plan' | 'completed'
   description?: string
   images?: ProductImage[]
   thumbnail?: ProductImage
@@ -234,12 +235,14 @@ export const api = {
     getAll: async (filters?: {
       search?: string
       type?: string
+      category?: string
       sortBy?: string
       sortOrder?: "asc" | "desc"
     }): Promise<ApiResponse<Product>> => {
       const params = new URLSearchParams()
       if (filters?.search) params.append('search', filters.search)
       if (filters?.type) params.append('type', filters.type)
+      if (filters?.category) params.append('category', filters.category)
       if (filters?.sortBy) params.append('sortBy', filters.sortBy)
       if (filters?.sortOrder) params.append('sortOrder', filters.sortOrder)
       

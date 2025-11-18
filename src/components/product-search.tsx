@@ -170,6 +170,17 @@ export function ProductSearch({
     return key ? t(key) : type
   }
 
+  const categoryLabelMap: Record<string, string> = {
+    'off-plan': 'propertyCategoryOffPlan',
+    'completed': 'propertyCategoryCompleted',
+  }
+
+  const getCategoryLabel = (category?: string) => {
+    if (!category) return ''
+    const key = categoryLabelMap[category]
+    return key ? t(key) : category
+  }
+
   return (
     <div>
     <Popover open={open} onOpenChange={setOpen}>
@@ -227,11 +238,15 @@ export function ProductSearch({
                     />
                     <div>
                       <div className="font-medium">{product.name}</div>
-                      {(product.type || product.price) && (
+                      {(product.type || product.category || product.price) && (
                         <div className="text-sm text-muted-foreground">
-                          {product.type && product.price 
-                            ? `${getTypeLabel(product.type)} • ${product.price}`
-                            : getTypeLabel(product.type) || product.price}
+                          {[
+                            getTypeLabel(product.type),
+                            getCategoryLabel(product.category),
+                            product.price,
+                          ]
+                            .filter(Boolean)
+                            .join(' • ')}
                         </div>
                       )}
                     </div>
