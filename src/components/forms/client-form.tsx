@@ -30,7 +30,6 @@ export function ClientForm({ client, initialName, open, onOpenChange, onSubmit, 
     phone: "",
     city: "",
     address: "",
-    company: "",
     origin: "online_lead" as Client['origin'],
   })
 
@@ -42,7 +41,6 @@ export function ClientForm({ client, initialName, open, onOpenChange, onSubmit, 
         phone: client.phone || "",
         city: client.city || "",
         address: client.address || "",
-        company: client.company || "",
         origin: (client.origin || "online_lead") as Client['origin'],
       })
     } else {
@@ -52,7 +50,6 @@ export function ClientForm({ client, initialName, open, onOpenChange, onSubmit, 
         phone: "",
         city: "",
         address: "",
-        company: "",
         origin: "online_lead",
       })
     }
@@ -127,15 +124,6 @@ export function ClientForm({ client, initialName, open, onOpenChange, onSubmit, 
               value={formData.address}
               onChange={(e) => setFormData({ ...formData, address: e.target.value })}
               {...(!isMobile && { tabIndex: 5 })}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="company">{t('company')}</Label>
-            <Input
-              id="company"
-              value={formData.company}
-              onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-              {...(!isMobile && { tabIndex: 6 })}
             />
           </div>
           <div className="space-y-2">

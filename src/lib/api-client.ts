@@ -94,7 +94,6 @@ export interface Client {
   phone: string
   city: string
   address?: string
-  company?: string
   origin?: 'online_lead' | 'own_portfolio' | 'duty_shift' | 'referral' | 'street_client'
 }
 

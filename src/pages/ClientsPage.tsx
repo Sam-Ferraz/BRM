@@ -216,7 +216,6 @@ export default function ClientsPage() {
                     >
                       {t('city')} {sortBy === "city" && (sortOrder === "asc" ? "↑" : "↓")}
                     </TableHead>
-                    <TableHead>{t('company')}</TableHead>
                     <TableHead>{t('origin')}</TableHead>
                     <TableHead className="text-right">{t('actions')}</TableHead>
                   </TableRow>
@@ -249,16 +248,6 @@ export default function ClientsPage() {
                           <MapPin className="h-4 w-4 text-muted-foreground" />
                           {client.city}
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        {client.company ? (
-                          <div className="flex items-center gap-2">
-                            <Building className="h-4 w-4 text-muted-foreground" />
-                            <Badge variant="outline">{client.company}</Badge>
-                          </div>
-                        ) : (
-                          "-"
-                        )}
                       </TableCell>
                       <TableCell>
                         {client.origin ? (

@@ -37,8 +37,8 @@ export class ClientRepository extends BaseRepository {
     const client = await this.getClient()
     try {
       const result = await client.query(
-        'INSERT INTO clients (name, email, phone, city, address, company, origin) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
-        [clientData.name, clientData.email, clientData.phone, clientData.city, clientData.address, clientData.company, clientData.origin]
+        'INSERT INTO clients (name, email, phone, city, address, origin) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+        [clientData.name, clientData.email, clientData.phone, clientData.city, clientData.address, clientData.origin]
       )
       return result.rows[0]
     } finally {
@@ -50,8 +50,8 @@ export class ClientRepository extends BaseRepository {
     const client = await this.getClient()
     try {
       const result = await client.query(
-        'UPDATE clients SET name = $1, email = $2, phone = $3, city = $4, address = $5, company = $6, origin = $7, updated_at = CURRENT_TIMESTAMP WHERE id = $8 RETURNING *',
-        [clientData.name, clientData.email, clientData.phone, clientData.city, clientData.address, clientData.company, clientData.origin, id]
+        'UPDATE clients SET name = $1, email = $2, phone = $3, city = $4, address = $5, origin = $6, updated_at = CURRENT_TIMESTAMP WHERE id = $7 RETURNING *',
+        [clientData.name, clientData.email, clientData.phone, clientData.city, clientData.address, clientData.origin, id]
       )
       return result.rows.length > 0 ? result.rows[0] : null
     } finally {

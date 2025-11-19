@@ -23,8 +23,8 @@ export function createClientRoutes(clientService: ClientService): Router {
 
   router.post('/', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      const { name, email, phone, city, address, company, origin } = req.body
-      const client = await clientService.createClient({ name, email, phone, city, address, company, origin })
+      const { name, email, phone, city, address, origin } = req.body
+      const client = await clientService.createClient({ name, email, phone, city, address, origin })
       res.json(client)
     } catch (error) {
       console.error('Error in create client route:', error)
@@ -35,8 +35,8 @@ export function createClientRoutes(clientService: ClientService): Router {
   router.put('/:id', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const id = parseInt(req.params.id)
-      const { name, email, phone, city, address, company, origin } = req.body
-      const client = await clientService.updateClient(id, { name, email, phone, city, address, company, origin })
+      const { name, email, phone, city, address, origin } = req.body
+      const client = await clientService.updateClient(id, { name, email, phone, city, address, origin })
       res.json(client)
     } catch (error) {
       console.error('Error in update client route:', error)

@@ -32,7 +32,6 @@ export interface Client {
   phone: string
   city: string
   address: string
-  company: string
   origin: string
   created_at?: Date
   updated_at?: Date
