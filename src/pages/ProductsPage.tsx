@@ -218,7 +218,7 @@ export default function ProductsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Image</TableHead>
+                    <TableHead>{t('image')}</TableHead>
                     <TableHead 
                       className="cursor-pointer" 
                       onClick={() => handleSort("name")}
