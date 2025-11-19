@@ -160,7 +160,7 @@ const resources = {
       // Clients Page
       clientsTitle: 'Clientes',
       clientsManagement: 'Gestão de Clientes',
-      newClient: 'Novo Cliente',
+      newClient: 'Novo cliente',
       searchClients: 'Buscar clientes...',
       phone: 'Telefone',
       city: 'Cidade',
@@ -280,7 +280,7 @@ const resources = {
       
       // Form Dialog Titles
       editDeal: 'Editar Negócio',
-      editClient: 'Editar Cliente',
+      editClient: 'Editar cliente',
       editService: 'Editar Atendimento',
       editAppointment: 'Editar Atendimento',
       newAppointment: 'Novo Atendimento',
@@ -478,7 +478,7 @@ const resources = {
       // Clients Page
       clientsTitle: 'Clients',
       clientsManagement: 'Client Management',
-      newClient: 'New Client',
+      newClient: 'New client',
       searchClients: 'Search clients...',
       phone: 'Phone',
       city: 'City',
@@ -598,7 +598,7 @@ const resources = {
       
       // Form Dialog Titles
       editDeal: 'Edit Deal',
-      editClient: 'Edit Client',
+      editClient: 'Edit client',
       editService: 'Edit Service',
       editAppointment: 'Edit Appointment',
       newAppointment: 'New Appointment',
@@ -796,7 +796,7 @@ const resources = {
       // Clients Page
       clientsTitle: 'Clientes',
       clientsManagement: 'Gestión de Clientes',
-      newClient: 'Nuevo Cliente',
+      newClient: 'Nuevo cliente',
       searchClients: 'Buscar clientes...',
       phone: 'Teléfono',
       city: 'Ciudad',
@@ -916,7 +916,7 @@ const resources = {
       
       // Form Dialog Titles
       editDeal: 'Editar Negocio',
-      editClient: 'Editar Cliente',
+      editClient: 'Editar cliente',
       editService: 'Editar Servicio',
       editAppointment: 'Editar Cita',
       newAppointment: 'Nueva Cita',
