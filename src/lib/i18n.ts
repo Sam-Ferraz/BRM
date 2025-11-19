@@ -159,7 +159,7 @@ const resources = {
       
       // Clients Page
       clientsTitle: 'Clientes',
-      clientsManagement: 'Gestão de Clientes',
+      clientsManagement: 'Carteira de clientes',
       newClient: 'Novo cliente',
       searchClients: 'Buscar clientes...',
       phone: 'Telefone',
@@ -477,7 +477,7 @@ const resources = {
       
       // Clients Page
       clientsTitle: 'Clients',
-      clientsManagement: 'Client Management',
+      clientsManagement: 'Client portfolio',
       newClient: 'New client',
       searchClients: 'Search clients...',
       phone: 'Phone',
@@ -795,7 +795,7 @@ const resources = {
       
       // Clients Page
       clientsTitle: 'Clientes',
-      clientsManagement: 'Gestión de Clientes',
+      clientsManagement: 'Cartera de clientes',
       newClient: 'Nuevo cliente',
       searchClients: 'Buscar clientes...',
       phone: 'Teléfono',
