@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   Table,
   TableBody,
@@ -25,8 +26,9 @@ export default function FollowUpsPage() {
   const [loading, setLoading] = useState(true)
   const [formLoading, setFormLoading] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
-  const [sortBy, setSortBy] = useState("")
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc")
+  const [statusFilter, setStatusFilter] = useState("active") // "active", "completed", "all"
+  const [sortBy, setSortBy] = useState("next_action_date")
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc")
 
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingFollowUp, setEditingFollowUp] = useState<FollowUpWithDetails | undefined>()
@@ -45,8 +47,17 @@ export default function FollowUpsPage() {
       }
 
       const result = await api.followUps.getAll(filters)
-      // Filter out completed follow-ups
-      setFollowUps(result.data.filter(f => !f.completed))
+
+      // Filter based on status filter
+      let filteredData = result.data
+      if (statusFilter === "active") {
+        filteredData = result.data.filter(f => !f.completed)
+      } else if (statusFilter === "completed") {
+        filteredData = result.data.filter(f => f.completed)
+      }
+      // "all" shows everything, no filter needed
+
+      setFollowUps(filteredData)
     } catch (error) {
       toast({
         title: t('error'),
@@ -56,7 +67,7 @@ export default function FollowUpsPage() {
     } finally {
       setLoading(false)
     }
-  }, [searchTerm, sortBy, sortOrder, toast, t])
+  }, [searchTerm, statusFilter, sortBy, sortOrder, toast, t])
 
   useEffect(() => {
     fetchFollowUps()
@@ -212,6 +223,16 @@ export default function FollowUpsPage() {
                   className="pl-9"
                 />
               </div>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full sm:w-48">
+                  <SelectValue placeholder={t('status')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">{t('activeFollowUps')}</SelectItem>
+                  <SelectItem value="completed">{t('completedFollowUps')}</SelectItem>
+                  <SelectItem value="all">{t('allFollowUps')}</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {loading ? (
@@ -234,6 +255,7 @@ export default function FollowUpsPage() {
                       {t('nextActionDate')} {sortBy === "next_action_date" && (sortOrder === "asc" ? "↑" : "↓")}
                     </TableHead>
                     <TableHead>{t('followUpStatus')}</TableHead>
+                    <TableHead>{t('completed')}</TableHead>
                     <TableHead className="text-right">{t('actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -269,19 +291,26 @@ export default function FollowUpsPage() {
                           {getStatusTranslation(followUp.followup_status)}
                         </Badge>
                       </TableCell>
+                      <TableCell>
+                        <Badge variant={followUp.completed ? "default" : "secondary"}>
+                          {followUp.completed ? t('yes') : t('no')}
+                        </Badge>
+                      </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleMarkComplete(followUp.id)
-                            }}
-                            title={t('markAsCompleted')}
-                          >
-                            <CheckCircle2 className="w-4 h-4" />
-                          </Button>
+                          {!followUp.completed && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleMarkComplete(followUp.id)
+                              }}
+                              title={t('markAsCompleted')}
+                            >
+                              <CheckCircle2 className="w-4 h-4" />
+                            </Button>
+                          )}
                           <Button
                             variant="outline"
                             size="sm"
@@ -310,7 +339,7 @@ export default function FollowUpsPage() {
                   ))}
                   {followUps.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                         {t('noFollowUpsFound')}
                       </TableCell>
                     </TableRow>

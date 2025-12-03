@@ -294,7 +294,12 @@ const resources = {
       allFollowUpStatuses: 'Todos os status',
       editFollowUp: 'Editar Follow-up',
       followUpModule: 'Acompanhamento de próximas ações',
-      
+      activeFollowUps: 'Ativos',
+      completedFollowUps: 'Concluídos',
+      allFollowUps: 'Todos',
+      yes: 'Sim',
+      no: 'Não',
+
       // Common actions
       success: 'Sucesso',
       error: 'Erro',
@@ -645,7 +650,12 @@ const resources = {
       allFollowUpStatuses: 'All statuses',
       editFollowUp: 'Edit Follow-up',
       followUpModule: 'Next actions tracking',
-      
+      activeFollowUps: 'Active',
+      completedFollowUps: 'Completed',
+      allFollowUps: 'All',
+      yes: 'Yes',
+      no: 'No',
+
       // Common actions
       success: 'Success',
       error: 'Error',
@@ -996,7 +1006,12 @@ const resources = {
       allFollowUpStatuses: 'Todos los estados',
       editFollowUp: 'Editar Follow-up',
       followUpModule: 'Seguimiento de próximas acciones',
-      
+      activeFollowUps: 'Activos',
+      completedFollowUps: 'Completados',
+      allFollowUps: 'Todos',
+      yes: 'Sí',
+      no: 'No',
+
       // Common actions
       success: 'Éxito',
       error: 'Error',
