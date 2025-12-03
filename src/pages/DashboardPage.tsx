@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Users, Briefcase, Package, HeadphonesIcon, Settings, LogOut, FileText, Plus, BarChart3 } from "lucide-react"
+import { Users, Briefcase, Package, HeadphonesIcon, Settings, LogOut, FileText, Plus, BarChart3, ClipboardCheck } from "lucide-react"
 import { ChartContainer } from "@/components/ui/chart-simple"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from "recharts"
 import { useAuth } from "@/hooks/use-auth"
@@ -356,6 +356,24 @@ export default function DashboardPage() {
                         <div>
                           <p className="text-sm font-medium text-muted-foreground">{t('products')}</p>
                           <p className="text-2xl font-bold text-foreground">{stats.totalProducts}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+
+              <Link to="/follow-ups">
+                <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                  <CardContent className="p-3 md:p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="p-2 bg-teal-100 rounded-lg">
+                          <ClipboardCheck className="w-6 h-6 text-teal-600" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">{t('followUps')}</p>
+                          <p className="text-2xl font-bold text-foreground">-</p>
                         </div>
                       </div>
                     </div>

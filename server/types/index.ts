@@ -83,6 +83,22 @@ export interface SalesAgenda {
   updated_at?: Date
 }
 
+export interface FollowUp {
+  id: number
+  appointment_id: number
+  next_action: string
+  next_action_date: string
+  completed: boolean
+  completed_at?: Date | null
+  created_at?: Date
+  updated_at?: Date
+}
+
+export interface FollowUpWithDetails extends FollowUp {
+  appointment?: Appointment
+  followup_status: 'open' | 'pending' | 'overdue'
+}
+
 export interface DashboardStats {
   totalDeals: number
   totalClients: number

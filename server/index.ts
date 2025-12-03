@@ -11,7 +11,8 @@ import {
   ClientRepository,
   ProductRepository,
   AppointmentRepository,
-  SalesAgendaRepository
+  SalesAgendaRepository,
+  FollowUpRepository
 } from './repositories/index.js'
 
 // Import services
@@ -22,7 +23,8 @@ import {
   ClientService,
   ProductService,
   AppointmentService,
-  SalesAgendaService
+  SalesAgendaService,
+  FollowUpService
 } from './services/index.js'
 
 // Import routes
@@ -33,6 +35,7 @@ import { createClientRoutes } from './routes/client-routes.js'
 import { createProductRoutes } from './routes/product-routes.js'
 import { createAppointmentRoutes } from './routes/appointment-routes.js'
 import { createSalesAgendaRoutes } from './routes/sales-agenda-routes.js'
+import { createFollowUpRoutes } from './routes/followup-routes.js'
 
 dotenv.config()
 
@@ -50,12 +53,14 @@ app.use(cors({
 app.use(express.json())
 
 // Serve static files from the Vite build
-app.use(express.static(path.join(__dirname, '../dist')))
+// In Docker: __dirname = /app/server/dist, so ../../dist = /app/dist
+// In dev: __dirname = /project/server/dist, so ../../dist = /project/dist
+app.use(express.static(path.join(__dirname, '../../dist')))
 
 // Health check
 app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'OK', 
+  res.json({
+    status: 'OK',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     version: process.env.npm_package_version || '1.0.0'
@@ -69,6 +74,7 @@ const clientRepository = new ClientRepository()
 const productRepository = new ProductRepository()
 const appointmentRepository = new AppointmentRepository()
 const salesAgendaRepository = new SalesAgendaRepository()
+const followUpRepository = new FollowUpRepository()
 
 // Initialize services with dependency injection
 const authService = new AuthService(userRepository)
@@ -84,6 +90,7 @@ const clientService = new ClientService(clientRepository)
 const productService = new ProductService(productRepository)
 const appointmentService = new AppointmentService(appointmentRepository)
 const salesAgendaService = new SalesAgendaService(salesAgendaRepository)
+const followUpService = new FollowUpService(followUpRepository)
 
 // Setup routes
 app.use('/api/auth', createAuthRoutes(authService))
@@ -93,6 +100,7 @@ app.use('/api/clients', createClientRoutes(clientService))
 app.use('/api/products', createProductRoutes(productService))
 app.use('/api/appointments', createAppointmentRoutes(appointmentService))
 app.use('/api/sales-agenda', createSalesAgendaRoutes(salesAgendaService))
+app.use('/api/follow-ups', createFollowUpRoutes(followUpService))
 
 // Serve React app for all non-API routes (client-side routing)
 app.get('*', (req, res) => {
@@ -100,8 +108,8 @@ app.get('*', (req, res) => {
   if (req.path.startsWith('/api/')) {
     return res.status(404).json({ error: 'Endpoint não encontrado' })
   }
-  
-  res.sendFile(path.join(__dirname, '../dist/index.html'))
+
+  res.sendFile(path.join(__dirname, '../../dist/index.html'))
 })
 
 // Error handling middleware

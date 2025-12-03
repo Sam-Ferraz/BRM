@@ -12,6 +12,7 @@ import ClientsPage from './pages/ClientsPage'
 import AppointmentsPage from './pages/AppointmentsPage'
 import ProductsPage from './pages/ProductsPage'
 import SalesAgendaPage from './pages/SalesAgendaPage'
+import FollowUpsPage from './pages/FollowUpsPage'
 import ConfigPage from './pages/ConfigPage'
 import './lib/i18n'
 import './index.css'
@@ -57,6 +58,11 @@ function App() {
               <Route path="/sales-agenda" element={
                 <ProtectedRoute>
                   <SalesAgendaPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/follow-ups" element={
+                <ProtectedRoute>
+                  <FollowUpsPage />
                 </ProtectedRoute>
               } />
               <Route path="/settings" element={

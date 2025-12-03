@@ -14,9 +14,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { ArrowLeft, Plus, Pencil, Trash2, Search, Clock, User, HeadphonesIcon } from "lucide-react"
+import { ArrowLeft, Plus, Pencil, Trash2, Search, Clock, User, HeadphonesIcon, ClipboardCheck } from "lucide-react"
 import { api, type Appointment } from "@/lib/api-client"
 import { AppointmentForm } from "@/components/forms/appointment-form"
+import { FollowUpForm } from "@/components/forms/followup-form"
 import { useToast } from "@/hooks/use-toast"
 import { ReactiveDateTime } from "@/components/reactive-datetime"
 
@@ -33,7 +34,11 @@ export default function AppointmentsPage() {
   
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingAppointment, setEditingAppointment] = useState<Appointment | undefined>()
-  
+
+  const [isFollowUpFormOpen, setIsFollowUpFormOpen] = useState(false)
+  const [selectedAppointmentForFollowUp, setSelectedAppointmentForFollowUp] = useState<Appointment | undefined>()
+  const [followUpFormLoading, setFollowUpFormLoading] = useState(false)
+
   const { toast } = useToast()
 
   // Check for auto-open dialog from FAB
@@ -138,6 +143,33 @@ export default function AppointmentsPage() {
         description: t('serviceDeleteError'),
         variant: "destructive",
       })
+    }
+  }
+
+  const handleCreateFollowUp = async (data: { next_action: string; next_action_date: string }) => {
+    if (!selectedAppointmentForFollowUp) return
+
+    try {
+      setFollowUpFormLoading(true)
+      await api.followUps.create({
+        appointment_id: selectedAppointmentForFollowUp.id,
+        next_action: data.next_action,
+        next_action_date: data.next_action_date,
+      })
+      toast({
+        title: t('success'),
+        description: t('followUpCreatedSuccess'),
+      })
+      setIsFollowUpFormOpen(false)
+      setSelectedAppointmentForFollowUp(undefined)
+    } catch (error) {
+      toast({
+        title: t('error'),
+        description: t('followUpCreateError'),
+        variant: "destructive",
+      })
+    } finally {
+      setFollowUpFormLoading(false)
     }
   }
 
@@ -321,6 +353,18 @@ export default function AppointmentsPage() {
                             size="sm"
                             onClick={(e) => {
                               e.stopPropagation()
+                              setSelectedAppointmentForFollowUp(appointment)
+                              setIsFollowUpFormOpen(true)
+                            }}
+                            title={t('createFollowUp')}
+                          >
+                            <ClipboardCheck className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation()
                               setEditingAppointment(appointment)
                               setIsFormOpen(true)
                             }}
@@ -365,6 +409,17 @@ export default function AppointmentsPage() {
         }}
         onSubmit={editingAppointment ? handleUpdate : handleCreate}
         loading={formLoading}
+      />
+
+      <FollowUpForm
+        open={isFollowUpFormOpen}
+        onOpenChange={(open) => {
+          setIsFollowUpFormOpen(open)
+          if (!open) setSelectedAppointmentForFollowUp(undefined)
+        }}
+        onSubmit={handleCreateFollowUp}
+        loading={followUpFormLoading}
+        appointment={selectedAppointmentForFollowUp}
       />
     </div>
   )

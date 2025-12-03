@@ -23,8 +23,8 @@ COPY package*.json ./
 # Copy source code
 COPY . .
 
-# Build the application
-RUN npm run build
+# Build the application (frontend + backend)
+RUN npm run build && npm run server:build
 
 # Production dependencies stage
 FROM node:18-alpine AS prod-deps
@@ -86,4 +86,4 @@ EXPOSE 3002
 
 # Start the application with dumb-init
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["node", "server/index.js"]
+CMD ["node", "server/dist/index.js"]

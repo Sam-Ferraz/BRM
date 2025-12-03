@@ -146,6 +146,22 @@ export interface SalesAgendaCreateInput {
   status: "Ativa" | "Concluída" | "Cancelada"
 }
 
+export interface FollowUp {
+  id: number
+  appointment_id: number
+  next_action: string
+  next_action_date: string
+  completed: boolean
+  completed_at?: string | null
+  created_at?: string
+  updated_at?: string
+}
+
+export interface FollowUpWithDetails extends FollowUp {
+  appointment?: Appointment
+  followup_status: 'open' | 'pending' | 'overdue'
+}
+
 export interface ApiResponse<T> {
   data: T[]
   total: number
@@ -397,7 +413,7 @@ export const api = {
       if (filters?.status) params.append('status', filters.status)
       if (filters?.sortBy) params.append('sortBy', filters.sortBy)
       if (filters?.sortOrder) params.append('sortOrder', filters.sortOrder)
-      
+
       const query = params.toString()
       return apiClient.get<ApiResponse<SalesAgenda>>(`/sales-agenda${query ? `?${query}` : ''}`)
     },
@@ -412,6 +428,53 @@ export const api = {
 
     delete: async (id: number): Promise<{ success: boolean }> => {
       return apiClient.delete<{ success: boolean }>(`/sales-agenda/${id}`)
+    },
+  },
+
+  // Follow-ups
+  followUps: {
+    getAll: async (filters?: {
+      search?: string
+      sortBy?: string
+      sortOrder?: "asc" | "desc"
+    }): Promise<ApiResponse<FollowUpWithDetails>> => {
+      const params = new URLSearchParams()
+      if (filters?.search) params.append('search', filters.search)
+      if (filters?.sortBy) params.append('sortBy', filters.sortBy)
+      if (filters?.sortOrder) params.append('sortOrder', filters.sortOrder)
+
+      const query = params.toString()
+      return apiClient.get<ApiResponse<FollowUpWithDetails>>(`/follow-ups${query ? `?${query}` : ''}`)
+    },
+
+    getById: async (id: number): Promise<FollowUpWithDetails> => {
+      return apiClient.get<FollowUpWithDetails>(`/follow-ups/${id}`)
+    },
+
+    getByAppointmentId: async (appointmentId: number): Promise<ApiResponse<FollowUp>> => {
+      return apiClient.get<ApiResponse<FollowUp>>(`/follow-ups/appointment/${appointmentId}`)
+    },
+
+    getStats: async (): Promise<{ data: { open: number; pending: number; overdue: number } }> => {
+      return apiClient.get<{ data: { open: number; pending: number; overdue: number } }>('/follow-ups/stats')
+    },
+
+    create: async (data: Omit<FollowUp, "id" | "created_at" | "updated_at" | "completed_at">): Promise<FollowUp> => {
+      return apiClient.post<FollowUp>('/follow-ups', data)
+    },
+
+    update: async (id: number, data: Partial<Omit<FollowUp, "id" | "created_at" | "updated_at">>): Promise<FollowUp> => {
+      return apiClient.put<FollowUp>(`/follow-ups/${id}`, data)
+    },
+
+    markAsCompleted: async (id: number): Promise<FollowUp> => {
+      return apiClient.request<FollowUp>(`/follow-ups/${id}/complete`, {
+        method: 'PATCH'
+      })
+    },
+
+    delete: async (id: number): Promise<{ success: boolean }> => {
+      return apiClient.delete<{ success: boolean }>(`/follow-ups/${id}`)
     },
   },
 }
