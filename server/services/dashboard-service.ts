@@ -1,4 +1,4 @@
-import { DealRepository, ClientRepository, ProductRepository, AppointmentRepository, SalesAgendaRepository } from '../repositories/index.js'
+import { DealRepository, ClientRepository, ProductRepository, AppointmentRepository, SalesAgendaRepository, FollowUpRepository } from '../repositories/index.js'
 import { DashboardStats } from '../types/index.js'
 
 export class DashboardService {
@@ -7,19 +7,22 @@ export class DashboardService {
   private productRepository: ProductRepository
   private appointmentRepository: AppointmentRepository
   private salesAgendaRepository: SalesAgendaRepository
+  private followUpRepository: FollowUpRepository
 
   constructor(
     dealRepository: DealRepository,
     clientRepository: ClientRepository,
     productRepository: ProductRepository,
     appointmentRepository: AppointmentRepository,
-    salesAgendaRepository: SalesAgendaRepository
+    salesAgendaRepository: SalesAgendaRepository,
+    followUpRepository: FollowUpRepository
   ) {
     this.dealRepository = dealRepository
     this.clientRepository = clientRepository
     this.productRepository = productRepository
     this.appointmentRepository = appointmentRepository
     this.salesAgendaRepository = salesAgendaRepository
+    this.followUpRepository = followUpRepository
   }
 
   async getDashboardStats(): Promise<DashboardStats> {
@@ -28,13 +31,15 @@ export class DashboardService {
       totalClients,
       totalProducts,
       totalAppointments,
-      totalSalesAgenda
+      totalSalesAgenda,
+      totalFollowUps
     ] = await Promise.all([
       this.dealRepository.getCount(),
       this.clientRepository.getCount(),
       this.productRepository.getCount(),
       this.appointmentRepository.getCount(),
-      this.salesAgendaRepository.getCount()
+      this.salesAgendaRepository.getCount(),
+      this.followUpRepository.getCount()
     ])
 
     return {
@@ -42,7 +47,8 @@ export class DashboardService {
       totalClients,
       totalProducts,
       totalAppointments,
-      totalSalesAgenda
+      totalSalesAgenda,
+      totalFollowUps
     }
   }
 }

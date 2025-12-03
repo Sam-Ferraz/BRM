@@ -83,7 +83,8 @@ const dashboardService = new DashboardService(
   clientRepository,
   productRepository,
   appointmentRepository,
-  salesAgendaRepository
+  salesAgendaRepository,
+  followUpRepository
 )
 const dealService = new DealService(dealRepository)
 const clientService = new ClientService(clientRepository)

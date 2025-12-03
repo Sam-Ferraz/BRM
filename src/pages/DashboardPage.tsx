@@ -34,6 +34,7 @@ export default function DashboardPage() {
     totalProducts: 0,
     totalAppointments: 0,
     totalSalesAgenda: 0,
+    totalFollowUps: 0,
   })
   const [appointmentAnalytics, setAppointmentAnalytics] = useState<AppointmentAnalytics[]>([])
   const [formStates, setFormStates] = useState({
@@ -55,6 +56,7 @@ export default function DashboardPage() {
     totalProducts: 0,
     totalAppointments: 0,
     totalSalesAgenda: 0,
+    totalFollowUps: 0,
   }
 
   const refreshStats = useCallback(async () => {
@@ -69,6 +71,7 @@ export default function DashboardPage() {
       totalProducts: statsData.totalProducts,
       totalAppointments: statsData.totalAppointments,
       totalSalesAgenda: statsData.totalSalesAgenda,
+      totalFollowUps: statsData.totalFollowUps,
     })
 
     setAppointmentAnalytics(analytics.data)
@@ -373,7 +376,7 @@ export default function DashboardPage() {
                         </div>
                         <div>
                           <p className="text-sm font-medium text-muted-foreground">{t('followUps')}</p>
-                          <p className="text-2xl font-bold text-foreground">-</p>
+                          <p className="text-2xl font-bold text-foreground">{stats.totalFollowUps}</p>
                         </div>
                       </div>
                     </div>

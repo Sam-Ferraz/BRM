@@ -105,6 +105,7 @@ export interface DashboardStats {
   totalProducts: number
   totalAppointments: number
   totalSalesAgenda: number
+  totalFollowUps: number
 }
 
 export interface AppointmentAnalytics {
