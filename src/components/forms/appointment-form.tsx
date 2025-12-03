@@ -17,13 +17,15 @@ import { getCurrentDateTimeForForm, convertFromAppToLocal, convertFromLocalToApp
 import { ClientSearch } from "@/components/client-search"
 import { ProductSearch } from "@/components/product-search"
 import { AnsweredStatusToggle } from "@/components/ui/answered-status-toggle"
+import { Checkbox } from "@/components/ui/checkbox"
 import { useTimezone } from "@/hooks/use-timezone"
+import { format } from "date-fns"
 
 interface AppointmentFormProps {
   appointment?: Appointment
   open: boolean
   onOpenChange: (open: boolean) => void
-  onSubmit: (data: Omit<Appointment, "id"> | Partial<Appointment>) => void
+  onSubmit: (data: Omit<Appointment, "id"> | Partial<Appointment>, followUpData?: { next_action: string; next_action_date: string }) => void
   loading?: boolean
 }
 
@@ -47,19 +49,26 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
   const [selectedClientPhone, setSelectedClientPhone] = useState<string | null>(null)
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
 
+  // Follow-up fields (optional)
+  const [includeFollowUp, setIncludeFollowUp] = useState(false)
+  const [followUpData, setFollowUpData] = useState({
+    next_action: "",
+    next_action_date: format(new Date(), 'yyyy-MM-dd'),
+  })
+
   useEffect(() => {
     // Clear errors when form opens/closes or changes mode
     setErrors({})
-    
+
     if (appointment) {
       // Convert datetime from database to form format (YYYY-MM-DDTHH:mm)
       let formattedDateTime = currentDateTime
-      
+
       if (appointment.scheduled_datetime) {
         // Convert from stored timezone to user's configured timezone for form input
         formattedDateTime = convertFromAppToLocal(appointment.scheduled_datetime, currentTimezone)
       }
-      
+
       setFormData({
         scheduled_datetime: formattedDateTime,
         description: appointment.description || "",
@@ -69,6 +78,7 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
         property_name: appointment.property_name || "",
       })
       setSelectedClientPhone(null)
+      setIncludeFollowUp(false)
     } else {
       setFormData({
         scheduled_datetime: currentDateTime,
@@ -79,6 +89,11 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
         property_name: "",
       })
       setSelectedClientPhone(null)
+      setIncludeFollowUp(false)
+      setFollowUpData({
+        next_action: "",
+        next_action_date: format(new Date(), 'yyyy-MM-dd'),
+      })
     }
   }, [appointment, currentDateTime, open, currentTimezone])
   
@@ -132,17 +147,17 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     // Clear previous errors
     setErrors({})
-    
+
     // Validate required fields
     const newErrors: { [key: string]: string } = {}
-    
+
     if (!formData.client.trim()) {
       newErrors.client = t('clientRequired') || 'Client is required'
     }
-    
+
     if (formData.answered === undefined) {
       newErrors.answered = t('answeredStatusRequired') || 'Response status is required'
     }
@@ -150,20 +165,31 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
     if (formData.type === 'visit' && !formData.property_name.trim()) {
       newErrors.property_name = t('productRequired') || 'Property is required'
     }
-    
+
+    // Validate follow-up fields if enabled
+    if (includeFollowUp) {
+      if (!followUpData.next_action.trim()) {
+        newErrors.next_action = t('nextActionRequired') || 'Next action is required'
+      }
+      if (!followUpData.next_action_date) {
+        newErrors.next_action_date = t('nextActionDateRequired') || 'Next action date is required'
+      }
+    }
+
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors)
       return
     }
-    
+
     // Convert datetime from user's configured timezone to app timezone before sending to server
     const dataToSubmit = {
       ...formData,
       property_name: formData.type === 'visit' ? formData.property_name : null,
       scheduled_datetime: convertFromLocalToApp(formData.scheduled_datetime, currentTimezone)
     }
-    
-    onSubmit(dataToSubmit)
+
+    // Pass follow-up data if enabled
+    onSubmit(dataToSubmit, includeFollowUp ? followUpData : undefined)
   }
 
   return (
@@ -284,6 +310,65 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
               <p className="text-sm text-red-500">{errors.answered}</p>
             )}
           </div>
+
+          {/* Follow-up section - only for new appointments */}
+          {!appointment && (
+            <>
+              <div className="border-t pt-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="include_followup"
+                    checked={includeFollowUp}
+                    onCheckedChange={(checked) => setIncludeFollowUp(checked === true)}
+                  />
+                  <Label
+                    htmlFor="include_followup"
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                  >
+                    {t('includeFollowUp')}
+                  </Label>
+                </div>
+              </div>
+
+              {includeFollowUp && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="next_action">
+                      {t('nextAction')} <span className="text-red-500">*</span>
+                    </Label>
+                    <Textarea
+                      id="next_action"
+                      value={followUpData.next_action}
+                      onChange={(e) => setFollowUpData({ ...followUpData, next_action: e.target.value })}
+                      rows={3}
+                      placeholder={t('nextAction')}
+                      className={errors.next_action ? 'ring-2 ring-red-500' : ''}
+                    />
+                    {errors.next_action && (
+                      <p className="text-sm text-red-500">{errors.next_action}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="next_action_date">
+                      {t('nextActionDate')} <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="next_action_date"
+                      type="date"
+                      value={followUpData.next_action_date}
+                      onChange={(e) => setFollowUpData({ ...followUpData, next_action_date: e.target.value })}
+                      className={errors.next_action_date ? 'ring-2 ring-red-500' : ''}
+                    />
+                    {errors.next_action_date && (
+                      <p className="text-sm text-red-500">{errors.next_action_date}</p>
+                    )}
+                  </div>
+                </>
+              )}
+            </>
+          )}
+
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} {...(!isMobile && { tabIndex: 5 })}>
               {t('cancel')}

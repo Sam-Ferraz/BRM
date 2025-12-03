@@ -82,13 +82,25 @@ export default function AppointmentsPage() {
     fetchAppointments()
   }, [fetchAppointments])
 
-  const handleCreate = async (data: Omit<Appointment, "id">) => {
+  const handleCreate = async (data: Omit<Appointment, "id">, followUpData?: { next_action: string; next_action_date: string }) => {
     try {
       setFormLoading(true)
-      await api.appointments.create(data)
+      const createdAppointment = await api.appointments.create(data)
+
+      // If follow-up data is provided, create the follow-up
+      if (followUpData && createdAppointment.id) {
+        await api.followUps.create({
+          appointment_id: createdAppointment.id,
+          next_action: followUpData.next_action,
+          next_action_date: followUpData.next_action_date,
+        })
+      }
+
       toast({
         title: t('success'),
-        description: t('serviceCreatedSuccess'),
+        description: followUpData
+          ? t('serviceAndFollowUpCreatedSuccess')
+          : t('serviceCreatedSuccess'),
       })
       setIsFormOpen(false)
       fetchAppointments()
