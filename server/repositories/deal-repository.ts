@@ -2,13 +2,20 @@ import { BaseRepository } from './base-repository.js'
 import { Deal, QueryFilters } from '../types/index.js'
 
 export class DealRepository extends BaseRepository {
-  async findAll(filters: QueryFilters = {}): Promise<Deal[]> {
+  async findAll(filters: QueryFilters = {}, userId?: number): Promise<Deal[]> {
     const client = await this.getClient()
     try {
       const { search, status, sortBy, sortOrder } = filters
       let query = 'SELECT * FROM deals WHERE 1=1'
       const params: any[] = []
       let paramCount = 1
+
+      // Filter by user_id if provided
+      if (userId) {
+        query += ` AND user_id = $${paramCount}`
+        params.push(userId)
+        paramCount++
+      }
 
       if (search) {
         // Search by client name or gsv (cast to text for partial match)
@@ -55,8 +62,9 @@ export class DealRepository extends BaseRepository {
           gsv,
           property_name,
           temperature,
-          status
-        ) VALUES ($1, $2::date, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
+          status,
+          user_id
+        ) VALUES ($1, $2::date, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
         [
           deal.client,
           deal.origin_date || null,
@@ -69,6 +77,7 @@ export class DealRepository extends BaseRepository {
           deal.property_name || null,
           deal.temperature || null,
           deal.status,
+          deal.user_id,
         ]
       )
       return result.rows[0]
@@ -126,10 +135,18 @@ export class DealRepository extends BaseRepository {
     }
   }
 
-  async getCount(): Promise<number> {
+  async getCount(userId?: number): Promise<number> {
     const client = await this.getClient()
     try {
-      const result = await client.query('SELECT COUNT(*) as count FROM deals')
+      let query = 'SELECT COUNT(*) as count FROM deals'
+      const params: any[] = []
+
+      if (userId) {
+        query += ' WHERE user_id = $1'
+        params.push(userId)
+      }
+
+      const result = await client.query(query, params)
       return parseInt(result.rows[0].count)
     } finally {
       this.releaseClient(client)

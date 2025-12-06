@@ -2,7 +2,7 @@ import { BaseRepository } from './base-repository.js'
 import { FollowUp, FollowUpWithDetails, QueryFilters } from '../types/index.js'
 
 export class FollowUpRepository extends BaseRepository {
-  async findAll(filters: QueryFilters = {}): Promise<FollowUpWithDetails[]> {
+  async findAll(filters: QueryFilters = {}, userId?: number): Promise<FollowUpWithDetails[]> {
     const client = await this.getClient()
     try {
       await client.query('SET TIMEZONE = \'UTC\'')
@@ -17,6 +17,7 @@ export class FollowUpRepository extends BaseRepository {
           a.description,
           a.answered,
           a.property_name,
+          a.user_id as appointment_user_id,
           CASE
             WHEN f.completed = true THEN NULL
             WHEN f.next_action_date >= CURRENT_DATE THEN 'open'
@@ -29,6 +30,13 @@ export class FollowUpRepository extends BaseRepository {
       `
       const params: any[] = []
       let paramCount = 1
+
+      // Filter by user_id if provided
+      if (userId) {
+        query += ` AND f.user_id = $${paramCount}`
+        params.push(userId)
+        paramCount++
+      }
 
       if (search) {
         query += ` AND (f.next_action ILIKE $${paramCount} OR a.client ILIKE $${paramCount})`
@@ -54,6 +62,7 @@ export class FollowUpRepository extends BaseRepository {
         next_action_date: row.next_action_date,
         completed: row.completed,
         completed_at: row.completed_at,
+        user_id: row.user_id,
         created_at: row.created_at,
         updated_at: row.updated_at,
         followup_status: row.followup_status,
@@ -64,7 +73,8 @@ export class FollowUpRepository extends BaseRepository {
           scheduled_datetime: row.scheduled_datetime,
           description: row.description,
           answered: row.answered,
-          property_name: row.property_name
+          property_name: row.property_name,
+          user_id: row.appointment_user_id
         } : undefined
       }))
     } finally {
@@ -99,6 +109,7 @@ export class FollowUpRepository extends BaseRepository {
           a.description,
           a.answered,
           a.property_name,
+          a.user_id as appointment_user_id,
           CASE
             WHEN f.completed = true THEN NULL
             WHEN f.next_action_date >= CURRENT_DATE THEN 'open'
@@ -121,6 +132,7 @@ export class FollowUpRepository extends BaseRepository {
         next_action_date: row.next_action_date,
         completed: row.completed,
         completed_at: row.completed_at,
+        user_id: row.user_id,
         created_at: row.created_at,
         updated_at: row.updated_at,
         followup_status: row.followup_status,
@@ -131,7 +143,8 @@ export class FollowUpRepository extends BaseRepository {
           scheduled_datetime: row.scheduled_datetime,
           description: row.description,
           answered: row.answered,
-          property_name: row.property_name
+          property_name: row.property_name,
+          user_id: row.appointment_user_id
         } : undefined
       }
     } finally {
@@ -143,12 +156,13 @@ export class FollowUpRepository extends BaseRepository {
     const client = await this.getClient()
     try {
       const result = await client.query(
-        'INSERT INTO follow_ups (appointment_id, next_action, next_action_date, completed) VALUES ($1, $2, $3, $4) RETURNING *',
+        'INSERT INTO follow_ups (appointment_id, next_action, next_action_date, completed, user_id) VALUES ($1, $2, $3, $4, $5) RETURNING *',
         [
           followUp.appointment_id,
           followUp.next_action,
           followUp.next_action_date,
-          followUp.completed ?? false
+          followUp.completed ?? false,
+          followUp.user_id
         ]
       )
       return result.rows[0]
@@ -211,20 +225,28 @@ export class FollowUpRepository extends BaseRepository {
     }
   }
 
-  async getCount(): Promise<number> {
+  async getCount(userId?: number): Promise<number> {
     const client = await this.getClient()
     try {
-      const result = await client.query('SELECT COUNT(*) as count FROM follow_ups WHERE completed = false')
+      let query = 'SELECT COUNT(*) as count FROM follow_ups WHERE completed = false'
+      const params: any[] = []
+
+      if (userId) {
+        query += ' AND user_id = $1'
+        params.push(userId)
+      }
+
+      const result = await client.query(query, params)
       return parseInt(result.rows[0].count)
     } finally {
       this.releaseClient(client)
     }
   }
 
-  async getCountByStatus(): Promise<{ open: number; pending: number; overdue: number }> {
+  async getCountByStatus(userId?: number): Promise<{ open: number; pending: number; overdue: number }> {
     const client = await this.getClient()
     try {
-      const query = `
+      let query = `
         SELECT
           COUNT(*) FILTER (WHERE next_action_date >= CURRENT_DATE AND completed = false) as open,
           COUNT(*) FILTER (WHERE next_action_date < CURRENT_DATE
@@ -234,7 +256,14 @@ export class FollowUpRepository extends BaseRepository {
             AND completed = false) as overdue
         FROM follow_ups
       `
-      const result = await client.query(query)
+      const params: any[] = []
+
+      if (userId) {
+        query += ' WHERE user_id = $1'
+        params.push(userId)
+      }
+
+      const result = await client.query(query, params)
       return {
         open: parseInt(result.rows[0].open),
         pending: parseInt(result.rows[0].pending),

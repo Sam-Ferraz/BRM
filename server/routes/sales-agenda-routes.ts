@@ -7,14 +7,15 @@ export function createSalesAgendaRoutes(salesAgendaService: SalesAgendaService):
 
   router.get('/', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const userId = req.user!.userId
       const filters = {
         search: req.query.search as string,
         status: req.query.status as string,
         sortBy: req.query.sortBy as string,
         sortOrder: req.query.sortOrder as 'asc' | 'desc'
       }
-      
-      const result = await salesAgendaService.getAllSalesAgenda(filters)
+
+      const result = await salesAgendaService.getAllSalesAgenda(filters, userId)
       res.json(result)
     } catch (error) {
       console.error('Error in get sales agenda route:', error)
@@ -24,12 +25,14 @@ export function createSalesAgendaRoutes(salesAgendaService: SalesAgendaService):
 
   router.post('/', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const userId = req.user!.userId
       const { title, product_name, product_id, status } = req.body
       const salesAgenda = await salesAgendaService.createSalesAgenda({
         title,
         product_name,
         product_id,
-        status
+        status,
+        user_id: userId
       })
       res.json(salesAgenda)
     } catch (error) {
@@ -44,13 +47,15 @@ export function createSalesAgendaRoutes(salesAgendaService: SalesAgendaService):
 
   router.put('/:id', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const userId = req.user!.userId
       const id = parseInt(req.params.id)
       const { title, product_name, product_id, status } = req.body
       const salesAgenda = await salesAgendaService.updateSalesAgenda(id, {
         title,
         product_name,
         product_id,
-        status
+        status,
+        user_id: userId
       })
       res.json(salesAgenda)
     } catch (error) {

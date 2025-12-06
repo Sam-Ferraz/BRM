@@ -25,7 +25,7 @@ export class DashboardService {
     this.followUpRepository = followUpRepository
   }
 
-  async getDashboardStats(): Promise<DashboardStats> {
+  async getDashboardStats(userId: number): Promise<DashboardStats> {
     const [
       totalDeals,
       totalClients,
@@ -34,12 +34,12 @@ export class DashboardService {
       totalSalesAgenda,
       totalFollowUps
     ] = await Promise.all([
-      this.dealRepository.getCount(),
+      this.dealRepository.getCount(userId),
       this.clientRepository.getCount(),
       this.productRepository.getCount(),
-      this.appointmentRepository.getCount(),
-      this.salesAgendaRepository.getCount(),
-      this.followUpRepository.getCount()
+      this.appointmentRepository.getCount(userId),
+      this.salesAgendaRepository.getCount(userId),
+      this.followUpRepository.getCount(userId)
     ])
 
     return {

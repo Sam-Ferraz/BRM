@@ -2,13 +2,20 @@ import { BaseRepository } from './base-repository.js'
 import { SalesAgenda, QueryFilters } from '../types/index.js'
 
 export class SalesAgendaRepository extends BaseRepository {
-  async findAll(filters: QueryFilters = {}): Promise<SalesAgenda[]> {
+  async findAll(filters: QueryFilters = {}, userId?: number): Promise<SalesAgenda[]> {
     const client = await this.getClient()
     try {
       const { search, status, sortBy, sortOrder } = filters
       let query = 'SELECT * FROM sales_agenda WHERE 1=1'
       const params: any[] = []
       let paramCount = 1
+
+      // Filter by user_id if provided
+      if (userId) {
+        query += ` AND user_id = $${paramCount}`
+        params.push(userId)
+        paramCount++
+      }
 
       if (search) {
         query += ` AND (title ILIKE $${paramCount} OR product_name ILIKE $${paramCount})`
@@ -44,10 +51,10 @@ export class SalesAgendaRepository extends BaseRepository {
     try {
       // Set current date automatically
       const currentDate = new Date().toISOString().split('T')[0] // YYYY-MM-DD format
-      
+
       const result = await client.query(
-        'INSERT INTO sales_agenda (title, product_name, product_id, date, status) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-        [salesAgenda.title, salesAgenda.product_name, salesAgenda.product_id || null, currentDate, salesAgenda.status]
+        'INSERT INTO sales_agenda (title, product_name, product_id, date, status, user_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+        [salesAgenda.title, salesAgenda.product_name, salesAgenda.product_id || null, currentDate, salesAgenda.status, salesAgenda.user_id]
       )
       return result.rows[0]
     } finally {
@@ -79,10 +86,18 @@ export class SalesAgendaRepository extends BaseRepository {
     }
   }
 
-  async getCount(): Promise<number> {
+  async getCount(userId?: number): Promise<number> {
     const client = await this.getClient()
     try {
-      const result = await client.query('SELECT COUNT(*) as count FROM sales_agenda')
+      let query = 'SELECT COUNT(*) as count FROM sales_agenda'
+      const params: any[] = []
+
+      if (userId) {
+        query += ' WHERE user_id = $1'
+        params.push(userId)
+      }
+
+      const result = await client.query(query, params)
       return parseInt(result.rows[0].count)
     } finally {
       this.releaseClient(client)

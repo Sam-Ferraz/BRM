@@ -8,9 +8,9 @@ export class FollowUpService {
     this.followUpRepository = followUpRepository
   }
 
-  async getAllFollowUps(filters: QueryFilters): Promise<ApiResponse<FollowUpWithDetails[]>> {
+  async getAllFollowUps(filters: QueryFilters, userId: number): Promise<ApiResponse<FollowUpWithDetails[]>> {
     try {
-      const followUps = await this.followUpRepository.findAll(filters)
+      const followUps = await this.followUpRepository.findAll(filters, userId)
       return {
         data: followUps,
         total: followUps.length
@@ -107,9 +107,9 @@ export class FollowUpService {
     }
   }
 
-  async getStatusCounts(): Promise<{ data: { open: number; pending: number; overdue: number } }> {
+  async getStatusCounts(userId: number): Promise<{ data: { open: number; pending: number; overdue: number } }> {
     try {
-      const counts = await this.followUpRepository.getCountByStatus()
+      const counts = await this.followUpRepository.getCountByStatus(userId)
       return { data: counts }
     } catch (error) {
       console.error('Error fetching follow-up status counts:', error)

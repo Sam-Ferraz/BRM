@@ -2,16 +2,23 @@ import { BaseRepository } from './base-repository.js'
 import { Appointment, AppointmentAnalytics, QueryFilters } from '../types/index.js'
 
 export class AppointmentRepository extends BaseRepository {
-  async findAll(filters: QueryFilters = {}): Promise<Appointment[]> {
+  async findAll(filters: QueryFilters = {}, userId?: number): Promise<Appointment[]> {
     const client = await this.getClient()
     try {
       // Ensure UTC timezone
       await client.query('SET TIMEZONE = \'UTC\'')
-      
+
       const { search, type, sortBy, sortOrder } = filters
       let query = 'SELECT * FROM appointments WHERE 1=1'
       const params: any[] = []
       let paramCount = 1
+
+      // Filter by user_id if provided
+      if (userId) {
+        query += ` AND user_id = $${paramCount}`
+        params.push(userId)
+        paramCount++
+      }
 
       if (search) {
         query += ` AND (client ILIKE $${paramCount} OR type ILIKE $${paramCount})`
@@ -48,14 +55,15 @@ export class AppointmentRepository extends BaseRepository {
       // Ensure UTC timezone
       await client.query('SET TIMEZONE = \'UTC\'')
       const result = await client.query(
-        'INSERT INTO appointments (client, type, scheduled_datetime, description, answered, property_name) VALUES ($1, $2, $3::timestamp, $4, $5, $6) RETURNING *',
+        'INSERT INTO appointments (client, type, scheduled_datetime, description, answered, property_name, user_id) VALUES ($1, $2, $3::timestamp, $4, $5, $6, $7) RETURNING *',
         [
           appointment.client,
           appointment.type,
           appointment.scheduled_datetime,
           appointment.description,
           appointment.answered,
-          appointment.property_name ?? null
+          appointment.property_name ?? null,
+          appointment.user_id
         ]
       )
       return result.rows[0]
@@ -97,10 +105,18 @@ export class AppointmentRepository extends BaseRepository {
     }
   }
 
-  async getCount(): Promise<number> {
+  async getCount(userId?: number): Promise<number> {
     const client = await this.getClient()
     try {
-      const result = await client.query('SELECT COUNT(*) as count FROM appointments')
+      let query = 'SELECT COUNT(*) as count FROM appointments'
+      const params: any[] = []
+
+      if (userId) {
+        query += ' WHERE user_id = $1'
+        params.push(userId)
+      }
+
+      const result = await client.query(query, params)
       return parseInt(result.rows[0].count)
     } finally {
       this.releaseClient(client)

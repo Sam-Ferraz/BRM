@@ -21,6 +21,7 @@ export interface Deal {
   property_name?: string | null
   temperature?: 'warm' | 'mild' | 'cold' | null
   status: 'service' | 'visit_foreseen' | 'visit_done' | 'proposal' | 'sold' | 'discarded'
+  user_id: number
   created_at?: Date
   updated_at?: Date
 }
@@ -68,6 +69,7 @@ export interface Appointment {
   description?: string | null
   answered: boolean
   property_name?: string | null
+  user_id: number
   created_at?: Date
   updated_at?: Date
 }
@@ -79,6 +81,7 @@ export interface SalesAgenda {
   product_id: number | null
   date: string
   status: 'Ativa' | 'Concluída' | 'Cancelada'
+  user_id: number
   created_at?: Date
   updated_at?: Date
 }
@@ -90,6 +93,7 @@ export interface FollowUp {
   next_action_date: string
   completed: boolean
   completed_at?: Date | null
+  user_id: number
   created_at?: Date
   updated_at?: Date
 }

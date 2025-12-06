@@ -8,9 +8,9 @@ export class SalesAgendaService {
     this.salesAgendaRepository = salesAgendaRepository
   }
 
-  async getAllSalesAgenda(filters: QueryFilters): Promise<ApiResponse<SalesAgenda[]>> {
+  async getAllSalesAgenda(filters: QueryFilters, userId: number): Promise<ApiResponse<SalesAgenda[]>> {
     try {
-      const salesAgenda = await this.salesAgendaRepository.findAll(filters)
+      const salesAgenda = await this.salesAgendaRepository.findAll(filters, userId)
       return {
         data: salesAgenda,
         total: salesAgenda.length

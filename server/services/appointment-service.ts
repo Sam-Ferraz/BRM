@@ -8,9 +8,9 @@ export class AppointmentService {
     this.appointmentRepository = appointmentRepository
   }
 
-  async getAllAppointments(filters: QueryFilters): Promise<ApiResponse<Appointment[]>> {
+  async getAllAppointments(filters: QueryFilters, userId: number): Promise<ApiResponse<Appointment[]>> {
     try {
-      const appointments = await this.appointmentRepository.findAll(filters)
+      const appointments = await this.appointmentRepository.findAll(filters, userId)
       return {
         data: appointments,
         total: appointments.length

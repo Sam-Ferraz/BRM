@@ -32,7 +32,8 @@ describe('DealService', () => {
         gsv: '1000.00',
         property_name: 'Property A',
         temperature: 'warm',
-        status: 'service'
+        status: 'service',
+        user_id: 1
       },
       {
         id: 2,
@@ -46,7 +47,8 @@ describe('DealService', () => {
         gsv: '2000.00',
         property_name: 'Property B',
         temperature: 'mild',
-        status: 'sold'
+        status: 'sold',
+        user_id: 1
       }
     ]
 
@@ -54,14 +56,15 @@ describe('DealService', () => {
       // Arrange
       mockDealRepository.findAll.mockResolvedValue(mockDeals)
       const filters = { search: 'test', status: 'service' }
+      const userId = 1
 
       // Act
-      const result = await dealService.getAllDeals(filters)
+      const result = await dealService.getAllDeals(filters, userId)
 
       // Assert
       expect(result.data).toEqual(mockDeals)
       expect(result.total).toBe(2)
-      expect(mockDealRepository.findAll).toHaveBeenCalledWith(filters)
+      expect(mockDealRepository.findAll).toHaveBeenCalledWith(filters, userId)
     })
 
     it('should handle repository errors', async () => {
@@ -69,7 +72,7 @@ describe('DealService', () => {
       mockDealRepository.findAll.mockRejectedValue(new Error('Database error'))
 
       // Act & Assert
-      await expect(dealService.getAllDeals({})).rejects.toThrow('Internal server error')
+      await expect(dealService.getAllDeals({}, 1)).rejects.toThrow('Internal server error')
     })
   })
 
@@ -85,7 +88,8 @@ describe('DealService', () => {
       gsv: '3000.00',
       property_name: 'Property C',
       temperature: 'cold',
-      status: 'proposal'
+      status: 'proposal',
+      user_id: 1
     }
 
     const createdDeal: Deal = {
@@ -126,7 +130,8 @@ describe('DealService', () => {
       gsv: '4000.00',
       property_name: 'Property D',
       temperature: 'warm',
-      status: 'sold'
+      status: 'sold',
+      user_id: 1
     }
 
     const updatedDeal: Deal = {

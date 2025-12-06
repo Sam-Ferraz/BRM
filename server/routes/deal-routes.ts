@@ -7,14 +7,15 @@ export function createDealRoutes(dealService: DealService): Router {
 
   router.get('/', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const userId = req.user!.userId
       const filters = {
         search: req.query.search as string,
         status: req.query.status as string,
         sortBy: req.query.sortBy as string,
         sortOrder: req.query.sortOrder as 'asc' | 'desc'
       }
-      
-      const result = await dealService.getAllDeals(filters)
+
+      const result = await dealService.getAllDeals(filters, userId)
       res.json(result)
     } catch (error) {
       console.error('Error in get deals route:', error)
@@ -24,6 +25,7 @@ export function createDealRoutes(dealService: DealService): Router {
 
   router.post('/', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const userId = req.user!.userId
       const {
         client,
         origin_date,
@@ -50,6 +52,7 @@ export function createDealRoutes(dealService: DealService): Router {
         property_name,
         temperature,
         status: status || 'service',
+        user_id: userId,
       }
 
       const deal = await dealService.createDeal(payload)
@@ -62,6 +65,7 @@ export function createDealRoutes(dealService: DealService): Router {
 
   router.put('/:id', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const userId = req.user!.userId
       const id = parseInt(req.params.id)
       const {
         client,
@@ -89,6 +93,7 @@ export function createDealRoutes(dealService: DealService): Router {
         property_name,
         temperature,
         status: status || 'service',
+        user_id: userId,
       }
 
       const deal = await dealService.updateDeal(id, payload)

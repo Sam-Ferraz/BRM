@@ -18,14 +18,15 @@ export function createAppointmentRoutes(appointmentService: AppointmentService):
 
   router.get('/', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const userId = req.user!.userId
       const filters = {
         search: req.query.search as string,
         type: req.query.type as string,
         sortBy: req.query.sortBy as string,
         sortOrder: req.query.sortOrder as 'asc' | 'desc'
       }
-      
-      const result = await appointmentService.getAllAppointments(filters)
+
+      const result = await appointmentService.getAllAppointments(filters, userId)
       res.json(result)
     } catch (error) {
       console.error('Error in get appointments route:', error)
@@ -35,6 +36,7 @@ export function createAppointmentRoutes(appointmentService: AppointmentService):
 
   router.post('/', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const userId = req.user!.userId
       const { client, type, scheduled_datetime, description, answered, property_name } = req.body
       const normalizedPropertyName = type === 'visit' ? property_name : null
       const appointment = await appointmentService.createAppointment({
@@ -43,7 +45,8 @@ export function createAppointmentRoutes(appointmentService: AppointmentService):
         scheduled_datetime,
         description,
         answered,
-        property_name: normalizedPropertyName
+        property_name: normalizedPropertyName,
+        user_id: userId
       })
       res.json(appointment)
     } catch (error) {
@@ -54,6 +57,7 @@ export function createAppointmentRoutes(appointmentService: AppointmentService):
 
   router.put('/:id', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const userId = req.user!.userId
       const id = parseInt(req.params.id)
       const { client, type, scheduled_datetime, description, answered, property_name } = req.body
       const normalizedPropertyName = type === 'visit' ? property_name : null
@@ -63,7 +67,8 @@ export function createAppointmentRoutes(appointmentService: AppointmentService):
         scheduled_datetime,
         description,
         answered,
-        property_name: normalizedPropertyName
+        property_name: normalizedPropertyName,
+        user_id: userId
       })
       res.json(appointment)
     } catch (error) {

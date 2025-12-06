@@ -10,7 +10,8 @@ export function createDashboardRoutes(
 
   router.get('/stats', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      const stats = await dashboardService.getDashboardStats()
+      const userId = req.user!.userId
+      const stats = await dashboardService.getDashboardStats(userId)
       res.json(stats)
     } catch (error) {
       console.error('Error fetching dashboard stats:', error)

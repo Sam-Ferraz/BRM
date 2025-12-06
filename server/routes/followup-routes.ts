@@ -7,13 +7,14 @@ export function createFollowUpRoutes(followUpService: FollowUpService): Router {
 
   router.get('/', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const userId = req.user!.userId
       const filters = {
         search: req.query.search as string,
         sortBy: req.query.sortBy as string,
         sortOrder: req.query.sortOrder as 'asc' | 'desc'
       }
 
-      const result = await followUpService.getAllFollowUps(filters)
+      const result = await followUpService.getAllFollowUps(filters, userId)
       res.json(result)
     } catch (error) {
       console.error('Error in get follow-ups route:', error)
@@ -23,7 +24,8 @@ export function createFollowUpRoutes(followUpService: FollowUpService): Router {
 
   router.get('/stats', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      const result = await followUpService.getStatusCounts()
+      const userId = req.user!.userId
+      const result = await followUpService.getStatusCounts(userId)
       res.json(result)
     } catch (error) {
       console.error('Error in get follow-up stats route:', error)
@@ -59,12 +61,14 @@ export function createFollowUpRoutes(followUpService: FollowUpService): Router {
 
   router.post('/', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const userId = req.user!.userId
       const { appointment_id, next_action, next_action_date, completed } = req.body
       const followUp = await followUpService.createFollowUp({
         appointment_id,
         next_action,
         next_action_date,
-        completed: completed ?? false
+        completed: completed ?? false,
+        user_id: userId
       })
       res.json(followUp)
     } catch (error) {

@@ -8,9 +8,9 @@ export class DealService {
     this.dealRepository = dealRepository
   }
 
-  async getAllDeals(filters: QueryFilters): Promise<ApiResponse<Deal[]>> {
+  async getAllDeals(filters: QueryFilters, userId: number): Promise<ApiResponse<Deal[]>> {
     try {
-      const deals = await this.dealRepository.findAll(filters)
+      const deals = await this.dealRepository.findAll(filters, userId)
       return {
         data: deals,
         total: deals.length
