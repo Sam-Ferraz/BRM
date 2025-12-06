@@ -203,7 +203,8 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
         <DialogHeader>
           <DialogTitle>{appointment ? t('editAppointment') : t('newAppointment')}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="max-h-[70vh] overflow-y-auto pr-2">
+        <form onSubmit={handleSubmit} className="space-y-4 pb-4">
           <div className="space-y-2">
             <Label htmlFor="scheduled_datetime">
               {t('dateTime')} <span className="text-red-500">*</span>
@@ -369,7 +370,7 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
             </>
           )}
 
-          <DialogFooter>
+          <DialogFooter className="pt-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} {...(!isMobile && { tabIndex: 5 })}>
               {t('cancel')}
             </Button>
@@ -378,6 +379,7 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
             </Button>
           </DialogFooter>
         </form>
+        </div>
       </DialogContent>
     </Dialog>
   )
