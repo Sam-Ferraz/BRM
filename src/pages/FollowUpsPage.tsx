@@ -37,6 +37,20 @@ export default function FollowUpsPage() {
 
   const { toast } = useToast()
 
+  // Format currency as Brazilian Real
+  const formatCurrency = (value: string | number): string => {
+    if (!value) return '-'
+    const numValue = typeof value === 'string' ? parseFloat(value) : value
+    if (isNaN(numValue)) return '-'
+
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(numValue)
+  }
+
   const fetchFollowUps = useCallback(async () => {
     try {
       setLoading(true)
@@ -393,7 +407,7 @@ export default function FollowUpsPage() {
                   {dealsWithoutFollowUps.map((deal) => (
                     <TableRow key={deal.id}>
                       <TableCell className="font-medium">{deal.client}</TableCell>
-                      <TableCell>{deal.gsv}</TableCell>
+                      <TableCell>{formatCurrency(deal.gsv)}</TableCell>
                       <TableCell>
                         <Badge variant={
                           deal.status === 'sold' ? 'default' :

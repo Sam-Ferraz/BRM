@@ -36,11 +36,25 @@ export default function DealsPage() {
   const [statusFilter, setStatusFilter] = useState("Todos")
   const [sortBy, setSortBy] = useState("")
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc")
-  
+
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingDeal, setEditingDeal] = useState<Deal | undefined>()
-  
+
   const { toast } = useToast()
+
+  // Format currency as Brazilian Real
+  const formatCurrency = (value: string | number): string => {
+    if (!value) return '-'
+    const numValue = typeof value === 'string' ? parseFloat(value) : value
+    if (isNaN(numValue)) return '-'
+
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(numValue)
+  }
 
   // Check for auto-open dialog from FAB
   useEffect(() => {
@@ -295,7 +309,7 @@ export default function DealsPage() {
                       }}
                     >
                       <TableCell className="font-medium">{deal.client}</TableCell>
-                      <TableCell>{deal.gsv || '-'}</TableCell>
+                      <TableCell>{formatCurrency(deal.gsv)}</TableCell>
                       <TableCell>{getStatusBadge(deal.status)}</TableCell>
                       <TableCell>{getTemperatureBadge(deal.temperature)}</TableCell>
                       <TableCell>
