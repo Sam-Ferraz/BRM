@@ -204,15 +204,12 @@ export default function DealsPage() {
       <header className="bg-card shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center">
-              <Button variant="outline" size="sm" asChild className="mr-4">
-                <Link to="/dashboard">
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  {t('backButton')}
-                </Link>
-              </Button>
-              <h1 className="text-xl font-semibold text-foreground">{t('dealsTitle')}</h1>
-            </div>
+            <Button variant="outline" size="sm" asChild>
+              <Link to="/dashboard">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                {t('backButton')}
+              </Link>
+            </Button>
             <Button onClick={() => setIsFormOpen(true)}>
               <Plus className="w-4 h-4 mr-2" />
               {t('newDeal')}
@@ -224,7 +221,7 @@ export default function DealsPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Card>
           <CardHeader>
-            <CardTitle>{t('dealsManagement')}</CardTitle>
+            <CardTitle>{t('dealsTitle')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex flex-col sm:flex-row gap-4">
