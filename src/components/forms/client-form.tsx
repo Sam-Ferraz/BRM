@@ -77,69 +77,73 @@ export function ClientForm({ client, initialName, open, onOpenChange, onSubmit, 
           <DialogTitle>{client ? t('editClient') : t('newClient')}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">
-              {t('name')} <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="name"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              required
-              {...(!isMobile && { tabIndex: 1 })}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="email">{t('email')}</Label>
-            <Input
-              id="email"
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              {...(!isMobile && { tabIndex: 2 })}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="phone">{t('phone')}</Label>
-            <Input
-              id="phone"
-              value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              {...(!isMobile && { tabIndex: 3 })}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="city">{t('city')}</Label>
-            <Input
-              id="city"
-              value={formData.city}
-              onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-              {...(!isMobile && { tabIndex: 4 })}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="address">{t('address')}</Label>
-            <Input
-              id="address"
-              value={formData.address}
-              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              {...(!isMobile && { tabIndex: 5 })}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="origin">{t('origin')}</Label>
-            <Select value={formData.origin || ''} onValueChange={(value) => setFormData({ ...formData, origin: value as Client['origin'] })}>
-              <SelectTrigger {...(!isMobile && { tabIndex: 7 })}>
-                <SelectValue placeholder={`${t('select')} ${t('origin').toLowerCase()}...`} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="online_lead">{t('onlineLead')}</SelectItem>
-                <SelectItem value="own_portfolio">{t('ownPortfolio')}</SelectItem>
-                <SelectItem value="duty_shift">{t('dutyShift')}</SelectItem>
-                <SelectItem value="referral">{t('referral')}</SelectItem>
-                <SelectItem value="street_client">{t('streetClient')}</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="max-h-[70vh] overflow-y-auto pr-2">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">
+                  {t('name')} <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  required
+                  {...(!isMobile && { tabIndex: 1 })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">{t('email')}</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  {...(!isMobile && { tabIndex: 2 })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="phone">{t('phone')}</Label>
+                <Input
+                  id="phone"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  {...(!isMobile && { tabIndex: 3 })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="city">{t('city')}</Label>
+                <Input
+                  id="city"
+                  value={formData.city}
+                  onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                  {...(!isMobile && { tabIndex: 4 })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="address">{t('address')}</Label>
+                <Input
+                  id="address"
+                  value={formData.address}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  {...(!isMobile && { tabIndex: 5 })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="origin">{t('origin')}</Label>
+                <Select value={formData.origin || ''} onValueChange={(value) => setFormData({ ...formData, origin: value as Client['origin'] })}>
+                  <SelectTrigger {...(!isMobile && { tabIndex: 7 })}>
+                    <SelectValue placeholder={`${t('select')} ${t('origin').toLowerCase()}...`} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="online_lead">{t('onlineLead')}</SelectItem>
+                    <SelectItem value="own_portfolio">{t('ownPortfolio')}</SelectItem>
+                    <SelectItem value="duty_shift">{t('dutyShift')}</SelectItem>
+                    <SelectItem value="referral">{t('referral')}</SelectItem>
+                    <SelectItem value="street_client">{t('streetClient')}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} {...(!isMobile && { tabIndex: 8 })}>
