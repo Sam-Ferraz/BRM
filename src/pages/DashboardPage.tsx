@@ -243,11 +243,6 @@ export default function DashboardPage() {
 
   const settingsItems = [
     {
-      title: t('analytics'),
-      icon: BarChart3,
-      href: "/analytics",
-    },
-    {
       title: t('settings'),
       icon: Settings,
       href: "/settings",
@@ -390,6 +385,24 @@ export default function DashboardPage() {
                         <div>
                           <p className="text-sm font-medium text-muted-foreground">{t('followUps')}</p>
                           <p className="text-2xl font-bold text-foreground">{stats.totalFollowUps}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+
+              <Link to="/analytics">
+                <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                  <CardContent className="p-3 md:p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="p-2 bg-amber-100 rounded-lg">
+                          <BarChart3 className="w-6 h-6 text-amber-600" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">{t('analytics')}</p>
+                          <p className="text-2xl font-bold text-foreground">—</p>
                         </div>
                       </div>
                     </div>
