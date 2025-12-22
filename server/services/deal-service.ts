@@ -61,4 +61,17 @@ export class DealService {
       throw new Error('Internal server error')
     }
   }
+
+  async getDealsWithoutOpenFollowUps(userId: number): Promise<ApiResponse<Deal[]>> {
+    try {
+      const deals = await this.dealRepository.findWithoutOpenFollowUps(userId)
+      return {
+        data: deals,
+        total: deals.length
+      }
+    } catch (error) {
+      console.error('Error fetching deals without open follow-ups:', error)
+      throw new Error('Internal server error')
+    }
+  }
 }

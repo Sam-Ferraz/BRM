@@ -152,4 +152,31 @@ export class DealRepository extends BaseRepository {
       this.releaseClient(client)
     }
   }
+
+  async findWithoutOpenFollowUps(userId?: number): Promise<Deal[]> {
+    const client = await this.getClient()
+    try {
+      // Find deals that are active (not sold/discarded) and have no appointments with open follow-ups for the same client
+      const query = `
+        SELECT DISTINCT d.*
+        FROM deals d
+        WHERE d.status NOT IN ('sold', 'discarded')
+          ${userId ? 'AND d.user_id = $1' : ''}
+          AND NOT EXISTS (
+            SELECT 1
+            FROM appointments a
+            INNER JOIN follow_ups f ON a.id = f.appointment_id
+            WHERE a.client = d.client
+              AND f.completed = false
+              ${userId ? 'AND a.user_id = $1' : ''}
+          )
+        ORDER BY d.origin_date DESC NULLS LAST
+      `
+      const params = userId ? [userId] : []
+      const result = await client.query(query, params)
+      return result.rows
+    } finally {
+      this.releaseClient(client)
+    }
+  }
 }

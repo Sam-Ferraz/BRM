@@ -23,6 +23,17 @@ export function createDealRoutes(dealService: DealService): Router {
     }
   })
 
+  router.get('/without-followups', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const userId = req.user!.userId
+      const result = await dealService.getDealsWithoutOpenFollowUps(userId)
+      res.json(result)
+    } catch (error) {
+      console.error('Error in get deals without follow-ups route:', error)
+      res.status(500).json({ error: 'Internal server error' })
+    }
+  })
+
   router.post('/', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const userId = req.user!.userId

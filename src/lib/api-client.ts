@@ -219,6 +219,10 @@ export const api = {
     delete: async (id: number): Promise<{ success: boolean }> => {
       return apiClient.delete<{ success: boolean }>(`/deals/${id}`)
     },
+
+    getWithoutFollowUps: async (): Promise<ApiResponse<Deal>> => {
+      return apiClient.get<ApiResponse<Deal>>('/deals/without-followups')
+    },
   },
 
   // Clients

@@ -15,7 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { ArrowLeft, Plus, Pencil, Trash2, Search, CheckCircle2, Calendar, User } from "lucide-react"
-import { api, type FollowUpWithDetails } from "@/lib/api-client"
+import { api, type FollowUpWithDetails, type Deal } from "@/lib/api-client"
 import { FollowUpForm } from "@/components/forms/followup-form"
 import { useToast } from "@/hooks/use-toast"
 import { format } from "date-fns"
@@ -23,7 +23,9 @@ import { format } from "date-fns"
 export default function FollowUpsPage() {
   const { t } = useTranslation()
   const [followUps, setFollowUps] = useState<FollowUpWithDetails[]>([])
+  const [dealsWithoutFollowUps, setDealsWithoutFollowUps] = useState<Deal[]>([])
   const [loading, setLoading] = useState(true)
+  const [dealsLoading, setDealsLoading] = useState(true)
   const [formLoading, setFormLoading] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("active") // "active", "completed", "all"
@@ -69,9 +71,27 @@ export default function FollowUpsPage() {
     }
   }, [searchTerm, statusFilter, sortBy, sortOrder, toast, t])
 
+  const fetchDeals = useCallback(async () => {
+    try {
+      setDealsLoading(true)
+      const result = await api.deals.getWithoutFollowUps()
+      setDealsWithoutFollowUps(result.data)
+    } catch (error) {
+      console.error('Error fetching deals:', error)
+      toast({
+        title: t('error'),
+        description: t('dealLoadError'),
+        variant: "destructive",
+      })
+    } finally {
+      setDealsLoading(false)
+    }
+  }, [toast, t])
+
   useEffect(() => {
     fetchFollowUps()
-  }, [fetchFollowUps])
+    fetchDeals()
+  }, [fetchFollowUps, fetchDeals])
 
   const handleCreate = async (data: any) => {
     try {
@@ -341,6 +361,57 @@ export default function FollowUpsPage() {
                     <TableRow>
                       <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                         {t('noFollowUpsFound')}
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Deals without open follow-ups */}
+        <Card className="mt-8">
+          <CardHeader>
+            <CardTitle>{t('dealsWithoutFollowUps')}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {dealsLoading ? (
+              <div className="text-center py-8 text-muted-foreground">{t('loading')}</div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t('client')}</TableHead>
+                    <TableHead>{t('gsv')}</TableHead>
+                    <TableHead>{t('status')}</TableHead>
+                    <TableHead>{t('originDate')}</TableHead>
+                    <TableHead>{t('propertyName')}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {dealsWithoutFollowUps.map((deal) => (
+                    <TableRow key={deal.id}>
+                      <TableCell className="font-medium">{deal.client}</TableCell>
+                      <TableCell>{deal.gsv}</TableCell>
+                      <TableCell>
+                        <Badge variant={
+                          deal.status === 'sold' ? 'default' :
+                          deal.status === 'proposal' ? 'secondary' :
+                          deal.status === 'discarded' ? 'destructive' :
+                          'outline'
+                        }>
+                          {t(deal.status)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{deal.origin_date ? format(new Date(deal.origin_date), 'dd/MM/yyyy') : '-'}</TableCell>
+                      <TableCell>{deal.property_name || '-'}</TableCell>
+                    </TableRow>
+                  ))}
+                  {dealsWithoutFollowUps.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                        {t('noDealsWithoutFollowUps')}
                       </TableCell>
                     </TableRow>
                   )}
