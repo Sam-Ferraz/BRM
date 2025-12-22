@@ -93,6 +93,7 @@ export default function AppointmentsPage() {
           appointment_id: createdAppointment.id,
           next_action: followUpData.next_action,
           next_action_date: followUpData.next_action_date,
+          completed: false,
         })
       }
 
@@ -115,7 +116,7 @@ export default function AppointmentsPage() {
     }
   }
 
-  const handleUpdate = async (data: Partial<Appointment>) => {
+  const handleUpdate = async (data: Partial<Appointment>, followUpData?: { next_action: string; next_action_date: string }) => {
     if (!editingAppointment) return
 
     try {
@@ -167,6 +168,7 @@ export default function AppointmentsPage() {
         appointment_id: selectedAppointmentForFollowUp.id,
         next_action: data.next_action,
         next_action_date: data.next_action_date,
+        completed: false,
       })
       toast({
         title: t('success'),

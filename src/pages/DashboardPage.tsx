@@ -205,13 +205,26 @@ export default function DashboardPage() {
     }
   }
 
-  const handleCreateAppointment = async (data: any) => {
+  const handleCreateAppointment = async (data: any, followUpData?: { next_action: string; next_action_date: string }) => {
     setLoading(true)
     try {
-      await api.appointments.create(data)
+      const createdAppointment = await api.appointments.create(data)
+
+      // If follow-up data is provided, create the follow-up
+      if (followUpData && createdAppointment.id) {
+        await api.followUps.create({
+          appointment_id: createdAppointment.id,
+          next_action: followUpData.next_action,
+          next_action_date: followUpData.next_action_date,
+          completed: false,
+        })
+      }
+
       toast({
         title: t('successMessages.serviceCreated'),
-        description: t('successMessages.serviceCreated'),
+        description: followUpData
+          ? t('successMessages.serviceAndFollowUpCreated')
+          : t('successMessages.serviceCreated'),
       })
       closeForm('appointment')
       // Update stats
