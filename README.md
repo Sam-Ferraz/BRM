@@ -20,6 +20,21 @@
   - [GitHub Repository](https://github.com) - Code hosting and version control
   - See [CLAUDE.md](./CLAUDE.md) for development guidelines
 
+  **Local Services (Docker):**
+  ```bash
+  # Start PostgreSQL and MinIO
+  docker-compose up -d postgres minio
+
+  # Run database migrations
+  npm run migrate
+
+  # Stop services
+  docker-compose down
+
+  # MinIO Console UI: http://localhost:9001
+  # User: minioadmin / Password: minioadmin
+  ```
+
   **Quick Start:**
   ```bash
   # Terminal 1: Start backend server (development mode with watch)
