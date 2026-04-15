@@ -172,45 +172,58 @@ export default function DealsPage() {
 
   const getStatusBadge = (status: Deal['status']) => {
     switch (status) {
-      case "service":
-        return <Badge variant="secondary">{t('dealStatusService')}</Badge>
-      case "visit_foreseen":
-        return <Badge variant="outline" className="bg-amber-100 text-amber-900">{t('dealStatusVisitForeseen')}</Badge>
-      case "visit_done":
-        return <Badge variant="outline" className="bg-blue-100 text-blue-900">{t('dealStatusVisitDone')}</Badge>
+      case "service_cold":
+        return <Badge variant="secondary" className="bg-blue-100 text-blue-900">{t('dealStatusServiceCold')}</Badge>
+      case "service_mild":
+        return <Badge variant="secondary" className="bg-yellow-100 text-yellow-900">{t('dealStatusServiceMild')}</Badge>
+      case "service_warm":
+        return <Badge variant="secondary" className="bg-orange-100 text-orange-900">{t('dealStatusServiceWarm')}</Badge>
+      case "visit_foreseen_cold":
+        return <Badge variant="outline" className="bg-blue-100 text-blue-900">{t('dealStatusVisitForeseenCold')}</Badge>
+      case "visit_foreseen_mild":
+        return <Badge variant="outline" className="bg-yellow-100 text-yellow-900">{t('dealStatusVisitForeseenMild')}</Badge>
+      case "visit_foreseen_warm":
+        return <Badge variant="outline" className="bg-orange-100 text-orange-900">{t('dealStatusVisitForeseenWarm')}</Badge>
+      case "visit_done_cold":
+        return <Badge variant="outline" className="bg-blue-200 text-blue-900">{t('dealStatusVisitDoneCold')}</Badge>
+      case "visit_done_mild":
+        return <Badge variant="outline" className="bg-yellow-200 text-yellow-900">{t('dealStatusVisitDoneMild')}</Badge>
+      case "visit_done_warm":
+        return <Badge variant="outline" className="bg-orange-200 text-orange-900">{t('dealStatusVisitDoneWarm')}</Badge>
       case "proposal":
         return <Badge variant="default">{t('dealStatusProposal')}</Badge>
       case "sold":
         return <Badge variant="default" className="bg-green-500">{t('dealStatusSold')}</Badge>
-      case "discarded":
-        return <Badge variant="destructive">{t('dealStatusDiscarded')}</Badge>
+      case "discarded_no_profile":
+        return <Badge variant="destructive">{t('dealStatusDiscardedNoProfile')}</Badge>
+      case "discarded_no_interest":
+        return <Badge variant="destructive">{t('dealStatusDiscardedNoInterest')}</Badge>
+      case "discarded_competitor":
+        return <Badge variant="destructive">{t('dealStatusDiscardedCompetitor')}</Badge>
+      case "discarded_error":
+        return <Badge variant="destructive">{t('dealStatusDiscardedError')}</Badge>
       default:
         return <Badge>{status}</Badge>
     }
   }
 
-  const getTemperatureBadge = (temperature?: Deal['temperature']) => {
-    if (!temperature) return '-'
-    switch (temperature) {
-      case 'warm':
-        return <Badge variant="default" className="bg-orange-500">{t('temperatureWarm')}</Badge>
-      case 'mild':
-        return <Badge variant="outline">{t('temperatureMild')}</Badge>
-      case 'cold':
-        return <Badge variant="secondary">{t('temperatureCold')}</Badge>
-      default:
-        return temperature
-    }
-  }
-
   const statusOptions = [
     { value: "Todos", label: t('allStatuses') },
-    { value: "service", label: t('dealStatusService') },
-    { value: "visit_foreseen", label: t('dealStatusVisitForeseen') },
-    { value: "visit_done", label: t('dealStatusVisitDone') },
+    { value: "service_cold", label: t('dealStatusServiceCold') },
+    { value: "service_mild", label: t('dealStatusServiceMild') },
+    { value: "service_warm", label: t('dealStatusServiceWarm') },
+    { value: "visit_foreseen_cold", label: t('dealStatusVisitForeseenCold') },
+    { value: "visit_foreseen_mild", label: t('dealStatusVisitForeseenMild') },
+    { value: "visit_foreseen_warm", label: t('dealStatusVisitForeseenWarm') },
+    { value: "visit_done_cold", label: t('dealStatusVisitDoneCold') },
+    { value: "visit_done_mild", label: t('dealStatusVisitDoneMild') },
+    { value: "visit_done_warm", label: t('dealStatusVisitDoneWarm') },
     { value: "proposal", label: t('dealStatusProposal') },
     { value: "sold", label: t('dealStatusSold') },
-    { value: "discarded", label: t('dealStatusDiscarded') },
+    { value: "discarded_no_profile", label: t('dealStatusDiscardedNoProfile') },
+    { value: "discarded_no_interest", label: t('dealStatusDiscardedNoInterest') },
+    { value: "discarded_competitor", label: t('dealStatusDiscardedCompetitor') },
+    { value: "discarded_error", label: t('dealStatusDiscardedError') },
   ]
 
   return (
@@ -286,7 +299,6 @@ export default function DealsPage() {
                     >
                       {t('status')} {sortBy === "status" && (sortOrder === "asc" ? "↑" : "↓")}
                     </TableHead>
-                    <TableHead>{t('temperature')}</TableHead>
                     <TableHead 
                       className="cursor-pointer" 
                       onClick={() => handleSort("origin_date")}
@@ -311,7 +323,6 @@ export default function DealsPage() {
                       <TableCell className="font-medium">{deal.client}</TableCell>
                       <TableCell>{formatCurrency(deal.gsv)}</TableCell>
                       <TableCell>{getStatusBadge(deal.status)}</TableCell>
-                      <TableCell>{getTemperatureBadge(deal.temperature)}</TableCell>
                       <TableCell>
                         <ReactiveDateTime 
                           value={deal.origin_date}

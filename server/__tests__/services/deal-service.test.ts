@@ -31,8 +31,8 @@ describe('DealService', () => {
         deal_type: 'purchase',
         gsv: '1000.00',
         property_name: 'Property A',
-        temperature: 'warm',
-        status: 'service',
+        
+        status: 'service_warm',
         user_id: 1
       },
       {
@@ -46,7 +46,7 @@ describe('DealService', () => {
         deal_type: 'purchase_exchange',
         gsv: '2000.00',
         property_name: 'Property B',
-        temperature: 'mild',
+        
         status: 'sold',
         user_id: 1
       }
@@ -55,7 +55,7 @@ describe('DealService', () => {
     it('should return all deals with filters', async () => {
       // Arrange
       mockDealRepository.findAll.mockResolvedValue(mockDeals)
-      const filters = { search: 'test', status: 'service' }
+      const filters = { search: 'test', status: 'service_warm' }
       const userId = 1
 
       // Act
@@ -87,7 +87,7 @@ describe('DealService', () => {
       deal_type: 'exchange',
       gsv: '3000.00',
       property_name: 'Property C',
-      temperature: 'cold',
+      
       status: 'proposal',
       user_id: 1
     }
@@ -129,7 +129,7 @@ describe('DealService', () => {
       deal_type: 'purchase',
       gsv: '4000.00',
       property_name: 'Property D',
-      temperature: 'warm',
+      
       status: 'sold',
       user_id: 1
     }

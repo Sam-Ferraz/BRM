@@ -61,10 +61,9 @@ export class DealRepository extends BaseRepository {
           deal_type,
           gsv,
           property_name,
-          temperature,
           status,
           user_id
-        ) VALUES ($1, $2::date, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
+        ) VALUES ($1, $2::date, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
         [
           deal.client,
           deal.origin_date || null,
@@ -75,7 +74,6 @@ export class DealRepository extends BaseRepository {
           deal.deal_type || null,
           deal.gsv,
           deal.property_name || null,
-          deal.temperature || null,
           deal.status,
           deal.user_id,
         ]
@@ -100,10 +98,9 @@ export class DealRepository extends BaseRepository {
           deal_type = $7,
           gsv = $8,
           property_name = $9,
-          temperature = $10,
-          status = $11,
+          status = $10,
           updated_at = CURRENT_TIMESTAMP
-        WHERE id = $12 RETURNING *`,
+        WHERE id = $11 RETURNING *`,
         [
           deal.client,
           deal.origin_date || null,
@@ -114,7 +111,6 @@ export class DealRepository extends BaseRepository {
           deal.deal_type || null,
           deal.gsv,
           deal.property_name || null,
-          deal.temperature || null,
           deal.status,
           id,
         ]

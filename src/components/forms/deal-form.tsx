@@ -35,7 +35,6 @@ export function DealForm({ deal, open, onOpenChange, onSubmit, loading }: DealFo
   type ClientOriginValue = Exclude<Deal['client_origin'], null | undefined>
   type PurposeValue = Exclude<Deal['purpose'], null | undefined>
   type DealTypeValue = Exclude<Deal['deal_type'], null | undefined>
-  type TemperatureValue = Exclude<Deal['temperature'], null | undefined>
   type DealStatusValue = Deal['status']
 
   type DealFormState = {
@@ -48,7 +47,6 @@ export function DealForm({ deal, open, onOpenChange, onSubmit, loading }: DealFo
     deal_type: DealTypeValue
     gsv: string
     property_name: string
-    temperature: TemperatureValue
     status: DealStatusValue
   }
 
@@ -62,8 +60,7 @@ export function DealForm({ deal, open, onOpenChange, onSubmit, loading }: DealFo
     deal_type: "purchase",
     gsv: "",
     property_name: "",
-    temperature: "warm",
-    status: "service",
+    status: "service_warm",
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -92,8 +89,7 @@ export function DealForm({ deal, open, onOpenChange, onSubmit, loading }: DealFo
         deal_type: (deal.deal_type || 'purchase') as DealTypeValue,
         gsv: deal.gsv || "",
         property_name: deal.property_name || "",
-        temperature: (deal.temperature || 'warm') as TemperatureValue,
-        status: (deal.status || 'service') as DealStatusValue,
+        status: (deal.status || 'service_warm') as DealStatusValue,
       })
     } else {
       setFormData({
@@ -106,8 +102,7 @@ export function DealForm({ deal, open, onOpenChange, onSubmit, loading }: DealFo
         deal_type: 'purchase',
         gsv: "",
         property_name: "",
-        temperature: 'warm',
-        status: 'service',
+        status: 'service_warm',
       })
     }
   }, [deal, open, currentDate])
@@ -184,19 +179,22 @@ export function DealForm({ deal, open, onOpenChange, onSubmit, loading }: DealFo
     { value: 'exchange', label: t('dealTypeExchange') },
   ]
 
-  const temperatureOptions: { value: TemperatureValue; label: string }[] = [
-    { value: 'warm', label: t('temperatureWarm') },
-    { value: 'mild', label: t('temperatureMild') },
-    { value: 'cold', label: t('temperatureCold') },
-  ]
-
   const statusOptions: { value: DealStatusValue; label: string }[] = [
-    { value: 'service', label: t('dealStatusService') },
-    { value: 'visit_foreseen', label: t('dealStatusVisitForeseen') },
-    { value: 'visit_done', label: t('dealStatusVisitDone') },
+    { value: 'service_cold', label: t('dealStatusServiceCold') },
+    { value: 'service_mild', label: t('dealStatusServiceMild') },
+    { value: 'service_warm', label: t('dealStatusServiceWarm') },
+    { value: 'visit_foreseen_cold', label: t('dealStatusVisitForeseenCold') },
+    { value: 'visit_foreseen_mild', label: t('dealStatusVisitForeseenMild') },
+    { value: 'visit_foreseen_warm', label: t('dealStatusVisitForeseenWarm') },
+    { value: 'visit_done_cold', label: t('dealStatusVisitDoneCold') },
+    { value: 'visit_done_mild', label: t('dealStatusVisitDoneMild') },
+    { value: 'visit_done_warm', label: t('dealStatusVisitDoneWarm') },
     { value: 'proposal', label: t('dealStatusProposal') },
     { value: 'sold', label: t('dealStatusSold') },
-    { value: 'discarded', label: t('dealStatusDiscarded') },
+    { value: 'discarded_no_profile', label: t('dealStatusDiscardedNoProfile') },
+    { value: 'discarded_no_interest', label: t('dealStatusDiscardedNoInterest') },
+    { value: 'discarded_competitor', label: t('dealStatusDiscardedCompetitor') },
+    { value: 'discarded_error', label: t('dealStatusDiscardedError') },
   ]
 
   return (
@@ -352,25 +350,6 @@ export function DealForm({ deal, open, onOpenChange, onSubmit, loading }: DealFo
               placeholder={t('selectProduct')}
               className="w-full"
             />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="temperature">{t('temperature')}</Label>
-            <Select
-              value={formData.temperature}
-              onValueChange={(value) => setFormData({ ...formData, temperature: value as TemperatureValue })}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {temperatureOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
 
           <div className="space-y-2">

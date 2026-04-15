@@ -19,8 +19,7 @@ export interface Deal {
   deal_type?: 'purchase' | 'purchase_exchange' | 'exchange' | null
   gsv: string
   property_name?: string | null
-  temperature?: 'warm' | 'mild' | 'cold' | null
-  status: 'service' | 'visit_foreseen' | 'visit_done' | 'proposal' | 'sold' | 'discarded'
+  status: 'service_cold' | 'service_mild' | 'service_warm' | 'visit_foreseen_cold' | 'visit_foreseen_mild' | 'visit_foreseen_warm' | 'visit_done_cold' | 'visit_done_mild' | 'visit_done_warm' | 'proposal' | 'sold' | 'discarded_no_profile' | 'discarded_no_interest' | 'discarded_competitor' | 'discarded_error'
   user_id: number
   created_at?: Date
   updated_at?: Date
