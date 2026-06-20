@@ -2,325 +2,334 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project Overview
+---
 
-This is a **Business Relationship Management (BRM)** system - a comprehensive CRM application built with **Vite + React**. It manages customers, deals, products, service tickets, and sales agendas with a modern React/TypeScript stack.
+## Objetivo do Sistema
 
-**Architecture**: Vite + React frontend with TypeScript Node.js/Express backend, PostgreSQL database, JWT authentication, shadcn/ui components, TailwindCSS styling. Backend follows layered architecture with Repository/Service/Route pattern and comprehensive testing.
+**BRM — Business Relationship Management (Imobiliário)**
 
-## Development Commands
+Software de **Gestão de Negócios Imobiliários** com foco em inteligência para tomada de decisão, integrando quatro pilares: **Negócio, Cliente, Atendimento e Produto (Imóvel)**.
+
+---
+
+## Stack Tecnológica
+
+| Camada | Tecnologia |
+|--------|-----------|
+| Frontend | React + TypeScript + Vite |
+| UI | shadcn/ui + TailwindCSS + Recharts |
+| i18n | react-i18next (PT, EN, ES) |
+| Backend | Node.js + TypeScript + Express |
+| Banco | PostgreSQL (porta 5523 local) |
+| Auth | JWT + bcrypt |
+| Migrations | Flyway (via Docker) ou psql manual |
+| Upload | S3 (imagens de imóveis) |
+| Infra | AWS CloudFormation |
+| Testes | Jest (backend) + Puppeteer (browser, dev) |
+
+---
+
+## Arquitetura do Backend
+
+Padrão em camadas com injeção de dependência:
+
+- `server/repositories/` — acesso ao banco (estende `BaseRepository`)
+- `server/services/` — regras de negócio
+- `server/routes/` — handlers HTTP
+- `server/types/index.ts` — interfaces TypeScript
+- `server/middleware/` — auth, upload, etc.
+- `server/__tests__/` — testes Jest com repositórios mockados
+- `server/database.ts` — pool PostgreSQL
+
+Fluxo: **Route → Service → Repository → DB**. Serviços recebem repositórios via DI, o que permite mockar nos testes unitários.
+
+---
+
+## Módulos do Sistema
+
+| Módulo | Rota Frontend | API | Descrição |
+|--------|--------------|-----|-----------|
+| Dashboard | `/dashboard` | (agrega) | Visão geral com contadores e gráficos |
+| Negócios | `/negocios` | `/api/deals` | Gestão de deals imobiliários |
+| Clientes | `/clientes` | `/api/clients` | Cadastro de clientes |
+| Atendimentos | `/atendimentos` | `/api/appointments` | Tickets de serviço/visita |
+| Imóveis | `/produtos` | `/api/products` | Catálogo de imóveis com fotos |
+| Vitrine | `/sales-agenda` | `/api/products` (consome o catálogo de imóveis) | Vitrine visual dos imóveis cadastrados |
+| Follow-ups | `/follow-ups` | — | Acompanhamentos |
+| Analytics | `/analytics` | — | Análises avançadas |
+| Configurações | `/configuracoes` | — | Tema, idioma, fuso horário |
+
+### Rotas de autenticação
+
+- `POST /api/auth/login` — login
+- `POST /api/auth/register` — cadastro
+- `GET  /api/auth/verify` — verificação de token
+- `POST /api/auth/logout` — logout
+
+---
+
+## Ambiente Local
+
+```text
+# PostgreSQL
+Host:    localhost
+Porta:   5523
+Banco:   brm
+Usuário: postgres
+Senha:   superdev
+
+# Backend
+Porta:   3001
+Comando: npm run server:dev   (Terminal 1)
+
+# Frontend
+Porta:   5173
+Comando: npm run dev          (Terminal 2)
+```
+
+### PostgreSQL — iniciar se cair
+
+```bat
+pg_ctl start -D "C:\Program Files\PostgreSQL\18\data"
+```
+
+Garantir que o `psql`/`pg_ctl` estão no PATH:
+
+```bat
+:: CMD
+set PATH=%PATH%;C:\Program Files\PostgreSQL\18\bin
+```
+
+```powershell
+# PowerShell
+$env:PATH += ";C:\Program Files\PostgreSQL\18\bin"
+```
+
+---
+
+## Credenciais de Desenvolvimento
+
+- **Email**: `admin@brm.com`
+- **Senha**: `admin123`
+
+Para uso apenas em ambiente local. Variáveis também disponíveis no `.env` como `DEV_USER` / `DEV_PASSWORD`.
+
+---
+
+## Repositório GitHub
+
+- **URL**: https://github.com/Sam-Ferraz/BRM
+- **Branch principal**: `trunk`
+- **Commit & push**:
+  ```bash
+  git add .
+  git commit -m "mensagem"
+  git push origin trunk
+  ```
+
+---
+
+## Comandos de Desenvolvimento
 
 ```bash
-# Frontend development server
-npm run dev
+# Frontend
+npm run dev                  # dev server (Vite)
+npm run build                # build produção
+npm run preview              # preview do build
+npm run lint                 # lint
 
-# Backend server (production mode)
-npm run server
+# Backend
+npm run server               # produção
+npm run server:dev           # dev com watch
+npm run server:build         # compila TypeScript
+npm run server:clean         # limpa artefatos
 
-# Backend server (development mode with watch)
-npm run server:dev
+# Testes backend
+npm run server:test
+npm run server:test:watch
+npm run server:test:coverage
 
-# Build TypeScript backend
-npm run server:build
+# Banco de dados
+npm run schema:dump          # gera db/schema/current-schema.sql
+npm run migrate              # aplica migrations pendentes
+npm run migrate:info         # status das migrations
+npm run migrate:validate     # valida arquivos
+npm run migrate:baseline     # baseline (primeira vez)
+npm run migrate:setup        # baseline + info
+npm run migrate:clean        # LIMPA BANCO (dev only — DESTRUTIVO)
 
-# Clean backend build artifacts
-npm run server:clean
-
-# Backend testing
-npm run server:test           # Run tests
-npm run server:test:watch     # Run tests in watch mode
-npm run server:test:coverage  # Run tests with coverage
-
-# Start both servers (recommended for development)
-# Terminal 1: npm run server:dev
-# Terminal 2: npm run dev
-
-# Build for production  
-npm run build
-
-# Preview production build
-npm run preview
-
-# Lint code
-npm run lint
-
-# Database operations
-npm run schema:dump          # Generate current database schema
-npm run migrate              # Run pending migrations
-npm run migrate:info         # Show migration status
-npm run migrate:validate     # Validate migration files  
-npm run migrate:baseline     # Create baseline (first time setup)
-npm run migrate:setup        # Complete setup (baseline + info)
-npm run migrate:clean        # Clean database (dev only - DESTRUCTIVE)
-
-# Testing with Puppeteer (development only)
+# Browser testing (Puppeteer)
 node dev-tools/test-browser.js
-
-# Start Puppeteer MCP server (for Claude Code integration)
 node dev-tools/puppeteer-mcp/server.js
 ```
 
-## Development Credentials
+> **Sempre fazer `npm run server:build` após alterar arquivos TypeScript do backend.**
 
-For local development and testing, use the credentials configured in `.env`.
-These credentials are defined in the `.env` file as `DEV_USER` and `DEV_PASSWORD`.
-Do not commit those credentials anywhere. Just use it on dev testing.
+---
 
-## Key Architecture Patterns
+## Entidades
 
-### Data Layer (TypeScript Backend)
-- **Backend API**: TypeScript Express.js server with PostgreSQL database (`server/` directory)
-- **Repository Layer**: Data access layer with dedicated repository classes (`server/repositories/`)
-  - `BaseRepository` - Abstract base with connection management and transactions
-  - `UserRepository`, `DealRepository`, `ClientRepository`, `ProductRepository`, `AppointmentRepository`, `SalesAgendaRepository`
-- **Service Layer**: Business logic layer with dependency injection (`server/services/`)
-  - `AuthService`, `DashboardService`, `DealService`, `ClientService`, `ProductService`, `AppointmentService`, `SalesAgendaService`
-- **Route Layer**: Clean route handlers with TypeScript types (`server/routes/`)
-- **Authentication**: JWT-based auth with bcrypt password hashing (`server/services/auth-service.ts`)
-- **Database**: PostgreSQL with connection pooling (`server/database.ts`)
-- **Testing**: Jest with mocked repositories for business logic testing (`server/__tests__/`)
-- **Frontend API**: Client-side API wrapper in `src/lib/api-client.ts` for frontend data operations
-- **Entities**: Deal (deals), Client (customers), Appointment (service tickets), Product (products), SalesAgenda (sales agenda), Users
+### Deal (Negócio)
 
-### UI Architecture  
-- **React Router**: Pages in `src/pages/` directory with React Router navigation
-- **Forms**: Reusable form components in `src/components/forms/` using Dialog pattern
-- **UI Components**: shadcn/ui components in `src/components/ui/`
-- **Styling**: TailwindCSS with responsive design patterns
-- **I18n**: React i18next for internationalization (Portuguese, English, Spanish)
+Campos: `id`, `client`, `value`, `status`, `date`, `description`.
 
-### Component Patterns
-- **Page Structure**: Login → Dashboard → Entity pages (with CRUD operations)
-- **Form Pattern**: Dialog-based forms with loading states and validation
-- **Table Pattern**: Data tables with search, filtering, sorting, and pagination
-- **Navigation**: Dashboard-centric with module navigation using React Router Link
-- **Settings**: Config page (`/configuracoes`) with theme toggle and language selector
+**Status (campo único — sem temperatura separada)**:
 
-### Available Routes
-**Frontend Routes:**
-- `/` - Login page (with language selector, password visibility toggle, auto-focus)
-- `/register` - User registration page
-- `/forgot-password` - Password reset page
-- `/dashboard` - Main dashboard (protected)
-- `/negocios` - Deals management (protected)
-- `/clientes` - Clients management (protected)
-- `/atendimentos` - Services management (protected)
-- `/produtos` - Products management (protected)
-- `/pauta-vendas` - Sales agenda management (protected)
-- `/configuracoes` - Settings/config page (protected)
+- Atendimento: `service_cold`, `service_mild`, `service_warm`
+- Visita prevista: `visit_foreseen_cold`, `visit_foreseen_mild`, `visit_foreseen_warm`
+- Visita realizada: `visit_done_cold`, `visit_done_mild`, `visit_done_warm`
+- Proposta: `proposal`
+- Vendido: `sold`
+- Descartado: `discarded_no_profile`, `discarded_no_interest`, `discarded_competitor`, `discarded_error`
 
-**Backend API Routes:**
-- `POST /api/auth/login` - User authentication
-- `POST /api/auth/register` - User registration
-- `GET /api/auth/verify` - Token verification
-- `POST /api/auth/logout` - User logout
-- `GET/POST/PUT/DELETE /api/deals` - Deal management endpoints
-- `GET/POST/PUT/DELETE /api/clients` - Client management endpoints
-- `GET/POST/PUT/DELETE /api/appointments` - Appointment management endpoints
-- `GET/POST/PUT/DELETE /api/products` - Product management endpoints
-- `GET/POST/PUT/DELETE /api/sales-agenda` - Sales agenda management endpoints
+### Product (Imóvel)
 
-## Key Files
+- **Nome**, **Preço**
+- **Tipo**: Apartamento / Casa / Cobertura / Terreno / Estúdio / Flat / Empreendimento
+- **Categoria**: off-plan / pronto
+- **Data de Captação**, **Captador** (select de usuários)
+- **Condição de Pagamento**
+- **Aceita permuta automóvel** (S/N), **Aceita permuta imóvel** (S/N)
+- **Quartos**, **Suítes**, **Vagas**, **Banheiros**
+- **Área Total**, **Área Privativa**, **Condomínio**
+- **Endereço**, **Bairro**, **Município**, **Estado**, **País**
+- **Disponível para venda** (S/N)
+- **Descrição**
+- **Fotos** (até 10, armazenadas em S3)
 
-**Frontend:**
-- `src/lib/i18n.ts` - Internationalization configuration and translations
-- `src/lib/datetime.ts` - Date/time formatting utilities with user-selectable timezone support
-- `src/pages/LoginPage.tsx` - Login page with improved UX (password toggle, auto-focus, validation)
-- `src/pages/DashboardPage.tsx` - Main dashboard with navigation and charts
-- `src/pages/ConfigPage.tsx` - Settings page with theme, language, and timezone selection
-- `src/contexts/AuthContext.tsx` - Authentication context with JWT handling
-- `src/components/forms/` - Reusable CRUD form components
-- `src/components/language-selector.tsx` - Language switching component
-- `src/components/timezone-selector.tsx` - Timezone selection component
-- `src/components/reactive-datetime.tsx` - Reactive datetime component that updates with timezone changes
-- `src/hooks/use-timezone.ts` - React hook for timezone state management
-- `src/App.tsx` - Main App component with React Router setup and protected routes
-- `vite.config.ts` - Vite configuration with path aliases
+### Client (Cliente)
 
-**Backend (TypeScript):**
-- `server/index.ts` - Express server setup with dependency injection
-- `server/types/index.ts` - TypeScript type definitions for all entities
-- `server/repositories/` - Data access layer
-  - `base-repository.ts` - Abstract base with connection management
-  - `user-repository.ts`, `deal-repository.ts`, `client-repository.ts`, etc.
-- `server/services/` - Business logic layer
-  - `auth-service.ts` - JWT authentication logic with bcrypt
-  - `dashboard-service.ts`, `deal-service.ts`, `client-service.ts`, etc.
-- `server/routes/` - Route handlers with TypeScript types
-  - `auth-routes.ts`, `deal-routes.ts`, `client-routes.ts`, etc.
-- `server/middleware/` - Express middleware (auth, upload, etc.)
-- `server/database.ts` - PostgreSQL connection and database utilities
-- `server/__tests__/` - Jest tests with mocked repositories
+`id`, `name`, `email`, `phone`, `city`, `address`, `company`.
 
-**Development Tools:**
-- `dev-tools/test-browser.js` - Puppeteer browser automation test script
-- `dev-tools/puppeteer-mcp/server.js` - MCP server for headless browser integration
-- `dev-tools/screenshots/` - Generated browser test screenshots
+### Appointment (Atendimento)
 
-## Entity Schemas
+`id`, `client`, `type` ("Suporte"|"Vendas"|"Consultoria"), `status`, `scheduled_datetime`, `description`.
 
-**Deal**: id, client, value, status ("Em Andamento"|"Proposta"|"Fechado"), date, description  
-**Client**: id, name, email, phone, city, address, company  
-**Appointment**: id, client, type ("Suporte"|"Vendas"|"Consultoria"), status, scheduled_datetime, description  
-**Product**: id, name, price, category, stock, description  
-**SalesAgenda**: id, title, client, value, date, status ("Ativa"|"Concluída"|"Cancelada")
+### SalesAgenda (tabela legada — não exposta como módulo; Vitrine consome `products`)
 
-## UI/UX Patterns
+`id`, `title`, `client`, `value`, `date`, `status` ("Ativa"|"Concluída"|"Cancelada").
 
-- **Responsive Design**: Mobile-first with grid layouts
-- **Theme**: Light theme with blue/indigo gradient accents  
-- **Charts**: Recharts integration for dashboard analytics
-- **Forms**: Dialog modals with proper validation and loading states
-- **Navigation**: Badge-based shortcuts (a-e keys) for modules, React Router navigation
+---
 
-## Technical Notes
+## Arquivos Principais
 
-**Frontend:**
-- **TypeScript**: Configured with relaxed settings for faster development
-- **Path Aliases**: `@/` maps to `src/` for clean imports
-- **Build**: Uses Vite for fast builds and HMR development
-- **Authentication**: Context-based with localStorage persistence and automatic token verification
-- **Routing**: Protected routes with automatic redirect to login
-- **Date Formatting**: Uses date-fns with Brazil locale (dd/MM/yyyy format)
-- **Timezone Support**: User-selectable timezone in configuration page, defaults to São Paulo, persisted in localStorage
+| Arquivo | Localização |
+|---------|------------|
+| Rotas frontend | `src/App.tsx` |
+| Traduções (i18n) | `src/lib/i18n.ts` |
+| API client | `src/lib/api-client.ts` |
+| Utilitários de data | `src/lib/datetime.ts` |
+| Formulário negócio | `src/components/forms/deal-form.tsx` |
+| Formulário imóvel | `src/components/forms/product-form.tsx` |
+| Formulário cliente | `src/components/forms/client-form.tsx` |
+| Auth context | `src/contexts/AuthContext.tsx` |
+| Login page | `src/pages/LoginPage.tsx` |
+| Dashboard page | `src/pages/DashboardPage.tsx` |
+| Config page | `src/pages/ConfigPage.tsx` |
+| Servidor principal | `server/index.ts` |
+| Types backend | `server/types/index.ts` |
+| Banco de dados | `server/database.ts` |
+| Auth service | `server/services/auth-service.ts` |
+| Migrations | `db/migrations/` |
+| Schema atual | `db/schema/current-schema.sql` |
 
-**Backend (TypeScript):**
-- **Language**: Full TypeScript with strict typing and ES modules
-- **Architecture**: Layered architecture with Repository/Service/Route pattern
-- **Database**: PostgreSQL with connection pooling and transaction support
-- **Database Migrations**: Flyway with Docker integration for schema versioning
-- **Authentication**: JWT tokens with configurable expiration
-- **Security**: bcrypt password hashing, CORS configuration
-- **Testing**: Jest framework with mocked repositories for unit testing
-- **Dependency Injection**: Services injected into routes for testability
-- **Environment**: Configurable via environment variables
-- **API**: RESTful design with proper error handling and TypeScript types
-- **Build**: TypeScript compilation to JavaScript with source maps
+### Dev tools
 
-**Development & Testing:**
-- **Puppeteer**: Headless browser automation for UI testing (devDependencies only)
-- **MCP Integration**: Model Context Protocol server for browser automation
-- **Browser Testing**: Automated login, form, and responsive design tests
-- **Screenshots**: Automated visual testing with desktop/mobile viewports
+- `dev-tools/test-browser.js` — script Puppeteer
+- `dev-tools/puppeteer-mcp/server.js` — MCP server para browser
+- `dev-tools/screenshots/` — screenshots gerados nos testes
 
-## Authentication Flow
+---
 
-1. User enters credentials on `/` (login page)
-2. Frontend validates email format and required fields
-3. POST request to `/api/auth/login` with credentials
-4. **TypeScript Backend**: 
-   - Route handler (`auth-routes.ts`) receives request
-   - Calls `AuthService.loginUser()` with credentials
-   - `AuthService` uses `UserRepository.findByEmail()` to get user
-   - Password verification with bcrypt
-   - JWT token generation if credentials valid
-5. On success: JWT token generated and returned with user data
-6. Frontend stores token in localStorage and sets auth context
-7. Protected routes check authentication status via context
-8. Token verification happens on app initialization and API calls
+## Convenções do Projeto
 
-## Database Schema
+- **Inglês** para variáveis, nomes de arquivo, colunas e tabelas
+- **Português** no frontend (idioma padrão PT-BR)
+- Arquitetura **Repository → Service → Route**
+- Sempre rodar `npm run server:build` após alterar TypeScript do backend
+- Migrations: `V{ANO}_{MES}_{DIA}_{SEQ}__{Descricao}.sql` (ex: `V2026_04_17_01__Add_property_fields_to_products.sql`)
+- **Nunca modificar migrations já aplicadas** — criar uma nova
+- Path alias: `@/` → `src/`
+- Diálogos modais para formulários CRUD, com loading states e validação
+- Rotas frontend protegidas via `AuthContext` + `localStorage`
+- Date-fns com locale BR (dd/MM/yyyy), timezone selecionável pelo usuário (default: São Paulo)
 
-The current database schema is available at `db/schema/current-schema.sql`. This file contains the complete PostgreSQL schema including all tables, indexes, and constraints.
+---
 
-### Generating Current Schema
-To generate the latest database schema:
-```bash
-npm run schema:dump
-```
-This command creates/updates `db/schema/current-schema.sql` with the current database structure.
+## Fluxo de Autenticação
 
-## Database Migrations
+1. Usuário entra em `/` (login)
+2. Frontend valida email e campos obrigatórios
+3. `POST /api/auth/login` com credenciais
+4. Backend:
+   - `auth-routes.ts` recebe a requisição
+   - Chama `AuthService.loginUser()`
+   - `AuthService` usa `UserRepository.findByEmail()`
+   - bcrypt verifica a senha
+   - JWT é gerado se OK
+5. Token retornado ao frontend, salvo em `localStorage`
+6. `AuthContext` mantém o estado
+7. Rotas protegidas verificam o token; verificação automática ocorre na inicialização
 
-The project uses **Flyway** for database schema management with Docker integration.
+---
 
-### Migration Setup
-- **Schema History**: Managed by `flyway_schema_history` table (auto-created)
-- **Configuration**: `flyway.conf` file with environment variable placeholders
-- **Migration Files**: Located in `db/migrations/` with naming convention `V{version}__{description}.sql`
-- **Supported Naming**: Both simple (`V1__Initial.sql`) and date-based (`V2025_08_14_01__Add_feature.sql`) formats
+## Migrations (Flyway)
 
-### Creating Migrations
-1. **Create migration file** in `db/migrations/`:
-   ```sql
-   -- V2025_08_14_01__Add_user_table.sql
-   CREATE TABLE new_table (
-       id SERIAL PRIMARY KEY,
-       name VARCHAR(255) NOT NULL
-   );
-   ```
+- **Schema history**: tabela `flyway_schema_history` (auto)
+- **Config**: `flyway.conf` com placeholders de env vars
+- **Localização**: `db/migrations/`
+- **Naming**: `V{ANO}_{MES}_{DIA}_{SEQ}__{Descricao}.sql` (recomendado para times)
+- **Workflow**:
+  - Dev: `npm run migrate:info` → `npm run migrate`
+  - Produção: GitHub Actions aplica automaticamente em pushes na branch `trunk`
+  - Validação: rodar `npm run migrate:validate` antes de commitar
+- **Regras**:
+  - Nunca modificar migrations já aplicadas
+  - Para remover coluna em uso: primeiro adicionar a nova, atualizar o código, depois (em migration futura) remover a antiga
+  - Baseline está na versão 1 — schema existente é preservado
 
-2. **Run migration**:
-   ```bash
-   npm run migrate
-   ```
+---
 
-### Migration Workflow
-- **Development**: Use `npm run migrate:info` to check status, `npm run migrate` to apply
-- **Production**: GitHub Actions automatically validates and applies migrations on deployment
-- **Rollbacks**: Supported through Flyway's undo migrations or manual intervention
+## Testing
 
-### GitHub Actions Integration
-- **Validation**: Tests migrations against PostgreSQL service on pull requests
-- **Deployment**: Auto-applies migrations to production database on main/trunk branch pushes
-- **Environment**: Uses GitHub secrets for production database credentials
+- **Backend**: Jest com repositórios mockados (`server/__tests__/services/`)
+  - Foco em regras de negócio, não em integração de banco
+- **Browser**: Puppeteer + MCP server (`dev-tools/`)
+  - Login, formulários, design responsivo (desktop + mobile)
+  - Screenshots gerados automaticamente
 
-### Important Notes
-- **Never modify applied migrations** - create new ones instead
-- **Use date-based versioning** for team environments: `V2025_08_14_01__description.sql`
-- **Test migrations locally** before committing using `npm run migrate:validate`
-- **Baseline is set at version 1** - existing schema is preserved
-- **Avoid breaking migrations**: When removing a used column, first add the new column, update the code, then plan a future migration to remove the old column
-- **Update this documentation**: When learning about new patterns, tools, or implementation details that will speed up future work or reduce token usage, update this CLAUDE.md file immediately to preserve the knowledge
-- use english as default for development (variables, file names, columns, tables, etc)
+---
 
-## TypeScript Backend Architecture
+## Pending / Próximas melhorias
 
-The backend has been converted to TypeScript with a proper layered architecture:
+- Status dos negócios na lista de **Negócios sem Follow-up** mostrando valores internos (ex: `service_warm`) — precisa aplicar tradução i18n
+- Coluna `propertyName` na lista de **Negócios sem Follow-up** precisa tradução
+- Testes unitários desatualizados após refatoração de deals
+- Script de inicialização automática (`.bat` / `.sh`) para subir todos os servidores de uma vez (já existem `start-brm.bat` / `stop-brm.bat` no diretório — verificar se atendem)
 
-### Repository Layer (`server/repositories/`)
-**Purpose**: Data access layer that handles all database operations
-- `BaseRepository` - Abstract class with connection management and transaction support
-- Entity repositories: `UserRepository`, `DealRepository`, `ClientRepository`, `ProductRepository`, `AppointmentRepository`, `SalesAgendaRepository`
-- **Benefits**: Database queries are centralized, consistent error handling, easy to mock for testing
+---
 
-### Service Layer (`server/services/`)
-**Purpose**: Business logic layer that orchestrates data operations and implements business rules
-- `AuthService` - Authentication logic (login, register, token management)
-- `DashboardService` - Aggregates stats from multiple repositories
-- Entity services: `DealService`, `ClientService`, `ProductService`, `AppointmentService`, `SalesAgendaService`
-- **Benefits**: Business logic is separated from HTTP concerns, fully testable with mocked repositories
+## Notas Técnicas
 
-### Route Layer (`server/routes/`)
-**Purpose**: HTTP request/response handling with proper TypeScript types
-- Clean route handlers that delegate to services
-- TypeScript interfaces for request/response types
-- Centralized error handling
-- Authentication middleware integration
+### Frontend
 
-### Testing Strategy
-- **Unit Tests**: Jest tests for service layer with mocked repositories
-- **Mocking**: Repository interfaces are mocked to test business logic in isolation
-- **Test Files**: Located in `server/__tests__/services/`
-- **Coverage**: Focus on business logic testing rather than database integration
+- TypeScript com config relaxado para iteração rápida
+- Vite (build + HMR)
+- React Router com rotas protegidas
+- Recharts para gráficos do dashboard
+- Tema light com gradiente azul/índigo
+- Atalhos de teclado (a-e) para navegação entre módulos no dashboard
 
-### Development Workflow
-```bash
-# Development with hot reload
-npm run server:dev
+### Backend
 
-# Build TypeScript
-npm run server:build
+- TypeScript estrito + ES modules
+- PostgreSQL com pool de conexões e suporte a transações (`BaseRepository`)
+- JWT com expiração configurável
+- bcrypt para hashing
+- CORS configurável
+- Tratamento centralizado de erros nos handlers de rota
+- Build: TS → JS com source maps
 
-# Run tests
-npm run server:test
+### Documentação
 
-# Test with coverage
-npm run server:test:coverage
-```
-
-### Type Safety Benefits
-- **Compile-time checks**: Catch errors before runtime
-- **IntelliSense**: Better IDE support and auto-completion
-- **Refactoring safety**: Rename operations are safe across the codebase
-- **API contracts**: Clear interfaces between layers
+- **Atualize este `CLAUDE.md`** sempre que aprender um novo padrão, ferramenta ou detalhe de implementação que vá acelerar trabalhos futuros ou reduzir consumo de tokens

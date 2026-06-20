@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useEffect, useRef } from "react"
 import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
@@ -13,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { CurrencyInput } from "@/components/ui/currency-input"
 import { Badge } from "@/components/ui/badge"
 import { ImageCarousel, FullscreenCarousel } from "@/components/ui/image-carousel"
-import { Upload, X, Image as ImageIcon, Star, Trash2, Eye } from "lucide-react"
+import { Upload, Star, Trash2, Eye } from "lucide-react"
 import { api, type Product, type ProductImage } from "@/lib/api-client"
 import { useMobileDetection } from "@/lib/mobile-utils"
 import { useToast } from "@/hooks/use-toast"
@@ -23,7 +22,7 @@ interface ProductFormProps {
   initialName?: string
   open: boolean
   onOpenChange: (open: boolean) => void
-  onSubmit: (data: Omit<Product, "id"> | Partial<Product>) => void
+  onSubmit: (data: Omit<Product, "id"> | Partial<Product>) => void | Promise<void> | Promise<Product | void>
   loading?: boolean
   onProductUpdated?: (product: Product) => void
 }
@@ -33,8 +32,10 @@ export function ProductForm({ product, initialName, open, onOpenChange, onSubmit
   const isMobile = useMobileDetection()
   const { toast } = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null)
+
   type PropertyTypeValue = 'apartment' | 'house' | 'penthouse' | 'land' | 'studio' | 'flat'
   type PropertyCategoryValue = 'off-plan' | 'completed'
+
   const propertyTypeOptions: { value: PropertyTypeValue; label: string }[] = [
     { value: 'apartment', label: t('propertyTypeApartment') },
     { value: 'house', label: t('propertyTypeHouse') },
@@ -43,24 +44,52 @@ export function ProductForm({ product, initialName, open, onOpenChange, onSubmit
     { value: 'studio', label: t('propertyTypeStudio') },
     { value: 'flat', label: t('propertyTypeFlat') },
   ]
+
   const propertyCategoryOptions: { value: PropertyCategoryValue; label: string }[] = [
     { value: 'off-plan', label: t('propertyCategoryOffPlan') },
     { value: 'completed', label: t('propertyCategoryCompleted') },
   ]
-  
-  const [formData, setFormData] = useState({
+
+  const emptyForm = {
     name: "",
     price: null as number | null,
     type: "apartment" as PropertyTypeValue,
     category: "off-plan" as PropertyCategoryValue,
     description: "",
-  })
-  
-  // Image management state
+    capture_date: "",
+    capturer: "",
+    payment_condition: "",
+    exchange_car: false,
+    exchange_property: false,
+    bedrooms: "" as string | number,
+    suites: "" as string | number,
+    parking_spots: "" as string | number,
+    bathrooms: "" as string | number,
+    total_area: "",
+    private_area: "",
+    condo_fee: "",
+    address: "",
+    neighborhood: "",
+    city: "",
+    state: "",
+    country: "Brasil",
+    available_for_sale: true,
+  }
+
+  const [users, setUsers] = useState<{ id: number; name: string }[]>([])
+
+  useEffect(() => {
+    api.users.list().then((list) => setUsers(list)).catch(() => {})
+  }, [])
+
+  const [formData, setFormData] = useState(emptyForm)
   const [images, setImages] = useState<ProductImage[]>([])
   const [imageUploading, setImageUploading] = useState(false)
   const [showImageUpload, setShowImageUpload] = useState(false)
   const [fullscreenCarousel, setFullscreenCarousel] = useState<{ open: boolean; initialIndex: number }>({ open: false, initialIndex: 0 })
+  // Fotos selecionadas ANTES do produto existir (modo novo imóvel).
+  // São enviadas ao S3 logo após a criação do produto no handleSubmit.
+  const [pendingFiles, setPendingFiles] = useState<File[]>([])
 
   const loadProductImages = async (productId: number) => {
     try {
@@ -79,23 +108,34 @@ export function ProductForm({ product, initialName, open, onOpenChange, onSubmit
         type: (product.type as PropertyTypeValue) || "apartment",
         category: (product.category as PropertyCategoryValue) || "off-plan",
         description: product.description || "",
+        capture_date: product.capture_date ? String(product.capture_date).split('T')[0] : "",
+        capturer: product.capturer || "",
+        payment_condition: product.payment_condition || "",
+        exchange_car: product.exchange_car || false,
+        exchange_property: product.exchange_property || false,
+        bedrooms: product.bedrooms ?? "",
+        suites: product.suites ?? "",
+        parking_spots: product.parking_spots ?? "",
+        bathrooms: product.bathrooms ?? "",
+        total_area: product.total_area || "",
+        private_area: product.private_area || "",
+        condo_fee: product.condo_fee || "",
+        address: product.address || "",
+        neighborhood: product.neighborhood || "",
+        city: product.city || "",
+        state: product.state || "",
+        country: product.country || "Brasil",
+        available_for_sale: product.available_for_sale !== false,
       })
       setShowImageUpload(true)
       loadProductImages(product.id)
     } else {
-      setFormData({
-        name: initialName || "",
-        price: null,
-        type: "apartment",
-        category: "off-plan",
-        description: "",
-      })
-      setShowImageUpload(false)
+      setFormData({ ...emptyForm, name: initialName || "" })
+      setShowImageUpload(true) // mostra seção de fotos também no modo novo
       setImages([])
     }
-    
-    // Reset image state when dialog opens/closes
     setImageUploading(false)
+    setPendingFiles([])
   }, [product, initialName, open])
 
   const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -103,110 +143,68 @@ export function ProductForm({ product, initialName, open, onOpenChange, onSubmit
     if (selectedFiles.length === 0) return
 
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif']
-    const maxSize = 20 * 1024 * 1024 // 20MB
-
+    const maxSize = 20 * 1024 * 1024
+    const currentCount = images.length + pendingFiles.length
     const validFiles: File[] = []
 
-    // Validate each file
     selectedFiles.forEach((file) => {
       if (!allowedTypes.includes(file.type)) {
-        toast({
-          title: t('error'),
-          description: `Invalid file type for ${file.name}. Only JPEG, PNG, WebP, and GIF images are allowed.`,
-          variant: "destructive",
-        })
+        toast({ title: t('error'), description: `Tipo inválido: ${file.name}`, variant: "destructive" })
         return
       }
-
       if (file.size > maxSize) {
-        toast({
-          title: t('error'),
-          description: `File ${file.name} is too large. Maximum allowed size is 20MB.`,
-          variant: "destructive",
-        })
+        toast({ title: t('error'), description: `Arquivo muito grande: ${file.name}`, variant: "destructive" })
         return
       }
-
+      if (currentCount + validFiles.length >= 10) {
+        toast({ title: t('error'), description: 'Limite de 10 fotos atingido', variant: "destructive" })
+        return
+      }
       validFiles.push(file)
     })
 
     if (validFiles.length === 0) return
 
-    // Auto-upload immediately after validation
-    if (product) {
-      try {
-        setImageUploading(true)
-        
-        let result
-        if (validFiles.length === 1) {
-          // Single upload
-          result = await api.products.uploadImage(product.id, validFiles[0], validFiles[0].name)
-          toast({
-            title: t('success'),
-            description: result.message || 'Image uploaded successfully',
-          })
-        } else {
-          // Multiple upload
-          result = await api.products.uploadMultipleImages(product.id, validFiles)
-          
-          if (result.errors && result.errors.length > 0) {
-            toast({
-              title: 'Partial Upload',
-              description: `${result.uploaded} of ${result.total} images uploaded successfully. ${result.errors.length} failed.`,
-              variant: "default",
-            })
-          } else {
-            toast({
-              title: t('success'),
-              description: result.message || `${result.uploaded} images uploaded successfully`,
-            })
-          }
-        }
-        
-        // Reload images
-        await loadProductImages(product.id)
-        
-        // Reset file input
-        if (fileInputRef.current) {
-          fileInputRef.current.value = ''
-        }
-        
-      } catch (error) {
-        console.error('Error uploading images:', error)
-        toast({
-          title: t('error'),
-          description: error instanceof Error ? error.message : 'Failed to upload images',
-          variant: "destructive",
-        })
-      } finally {
-        setImageUploading(false)
+    // Limpa input pra permitir re-selecionar os mesmos arquivos
+    if (fileInputRef.current) fileInputRef.current.value = ''
+
+    // Modo NOVO imóvel: acumula localmente, upload ocorre no submit
+    if (!product) {
+      setPendingFiles((prev) => [...prev, ...validFiles])
+      return
+    }
+
+    // Modo EDIÇÃO: upload imediato (comportamento anterior)
+    try {
+      setImageUploading(true)
+      if (validFiles.length === 1) {
+        await api.products.uploadImage(product.id, validFiles[0], validFiles[0].name)
+        toast({ title: t('success'), description: 'Foto enviada com sucesso' })
+      } else {
+        const result = await api.products.uploadMultipleImages(product.id, validFiles)
+        toast({ title: t('success'), description: `${result.uploaded} fotos enviadas` })
       }
+      await loadProductImages(product.id)
+    } catch (error) {
+      toast({ title: t('error'), description: 'Falha ao enviar fotos', variant: "destructive" })
+    } finally {
+      setImageUploading(false)
     }
   }
 
+  const handlePendingRemove = (index: number) => {
+    setPendingFiles((prev) => prev.filter((_, i) => i !== index))
+  }
 
   const handleImageDelete = async (imageId: number) => {
     if (!product) return
-
     try {
       setImageUploading(true)
-      const result = await api.products.deleteImage(product.id, imageId)
-      
-      toast({
-        title: t('success'),
-        description: result.message || 'Image deleted successfully',
-      })
-      
-      // Reload images
+      await api.products.deleteImage(product.id, imageId)
+      toast({ title: t('success'), description: 'Foto removida' })
       await loadProductImages(product.id)
-      
     } catch (error) {
-      console.error('Error deleting image:', error)
-      toast({
-        title: t('error'),
-        description: error instanceof Error ? error.message : 'Failed to delete image',
-        variant: "destructive",
-      })
+      toast({ title: t('error'), description: 'Falha ao remover foto', variant: "destructive" })
     } finally {
       setImageUploading(false)
     }
@@ -214,274 +212,333 @@ export function ProductForm({ product, initialName, open, onOpenChange, onSubmit
 
   const handleSetThumbnail = async (imageId: number) => {
     if (!product) return
-
     try {
       setImageUploading(true)
-      const result = await api.products.updateImage(product.id, imageId, { is_thumbnail: true })
-      
-      toast({
-        title: t('success'),
-        description: result.message || 'Thumbnail updated successfully',
-      })
-      
-      // Reload images
+      await api.products.updateImage(product.id, imageId, { is_thumbnail: true })
+      toast({ title: t('success'), description: 'Capa atualizada' })
       await loadProductImages(product.id)
-      
     } catch (error) {
-      console.error('Error updating thumbnail:', error)
-      toast({
-        title: t('error'),
-        description: error instanceof Error ? error.message : 'Failed to update thumbnail',
-        variant: "destructive",
-      })
+      toast({ title: t('error'), description: 'Falha ao atualizar capa', variant: "destructive" })
     } finally {
       setImageUploading(false)
     }
   }
 
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    onSubmit(formData)
-  }
 
-  const openFullscreenCarousel = (index: number) => {
-    setFullscreenCarousel({ open: true, initialIndex: index })
+    // Modo edição: fluxo original (upload de fotos é imediato)
+    if (product || pendingFiles.length === 0) {
+      onSubmit(formData)
+      return
+    }
+
+    // Modo novo COM fotos pendentes: precisa do id retornado pelo onSubmit
+    try {
+      setImageUploading(true)
+      const created = await onSubmit(formData)
+      if (created && typeof created === 'object' && 'id' in created) {
+        try {
+          await api.products.uploadMultipleImages(created.id, pendingFiles)
+          toast({ title: t('success'), description: `${pendingFiles.length} foto(s) enviada(s)` })
+        } catch {
+          toast({
+            title: t('error'),
+            description: 'Imóvel criado, mas houve falha no upload das fotos. Tente novamente na edição.',
+            variant: 'destructive',
+          })
+        }
+      }
+    } finally {
+      setImageUploading(false)
+    }
   }
 
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent 
+        <DialogContent
           className="sm:max-w-[800px] max-h-[95vh] flex flex-col"
-          {...(isMobile && {
-            onOpenAutoFocus: (e) => e.preventDefault()
-          })}
+          {...(isMobile && { onOpenAutoFocus: (e) => e.preventDefault() })}
         >
           <DialogHeader>
             <DialogTitle>{product ? t('editProduct') : t('newProduct')}</DialogTitle>
           </DialogHeader>
-          
-          <div className="flex-1 overflow-y-auto">
-            <form id="product-form" onSubmit={handleSubmit} className="space-y-6">
-            {/* Basic Product Information */}
-            <div className="grid grid-cols-1 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">
-                  {t('name')} <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  required
-                  {...(!isMobile && { tabIndex: 1 })}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="price">{t('price')}</Label>
-                <CurrencyInput
-                  id="price"
-                  value={formData.price}
-                  onChange={(price) => setFormData({ ...formData, price })}
-                  {...(!isMobile && { tabIndex: 2 })}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="type">{t('propertyType')}</Label>
-                <Select
-                  value={formData.type}
-                  onValueChange={(value) => setFormData({ ...formData, type: value as PropertyTypeValue })}
-                >
-                  <SelectTrigger {...(!isMobile && { tabIndex: 3 })}>
-                    <SelectValue placeholder={t('select')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {propertyTypeOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+
+          <div className="flex-1 overflow-y-auto pr-1">
+            <form id="product-form" onSubmit={handleSubmit} className="space-y-4 pb-4">
+
+              {/* Identificação */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2 sm:col-span-2">
+                  <Label htmlFor="name">{t('name')} <span className="text-red-500">*</span></Label>
+                  <Input id="name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="type">{t('propertyType')}</Label>
+                  <Select value={formData.type} onValueChange={(v) => setFormData({ ...formData, type: v as PropertyTypeValue })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {propertyTypeOptions.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="category">{t('propertyCategory')}</Label>
+                  <Select value={formData.category} onValueChange={(v) => setFormData({ ...formData, category: v as PropertyCategoryValue })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {propertyCategoryOptions.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="capture_date">Data de Captação</Label>
+                  <Input id="capture_date" type="date" value={formData.capture_date} onChange={(e) => setFormData({ ...formData, capture_date: e.target.value })} />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="capturer">Captador</Label>
+                  <Select value={formData.capturer || "none"} onValueChange={(v) => setFormData({ ...formData, capturer: v === "none" ? "" : v })}>
+                    <SelectTrigger><SelectValue placeholder="Selecione o captador" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nenhum</SelectItem>
+                      {users.map((u) => (
+                        <SelectItem key={u.id} value={u.name}>{u.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2 sm:col-span-2">
+                  <Label htmlFor="payment_condition">Condição de Pagamento</Label>
+                  <Input id="payment_condition" value={formData.payment_condition} onChange={(e) => setFormData({ ...formData, payment_condition: e.target.value })} />
+                </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="category">{t('propertyCategory')}</Label>
-                <Select
-                  value={formData.category}
-                  onValueChange={(value) => setFormData({ ...formData, category: value as PropertyCategoryValue })}
-                >
-                  <SelectTrigger {...(!isMobile && { tabIndex: 4 })}>
-                    <SelectValue placeholder={t('select')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {propertyCategoryOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              {/* Permuta */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Aceita permuta por automóvel?</Label>
+                  <Select value={formData.exchange_car ? "sim" : "nao"} onValueChange={(v) => setFormData({ ...formData, exchange_car: v === "sim" })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="sim">Sim</SelectItem>
+                      <SelectItem value="nao">Não</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Aceita permuta por imóvel?</Label>
+                  <Select value={formData.exchange_property ? "sim" : "nao"} onValueChange={(v) => setFormData({ ...formData, exchange_property: v === "sim" })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="sim">Sim</SelectItem>
+                      <SelectItem value="nao">Não</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              
+
+              {/* Características */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="bedrooms">Quartos</Label>
+                  <Input id="bedrooms" type="number" min="0" value={formData.bedrooms} onChange={(e) => setFormData({ ...formData, bedrooms: e.target.value === "" ? "" : Number(e.target.value) })} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="suites">Suítes</Label>
+                  <Input id="suites" type="number" min="0" value={formData.suites} onChange={(e) => setFormData({ ...formData, suites: e.target.value === "" ? "" : Number(e.target.value) })} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="parking_spots">Vagas</Label>
+                  <Input id="parking_spots" type="number" min="0" value={formData.parking_spots} onChange={(e) => setFormData({ ...formData, parking_spots: e.target.value === "" ? "" : Number(e.target.value) })} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="bathrooms">Banheiros</Label>
+                  <Input id="bathrooms" type="number" min="0" value={formData.bathrooms} onChange={(e) => setFormData({ ...formData, bathrooms: e.target.value === "" ? "" : Number(e.target.value) })} />
+                </div>
+              </div>
+
+              {/* Áreas e valores */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="total_area">Área Total (m²)</Label>
+                  <Input id="total_area" type="number" step="0.01" min="0" value={formData.total_area} onChange={(e) => setFormData({ ...formData, total_area: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="private_area">Área Privativa (m²)</Label>
+                  <Input id="private_area" type="number" step="0.01" min="0" value={formData.private_area} onChange={(e) => setFormData({ ...formData, private_area: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="condo_fee">Condomínio (R$)</Label>
+                  <Input id="condo_fee" type="number" step="0.01" min="0" value={formData.condo_fee} onChange={(e) => setFormData({ ...formData, condo_fee: e.target.value })} />
+                </div>
+              </div>
+
+              {/* Endereço */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2 sm:col-span-2">
+                  <Label htmlFor="address">Endereço</Label>
+                  <Input id="address" value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="neighborhood">Bairro</Label>
+                  <Input id="neighborhood" value={formData.neighborhood} onChange={(e) => setFormData({ ...formData, neighborhood: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="city">Município</Label>
+                  <Input id="city" value={formData.city} onChange={(e) => setFormData({ ...formData, city: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="state">Estado</Label>
+                  <Input id="state" value={formData.state} onChange={(e) => setFormData({ ...formData, state: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="country">País</Label>
+                  <Input id="country" value={formData.country} onChange={(e) => setFormData({ ...formData, country: e.target.value })} />
+                </div>
+              </div>
+
+              {/* Venda */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Disponível para venda?</Label>
+                  <Select value={formData.available_for_sale ? "sim" : "nao"} onValueChange={(v) => setFormData({ ...formData, available_for_sale: v === "sim" })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="sim">Sim</SelectItem>
+                      <SelectItem value="nao">Não</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="price">{t('price')}</Label>
+                  <CurrencyInput id="price" value={formData.price} onChange={(price) => setFormData({ ...formData, price })} />
+                </div>
+              </div>
+
+              {/* Descrição */}
               <div className="space-y-2">
                 <Label htmlFor="description">{t('description')}</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  rows={3}
-                  {...(!isMobile && { tabIndex: 5 })}
-                />
+                <Textarea id="description" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} rows={3} />
               </div>
-            </div>
-            
-            {/* Image Management Section */}
-            {showImageUpload && product && (
-              <div className="space-y-4 border-t pt-4">
-                <div className="flex items-center justify-between">
-                  <Label className="text-base font-medium">Product Images</Label>
-                  <Badge variant="secondary">{images.length} image{images.length !== 1 ? 's' : ''}</Badge>
-                </div>
-                
-                {/* Current Images Display */}
-                {images.length > 0 && (
-                  <div className="space-y-4">
-                    {/* Image Management Grid */}
+
+              {/* Fotos */}
+              {showImageUpload && (
+                <div className="space-y-4 border-t pt-4">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-base font-medium">Fotos</Label>
+                    <Badge variant="secondary">{images.length + pendingFiles.length}/10 fotos</Badge>
+                  </div>
+
+                  {!product && pendingFiles.length > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      As fotos serão enviadas ao salvar o imóvel.
+                    </p>
+                  )}
+
+                  {/* Fotos já salvas (modo edição) */}
+                  {product && images.length > 0 && (
                     <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                       {images.map((image, index) => (
                         <div key={image.id} className="relative group">
                           <div className="aspect-square rounded-lg overflow-hidden border">
                             <img
                               src={api.products.getImageUrl(product.id, image.id)}
-                              alt={image.alt_text || `Image ${index + 1}`}
+                              alt={image.alt_text || `Foto ${index + 1}`}
                               className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
-                              onClick={() => openFullscreenCarousel(index)}
-                              onError={(e) => {
-                                const target = e.target as HTMLImageElement
-                                target.src = '/placeholder.svg'
-                              }}
+                              onClick={() => setFullscreenCarousel({ open: true, initialIndex: index })}
+                              onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.svg' }}
                             />
                           </div>
-                          
-                          {/* Image Controls */}
-                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="secondary"
-                              onClick={() => openFullscreenCarousel(index)}
-                              className="h-8 w-8 p-0"
-                            >
-                              <Eye className="h-4 w-4" />
+                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
+                            <Button type="button" size="sm" variant="secondary" onClick={() => setFullscreenCarousel({ open: true, initialIndex: index })} className="h-7 w-7 p-0">
+                              <Eye className="h-3 w-3" />
                             </Button>
-                            
                             {!image.is_thumbnail && (
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="secondary"
-                                onClick={() => handleSetThumbnail(image.id)}
-                                disabled={imageUploading}
-                                className="h-8 w-8 p-0"
-                              >
-                                <Star className="h-4 w-4" />
+                              <Button type="button" size="sm" variant="secondary" onClick={() => handleSetThumbnail(image.id)} disabled={imageUploading} className="h-7 w-7 p-0">
+                                <Star className="h-3 w-3" />
                               </Button>
                             )}
-                            
+                            <Button type="button" size="sm" variant="destructive" onClick={() => handleImageDelete(image.id)} disabled={imageUploading} className="h-7 w-7 p-0">
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                          {image.is_thumbnail && (
+                            <Badge className="absolute top-1 left-1 text-xs py-0">Capa</Badge>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Fotos pendentes (ainda não enviadas ao servidor) */}
+                  {pendingFiles.length > 0 && (
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                      {pendingFiles.map((file, index) => {
+                        const previewUrl = URL.createObjectURL(file)
+                        return (
+                          <div key={`pending-${index}`} className="relative group">
+                            <div className="aspect-square rounded-lg overflow-hidden border">
+                              <img
+                                src={previewUrl}
+                                alt={`Pendente ${index + 1}`}
+                                className="w-full h-full object-cover"
+                                onLoad={() => URL.revokeObjectURL(previewUrl)}
+                              />
+                            </div>
                             <Button
                               type="button"
                               size="sm"
                               variant="destructive"
-                              onClick={() => handleImageDelete(image.id)}
+                              onClick={() => handlePendingRemove(index)}
                               disabled={imageUploading}
-                              className="h-8 w-8 p-0"
+                              className="absolute top-1 right-1 h-6 w-6 p-0"
                             >
-                              <Trash2 className="h-4 w-4" />
+                              <Trash2 className="h-3 w-3" />
                             </Button>
-                          </div>
-                          
-                          {/* Thumbnail Badge */}
-                          {image.is_thumbnail && (
-                            <Badge className="absolute top-2 left-2 bg-primary text-primary-foreground">
-                              <Star className="w-3 h-3 mr-1" />
-                              Thumbnail
+                            <Badge variant="outline" className="absolute bottom-1 left-1 text-xs py-0 bg-background/80">
+                              Pendente
                             </Badge>
-                          )}
-                          
-                          {/* Display Order */}
-                          <Badge variant="secondary" className="absolute top-2 right-2">
-                            #{image.display_order}
-                          </Badge>
-                        </div>
-                      ))}
+                          </div>
+                        )
+                      })}
                     </div>
-                  </div>
-                )}
-                
-                {/* Image Upload Section */}
-                <div className="space-y-4 border-t pt-4">
-                  <Label>Add New Images</Label>
-                  
-                  <div className="space-y-2">
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      onChange={handleImageSelect}
-                      className="hidden"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={imageUploading}
-                      className="w-full h-24 border-dashed border-2 hover:border-primary"
-                    >
-                      <div className="flex flex-col items-center gap-2">
-                        {imageUploading ? (
-                          <>
-                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-                            <span className="text-sm">Uploading...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Upload className="h-6 w-6 text-muted-foreground" />
-                            <span className="text-sm text-muted-foreground">
-                              Click to select and upload images
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              JPG, PNG, WebP, GIF (max 20MB each)
-                            </span>
-                          </>
-                        )}
-                      </div>
-                    </Button>
-                  </div>
+                  )}
+
+                  {(images.length + pendingFiles.length) < 10 && (
+                    <div>
+                      <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleImageSelect} className="hidden" />
+                      <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={imageUploading} className="w-full h-20 border-dashed border-2 hover:border-primary">
+                        <div className="flex flex-col items-center gap-1">
+                          {imageUploading ? (
+                            <><div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div><span className="text-sm">Enviando...</span></>
+                          ) : (
+                            <><Upload className="h-5 w-5 text-muted-foreground" /><span className="text-sm text-muted-foreground">Clique para adicionar fotos (máx. 10)</span></>
+                          )}
+                        </div>
+                      </Button>
+                    </div>
+                  )}
                 </div>
-              </div>
-            )}
-            
+              )}
+
             </form>
           </div>
-          
+
           <DialogFooter className="flex-shrink-0 border-t pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} {...(!isMobile && { tabIndex: 6 })}>
-              {t('cancel')}
-            </Button>
-            <Button type="submit" disabled={loading} {...(!isMobile && { tabIndex: 7 })} form="product-form">
-              {loading ? t('saving') : t('save')}
-            </Button>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>{t('cancel')}</Button>
+            <Button type="submit" disabled={loading} form="product-form">{loading ? t('saving') : t('save')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Fullscreen Carousel */}
       <FullscreenCarousel
         productId={product?.id || 0}
         images={images}

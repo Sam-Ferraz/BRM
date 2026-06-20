@@ -119,5 +119,53 @@ export function createAppointmentRoutes(appointmentService: AppointmentService):
     }
   })
 
+  const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
+  const isValidDate = (v: unknown): v is string => typeof v === 'string' && ISO_DATE.test(v)
+
+  const parseAppointmentDateField = (v: unknown): 'scheduled_datetime' | 'created_at' =>
+    v === 'created_at' ? 'created_at' : 'scheduled_datetime'
+
+  router.get('/analytics/by-date-range', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      if (!isValidDate(req.query.from) || !isValidDate(req.query.to)) {
+        res.status(400).json({ error: 'Invalid or missing "from" / "to" (expected YYYY-MM-DD)' })
+        return
+      }
+      const timezone = isValidTimezone(req.query.timezone) ? req.query.timezone : DEFAULT_TIMEZONE
+      const dateField = parseAppointmentDateField(req.query.dateField)
+      const result = await appointmentService.getAnalyticsByDateRange({
+        from: req.query.from,
+        to: req.query.to,
+        timezone,
+        dateField
+      })
+      res.json(result)
+    } catch (error) {
+      console.error('Error in appointments analytics by-date-range route:', error)
+      res.status(500).json({ error: 'Internal server error' })
+    }
+  })
+
+  router.get('/analytics/by-type/by-date-range', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      if (!isValidDate(req.query.from) || !isValidDate(req.query.to)) {
+        res.status(400).json({ error: 'Invalid or missing "from" / "to" (expected YYYY-MM-DD)' })
+        return
+      }
+      const timezone = isValidTimezone(req.query.timezone) ? req.query.timezone : DEFAULT_TIMEZONE
+      const dateField = parseAppointmentDateField(req.query.dateField)
+      const result = await appointmentService.getAnalyticsByTypeByDateRange({
+        from: req.query.from,
+        to: req.query.to,
+        timezone,
+        dateField
+      })
+      res.json(result)
+    } catch (error) {
+      console.error('Error in appointments analytics by-type by-date-range route:', error)
+      res.status(500).json({ error: 'Internal server error' })
+    }
+  })
+
   return router
 }

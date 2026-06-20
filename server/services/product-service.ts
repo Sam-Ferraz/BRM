@@ -46,6 +46,12 @@ export class ProductService {
     }
   }
 
+  async setAvailability(id: number, available: boolean): Promise<Product> {
+    const updated = await this.productRepository.setAvailability(id, available)
+    if (!updated) throw new Error('Product not found')
+    return updated
+  }
+
   async deleteProduct(id: number): Promise<{ success: boolean, imagePaths: string[] }> {
     try {
       // Check if product exists

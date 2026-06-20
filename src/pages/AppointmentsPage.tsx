@@ -78,14 +78,19 @@ export default function AppointmentsPage() {
   }, [fetchAppointments])
 
   const handleCreate = async (data: Omit<Appointment, "id">, followUpData?: { next_action: string; next_action_date: string }) => {
+    let stage: 'appointment' | 'follow_up' = 'appointment'
     try {
       setFormLoading(true)
       const createdAppointment = await api.appointments.create(data)
 
-      // If follow-up data is provided, create the follow-up
+      // If follow-up data is provided, create the follow-up.
+      // O backend exige client_name desde o refactor que tornou os follow-ups
+      // independentes de appointment_id — reaproveitamos o cliente do atendimento.
       if (followUpData && createdAppointment.id) {
+        stage = 'follow_up'
         await api.followUps.create({
           appointment_id: createdAppointment.id,
+          client_name: data.client,
           next_action: followUpData.next_action,
           next_action_date: followUpData.next_action_date,
           completed: false,
@@ -101,10 +106,15 @@ export default function AppointmentsPage() {
       setIsFormOpen(false)
       fetchAppointments()
     } catch (error) {
+      // Log no console pra debug + mostra a mensagem real do backend no toast
+      console.error(`Falha ao criar ${stage}:`, error)
+      const backendMessage = error instanceof Error ? error.message : ''
       toast({
         title: t('error'),
-        description: t('serviceCreateError'),
-        variant: "destructive",
+        description: backendMessage
+          ? `[${stage}] ${backendMessage}`
+          : t('serviceCreateError'),
+        variant: 'destructive',
       })
     } finally {
       setFormLoading(false)
@@ -216,7 +226,10 @@ export default function AppointmentsPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Card>
           <CardHeader>
-            <CardTitle>{t('servicesTitle')}</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <HeadphonesIcon className="w-5 h-5" />
+              {t('servicesTitle')}
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex flex-col sm:flex-row gap-4">

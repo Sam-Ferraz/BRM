@@ -370,13 +370,25 @@ export function convertFromLocalToSaoPaulo(localDateTime: string): string {
 // Format date for chart display with locale support
 export function formatDateForChart(dateStr: string, t: any): string {
   if (!dateStr) return ""
-  
+
   try {
-    const date = new Date(dateStr)
+    // dateStr arrives as "YYYY-MM-DD" from the backend (already in user's timezone).
+    // We must NOT use `new Date(dateStr)` because that parses as UTC midnight,
+    // which for users west of UTC (e.g. America/Sao_Paulo, UTC-3) becomes the
+    // previous day in local time and the chart label shifts by -1 day.
+    // Parse the parts manually and build a local-midnight Date instead.
+    let date: Date
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      const [y, m, d] = dateStr.split('-').map(Number)
+      date = new Date(y, m - 1, d) // local midnight, no timezone shift
+    } else {
+      date = new Date(dateStr)
+    }
+
     const today = new Date()
     const yesterday = new Date()
     yesterday.setDate(today.getDate() - 1)
-    
+
     // Check if it's today or yesterday
     if (date.toDateString() === today.toDateString()) {
       return t('today') || 'Today'
@@ -384,7 +396,7 @@ export function formatDateForChart(dateStr: string, t: any): string {
       return t('yesterday') || 'Yesterday'
     } else {
       // Use locale-aware date formatting for other dates
-      return date.toLocaleDateString(getDateLocale(), { 
+      return date.toLocaleDateString(getDateLocale(), {
         weekday: 'short',
         day: '2-digit'
       })

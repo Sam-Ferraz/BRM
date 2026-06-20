@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { ArrowLeft, Plus, Pencil, Trash2, Search, Image } from "lucide-react"
+import { ArrowLeft, Plus, Pencil, Trash2, Search, Image, Package, Eye, EyeOff } from "lucide-react"
 import { api, type Product } from "@/lib/api-client"
 import { ProductForm } from "@/components/forms/product-form"
 import { useToast } from "@/hooks/use-toast"
@@ -76,13 +76,14 @@ export default function ProductsPage() {
   const handleCreate = async (data: Omit<Product, "id">) => {
     try {
       setFormLoading(true)
-      await api.products.create(data)
+      const created = await api.products.create(data)
       toast({
         title: t('success'),
         description: t('productCreatedSuccess'),
       })
       setIsFormOpen(false)
       fetchProducts()
+      return created
     } catch (error) {
       toast({
         title: t('error'),
@@ -137,6 +138,27 @@ export default function ProductsPage() {
     }
   }
 
+  // Liga/desliga a flag available_for_sale do imóvel. Quando false, ele
+  // some da Vitrine. Usa endpoint dedicado pra não precisar mandar o
+  // produto inteiro no PUT.
+  const handleToggleAvailability = async (product: Product) => {
+    const nextValue = !(product.available_for_sale ?? true)
+    try {
+      await api.products.setAvailability(product.id, nextValue)
+      toast({
+        title: t('success'),
+        description: nextValue ? t('productNowVisibleInShowcase') : t('productHiddenFromShowcase'),
+      })
+      fetchProducts()
+    } catch (error) {
+      toast({
+        title: t('error'),
+        description: t('productUpdateError'),
+        variant: 'destructive',
+      })
+    }
+  }
+
   const handleSort = (field: string) => {
     if (sortBy === field) {
       setSortOrder(sortOrder === "asc" ? "desc" : "asc")
@@ -186,7 +208,6 @@ export default function ProductsPage() {
                   {t('backButton')}
                 </Link>
               </Button>
-              <h1 className="text-xl font-semibold text-foreground">{t('productsTitle')}</h1>
             </div>
             <Button onClick={() => setIsFormOpen(true)}>
               <Plus className="w-4 h-4 mr-2" />
@@ -199,7 +220,10 @@ export default function ProductsPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Card>
           <CardHeader>
-            <CardTitle>{t('productsManagement')}</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Package className="w-5 h-5" />
+              {t('productsManagement')}
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="relative">
@@ -267,7 +291,7 @@ export default function ProductsPage() {
                         >
                           {product.has_thumbnail ? (
                             <img
-                              src={api.products.getThumbnailUrl(product.id)}
+                              src={api.products.getThumbnailUrl(product.id, product.updated_at)}
                               alt={product.name}
                               className="w-full h-full object-cover"
                               onError={(e) => {
@@ -321,8 +345,22 @@ export default function ProductsPage() {
                               setEditingProduct(product)
                               setIsFormOpen(true)
                             }}
+                            title={t('edit')}
                           >
                             <Pencil className="w-4 h-4" />
+                          </Button>
+                          {/* Visibilidade na Vitrine — toggle direto */}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleToggleAvailability(product)
+                            }}
+                            className={product.available_for_sale === false ? 'text-slate-400' : 'text-emerald-600 hover:text-emerald-700'}
+                            title={product.available_for_sale === false ? t('showInShowcase') : t('hideFromShowcase')}
+                          >
+                            {product.available_for_sale === false ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                           </Button>
                           <Button
                             variant="outline"
@@ -332,6 +370,7 @@ export default function ProductsPage() {
                               handleDelete(product.id)
                             }}
                             className="text-red-600 hover:text-red-700"
+                            title={t('delete')}
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>

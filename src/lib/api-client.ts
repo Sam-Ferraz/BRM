@@ -61,7 +61,14 @@ class ApiClient {
       body: JSON.stringify(data),
     })
   }
-  
+
+  async patch<T>(endpoint: string, data: any): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    })
+  }
+
   async delete<T>(endpoint: string): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'DELETE',
@@ -83,8 +90,7 @@ export interface Deal {
   deal_type?: 'purchase' | 'purchase_exchange' | 'exchange'
   gsv: string
   property_name?: string
-  temperature?: 'warm' | 'mild' | 'cold'
-  status: 'service' | 'visit_foreseen' | 'visit_done' | 'proposal' | 'sold' | 'discarded'
+  status: 'service_cold' | 'service_mild' | 'service_warm' | 'visit_foreseen_cold' | 'visit_foreseen_mild' | 'visit_foreseen_warm' | 'visit_done_cold' | 'visit_done_mild' | 'visit_done_warm' | 'proposal' | 'sold' | 'discarded_no_profile' | 'discarded_no_interest' | 'discarded_competitor' | 'discarded_error'
 }
 
 export interface Client {
@@ -125,9 +131,30 @@ export interface Product {
   type?: string
   category?: 'off-plan' | 'completed'
   description?: string
+  capture_date?: string | null
+  capturer?: string | null
+  payment_condition?: string | null
+  exchange_car?: boolean
+  exchange_property?: boolean
+  bedrooms?: number | null
+  suites?: number | null
+  parking_spots?: number | null
+  bathrooms?: number | null
+  total_area?: string | null
+  private_area?: string | null
+  condo_fee?: string | null
+  address?: string | null
+  neighborhood?: string | null
+  city?: string | null
+  state?: string | null
+  country?: string | null
+  available_for_sale?: boolean
+  user_id?: number
   images?: ProductImage[]
   thumbnail?: ProductImage
   has_thumbnail: boolean
+  created_at?: string
+  updated_at?: string
 }
 
 export interface SalesAgenda {
@@ -137,6 +164,21 @@ export interface SalesAgenda {
   product_id?: number
   date: string
   status: "Ativa" | "Concluída" | "Cancelada"
+  // Campos opcionais vindos do JOIN com products na listagem da vitrine
+  product_price?: string | number | null
+  product_type?: string | null
+  product_category?: string | null
+  product_bedrooms?: number | null
+  product_suites?: number | null
+  product_parking_spots?: number | null
+  product_bathrooms?: number | null
+  product_total_area?: string | null
+  product_private_area?: string | null
+  product_neighborhood?: string | null
+  product_city?: string | null
+  product_state?: string | null
+  product_description?: string | null
+  has_thumbnail?: boolean
 }
 
 export interface SalesAgendaCreateInput {
@@ -148,7 +190,8 @@ export interface SalesAgendaCreateInput {
 
 export interface FollowUp {
   id: number
-  appointment_id: number
+  appointment_id: number | null
+  client_name: string
   next_action: string
   next_action_date: string
   completed: boolean
@@ -162,6 +205,139 @@ export interface FollowUpWithDetails extends FollowUp {
   followup_status: 'open' | 'pending' | 'overdue'
 }
 
+export type ProposalStatus = 'pending' | 'accepted' | 'rejected' | 'counter_proposal' | 'expired'
+
+export interface Proposal {
+  id: number
+  deal_id: number
+  proposal_value: string | number
+  payment_condition?: string | null
+  proposal_date: string
+  validity_date?: string | null
+  status: ProposalStatus
+  notes?: string | null
+  user_id?: number
+  created_at?: string
+  updated_at?: string
+}
+
+export interface ProposalWithDetails extends Proposal {
+  deal_client?: string
+  deal_property_name?: string | null
+}
+
+// ---------------------------------------------------------------------------
+// Módulo Chat (WhatsApp)
+// ---------------------------------------------------------------------------
+
+export type WhatsAppSessionStatus = 'connected' | 'disconnected'
+
+// Estado vindo do provedor (Baileys) durante o pareamento
+export type WhatsAppProviderStatus =
+  | 'idle'
+  | 'pending_qr'
+  | 'connecting'
+  | 'connected'
+  | 'disconnected'
+
+export interface WhatsAppProviderState {
+  status: WhatsAppProviderStatus
+  qrCode?: string | null       // data URL PNG (presente quando status === 'pending_qr')
+  phoneNumber?: string | null
+  displayName?: string | null
+}
+
+export interface WhatsAppSession {
+  id: number
+  user_id: number
+  phone_number: string
+  display_name?: string | null
+  status: WhatsAppSessionStatus
+  connected_at?: string | null
+  created_at?: string
+  updated_at?: string
+}
+
+export interface Conversation {
+  id: number
+  owner_user_id: number
+  contact_phone: string
+  contact_name?: string | null
+  client_id?: number | null
+  last_message_at?: string | null
+  unread_count: number
+  created_at?: string
+  updated_at?: string
+}
+
+export interface ConversationWithDetails extends Conversation {
+  client_name?: string | null
+  owner_user_name?: string | null
+  last_message_preview?: string | null
+  last_message_direction?: 'inbound' | 'outbound' | null
+}
+
+// ---------------------------------------------------------------------------
+// Módulo Leads
+// ---------------------------------------------------------------------------
+
+export type LeadSourceType = 'meta' | 'webhook_generic' | 'manual'
+export type LeadSourceStatus = 'active' | 'paused'
+export type LeadStatus = 'novo' | 'aceito' | 'descartado'
+
+export interface LeadSource {
+  id: number
+  name: string
+  type: LeadSourceType
+  config?: Record<string, any> | null
+  webhook_token: string
+  status: LeadSourceStatus
+  last_lead_at?: string | null
+  created_at?: string
+  updated_at?: string
+}
+
+export interface Lead {
+  id: number
+  source_id?: number | null
+  external_id?: string | null
+  name?: string | null
+  email?: string | null
+  phone?: string | null
+  form_data?: Record<string, any> | null
+  status: LeadStatus
+  client_id?: number | null
+  deal_id?: number | null
+  accepted_by_user_id?: number | null
+  accepted_at?: string | null
+  notes?: string | null
+  received_at?: string
+  created_at?: string
+  updated_at?: string
+}
+
+export interface LeadWithDetails extends Lead {
+  source_name?: string | null
+  source_type?: LeadSourceType | null
+  accepted_by_user_name?: string | null
+  client_name?: string | null
+}
+
+export type MessageDirection = 'inbound' | 'outbound'
+export type MessageStatus = 'sent' | 'delivered' | 'read' | 'failed' | 'received'
+
+export interface Message {
+  id: number
+  conversation_id: number
+  direction: MessageDirection
+  content: string
+  media_url?: string | null
+  status: MessageStatus
+  provider_message_id?: string | null
+  sent_at?: string
+  created_at?: string
+}
+
 export interface ApiResponse<T> {
   data: T[]
   total: number
@@ -173,7 +349,14 @@ export interface DashboardStats {
   totalProducts: number
   totalAppointments: number
   totalSalesAgenda: number
+  // Imóveis visíveis na Vitrine (available_for_sale = true)
+  totalShowcaseProducts: number
   totalFollowUps: number
+  totalProposals: number
+  // Conversas não respondidas + ligações não atendidas
+  pendingChatAndCalls: number
+  // Leads aguardando triagem (status='novo')
+  newLeads: number
 }
 
 export interface AppointmentAnalytics {
@@ -186,8 +369,21 @@ export interface AppointmentAnalyticsByType {
   [appointmentType: string]: AppointmentAnalytics[]
 }
 
+export interface DealFunnelStage {
+  status: string
+  count: number
+}
+
 // API service methods
 export const api = {
+  // Users
+  users: {
+    list: async (): Promise<{ id: number; name: string; email: string }[]> => {
+      const result = await apiClient.get<{ success: boolean; users: { id: number; name: string; email: string }[] }>('/auth/users')
+      return result.users || []
+    },
+  },
+
   // Dashboard
   dashboard: {
     getStats: async (): Promise<DashboardStats> => {
@@ -222,6 +418,21 @@ export const api = {
 
     getWithoutFollowUps: async (): Promise<ApiResponse<Deal>> => {
       return apiClient.get<ApiResponse<Deal>>('/deals/without-followups')
+    },
+
+    getFunnel: async (params?: {
+      from?: string
+      to?: string
+      timezone?: string
+      dateField?: 'origin_date' | 'created_at'
+    }): Promise<{ data: DealFunnelStage[] }> => {
+      const search = new URLSearchParams()
+      if (params?.from) search.append('from', params.from)
+      if (params?.to) search.append('to', params.to)
+      if (params?.timezone) search.append('timezone', params.timezone)
+      if (params?.dateField) search.append('dateField', params.dateField)
+      const query = search.toString()
+      return apiClient.get<{ data: DealFunnelStage[] }>(`/deals/analytics/funnel${query ? `?${query}` : ''}`)
     },
   },
 
@@ -280,6 +491,12 @@ export const api = {
 
     delete: async (id: number): Promise<{ success: boolean }> => {
       return apiClient.delete<{ success: boolean }>(`/products/${id}`)
+    },
+
+    // Toggle dedicado pra visibilidade na Vitrine, sem precisar enviar o
+    // produto inteiro no PUT (que falha porque a rota PUT exige campos NOT NULL).
+    setAvailability: async (id: number, available: boolean): Promise<Product> => {
+      return apiClient.patch<Product>(`/products/${id}/availability`, { available_for_sale: available })
     },
 
     // Multiple images management methods
@@ -352,8 +569,13 @@ export const api = {
       return `/api/products/${id}/images/${imageId}`
     },
 
-    getThumbnailUrl: (id: number): string => {
-      return `/api/products/${id}/thumbnail`
+    // Cache-busting: como a URL do thumbnail é fixa por produto, sem `version`
+    // o navegador serve a versão antiga até o cache expirar (24h por padrão).
+    // Passe `updated_at` do produto para forçar o navegador a buscar a foto
+    // nova sempre que ele for atualizado.
+    getThumbnailUrl: (id: number, version?: string | null): string => {
+      const v = version ? `?v=${encodeURIComponent(version)}` : ''
+      return `/api/products/${id}/thumbnail${v}`
     },
 
     updateImage: async (id: number, imageId: number, updates: { is_thumbnail?: boolean; display_order?: number; alt_text?: string }): Promise<{ success: boolean; image: ProductImage; message: string }> => {
@@ -395,6 +617,34 @@ export const api = {
       if (timezone) params.append('timezone', timezone)
       const query = params.toString()
       return apiClient.get<{ data: AppointmentAnalyticsByType }>(`/appointments/analytics/by-type/last-7-days${query ? `?${query}` : ''}`)
+    },
+
+    getAnalyticsByDateRange: async (input: {
+      from: string
+      to: string
+      timezone?: string
+      dateField?: 'scheduled_datetime' | 'created_at'
+    }): Promise<{ data: AppointmentAnalytics[] }> => {
+      const params = new URLSearchParams()
+      params.append('from', input.from)
+      params.append('to', input.to)
+      if (input.timezone) params.append('timezone', input.timezone)
+      if (input.dateField) params.append('dateField', input.dateField)
+      return apiClient.get<{ data: AppointmentAnalytics[] }>(`/appointments/analytics/by-date-range?${params.toString()}`)
+    },
+
+    getAnalyticsByTypeByDateRange: async (input: {
+      from: string
+      to: string
+      timezone?: string
+      dateField?: 'scheduled_datetime' | 'created_at'
+    }): Promise<{ data: AppointmentAnalyticsByType }> => {
+      const params = new URLSearchParams()
+      params.append('from', input.from)
+      params.append('to', input.to)
+      if (input.timezone) params.append('timezone', input.timezone)
+      if (input.dateField) params.append('dateField', input.dateField)
+      return apiClient.get<{ data: AppointmentAnalyticsByType }>(`/appointments/analytics/by-type/by-date-range?${params.toString()}`)
     },
 
     create: async (data: Omit<Appointment, "id">): Promise<Appointment> => {
@@ -480,6 +730,140 @@ export const api = {
 
     delete: async (id: number): Promise<{ success: boolean }> => {
       return apiClient.delete<{ success: boolean }>(`/follow-ups/${id}`)
+    },
+  },
+
+  // Proposals
+  proposals: {
+    getAll: async (filters?: {
+      search?: string
+      status?: string
+      sortBy?: string
+      sortOrder?: 'asc' | 'desc'
+    }): Promise<ApiResponse<ProposalWithDetails>> => {
+      const params = new URLSearchParams()
+      if (filters?.search) params.append('search', filters.search)
+      if (filters?.status) params.append('status', filters.status)
+      if (filters?.sortBy) params.append('sortBy', filters.sortBy)
+      if (filters?.sortOrder) params.append('sortOrder', filters.sortOrder)
+      const query = params.toString()
+      return apiClient.get<ApiResponse<ProposalWithDetails>>(`/proposals${query ? `?${query}` : ''}`)
+    },
+
+    getById: async (id: number): Promise<ProposalWithDetails> => {
+      return apiClient.get<ProposalWithDetails>(`/proposals/${id}`)
+    },
+
+    create: async (data: Omit<Proposal, 'id' | 'user_id' | 'created_at' | 'updated_at'>): Promise<Proposal> => {
+      return apiClient.post<Proposal>('/proposals', data)
+    },
+
+    update: async (id: number, data: Partial<Omit<Proposal, 'id' | 'user_id' | 'created_at' | 'updated_at'>>): Promise<Proposal> => {
+      return apiClient.put<Proposal>(`/proposals/${id}`, data)
+    },
+
+    delete: async (id: number): Promise<{ success: boolean }> => {
+      return apiClient.delete<{ success: boolean }>(`/proposals/${id}`)
+    },
+  },
+
+  // WhatsApp — sessão (vínculo entre usuário do BRM e número WhatsApp)
+  whatsapp: {
+    getSession: async (): Promise<{ data: WhatsAppSession | null }> => {
+      return apiClient.get<{ data: WhatsAppSession | null }>('/whatsapp/session')
+    },
+    connect: async (input: { phone_number: string; display_name?: string | null }): Promise<{ data: WhatsAppSession }> => {
+      return apiClient.post<{ data: WhatsAppSession }>('/whatsapp/session', input)
+    },
+    disconnect: async (): Promise<{ success: boolean }> => {
+      return apiClient.delete<{ success: boolean }>('/whatsapp/session')
+    },
+    // Pareamento via QR Code (Baileys)
+    start: async (): Promise<{ data: WhatsAppProviderState }> => {
+      return apiClient.post<{ data: WhatsAppProviderState }>('/whatsapp/start', {})
+    },
+    getState: async (): Promise<{ data: WhatsAppProviderState }> => {
+      return apiClient.get<{ data: WhatsAppProviderState }>('/whatsapp/state')
+    },
+  },
+
+  // Chat — conversas e mensagens
+  chat: {
+    listConversations: async (): Promise<ApiResponse<ConversationWithDetails>> => {
+      return apiClient.get<ApiResponse<ConversationWithDetails>>('/chat/conversations')
+    },
+    getConversation: async (id: number): Promise<{ conversation: ConversationWithDetails; messages: Message[] }> => {
+      return apiClient.get<{ conversation: ConversationWithDetails; messages: Message[] }>(`/chat/conversations/${id}`)
+    },
+    startConversation: async (input: {
+      contact_phone: string
+      contact_name?: string | null
+      message: string
+    }): Promise<{ conversation: ConversationWithDetails; message: Message }> => {
+      return apiClient.post<{ conversation: ConversationWithDetails; message: Message }>('/chat/conversations', input)
+    },
+    sendMessage: async (conversationId: number, content: string): Promise<{ data: Message }> => {
+      return apiClient.post<{ data: Message }>(`/chat/conversations/${conversationId}/messages`, { content })
+    },
+    // Endpoint stub para simular entrada de mensagem enquanto não há provedor real.
+    simulateInbound: async (input: {
+      owner_user_id?: number
+      from_phone: string
+      from_name?: string | null
+      content: string
+    }): Promise<{ data: Message }> => {
+      return apiClient.post<{ data: Message }>('/chat/inbound', input)
+    },
+  },
+
+  // Leads — integrações de captação + triagem
+  leads: {
+    list: async (status?: LeadStatus): Promise<ApiResponse<LeadWithDetails>> => {
+      const query = status ? `?status=${status}` : ''
+      return apiClient.get<ApiResponse<LeadWithDetails>>(`/leads${query}`)
+    },
+    getCounts: async (): Promise<{ data: Record<LeadStatus, number> }> => {
+      return apiClient.get<{ data: Record<LeadStatus, number> }>(`/leads/counts`)
+    },
+    getById: async (id: number): Promise<{ data: LeadWithDetails }> => {
+      return apiClient.get<{ data: LeadWithDetails }>(`/leads/${id}`)
+    },
+    createManual: async (input: {
+      name?: string | null
+      email?: string | null
+      phone?: string | null
+      notes?: string | null
+    }): Promise<{ data: Lead }> => {
+      return apiClient.post<{ data: Lead }>('/leads', input)
+    },
+    accept: async (id: number): Promise<{ data: { lead: Lead; client_id: number; deal_id: number } }> => {
+      return apiClient.post<{ data: { lead: Lead; client_id: number; deal_id: number } }>(`/leads/${id}/accept`, {})
+    },
+    discard: async (id: number, notes?: string | null): Promise<{ data: Lead }> => {
+      return apiClient.post<{ data: Lead }>(`/leads/${id}/discard`, { notes })
+    },
+
+    // Lead Sources (somente admin)
+    sources: {
+      list: async (): Promise<{ data: LeadSource[] }> => {
+        return apiClient.get<{ data: LeadSource[] }>('/leads/sources')
+      },
+      create: async (input: {
+        name: string
+        type: LeadSourceType
+        config?: Record<string, any> | null
+      }): Promise<{ data: LeadSource }> => {
+        return apiClient.post<{ data: LeadSource }>('/leads/sources', input)
+      },
+      update: async (
+        id: number,
+        input: { name?: string; config?: Record<string, any> | null; status?: LeadSourceStatus }
+      ): Promise<{ data: LeadSource }> => {
+        return apiClient.put<{ data: LeadSource }>(`/leads/sources/${id}`, input)
+      },
+      delete: async (id: number): Promise<{ success: boolean }> => {
+        return apiClient.delete<{ success: boolean }>(`/leads/sources/${id}`)
+      },
     },
   },
 }

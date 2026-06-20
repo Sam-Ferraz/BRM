@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { ArrowLeft, Plus, Pencil, Trash2, Search, CheckCircle2, Calendar, User } from "lucide-react"
+import { ArrowLeft, Plus, Pencil, Trash2, Search, CheckCircle2, Calendar, User, ClipboardCheck } from "lucide-react"
 import { api, type FollowUpWithDetails, type Deal } from "@/lib/api-client"
 import { FollowUpForm } from "@/components/forms/followup-form"
 import { useToast } from "@/hooks/use-toast"
@@ -28,7 +28,7 @@ export default function FollowUpsPage() {
   const [dealsLoading, setDealsLoading] = useState(true)
   const [formLoading, setFormLoading] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState("active") // "active", "completed", "all"
+  const [statusFilter, setStatusFilter] = useState("open") // "open", "pending", "completed", "all"
   const [sortBy, setSortBy] = useState("next_action_date")
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc")
 
@@ -66,8 +66,13 @@ export default function FollowUpsPage() {
 
       // Filter based on status filter
       let filteredData = result.data
-      if (statusFilter === "active") {
-        filteredData = result.data.filter(f => !f.completed)
+      if (statusFilter === "open") {
+        filteredData = result.data.filter(f => f.followup_status === "open")
+      } else if (statusFilter === "pending") {
+        // "Pendentes" agrupa pendentes + atrasados (tudo que está com a data passada e não concluído)
+        filteredData = result.data.filter(
+          f => f.followup_status === "pending" || f.followup_status === "overdue"
+        )
       } else if (statusFilter === "completed") {
         filteredData = result.data.filter(f => f.completed)
       }
@@ -235,8 +240,11 @@ export default function FollowUpsPage() {
                   {t('backButton')}
                 </Link>
               </Button>
-              <h1 className="text-xl font-semibold text-foreground">{t('followUpsTitle')}</h1>
             </div>
+            <Button onClick={() => setIsFormOpen(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              {t('newFollowUp')}
+            </Button>
           </div>
         </div>
       </header>
@@ -244,7 +252,10 @@ export default function FollowUpsPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Card>
           <CardHeader>
-            <CardTitle>{t('followUpsManagement')}</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <ClipboardCheck className="w-5 h-5" />
+              {t('followUps')}
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex flex-col sm:flex-row gap-4">
@@ -262,7 +273,8 @@ export default function FollowUpsPage() {
                   <SelectValue placeholder={t('status')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="active">{t('activeFollowUps')}</SelectItem>
+                  <SelectItem value="open">{t('openFollowUps')}</SelectItem>
+                  <SelectItem value="pending">{t('pendingFollowUps')}</SelectItem>
                   <SelectItem value="completed">{t('completedFollowUps')}</SelectItem>
                   <SelectItem value="all">{t('allFollowUps')}</SelectItem>
                 </SelectContent>
@@ -306,7 +318,7 @@ export default function FollowUpsPage() {
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
                           <User className="h-4 w-4 text-muted-foreground" />
-                          {followUp.appointment?.client || '-'}
+                          {followUp.client_name || followUp.appointment?.client || '-'}
                         </div>
                       </TableCell>
                       <TableCell>

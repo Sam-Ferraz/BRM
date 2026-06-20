@@ -25,6 +25,8 @@ interface FullscreenCarouselProps {
   initialIndex: number
   open: boolean
   onOpenChange: (open: boolean) => void
+  // Modo apresentação: passa um intervalo em ms para auto-avançar entre fotos
+  autoplayDelayMs?: number
 }
 
 export function ImageCarousel({
@@ -166,10 +168,13 @@ export function FullscreenCarousel({
   images,
   initialIndex,
   open,
-  onOpenChange
+  onOpenChange,
+  autoplayDelayMs,
 }: FullscreenCarouselProps) {
   const options: EmblaOptionsType = { loop: true, startIndex: initialIndex, duration: 0 }
-  const [emblaRef, emblaApi] = useEmblaCarousel(options)
+  // Plugin de autoplay condicional — só ativa em "modo apresentação"
+  const plugins = autoplayDelayMs ? [Autoplay({ delay: autoplayDelayMs, stopOnInteraction: false })] : []
+  const [emblaRef, emblaApi] = useEmblaCarousel(options, plugins)
   const [selectedIndex, setSelectedIndex] = useState(initialIndex)
 
   const onSelect = useCallback((emblaApi: any) => {
@@ -189,12 +194,31 @@ export function FullscreenCarousel({
     }
   }, [emblaApi, initialIndex, open])
 
+  // Pede ao navegador a tela cheia real (cobre a barra de tarefas do SO).
+  // Disparado pela interação do usuário ao abrir a apresentação.
+  useEffect(() => {
+    if (!open) return
+    const el = document.documentElement
+    const isFs = () => Boolean(document.fullscreenElement)
+    if (!isFs() && el.requestFullscreen) {
+      el.requestFullscreen().catch(() => undefined)
+    }
+    return () => {
+      if (document.fullscreenElement && document.exitFullscreen) {
+        document.exitFullscreen().catch(() => undefined)
+      }
+    }
+  }, [open])
+
   if (!images || images.length === 0) return null
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-screen-xl w-full h-screen sm:h-[95vh] p-0 bg-black/95 backdrop-blur-sm border-0">
-        <div className="relative h-full flex flex-col">
+      <DialogContent
+        className="!max-w-none w-screen h-screen p-0 bg-black border-0 rounded-none sm:rounded-none"
+        style={{ width: '100vw', height: '100vh', maxWidth: 'none' }}
+      >
+        <div className="relative h-full w-full flex flex-col">
           {/* Close button */}
           <Button
             variant="ghost"

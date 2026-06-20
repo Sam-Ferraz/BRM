@@ -92,4 +92,9 @@ export class AuthService {
       return { success: false, error: 'Erro interno do servidor' }
     }
   }
+
+  async listUsers(): Promise<{ id: number; name: string; email: string }[]> {
+    const users = await this.userRepository.findAll()
+    return users.map(u => ({ id: u.id, name: u.name, email: u.email }))
+  }
 }

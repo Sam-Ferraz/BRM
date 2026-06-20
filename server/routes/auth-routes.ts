@@ -68,6 +68,15 @@ export function createAuthRoutes(authService: AuthService): Router {
     }
   })
 
+  router.get('/users', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const users = await authService.listUsers()
+      res.json({ success: true, users })
+    } catch (error) {
+      res.status(500).json({ error: 'Erro interno do servidor' })
+    }
+  })
+
   router.get('/verify', authenticateToken, (req: AuthenticatedRequest, res: Response): void => {
     res.json({
       success: true,

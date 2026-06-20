@@ -13,6 +13,9 @@ import AppointmentsPage from './pages/AppointmentsPage'
 import ProductsPage from './pages/ProductsPage'
 import SalesAgendaPage from './pages/SalesAgendaPage'
 import FollowUpsPage from './pages/FollowUpsPage'
+import ProposalsPage from './pages/ProposalsPage'
+import ChatPage from './pages/ChatPage'
+import LeadsPage from './pages/LeadsPage'
 import ConfigPage from './pages/ConfigPage'
 import './lib/i18n'
 import './index.css'
@@ -63,6 +66,21 @@ function App() {
               <Route path="/follow-ups" element={
                 <ProtectedRoute>
                   <FollowUpsPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/proposals" element={
+                <ProtectedRoute>
+                  <ProposalsPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/chat" element={
+                <ProtectedRoute>
+                  <ChatPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/leads" element={
+                <ProtectedRoute>
+                  <LeadsPage />
                 </ProtectedRoute>
               } />
               <Route path="/settings" element={

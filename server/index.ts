@@ -12,7 +12,13 @@ import {
   ProductRepository,
   AppointmentRepository,
   SalesAgendaRepository,
-  FollowUpRepository
+  FollowUpRepository,
+  ProposalRepository,
+  WhatsAppSessionRepository,
+  ConversationRepository,
+  MessageRepository,
+  LeadSourceRepository,
+  LeadRepository
 } from './repositories/index.js'
 
 // Import services
@@ -24,8 +30,14 @@ import {
   ProductService,
   AppointmentService,
   SalesAgendaService,
-  FollowUpService
+  FollowUpService,
+  ProposalService,
+  WhatsAppService,
+  ChatService,
+  LeadService
 } from './services/index.js'
+import { StubWhatsAppProvider } from './services/whatsapp-provider.js'
+import { BaileysWhatsAppProvider } from './services/baileys-whatsapp-provider.js'
 
 // Import routes
 import { createAuthRoutes } from './routes/auth-routes.js'
@@ -36,6 +48,10 @@ import { createProductRoutes } from './routes/product-routes.js'
 import { createAppointmentRoutes } from './routes/appointment-routes.js'
 import { createSalesAgendaRoutes } from './routes/sales-agenda-routes.js'
 import { createFollowUpRoutes } from './routes/followup-routes.js'
+import { createProposalRoutes } from './routes/proposal-routes.js'
+import { createWhatsAppRoutes } from './routes/whatsapp-routes.js'
+import { createChatRoutes } from './routes/chat-routes.js'
+import { createLeadRoutes } from './routes/lead-routes.js'
 
 dotenv.config()
 
@@ -57,6 +73,11 @@ app.use(express.json())
 // In dev: __dirname = /project/server/dist, so ../../dist = /project/dist
 app.use(express.static(path.join(__dirname, '../../dist')))
 
+// Serve uploaded files (only used when STORAGE_MODE=local)
+// Path: project_root/uploads -> served at /uploads/*
+const uploadsPath = path.resolve(process.env.LOCAL_STORAGE_PATH || './uploads')
+app.use('/uploads', express.static(uploadsPath))
+
 // Health check
 app.get('/health', (req, res) => {
   res.json({
@@ -75,6 +96,12 @@ const productRepository = new ProductRepository()
 const appointmentRepository = new AppointmentRepository()
 const salesAgendaRepository = new SalesAgendaRepository()
 const followUpRepository = new FollowUpRepository()
+const proposalRepository = new ProposalRepository()
+const whatsappSessionRepository = new WhatsAppSessionRepository()
+const conversationRepository = new ConversationRepository()
+const messageRepository = new MessageRepository()
+const leadSourceRepository = new LeadSourceRepository()
+const leadRepository = new LeadRepository()
 
 // Initialize services with dependency injection
 const authService = new AuthService(userRepository)
@@ -84,7 +111,10 @@ const dashboardService = new DashboardService(
   productRepository,
   appointmentRepository,
   salesAgendaRepository,
-  followUpRepository
+  followUpRepository,
+  proposalRepository,
+  conversationRepository,
+  leadRepository
 )
 const dealService = new DealService(dealRepository)
 const clientService = new ClientService(clientRepository)
@@ -92,6 +122,46 @@ const productService = new ProductService(productRepository)
 const appointmentService = new AppointmentService(appointmentRepository)
 const salesAgendaService = new SalesAgendaService(salesAgendaRepository)
 const followUpService = new FollowUpService(followUpRepository)
+const proposalService = new ProposalService(proposalRepository, dealRepository)
+
+// Provider de WhatsApp:
+//   WHATSAPP_PROVIDER=stub    → não conversa de verdade (útil para CI / dev offline)
+//   WHATSAPP_PROVIDER=baileys → conecta no WhatsApp real via Baileys (padrão)
+//
+// Provider e ChatService têm uma dependência circular: o provider precisa
+// chamar chatService.receiveMessage quando chega mensagem entrante, mas
+// o chatService já depende do provider para enviar. Resolvemos com uma
+// referência tardia (closure aponta para chatService criado abaixo).
+let chatServiceRef: ChatService | null = null
+const incomingHandler = async (input: Parameters<NonNullable<ChatService['receiveMessage']>>[0]) => {
+  if (!chatServiceRef) return
+  return chatServiceRef.receiveMessage(input)
+}
+
+const whatsappProvider =
+  process.env.WHATSAPP_PROVIDER === 'stub'
+    ? new StubWhatsAppProvider()
+    : new BaileysWhatsAppProvider({
+        incoming: incomingHandler,
+        sessionRepository: whatsappSessionRepository,
+      })
+
+const whatsappService = new WhatsAppService(whatsappSessionRepository)
+const chatService = new ChatService(
+  conversationRepository,
+  messageRepository,
+  whatsappSessionRepository,
+  whatsappProvider,
+  appointmentRepository
+)
+chatServiceRef = chatService
+
+const leadService = new LeadService(
+  leadRepository,
+  leadSourceRepository,
+  clientRepository,
+  dealRepository
+)
 
 // Setup routes
 app.use('/api/auth', createAuthRoutes(authService))
@@ -102,6 +172,10 @@ app.use('/api/products', createProductRoutes(productService))
 app.use('/api/appointments', createAppointmentRoutes(appointmentService))
 app.use('/api/sales-agenda', createSalesAgendaRoutes(salesAgendaService))
 app.use('/api/follow-ups', createFollowUpRoutes(followUpService))
+app.use('/api/proposals', createProposalRoutes(proposalService))
+app.use('/api/whatsapp', createWhatsAppRoutes(whatsappService, whatsappProvider))
+app.use('/api/chat', createChatRoutes(chatService))
+app.use('/api/leads', createLeadRoutes(leadService, leadSourceRepository))
 
 // Serve React app for all non-API routes (client-side routing)
 app.get('*', (req, res) => {

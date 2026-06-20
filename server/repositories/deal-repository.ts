@@ -1,5 +1,5 @@
 import { BaseRepository } from './base-repository.js'
-import { Deal, QueryFilters } from '../types/index.js'
+import { Deal, DealFunnelStage, QueryFilters } from '../types/index.js'
 
 export class DealRepository extends BaseRepository {
   async findAll(filters: QueryFilters = {}, userId?: number): Promise<Deal[]> {
@@ -131,6 +131,40 @@ export class DealRepository extends BaseRepository {
     }
   }
 
+  /**
+   * Focused setter used when an accepted proposal needs to push its value
+   * into the deal's VGV (gsv). Returns true if a row was updated.
+   */
+  async updateGsv(id: number, gsv: string | number): Promise<boolean> {
+    const client = await this.getClient()
+    try {
+      const result = await client.query(
+        'UPDATE deals SET gsv = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING id',
+        [gsv, id]
+      )
+      return result.rows.length > 0
+    } finally {
+      this.releaseClient(client)
+    }
+  }
+
+  /**
+   * Focused setter used when a proposal carries a different property than the
+   * deal currently has — the latest write from the proposal form wins.
+   */
+  async updatePropertyName(id: number, propertyName: string | null): Promise<boolean> {
+    const client = await this.getClient()
+    try {
+      const result = await client.query(
+        'UPDATE deals SET property_name = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING id',
+        [propertyName ?? null, id]
+      )
+      return result.rows.length > 0
+    } finally {
+      this.releaseClient(client)
+    }
+  }
+
   async getCount(userId?: number): Promise<number> {
     const client = await this.getClient()
     try {
@@ -171,6 +205,63 @@ export class DealRepository extends BaseRepository {
       const params = userId ? [userId] : []
       const result = await client.query(query, params)
       return result.rows
+    } finally {
+      this.releaseClient(client)
+    }
+  }
+
+  /**
+   * Counts deals grouped by status across ALL users (company-wide).
+   * Returns one row per status that exists in the table — including
+   * the discarded_* statuses. Frontend decides which go in the funnel
+   * and which go in the "discarded" section.
+   *
+   * If `from` / `to` are provided, the count is restricted to deals
+   * whose chosen `dateField` falls inside that inclusive range. `origin_date`
+   * is a DATE column and is compared directly; `created_at` is a TIMESTAMP
+   * and is interpreted in the requested timezone before comparison.
+   */
+  async getFunnelByStatus(params?: {
+    from?: string
+    to?: string
+    timezone?: string
+    dateField?: 'origin_date' | 'created_at'
+  }): Promise<DealFunnelStage[]> {
+    const client = await this.getClient()
+    try {
+      await client.query("SET TIMEZONE = 'UTC'")
+
+      const conditions: string[] = ['status IS NOT NULL']
+      const values: any[] = []
+      let p = 1
+
+      if (params?.from && params?.to) {
+        const dateField = params.dateField === 'created_at' ? 'created_at' : 'origin_date'
+        if (dateField === 'origin_date') {
+          conditions.push(`origin_date BETWEEN $${p}::date AND $${p + 1}::date`)
+          values.push(params.from, params.to)
+          p += 2
+        } else {
+          const timezone = params.timezone || 'UTC'
+          conditions.push(
+            `timezone($${p + 2}, created_at AT TIME ZONE 'UTC')::date BETWEEN $${p}::date AND $${p + 1}::date`
+          )
+          values.push(params.from, params.to, timezone)
+          p += 3
+        }
+      }
+
+      const query = `
+        SELECT status, COUNT(*)::int AS count
+        FROM deals
+        WHERE ${conditions.join(' AND ')}
+        GROUP BY status
+      `
+      const result = await client.query(query, values)
+      return result.rows.map(row => ({
+        status: row.status,
+        count: row.count
+      }))
     } finally {
       this.releaseClient(client)
     }

@@ -15,6 +15,18 @@ export class UserRepository extends BaseRepository {
     }
   }
 
+  async findAll(): Promise<User[]> {
+    const client = await this.getClient()
+    try {
+      const result = await client.query(
+        'SELECT id, name, email, role FROM users ORDER BY name ASC'
+      )
+      return result.rows
+    } finally {
+      this.releaseClient(client)
+    }
+  }
+
   async findById(id: number): Promise<User | null> {
     const client = await this.getClient()
     try {

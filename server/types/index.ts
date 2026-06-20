@@ -44,6 +44,25 @@ export interface Product {
   type: string
   category: 'off-plan' | 'completed'
   description: string
+  capture_date?: string | null
+  capturer?: string | null
+  payment_condition?: string | null
+  exchange_car?: boolean
+  exchange_property?: boolean
+  bedrooms?: number | null
+  suites?: number | null
+  parking_spots?: number | null
+  bathrooms?: number | null
+  total_area?: string | null
+  private_area?: string | null
+  condo_fee?: string | null
+  address?: string | null
+  neighborhood?: string | null
+  city?: string | null
+  state?: string | null
+  country?: string | null
+  available_for_sale?: boolean
+  user_id?: number
   has_thumbnail?: boolean
   created_at?: Date
   updated_at?: Date
@@ -60,6 +79,8 @@ export interface ProductImage {
   updated_at?: Date
 }
 
+export type AppointmentOrigin = 'manual' | 'whatsapp'
+
 export interface Appointment {
   id: number
   client: string
@@ -69,6 +90,11 @@ export interface Appointment {
   answered: boolean
   property_name?: string | null
   user_id: number
+  // 'manual' (criado na tela) ou 'whatsapp' (auto-criado pelo ChatService).
+  // Opcional porque o banco aplica DEFAULT 'manual' quando o campo não é informado.
+  origin?: AppointmentOrigin
+  // Quando origin='whatsapp', referencia a conversa que disparou a auto-criação.
+  conversation_id?: number | null
   created_at?: Date
   updated_at?: Date
 }
@@ -83,11 +109,27 @@ export interface SalesAgenda {
   user_id: number
   created_at?: Date
   updated_at?: Date
+  // Campos opcionais vindos do JOIN com products na listagem da vitrine
+  product_price?: string | number | null
+  product_type?: string | null
+  product_category?: string | null
+  product_bedrooms?: number | null
+  product_suites?: number | null
+  product_parking_spots?: number | null
+  product_bathrooms?: number | null
+  product_total_area?: string | null
+  product_private_area?: string | null
+  product_neighborhood?: string | null
+  product_city?: string | null
+  product_state?: string | null
+  product_description?: string | null
+  has_thumbnail?: boolean
 }
 
 export interface FollowUp {
   id: number
-  appointment_id: number
+  appointment_id: number | null
+  client_name: string
   next_action: string
   next_action_date: string
   completed: boolean
@@ -102,19 +144,150 @@ export interface FollowUpWithDetails extends FollowUp {
   followup_status: 'open' | 'pending' | 'overdue'
 }
 
+export type ProposalStatus = 'pending' | 'accepted' | 'rejected' | 'counter_proposal' | 'expired'
+
+export interface Proposal {
+  id: number
+  deal_id: number
+  proposal_value: string | number
+  payment_condition?: string | null
+  proposal_date: string
+  validity_date?: string | null
+  status: ProposalStatus
+  notes?: string | null
+  user_id: number
+  created_at?: Date
+  updated_at?: Date
+}
+
+export interface ProposalWithDetails extends Proposal {
+  deal_client?: string
+  deal_property_name?: string | null
+}
+
+// ---------------------------------------------------------------------------
+// Módulo Chat (WhatsApp)
+// ---------------------------------------------------------------------------
+
+export type WhatsAppSessionStatus = 'connected' | 'disconnected'
+
+export interface WhatsAppSession {
+  id: number
+  user_id: number
+  phone_number: string
+  display_name?: string | null
+  status: WhatsAppSessionStatus
+  connected_at?: Date | null
+  created_at?: Date
+  updated_at?: Date
+}
+
+export interface Conversation {
+  id: number
+  owner_user_id: number
+  contact_phone: string
+  contact_name?: string | null
+  client_id?: number | null
+  last_message_at?: Date | null
+  unread_count: number
+  created_at?: Date
+  updated_at?: Date
+}
+
+export interface ConversationWithDetails extends Conversation {
+  // Enriquecimentos do JOIN — exibidos na lista de conversas
+  client_name?: string | null
+  owner_user_name?: string | null
+  last_message_preview?: string | null
+  last_message_direction?: 'inbound' | 'outbound' | null
+}
+
+export type MessageDirection = 'inbound' | 'outbound'
+export type MessageStatus = 'sent' | 'delivered' | 'read' | 'failed' | 'received'
+
+export interface Message {
+  id: number
+  conversation_id: number
+  direction: MessageDirection
+  content: string
+  media_url?: string | null
+  status: MessageStatus
+  provider_message_id?: string | null
+  sent_at?: Date
+  created_at?: Date
+}
+
+// ---------------------------------------------------------------------------
+// Módulo Leads (integrações com Meta, Google Ads, etc.)
+// ---------------------------------------------------------------------------
+
+export type LeadSourceType = 'meta' | 'webhook_generic' | 'manual'
+export type LeadSourceStatus = 'active' | 'paused'
+export type LeadStatus = 'novo' | 'aceito' | 'descartado'
+
+export interface LeadSource {
+  id: number
+  name: string
+  type: LeadSourceType
+  config?: Record<string, any> | null
+  webhook_token: string
+  status: LeadSourceStatus
+  last_lead_at?: Date | null
+  created_at?: Date
+  updated_at?: Date
+}
+
+export interface Lead {
+  id: number
+  source_id?: number | null
+  external_id?: string | null
+  name?: string | null
+  email?: string | null
+  phone?: string | null
+  form_data?: Record<string, any> | null
+  status: LeadStatus
+  client_id?: number | null
+  deal_id?: number | null
+  accepted_by_user_id?: number | null
+  accepted_at?: Date | null
+  notes?: string | null
+  received_at?: Date
+  created_at?: Date
+  updated_at?: Date
+}
+
+export interface LeadWithDetails extends Lead {
+  source_name?: string | null
+  source_type?: LeadSourceType | null
+  accepted_by_user_name?: string | null
+  client_name?: string | null
+}
+
 export interface DashboardStats {
   totalDeals: number
   totalClients: number
   totalProducts: number
   totalAppointments: number
   totalSalesAgenda: number
+  // Imóveis visíveis na Vitrine (available_for_sale = true)
+  totalShowcaseProducts: number
   totalFollowUps: number
+  totalProposals: number
+  // Pendências de comunicação: conversas não respondidas + ligações não atendidas
+  pendingChatAndCalls: number
+  // Leads aguardando triagem (status='novo')
+  newLeads: number
 }
 
 export interface AppointmentAnalytics {
   date: string
   answered: number
   not_answered: number
+}
+
+export interface DealFunnelStage {
+  status: string
+  count: number
 }
 
 export interface AuthResult {

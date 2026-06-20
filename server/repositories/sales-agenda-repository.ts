@@ -6,37 +6,65 @@ export class SalesAgendaRepository extends BaseRepository {
     const client = await this.getClient()
     try {
       const { search, status, sortBy, sortOrder } = filters
-      let query = 'SELECT * FROM sales_agenda WHERE 1=1'
+      // LEFT JOIN com products para trazer o snapshot do imóvel (preço, tipo,
+      // cômodos, área, bairro) usado na vitrine — evita uma chamada extra por
+      // card. Outro LEFT JOIN com product_images apenas para marcar a flag
+      // has_thumbnail; a imagem em si é servida pelo endpoint /thumbnail.
+      let query = `
+        SELECT
+          sa.*,
+          p.price          AS product_price,
+          p.type           AS product_type,
+          p.category       AS product_category,
+          p.bedrooms       AS product_bedrooms,
+          p.suites         AS product_suites,
+          p.parking_spots  AS product_parking_spots,
+          p.bathrooms      AS product_bathrooms,
+          p.total_area     AS product_total_area,
+          p.private_area   AS product_private_area,
+          p.neighborhood   AS product_neighborhood,
+          p.city           AS product_city,
+          p.state          AS product_state,
+          p.description    AS product_description,
+          (pi.id IS NOT NULL) AS has_thumbnail
+        FROM sales_agenda sa
+        LEFT JOIN products p ON sa.product_id = p.id
+        LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_thumbnail = TRUE
+        WHERE 1=1
+      `
       const params: any[] = []
       let paramCount = 1
 
-      // Filter by user_id if provided
       if (userId) {
-        query += ` AND user_id = $${paramCount}`
+        query += ` AND sa.user_id = $${paramCount}`
         params.push(userId)
         paramCount++
       }
 
       if (search) {
-        query += ` AND (title ILIKE $${paramCount} OR product_name ILIKE $${paramCount})`
+        query += ` AND (sa.title ILIKE $${paramCount} OR sa.product_name ILIKE $${paramCount} OR p.neighborhood ILIKE $${paramCount} OR p.city ILIKE $${paramCount})`
         params.push(`%${search}%`)
         paramCount++
       }
 
       if (status && status !== 'All') {
-        query += ` AND status = $${paramCount}`
+        query += ` AND sa.status = $${paramCount}`
         params.push(status)
         paramCount++
       }
 
-      if (sortBy) {
-        const validColumns = ['title', 'client', 'product_name', 'value', 'date', 'status']
-        if (validColumns.includes(sortBy)) {
-          const order = sortOrder === 'desc' ? 'DESC' : 'ASC'
-          query += ` ORDER BY ${sortBy} ${order}`
-        }
+      const validSortColumns: Record<string, string> = {
+        title: 'sa.title',
+        product_name: 'sa.product_name',
+        date: 'sa.date',
+        status: 'sa.status',
+        price: 'p.price',
+      }
+      if (sortBy && validSortColumns[sortBy]) {
+        const order = sortOrder === 'desc' ? 'DESC' : 'ASC'
+        query += ` ORDER BY ${validSortColumns[sortBy]} ${order} NULLS LAST`
       } else {
-        query += ' ORDER BY date DESC'
+        query += ' ORDER BY sa.date DESC'
       }
 
       const result = await client.query(query, params)

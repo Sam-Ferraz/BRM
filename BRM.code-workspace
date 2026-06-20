@@ -1,0 +1,31 @@
+{
+	"folders": [
+		{
+			"path": "../brm/.claude"
+		},
+		{
+			"path": "../brm/cloudformation"
+		},
+		{
+			"path": "../brm/db"
+		},
+		{
+			"path": "../brm/dev-tools"
+		},
+		{
+			"path": "../brm/public"
+		},
+		{
+			"path": "../brm/scripts"
+		},
+		{
+			"path": "../brm/server"
+		},
+		{
+			"path": "../brm/src"
+		},
+		{
+			"path": "../brm/styles"
+		}
+	]
+}

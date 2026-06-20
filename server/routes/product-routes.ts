@@ -1,7 +1,7 @@
 import { Request, Response, Router } from 'express'
 import { ProductService } from '../services/index.js'
 import { authenticateToken, AuthenticatedRequest } from '../middleware/auth.js'
-import s3Service from '../services/s3-service.js'
+import storageService from '../services/storage-service.js'
 import { uploadSingle, uploadMultiple, handleUploadErrors } from '../middleware/upload.js'
 
 export function createProductRoutes(productService: ProductService): Router {
@@ -140,15 +140,36 @@ export function createProductRoutes(productService: ProductService): Router {
     }
   })
 
+  // Toggle de visibilidade na Vitrine (sem precisar mandar o produto inteiro)
+  router.patch('/:id/availability', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const id = parseInt(req.params.id)
+      const { available_for_sale } = req.body
+      if (typeof available_for_sale !== 'boolean') {
+        res.status(400).json({ error: 'available_for_sale (boolean) is required' })
+        return
+      }
+      const product = await productService.setAvailability(id, available_for_sale)
+      res.json(product)
+    } catch (error) {
+      if (error instanceof Error && error.message === 'Product not found') {
+        res.status(404).json({ error: 'Product not found' })
+        return
+      }
+      console.error('Error in patch availability route:', error)
+      res.status(500).json({ error: 'Internal server error' })
+    }
+  })
+
   router.delete('/:id', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const id = parseInt(req.params.id)
       const result = await productService.deleteProduct(id)
       
-      // Clean up S3 images if they exist
+      // Clean up storage files if they exist
       if (result.imagePaths.length > 0) {
         try {
-          await s3Service.deleteProductFiles(result.imagePaths)
+          await storageService.deleteProductFiles(result.imagePaths)
         } catch (s3Error) {
           console.error('Error deleting images from S3:', s3Error)
           // Don't fail the product deletion if image cleanup fails
@@ -195,8 +216,8 @@ export function createProductRoutes(productService: ProductService): Router {
         return
       }
       
-      // Upload new image to S3
-      const filePath = await s3Service.uploadFile(
+      // Upload new image to storage
+      const filePath = await storageService.uploadFile(
         req.file.buffer,
         req.file.originalname,
         req.file.mimetype,
@@ -226,7 +247,7 @@ export function createProductRoutes(productService: ProductService): Router {
       }
       
       const uploadPromises = req.files.map(async (file: Express.Multer.File) => {
-        const filePath = await s3Service.uploadFile(
+        const filePath = await storageService.uploadFile(
           file.buffer,
           file.originalname,
           file.mimetype,
@@ -256,8 +277,8 @@ export function createProductRoutes(productService: ProductService): Router {
       
       const image = await productService.getProductImage(id, imageId)
       
-      // Stream image from S3
-      const fileData = await s3Service.getFile(image.image_url)
+      // Stream image from storage
+      const fileData = await storageService.getFile(image.image_url)
       
       // Set appropriate headers
       res.set({
@@ -311,9 +332,9 @@ export function createProductRoutes(productService: ProductService): Router {
       
       const result = await productService.deleteProductImage(id, imageId)
       
-      // Delete from S3
+      // Delete from storage
       try {
-        await s3Service.deleteFile(result.image.image_url)
+        await storageService.deleteFile(result.image.image_url)
       } catch (s3Error) {
         console.error('Error deleting image from S3:', s3Error)
         // Don't fail the deletion if S3 cleanup fails
@@ -336,8 +357,8 @@ export function createProductRoutes(productService: ProductService): Router {
       const id = parseInt(req.params.id)
       const thumbnail = await productService.getProductThumbnail(id)
       
-      // Stream image from S3
-      const fileData = await s3Service.getFile(thumbnail.image_url)
+      // Stream image from storage
+      const fileData = await storageService.getFile(thumbnail.image_url)
       
       // Set appropriate headers
       res.set({

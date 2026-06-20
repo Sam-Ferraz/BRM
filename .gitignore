@@ -27,3 +27,14 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+uploads/
+
+# Auth state das sessões Baileys (credenciais WhatsApp) — NÃO commitar
+/auth/
+
+# Lixo do Windows
+desktop.ini
+Thumbs.db
+
+# Arquivos temporários de mensagem de commit
+.commit-msg.txt

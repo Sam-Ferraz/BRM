@@ -2,6 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Escala global da interface a ~75% do tamanho padrão. Como o Tailwind
+ * dimensiona praticamente tudo (fontes, paddings, larguras, alturas, ícones
+ * via w-/h-) em unidades rem, reduzir a font-size raiz de 16px para 12px
+ * encolhe proporcionalmente todo o layout — equivalente a aplicar zoom 75%
+ * no browser, mas sem os efeitos colaterais de transform/zoom CSS.
+ * Se precisar reverter, basta remover esta regra.
+ */
+html {
+  font-size: 12px;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;

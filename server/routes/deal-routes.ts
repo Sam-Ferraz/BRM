@@ -34,6 +34,43 @@ export function createDealRoutes(dealService: DealService): Router {
     }
   })
 
+  const DEFAULT_TIMEZONE = 'America/Sao_Paulo'
+  const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
+
+  const isValidTimezone = (value: unknown): value is string => {
+    if (typeof value !== 'string') return false
+    try {
+      Intl.DateTimeFormat('en-US', { timeZone: value })
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  // Company-wide deal funnel grouped by status (optionally narrowed by date range)
+  router.get('/analytics/funnel', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const from = typeof req.query.from === 'string' && ISO_DATE.test(req.query.from) ? req.query.from : undefined
+      const to = typeof req.query.to === 'string' && ISO_DATE.test(req.query.to) ? req.query.to : undefined
+      const timezone = isValidTimezone(req.query.timezone) ? req.query.timezone : DEFAULT_TIMEZONE
+      const dateField: 'origin_date' | 'created_at' =
+        req.query.dateField === 'created_at' ? 'created_at' : 'origin_date'
+
+      if ((from && !to) || (to && !from)) {
+        res.status(400).json({ error: 'Both "from" and "to" must be provided together (YYYY-MM-DD)' })
+        return
+      }
+
+      const result = await dealService.getFunnel(
+        from && to ? { from, to, timezone, dateField } : undefined
+      )
+      res.json(result)
+    } catch (error) {
+      console.error('Error in deal funnel analytics route:', error)
+      res.status(500).json({ error: 'Internal server error' })
+    }
+  })
+
   router.post('/', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const userId = req.user!.userId

@@ -62,9 +62,14 @@ export function createFollowUpRoutes(followUpService: FollowUpService): Router {
   router.post('/', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const userId = req.user!.userId
-      const { appointment_id, next_action, next_action_date, completed } = req.body
+      const { appointment_id, client_name, next_action, next_action_date, completed } = req.body
+      if (typeof client_name !== 'string' || client_name.trim() === '') {
+        res.status(400).json({ error: 'client_name is required' })
+        return
+      }
       const followUp = await followUpService.createFollowUp({
-        appointment_id,
+        appointment_id: appointment_id ?? null,
+        client_name: client_name.trim(),
         next_action,
         next_action_date,
         completed: completed ?? false,
@@ -80,8 +85,9 @@ export function createFollowUpRoutes(followUpService: FollowUpService): Router {
   router.put('/:id', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const id = parseInt(req.params.id)
-      const { next_action, next_action_date, completed } = req.body
+      const { client_name, next_action, next_action_date, completed } = req.body
       const followUp = await followUpService.updateFollowUp(id, {
+        client_name,
         next_action,
         next_action_date,
         completed

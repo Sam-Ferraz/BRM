@@ -81,4 +81,34 @@ export class AppointmentService {
       throw new Error('Internal server error')
     }
   }
+
+  async getAnalyticsByDateRange(params: {
+    from: string
+    to: string
+    timezone: string
+    dateField: 'scheduled_datetime' | 'created_at'
+  }): Promise<{ data: AppointmentAnalytics[] }> {
+    try {
+      const analytics = await this.appointmentRepository.getAnalyticsByDateRange(params)
+      return { data: analytics }
+    } catch (error) {
+      console.error('Error fetching appointments analytics by date range:', error)
+      throw new Error('Internal server error')
+    }
+  }
+
+  async getAnalyticsByTypeByDateRange(params: {
+    from: string
+    to: string
+    timezone: string
+    dateField: 'scheduled_datetime' | 'created_at'
+  }): Promise<{ data: Record<string, AppointmentAnalytics[]> }> {
+    try {
+      const analytics = await this.appointmentRepository.getAnalyticsByTypeByDateRange(params)
+      return { data: analytics }
+    } catch (error) {
+      console.error('Error fetching appointments analytics by type by date range:', error)
+      throw new Error('Internal server error')
+    }
+  }
 }

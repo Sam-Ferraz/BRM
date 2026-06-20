@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { ArrowLeft, Plus, Pencil, Trash2, Search, Mail, Phone, MapPin, Building } from "lucide-react"
+import { ArrowLeft, Plus, Pencil, Trash2, Search, Mail, Phone, MapPin, Building, Users } from "lucide-react"
 import { api, type Client } from "@/lib/api-client"
 import { ClientForm } from "@/components/forms/client-form"
 import { useToast } from "@/hooks/use-toast"
@@ -168,7 +168,10 @@ export default function ClientsPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Card>
           <CardHeader>
-            <CardTitle>{t('clientsTitle')}</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="w-5 h-5" />
+              {t('clientsTitle')}
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex flex-col sm:flex-row gap-4">

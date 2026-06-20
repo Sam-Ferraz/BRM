@@ -21,7 +21,7 @@ export class ProductRepository extends BaseRepository {
       let paramCount = 1
 
       if (search) {
-        query += ` AND (p.name ILIKE $${paramCount} OR p.type ILIKE $${paramCount} OR p.category ILIKE $${paramCount})`
+        query += ` AND (p.name ILIKE $${paramCount} OR p.type ILIKE $${paramCount} OR p.category ILIKE $${paramCount} OR p.neighborhood ILIKE $${paramCount} OR p.city ILIKE $${paramCount})`
         params.push(`%${search}%`)
         paramCount++
       }
@@ -69,8 +69,24 @@ export class ProductRepository extends BaseRepository {
     const client = await this.getClient()
     try {
       const result = await client.query(
-        'INSERT INTO products (name, price, type, category, description) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-        [product.name, product.price, product.type, product.category, product.description]
+        `INSERT INTO products (
+          name, price, type, category, description,
+          capture_date, capturer, payment_condition,
+          exchange_car, exchange_property,
+          bedrooms, suites, parking_spots, bathrooms,
+          total_area, private_area, condo_fee,
+          address, neighborhood, city, state, country,
+          available_for_sale, user_id
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24) RETURNING *`,
+        [
+          product.name, product.price, product.type, product.category, product.description,
+          product.capture_date || null, product.capturer || null, product.payment_condition || null,
+          product.exchange_car || false, product.exchange_property || false,
+          product.bedrooms || null, product.suites || null, product.parking_spots || null, product.bathrooms || null,
+          product.total_area || null, product.private_area || null, product.condo_fee || null,
+          product.address || null, product.neighborhood || null, product.city || null, product.state || null, product.country || 'Brasil',
+          product.available_for_sale !== false, product.user_id || null
+        ]
       )
       return result.rows[0]
     } finally {
@@ -82,8 +98,25 @@ export class ProductRepository extends BaseRepository {
     const client = await this.getClient()
     try {
       const result = await client.query(
-        'UPDATE products SET name = $1, price = $2, type = $3, category = $4, description = $5, updated_at = CURRENT_TIMESTAMP WHERE id = $6 RETURNING *',
-        [product.name, product.price, product.type, product.category, product.description, id]
+        `UPDATE products SET
+          name = $1, price = $2, type = $3, category = $4, description = $5,
+          capture_date = $6, capturer = $7, payment_condition = $8,
+          exchange_car = $9, exchange_property = $10,
+          bedrooms = $11, suites = $12, parking_spots = $13, bathrooms = $14,
+          total_area = $15, private_area = $16, condo_fee = $17,
+          address = $18, neighborhood = $19, city = $20, state = $21, country = $22,
+          available_for_sale = $23, user_id = $24,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = $25 RETURNING *`,
+        [
+          product.name, product.price, product.type, product.category, product.description,
+          product.capture_date || null, product.capturer || null, product.payment_condition || null,
+          product.exchange_car || false, product.exchange_property || false,
+          product.bedrooms || null, product.suites || null, product.parking_spots || null, product.bathrooms || null,
+          product.total_area || null, product.private_area || null, product.condo_fee || null,
+          product.address || null, product.neighborhood || null, product.city || null, product.state || null, product.country || 'Brasil',
+          product.available_for_sale !== false, product.user_id || null, id
+        ]
       )
       return result.rows.length > 0 ? result.rows[0] : null
     } finally {
@@ -96,6 +129,39 @@ export class ProductRepository extends BaseRepository {
     try {
       const result = await client.query('DELETE FROM products WHERE id = $1 RETURNING *', [id])
       return result.rows.length > 0
+    } finally {
+      this.releaseClient(client)
+    }
+  }
+
+  /**
+   * Conta imóveis visíveis na Vitrine (available_for_sale = true).
+   * Usado no card "Vitrine" do dashboard.
+   */
+  async getShowcaseCount(): Promise<number> {
+    const client = await this.getClient()
+    try {
+      const result = await client.query(
+        "SELECT COUNT(*) as count FROM products WHERE available_for_sale = TRUE"
+      )
+      return parseInt(result.rows[0].count)
+    } finally {
+      this.releaseClient(client)
+    }
+  }
+
+  /**
+   * Toggle dedicado da flag available_for_sale. Usado para esconder/mostrar
+   * o imóvel na Vitrine sem precisar fazer um UPDATE com todos os campos.
+   */
+  async setAvailability(id: number, available: boolean): Promise<Product | null> {
+    const client = await this.getClient()
+    try {
+      const result = await client.query(
+        'UPDATE products SET available_for_sale = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *',
+        [available, id]
+      )
+      return result.rows.length > 0 ? result.rows[0] : null
     } finally {
       this.releaseClient(client)
     }
@@ -143,6 +209,9 @@ export class ProductRepository extends BaseRepository {
   ): Promise<ProductImage> {
     const client = await this.getClient()
     try {
+      // Bumpa o updated_at do produto pai para invalidar o cache do thumbnail
+      // no navegador (cache-busting via ?v=updated_at na URL).
+      await client.query('UPDATE products SET updated_at = CURRENT_TIMESTAMP WHERE id = $1', [productId])
       const result = await client.query(
         'INSERT INTO product_images (product_id, image_url, display_order, is_thumbnail, alt_text) VALUES ($1, $2, $3, $4, $5) RETURNING *',
         [productId, imageUrl, displayOrder, isThumbnail, altText]
@@ -202,12 +271,17 @@ export class ProductRepository extends BaseRepository {
       `
 
       const result = await client.query(updateQuery, values)
+      // Bumpa o updated_at do produto pai para invalidar o cache do thumbnail
+      await client.query('UPDATE products SET updated_at = CURRENT_TIMESTAMP WHERE id = $1', [productId])
       return result.rows.length > 0 ? result.rows[0] : null
     })
   }
 
   async deleteProductImage(imageId: number, productId: number): Promise<ProductImage | null> {
     return await this.withTransaction(async (client) => {
+      // Bumpa o updated_at do produto pai para invalidar o cache do thumbnail
+      await client.query('UPDATE products SET updated_at = CURRENT_TIMESTAMP WHERE id = $1', [productId])
+
       // Get image record
       const imageResult = await client.query(
         'SELECT * FROM product_images WHERE id = $1 AND product_id = $2',

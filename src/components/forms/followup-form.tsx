@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import type { FollowUp, Appointment } from "@/lib/api-client"
 import { useMobileDetection } from "@/lib/mobile-utils"
+import { ClientSearch } from "@/components/client-search"
 import { format } from "date-fns"
 
 interface FollowUpFormProps {
@@ -29,7 +30,8 @@ export function FollowUpForm({ followUp, appointment, open, onOpenChange, onSubm
   const currentDate = useMemo(() => format(new Date(), 'yyyy-MM-dd'), [])
 
   const [formData, setFormData] = useState({
-    appointment_id: appointment?.id || 0,
+    appointment_id: appointment?.id ?? null as number | null,
+    client_name: appointment?.client ?? "",
     next_action: "",
     next_action_date: currentDate,
     completed: false
@@ -37,19 +39,25 @@ export function FollowUpForm({ followUp, appointment, open, onOpenChange, onSubm
 
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
 
+  // When tied to an existing appointment the client name comes from that record
+  // and is not editable from this form.
+  const clientLocked = Boolean(appointment)
+
   useEffect(() => {
     setErrors({})
 
     if (followUp) {
       setFormData({
         appointment_id: followUp.appointment_id,
+        client_name: followUp.client_name || appointment?.client || "",
         next_action: followUp.next_action || "",
         next_action_date: followUp.next_action_date || currentDate,
         completed: followUp.completed || false
       })
     } else {
       setFormData({
-        appointment_id: appointment?.id || 0,
+        appointment_id: appointment?.id ?? null,
+        client_name: appointment?.client ?? "",
         next_action: "",
         next_action_date: currentDate,
         completed: false
@@ -63,6 +71,10 @@ export function FollowUpForm({ followUp, appointment, open, onOpenChange, onSubm
     setErrors({})
 
     const newErrors: { [key: string]: string } = {}
+
+    if (!formData.client_name.trim()) {
+      newErrors.client_name = t('clientRequired') || 'Client is required'
+    }
 
     if (!formData.next_action.trim()) {
       newErrors.next_action = t('nextActionRequired') || 'Next action is required'
@@ -92,16 +104,29 @@ export function FollowUpForm({ followUp, appointment, open, onOpenChange, onSubm
           <DialogTitle>{followUp ? t('editFollowUp') : t('newFollowUp')}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {appointment && (
-            <div className="space-y-2">
-              <Label>{t('client')}</Label>
+          <div className="space-y-2">
+            <Label htmlFor="client_name">
+              {t('client')} <span className="text-red-500">*</span>
+            </Label>
+            {clientLocked ? (
               <Input
-                value={appointment.client}
+                id="client_name"
+                value={formData.client_name}
                 readOnly
                 className="bg-muted"
               />
-            </div>
-          )}
+            ) : (
+              <ClientSearch
+                value={formData.client_name}
+                onSelect={(name) => setFormData({ ...formData, client_name: name })}
+                placeholder={t('selectClient')}
+                className={`w-full ${errors.client_name ? 'ring-2 ring-red-500' : ''}`}
+              />
+            )}
+            {errors.client_name && (
+              <p className="text-sm text-red-500">{errors.client_name}</p>
+            )}
+          </div>
 
           <div className="space-y-2">
             <Label htmlFor="next_action">

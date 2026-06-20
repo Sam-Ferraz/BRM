@@ -1,15 +1,22 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Link } from "react-router-dom"
 import { useTranslation } from "react-i18next"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, BarChart3, TrendingUp } from "lucide-react"
 import { ChartContainer } from "@/components/ui/chart-simple"
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from "recharts"
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, LabelList } from "recharts"
 import { useAuth } from "@/hooks/use-auth"
-import { api, AppointmentAnalytics, AppointmentAnalyticsByType } from "@/lib/api-client"
+import { api, AppointmentAnalytics, AppointmentAnalyticsByType, DealFunnelStage } from "@/lib/api-client"
 import { formatDateForChart } from "@/lib/datetime"
 import { useTimezone } from "@/hooks/use-timezone"
+import { DealFunnelChart } from "@/components/charts/deal-funnel-chart"
+import {
+  DateRangeFilter,
+  DateRangeValue,
+  computePresetRange,
+  toIsoDate,
+} from "@/components/analytics/date-range-filter"
 
 const formatAppointmentAnalytics = (analytics: AppointmentAnalytics[], t: any) => {
   return analytics.map(item => ({
@@ -66,51 +73,101 @@ export default function AnalyticsPage() {
   const { t } = useTranslation()
   const { user } = useAuth()
   const timezone = useTimezone()
+
+  const initialAppointmentsRange = useMemo<DateRangeValue>(() => {
+    const { from, to } = computePresetRange("last7Days")
+    return { from, to, preset: "last7Days" }
+  }, [])
+
+  // Funil começa em "Tempo total" — sem filtro de período, todos os negócios entram
+  const [funnelDateRange, setFunnelDateRange] = useState<DateRangeValue>({ preset: "allTime" })
+  const [appointmentsDateRange, setAppointmentsDateRange] = useState<DateRangeValue>(initialAppointmentsRange)
+
   const [appointmentAnalytics, setAppointmentAnalytics] = useState<AppointmentAnalytics[]>([])
   const [appointmentAnalyticsByType, setAppointmentAnalyticsByType] = useState<AppointmentAnalyticsByType>({})
-  const [loading, setLoading] = useState(true)
+  const [funnelData, setFunnelData] = useState<DealFunnelStage[]>([])
+  const [initialLoading, setInitialLoading] = useState(true)
+  const [refetching, setRefetching] = useState(false)
+
+  // Quando o filtro está em 'allTime', from/to são undefined → não envia ao backend
+  const funnelFromIso = useMemo(
+    () => (funnelDateRange.from ? toIsoDate(funnelDateRange.from) : undefined),
+    [funnelDateRange.from]
+  )
+  const funnelToIso = useMemo(
+    () => (funnelDateRange.to ? toIsoDate(funnelDateRange.to) : undefined),
+    [funnelDateRange.to]
+  )
+  const appointmentsFromIso = useMemo(
+    () => (appointmentsDateRange.from ? toIsoDate(appointmentsDateRange.from) : undefined),
+    [appointmentsDateRange.from]
+  )
+  const appointmentsToIso = useMemo(
+    () => (appointmentsDateRange.to ? toIsoDate(appointmentsDateRange.to) : undefined),
+    [appointmentsDateRange.to]
+  )
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        setLoading(true)
-        const [analytics, analyticsByType] = await Promise.all([
-          api.appointments.getAnalyticsLast7Days(timezone),
-          api.appointments.getAnalyticsByTypeLast7Days(timezone)
+        setRefetching(true)
+        const [analytics, analyticsByType, funnel] = await Promise.all([
+          // Atendimentos: sempre passa from/to (mantém comportamento atual)
+          appointmentsFromIso && appointmentsToIso
+            ? api.appointments.getAnalyticsByDateRange({
+                from: appointmentsFromIso,
+                to: appointmentsToIso,
+                timezone,
+                dateField: 'scheduled_datetime',
+              })
+            : Promise.resolve({ data: [] as AppointmentAnalytics[] }),
+          appointmentsFromIso && appointmentsToIso
+            ? api.appointments.getAnalyticsByTypeByDateRange({
+                from: appointmentsFromIso,
+                to: appointmentsToIso,
+                timezone,
+                dateField: 'scheduled_datetime',
+              })
+            : Promise.resolve({ data: {} as AppointmentAnalyticsByType }),
+          // Funil: se 'allTime', não manda from/to → backend retorna todos os deals
+          api.deals.getFunnel(
+            funnelFromIso && funnelToIso
+              ? { from: funnelFromIso, to: funnelToIso, timezone, dateField: 'origin_date' }
+              : { timezone, dateField: 'origin_date' }
+          ),
         ])
-        
+
         setAppointmentAnalytics(analytics.data)
         setAppointmentAnalyticsByType(analyticsByType.data)
+        setFunnelData(funnel.data)
       } catch (error) {
         console.error('Error fetching analytics data:', error)
         setAppointmentAnalytics([])
         setAppointmentAnalyticsByType({})
+        setFunnelData([])
       } finally {
-        setLoading(false)
+        setRefetching(false)
+        setInitialLoading(false)
       }
     }
-    
-    fetchData()
-  }, [timezone])
 
-  if (loading) {
+    fetchData()
+  }, [timezone, funnelFromIso, funnelToIso, appointmentsFromIso, appointmentsToIso])
+
+  if (initialLoading) {
     return (
       <div className="min-h-screen bg-background">
         {/* Header */}
         <header className="bg-card shadow-sm border-b">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16">
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center">
                 <Link to="/dashboard">
                   <Button variant="ghost" size="sm">
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     {t('backButton')}
                   </Button>
                 </Link>
-                <div className="flex items-center space-x-3">
-                  <BarChart3 className="w-6 h-6 text-blue-600" />
-                  <h1 className="text-xl font-semibold text-foreground">{t('analytics')}</h1>
-                </div>
               </div>
               <div className="flex items-center space-x-4">
                 <span className="text-sm text-muted-foreground">
@@ -122,6 +179,10 @@ export default function AnalyticsPage() {
         </header>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <h2 className="text-xl font-semibold flex items-center gap-2 text-foreground mb-8">
+            <BarChart3 className="w-5 h-5" />
+            {t('analytics')}
+          </h2>
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
@@ -139,17 +200,13 @@ export default function AnalyticsPage() {
       <header className="bg-card shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center">
               <Link to="/dashboard">
                 <Button variant="ghost" size="sm">
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   {t('backButton')}
                 </Button>
               </Link>
-              <div className="flex items-center space-x-3">
-                <BarChart3 className="w-6 h-6 text-blue-600" />
-                <h1 className="text-xl font-semibold text-foreground">{t('analytics')}</h1>
-              </div>
             </div>
             <div className="flex items-center space-x-4">
               <span className="text-sm text-muted-foreground">
@@ -162,8 +219,44 @@ export default function AnalyticsPage() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="space-y-8">
-          {/* Overview Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <h2 className="text-xl font-semibold flex items-center gap-2 text-foreground">
+            <BarChart3 className="w-5 h-5" />
+            {t('analytics')}
+          </h2>
+
+          {refetching && (
+            <p className="text-xs text-muted-foreground/70">{t('loading')}…</p>
+          )}
+
+          {/* === FUNNEL SECTION === */}
+          <section className="space-y-4">
+            <div className="flex items-center justify-end gap-3">
+              <span className="text-sm text-muted-foreground">{t('filterByPeriod')}</span>
+              <DateRangeFilter value={funnelDateRange} onChange={setFunnelDateRange} />
+            </div>
+
+            <Card className="max-w-[65%] bg-gradient-to-br from-slate-50 to-white dark:from-slate-900/50 dark:to-slate-800/50 border-slate-200 dark:border-slate-700 dark:backdrop-blur-sm dark:bg-slate-900/80">
+              <CardHeader className="pb-4 px-3 sm:px-6">
+                <CardTitle className="text-xl font-semibold text-foreground flex items-center gap-3">
+                  <div className="w-2 h-8 bg-gradient-to-b from-amber-500 to-rose-500 dark:from-amber-400 dark:to-rose-400 rounded-full"></div>
+                  {t('dealFunnel')}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0 px-3 sm:px-6">
+                <DealFunnelChart data={funnelData} />
+              </CardContent>
+            </Card>
+          </section>
+
+          {/* === APPOINTMENTS SECTION === */}
+          <section className="space-y-4">
+            <div className="flex items-center justify-end gap-3">
+              <span className="text-sm text-muted-foreground">{t('filterByPeriod')}</span>
+              <DateRangeFilter value={appointmentsDateRange} onChange={setAppointmentsDateRange} />
+            </div>
+
+            {/* Overview Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <Card>
               <CardContent className="p-6">
                 <div className="flex items-center space-x-3">
@@ -217,17 +310,14 @@ export default function AnalyticsPage() {
             </Card>
           </div>
 
-          {/* Main Appointments Analytics Chart */}
-          <Card className="bg-gradient-to-br from-slate-50 to-white dark:from-slate-900/50 dark:to-slate-800/50 border-slate-200 dark:border-slate-700 dark:backdrop-blur-sm dark:bg-slate-900/80">
-            <CardHeader className="pb-4 px-3 sm:px-6">
-              <CardTitle className="text-xl font-semibold text-foreground flex items-center gap-3">
-                <div className="w-2 h-8 bg-gradient-to-b from-blue-500 to-purple-600 dark:from-blue-400 dark:to-purple-400 rounded-full"></div>
-                {t('appointmentsLast7Days')}
-              </CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">
-                {t('appointmentsAnalyticsDescription')}
-              </p>
-            </CardHeader>
+            {/* Main Appointments Analytics Chart */}
+            <Card className="max-w-[50%] bg-gradient-to-br from-slate-50 to-white dark:from-slate-900/50 dark:to-slate-800/50 border-slate-200 dark:border-slate-700 dark:backdrop-blur-sm dark:bg-slate-900/80">
+              <CardHeader className="pb-4 px-3 sm:px-6">
+                <CardTitle className="text-xl font-semibold text-foreground flex items-center gap-3">
+                  <div className="w-2 h-8 bg-gradient-to-b from-blue-500 to-purple-600 dark:from-blue-400 dark:to-purple-400 rounded-full"></div>
+                  {t('appointmentsInPeriod')}
+                </CardTitle>
+              </CardHeader>
             <CardContent className="pt-0 px-3 sm:px-6">
               <ChartContainer
                 config={{
@@ -240,10 +330,10 @@ export default function AnalyticsPage() {
                     color: "hsl(0, 84%, 60%)",
                   },
                 }}
-                className="h-[400px]"
+                className="h-[125px]"
               >
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart 
+                  <BarChart
                     data={formatAppointmentAnalytics(appointmentAnalytics, t)}
                     margin={{ top: 20, right: 5, left: 0, bottom: 20 }}
                     barCategoryGap="15%"
@@ -258,47 +348,49 @@ export default function AnalyticsPage() {
                         <stop offset="100%" stopColor="hsl(var(--destructive))" stopOpacity={0.8} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid 
-                      strokeDasharray="3 3" 
-                      stroke="hsl(var(--border))" 
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke="hsl(var(--border))"
                       strokeOpacity={0.6}
                       horizontal={true}
                       vertical={false}
                     />
-                    <XAxis 
-                      dataKey="date" 
+                    <XAxis
+                      dataKey="date"
                       axisLine={false}
                       tickLine={false}
                       tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
                       tickMargin={8}
                     />
-                    <YAxis 
+                    <YAxis
                       axisLine={false}
                       tickLine={false}
                       tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
                       tickMargin={2}
                       width={30}
+                      domain={[0, 50]}
+                      allowDataOverflow
                     />
-                    <Tooltip 
+                    <Tooltip
                       cursor={{ fill: 'rgba(59, 130, 246, 0.1)' }}
                       content={({ active, payload, label }) => {
                         if (active && payload && payload.length) {
                           const total = payload.reduce((sum, entry) => sum + (Number(entry.value) || 0), 0)
                           const answeredEntry = payload.find(entry => entry.dataKey === t('answered'))
                           const responseRate = total > 0 ? ((Number(answeredEntry?.value) || 0) / total * 100).toFixed(1) : '0.0'
-                          
+
                           return (
                             <div className="bg-card border border-border rounded-lg shadow-xl p-4 min-w-[200px]">
                               <div className="flex items-center gap-2 mb-3 pb-2 border-b border-border">
                                 <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
                                 <p className="font-semibold text-foreground">{label}</p>
                               </div>
-                              
+
                               {payload.map((entry, index) => (
                                 <div key={index} className="flex items-center justify-between gap-4 mb-2">
                                   <div className="flex items-center gap-2">
-                                    <div 
-                                      className="w-3 h-3 rounded-full shadow-sm" 
+                                    <div
+                                      className="w-3 h-3 rounded-full shadow-sm"
                                       style={{ backgroundColor: entry.color }}
                                     ></div>
                                     <span className="text-muted-foreground text-sm">{entry.dataKey}</span>
@@ -311,7 +403,7 @@ export default function AnalyticsPage() {
                                   </div>
                                 </div>
                               ))}
-                              
+
                               <div className="mt-3 pt-2 border-t border-border">
                                 <div className="flex items-center justify-between text-sm">
                                   <span className="text-muted-foreground font-medium">{t('totalAppointments')}:</span>
@@ -330,58 +422,64 @@ export default function AnalyticsPage() {
                         return null
                       }}
                     />
-                    <Bar 
-                      dataKey={t('answered')} 
-                      fill="url(#answeredGradient)" 
+                    <Bar
+                      dataKey={t('answered')}
+                      fill="url(#answeredGradient)"
                       radius={[6, 6, 0, 0]}
                       stroke="hsl(var(--chart-2))"
                       strokeWidth={1}
                       style={{ cursor: 'pointer' }}
-                    />
-                    <Bar 
-                      dataKey={t('notAnswered')} 
-                      fill="url(#notAnsweredGradient)" 
+                      maxBarSize={20}
+                    >
+                      <LabelList
+                        dataKey={t('answered')}
+                        position="top"
+                        style={{ fontSize: 10, fill: 'hsl(var(--chart-2))', fontWeight: 600 }}
+                        formatter={(v: any) => (v && v > 0 ? v : '')}
+                      />
+                    </Bar>
+                    <Bar
+                      dataKey={t('notAnswered')}
+                      fill="url(#notAnsweredGradient)"
                       radius={[6, 6, 0, 0]}
                       stroke="hsl(var(--destructive))"
                       strokeWidth={1}
                       style={{ cursor: 'pointer' }}
-                    />
+                      maxBarSize={20}
+                    >
+                      <LabelList
+                        dataKey={t('notAnswered')}
+                        position="top"
+                        style={{ fontSize: 10, fill: 'hsl(var(--destructive))', fontWeight: 600 }}
+                        formatter={(v: any) => (v && v > 0 ? v : '')}
+                      />
+                    </Bar>
                   </BarChart>
                 </ResponsiveContainer>
               </ChartContainer>
             </CardContent>
           </Card>
 
-          {/* Dynamic Appointment Type Charts */}
-          {Object.keys(appointmentAnalyticsByType).length > 0 && (
-            <Card className="bg-gradient-to-br from-slate-50 to-white dark:from-slate-900/50 dark:to-slate-800/50 border-slate-200 dark:border-slate-700 dark:backdrop-blur-sm dark:bg-slate-900/80">
-              <CardHeader className="pb-4 px-3 sm:px-6">
-                <CardTitle className="text-xl font-semibold text-foreground flex items-center gap-3">
-                  <div className="w-2 h-8 bg-gradient-to-b from-indigo-500 to-purple-600 dark:from-indigo-400 dark:to-purple-400 rounded-full"></div>
-                  {t('appointmentsByType')}
-                </CardTitle>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {t('appointmentsByTypeDescription')}
-                </p>
-              </CardHeader>
+            {/* Dynamic Appointment Type Charts */}
+            {Object.keys(appointmentAnalyticsByType).length > 0 && (
+              <Card className="max-w-[50%] bg-gradient-to-br from-slate-50 to-white dark:from-slate-900/50 dark:to-slate-800/50 border-slate-200 dark:border-slate-700 dark:backdrop-blur-sm dark:bg-slate-900/80">
+                <CardHeader className="pb-4 px-3 sm:px-6">
+                  <CardTitle className="text-xl font-semibold text-foreground flex items-center gap-3">
+                    <div className="w-2 h-8 bg-gradient-to-b from-indigo-500 to-purple-600 dark:from-indigo-400 dark:to-purple-400 rounded-full"></div>
+                    {t('visits')}
+                  </CardTitle>
+                </CardHeader>
               <CardContent className="pt-0 px-3 sm:px-6">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {Object.entries(appointmentAnalyticsByType).map(([appointmentType, data], index) => {
+                <div>
+                  {Object.entries(appointmentAnalyticsByType)
+                    .filter(([appointmentType]) => appointmentType === 'visit')
+                    .map(([appointmentType, data], index) => {
                     const headerColor = getTypeHeaderColor(index)
                     const answerColors = getAnswerColors()
                     const formattedData = formatAppointmentAnalytics(data, t)
-                    
+
                     return (
                       <div key={appointmentType} className="space-y-4">
-                        <div className="flex items-center gap-2 mb-4">
-                          <div 
-                            className={`w-4 h-4 rounded bg-gradient-to-b ${headerColor.gradient}`}
-                          ></div>
-                          <h3 className="text-lg font-semibold text-foreground">
-                            {getAppointmentTypeTranslation(appointmentType, t)}
-                          </h3>
-                        </div>
-                        
                         <ChartContainer
                           config={{
                             [t('answered')]: {
@@ -393,10 +491,10 @@ export default function AnalyticsPage() {
                               color: answerColors.notAnswered.primary,
                             },
                           }}
-                          className="h-[250px]"
+                          className="h-[125px]"
                         >
                           <ResponsiveContainer width="100%" height="100%">
-                            <BarChart 
+                            <BarChart
                               data={formattedData}
                               margin={{ top: 10, right: 10, left: 0, bottom: 10 }}
                               barCategoryGap="10%"
@@ -411,50 +509,52 @@ export default function AnalyticsPage() {
                                   <stop offset="100%" stopColor={answerColors.notAnswered.secondary} stopOpacity={0.8} />
                                 </linearGradient>
                               </defs>
-                              <CartesianGrid 
-                                strokeDasharray="3 3" 
-                                stroke="hsl(var(--border))" 
+                              <CartesianGrid
+                                strokeDasharray="3 3"
+                                stroke="hsl(var(--border))"
                                 strokeOpacity={0.6}
                                 horizontal={true}
                                 vertical={false}
                               />
-                              <XAxis 
-                                dataKey="date" 
+                              <XAxis
+                                dataKey="date"
                                 axisLine={false}
                                 tickLine={false}
                                 tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
                                 tickMargin={6}
                               />
-                              <YAxis 
+                              <YAxis
                                 axisLine={false}
                                 tickLine={false}
                                 tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
                                 tickMargin={2}
                                 width={25}
+                                domain={[0, 10]}
+                                allowDataOverflow
                               />
-                              <Tooltip 
+                              <Tooltip
                                 cursor={{ fill: 'rgba(59, 130, 246, 0.1)' }}
                                 content={({ active, payload, label }) => {
                                   if (active && payload && payload.length) {
                                     const total = payload.reduce((sum, entry) => sum + (Number(entry.value) || 0), 0)
                                     const answeredEntry = payload.find(entry => entry.dataKey === t('answered'))
                                     const responseRate = total > 0 ? ((Number(answeredEntry?.value) || 0) / total * 100).toFixed(1) : '0.0'
-                                    
+
                                     return (
                                       <div className="bg-card border border-border rounded-lg shadow-xl p-3 min-w-[180px]">
                                         <div className="flex items-center gap-2 mb-2 pb-1 border-b border-border">
-                                          <div 
+                                          <div
                                             className="w-2 h-2 rounded-full"
                                             style={{ backgroundColor: answerColors.answered.primary }}
                                           ></div>
                                           <p className="font-semibold text-foreground text-sm">{label}</p>
                                         </div>
-                                        
+
                                         {payload.map((entry, idx) => (
                                           <div key={idx} className="flex items-center justify-between gap-3 mb-1">
                                             <div className="flex items-center gap-1">
-                                              <div 
-                                                className="w-2 h-2 rounded-full" 
+                                              <div
+                                                className="w-2 h-2 rounded-full"
                                                 style={{ backgroundColor: entry.color }}
                                               ></div>
                                               <span className="text-muted-foreground text-xs">{entry.dataKey}</span>
@@ -467,7 +567,7 @@ export default function AnalyticsPage() {
                                             </div>
                                           </div>
                                         ))}
-                                        
+
                                         <div className="mt-2 pt-1 border-t border-border">
                                           <div className="flex items-center justify-between text-xs">
                                             <span className="text-muted-foreground font-medium">{t('responseRate')}:</span>
@@ -482,46 +582,47 @@ export default function AnalyticsPage() {
                                   return null
                                 }}
                               />
-                              <Bar 
-                                dataKey={t('answered')} 
+                              <Bar
+                                dataKey={t('answered')}
                                 fill={`url(#answeredGradient${index})`}
                                 radius={[3, 3, 0, 0]}
                                 stroke={answerColors.answered.secondary}
                                 strokeWidth={1}
-                              />
-                              <Bar 
-                                dataKey={t('notAnswered')} 
+                                maxBarSize={20}
+                              >
+                                <LabelList
+                                  dataKey={t('answered')}
+                                  position="top"
+                                  style={{ fontSize: 9, fill: answerColors.answered.primary, fontWeight: 600 }}
+                                  formatter={(v: any) => (v && v > 0 ? v : '')}
+                                />
+                              </Bar>
+                              <Bar
+                                dataKey={t('notAnswered')}
                                 fill={`url(#notAnsweredGradient${index})`}
                                 radius={[3, 3, 0, 0]}
                                 stroke={answerColors.notAnswered.secondary}
                                 strokeWidth={1}
-                              />
+                                maxBarSize={20}
+                              >
+                                <LabelList
+                                  dataKey={t('notAnswered')}
+                                  position="top"
+                                  style={{ fontSize: 9, fill: answerColors.notAnswered.primary, fontWeight: 600 }}
+                                  formatter={(v: any) => (v && v > 0 ? v : '')}
+                                />
+                              </Bar>
                             </BarChart>
                           </ResponsiveContainer>
                         </ChartContainer>
-                        
-                        {/* Type-specific summary */}
-                        <div className="grid grid-cols-2 gap-4 text-center mt-3">
-                          <div className="p-2 bg-muted rounded-lg">
-                            <div className="text-lg font-bold" style={{ color: answerColors.answered.primary }}>
-                              {data.reduce((sum, item) => sum + parseInt(item.answered), 0)}
-                            </div>
-                            <div className="text-xs text-muted-foreground">{t('answered')}</div>
-                          </div>
-                          <div className="p-2 bg-muted rounded-lg">
-                            <div className="text-lg font-bold" style={{ color: answerColors.notAnswered.primary }}>
-                              {data.reduce((sum, item) => sum + parseInt(item.not_answered), 0)}
-                            </div>
-                            <div className="text-xs text-muted-foreground">{t('notAnswered')}</div>
-                          </div>
-                        </div>
                       </div>
                     )
                   })}
                 </div>
-              </CardContent>
-            </Card>
-          )}
+                </CardContent>
+              </Card>
+            )}
+          </section>
         </div>
       </div>
     </div>

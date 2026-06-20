@@ -58,6 +58,7 @@ export class FollowUpRepository extends BaseRepository {
       return result.rows.map(row => ({
         id: row.id,
         appointment_id: row.appointment_id,
+        client_name: row.client_name,
         next_action: row.next_action,
         next_action_date: row.next_action_date,
         completed: row.completed,
@@ -128,6 +129,7 @@ export class FollowUpRepository extends BaseRepository {
       return {
         id: row.id,
         appointment_id: row.appointment_id,
+        client_name: row.client_name,
         next_action: row.next_action,
         next_action_date: row.next_action_date,
         completed: row.completed,
@@ -156,9 +158,10 @@ export class FollowUpRepository extends BaseRepository {
     const client = await this.getClient()
     try {
       const result = await client.query(
-        'INSERT INTO follow_ups (appointment_id, next_action, next_action_date, completed, user_id) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+        'INSERT INTO follow_ups (appointment_id, client_name, next_action, next_action_date, completed, user_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
         [
-          followUp.appointment_id,
+          followUp.appointment_id ?? null,
+          followUp.client_name,
           followUp.next_action,
           followUp.next_action_date,
           followUp.completed ?? false,
@@ -187,6 +190,12 @@ export class FollowUpRepository extends BaseRepository {
       if (followUp.next_action_date !== undefined) {
         fields.push(`next_action_date = $${paramCount}`)
         values.push(followUp.next_action_date)
+        paramCount++
+      }
+
+      if (followUp.client_name !== undefined) {
+        fields.push(`client_name = $${paramCount}`)
+        values.push(followUp.client_name)
         paramCount++
       }
 

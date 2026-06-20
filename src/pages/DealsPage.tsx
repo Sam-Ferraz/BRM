@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { ArrowLeft, Plus, Pencil, Trash2, Search } from "lucide-react"
+import { ArrowLeft, Plus, Pencil, Trash2, Search, Briefcase } from "lucide-react"
 import { api, type Deal } from "@/lib/api-client"
 import { DealForm } from "@/components/forms/deal-form"
 import { useToast } from "@/hooks/use-toast"
@@ -248,7 +248,10 @@ export default function DealsPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Card>
           <CardHeader>
-            <CardTitle>{t('dealsTitle')}</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Briefcase className="w-5 h-5" />
+              {t('dealsTitle')}
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex flex-col sm:flex-row gap-4">
