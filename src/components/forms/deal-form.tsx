@@ -114,19 +114,26 @@ export function DealForm({ deal, open, onOpenChange, onSubmit, loading }: DealFo
 
     let isMounted = true
 
-    const fetchClientPhone = async () => {
+    // Fallback: quando o cliente foi digitado direto (sem passar pelo
+    // onClientSelect do ClientSearch), busca via API pra preencher
+    // telefone E origem automaticamente — ambos read-only no form.
+    const fetchClientData = async () => {
       try {
         const response = await api.clients.getAll({ search: formData.client })
         const matchedClient = response.data.find((client: Client) => client.name === formData.client)
-        if (isMounted) {
-          setFormData(prev => ({ ...prev, client_phone: matchedClient?.phone || '' }))
+        if (isMounted && matchedClient) {
+          setFormData(prev => ({
+            ...prev,
+            client_phone: matchedClient.phone || '',
+            client_origin: (matchedClient.origin || prev.client_origin) as ClientOriginValue,
+          }))
         }
       } catch (error) {
-        console.error('Error fetching client phone:', error)
+        console.error('Error fetching client data:', error)
       }
     }
 
-    fetchClientPhone()
+    fetchClientData()
 
     return () => {
       isMounted = false
@@ -244,7 +251,13 @@ export function DealForm({ deal, open, onOpenChange, onSubmit, loading }: DealFo
                 setFormData({ ...formData, client: clientName, client_phone: '' })
               }}
               onClientSelect={(client: Client) => {
-                setFormData(prev => ({ ...prev, client_phone: client.phone || '' }))
+                // Preenche telefone E origem automaticamente do cliente
+                // selecionado — ambos ficam read-only no form do negócio.
+                setFormData(prev => ({
+                  ...prev,
+                  client_phone: client.phone || '',
+                  client_origin: (client.origin || prev.client_origin) as ClientOriginValue,
+                }))
               }}
               placeholder={t('selectClient')}
               className={`w-full ${errors.client ? 'ring-2 ring-red-500' : ''}`}
@@ -267,21 +280,13 @@ export function DealForm({ deal, open, onOpenChange, onSubmit, loading }: DealFo
 
           <div className="space-y-2">
             <Label htmlFor="client_origin">{t('clientOrigin')}</Label>
-            <Select
-              value={formData.client_origin}
-              onValueChange={(value) => setFormData({ ...formData, client_origin: value as ClientOriginValue })}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {clientOriginOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Input
+              id="client_origin"
+              value={clientOriginOptions.find(o => o.value === formData.client_origin)?.label || ''}
+              placeholder={t('selectClient')}
+              readOnly
+              className="bg-muted"
+            />
           </div>
 
           <div className="space-y-2">
