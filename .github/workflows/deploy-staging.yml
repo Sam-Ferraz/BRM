@@ -1,0 +1,50 @@
+name: Deploy to Staging
+
+# Dispara automaticamente em todo push para a branch `trunk`.
+# Deploya em test.brm.tec.br.
+on:
+  push:
+    branches:
+      - trunk
+
+# Evita rodar 2 deploys simultâneos pra staging (segura o mais novo, cancela em andamento).
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Deploy staging
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (apenas pra mostrar o commit no log)
+        uses: actions/checkout@v4
+
+      - name: Configura agente SSH com a chave privada do secret
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Adiciona host ao known_hosts (evita prompt de fingerprint)
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Roda deploy remoto (staging) puxando trunk atualizado
+        run: |
+          # SHA do commit que disparou: ${{ github.sha }}
+          # O script puxa a branch trunk, que neste momento tem esse SHA como HEAD.
+          ssh "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" \
+            "/opt/brm/deploy.sh staging trunk"
+
+      - name: Smoke test no endpoint público
+        run: |
+          # Aguarda alguns segundos pro app estabilizar pós-restart
+          sleep 5
+          HTTP=$(curl -s -o /dev/null -w "%{http_code}" https://test.brm.tec.br/health)
+          echo "GET https://test.brm.tec.br/health → HTTP $HTTP"
+          if [ "$HTTP" != "200" ]; then
+            echo "❌ Smoke test falhou (esperado 200, recebeu $HTTP)"
+            exit 1
+          fi
+          echo "✅ Staging respondendo OK"

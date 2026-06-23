@@ -1,0 +1,70 @@
+name: Deploy to Production
+
+# Dispara MANUALMENTE pelo botão "Run workflow" na aba Actions.
+# Deploya em brm.tec.br.
+#
+# Fluxo recomendado:
+#   1. Push para trunk → auto-deploya staging
+#   2. Testa em https://test.brm.tec.br
+#   3. Se OK, vai em Actions → "Deploy to Production" → "Run workflow"
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Branch, tag ou SHA a promover (default: trunk)'
+        required: false
+        default: 'trunk'
+        type: string
+      confirm:
+        description: 'Digite "deploy" para confirmar (proteção contra cliques acidentais)'
+        required: true
+        type: string
+
+# Evita rodar 2 deploys simultâneos pra prod (segura o primeiro, falha o segundo).
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy production
+    runs-on: ubuntu-latest
+    steps:
+      - name: Confirma intenção de deploy
+        run: |
+          if [ "${{ github.event.inputs.confirm }}" != "deploy" ]; then
+            echo "❌ Você precisa digitar exatamente 'deploy' no campo de confirmação."
+            exit 1
+          fi
+          echo "✅ Confirmação OK, prosseguindo com deploy de ${{ github.event.inputs.ref }}"
+
+      - name: Checkout (pra mostrar o commit no log)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.ref }}
+
+      - name: Configura agente SSH com a chave privada do secret
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Adiciona host ao known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Roda deploy remoto (prod) pelo ref informado
+        run: |
+          ssh "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" \
+            "/opt/brm/deploy.sh prod ${{ github.event.inputs.ref }}"
+
+      - name: Smoke test no endpoint público
+        run: |
+          sleep 5
+          HTTP=$(curl -s -o /dev/null -w "%{http_code}" https://brm.tec.br/health)
+          echo "GET https://brm.tec.br/health → HTTP $HTTP"
+          if [ "$HTTP" != "200" ]; then
+            echo "❌ Smoke test falhou (esperado 200, recebeu $HTTP)"
+            exit 1
+          fi
+          echo "✅ Produção respondendo OK"
