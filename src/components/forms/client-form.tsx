@@ -136,7 +136,7 @@ export function ClientForm({ client, initialName, open, onOpenChange, onSubmit, 
           <DialogTitle>{client ? t('editClient') : t('newClient')}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="max-h-[70vh] overflow-y-auto pr-2">
+          <div className="max-h-[70vh] overflow-y-auto p-1">
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="name">

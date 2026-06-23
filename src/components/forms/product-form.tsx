@@ -284,7 +284,7 @@ export function ProductForm({ product, initialName, open, onOpenChange, onSubmit
             <DialogTitle>{product ? t('editProduct') : t('newProduct')}</DialogTitle>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto pr-1">
+          <div className="flex-1 overflow-y-auto p-1">
             <form id="product-form" onSubmit={handleSubmit} className="space-y-4 pb-4">
 
               {/* Identificação */}

@@ -203,7 +203,7 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
         <DialogHeader>
           <DialogTitle>{appointment ? t('editAppointment') : t('newAppointment')}</DialogTitle>
         </DialogHeader>
-        <div className="max-h-[70vh] overflow-y-auto pr-2">
+        <div className="max-h-[70vh] overflow-y-auto p-1">
         <form onSubmit={handleSubmit} className="space-y-4 pb-4">
           <div className="space-y-2">
             <Label htmlFor="scheduled_datetime">
