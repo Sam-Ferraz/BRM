@@ -4,6 +4,33 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ---
 
+## ⚙️ Fluxo de Trabalho (IMPORTANTE)
+
+**O usuário NÃO quer parar para commitar/pushar.** O fluxo é:
+
+1. Claude edita o código
+2. Claude AUTOMATICAMENTE roda `git add + commit + push origin trunk` ao final de cada mudança substantiva (1 feature = 1 commit)
+3. GitHub Actions auto-deploya em https://test.brm.tec.br (staging)
+4. Usuário testa em staging e decide:
+   - ✅ Aprovado → vai em Actions → "Deploy to Production" → digita `deploy`
+   - ❌ Rejeitado → pede ajuste, Claude reedita e o ciclo repete
+
+**Regras de commit automático:**
+- Mensagem em PT-BR, descritiva (não só "fix bug"). Padrão Conventional Commits: `feat:`, `fix:`, `refactor:`, `chore:`, `docs:`, `style:`, `test:`, `ci:`
+- Sempre incluir `Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>` no rodapé
+- Stage apenas arquivos relacionados à mudança (evita `git add .`)
+- 1 mudança lógica = 1 commit (NÃO juntar features diferentes)
+- Push imediato após o commit (sem esperar acumular)
+
+**Quando NÃO commitar automaticamente:**
+- Edições só de teste/exploração que o usuário pediu pra testar antes
+- Edições em arquivos sensíveis (`.env`, `auth/`, credenciais)
+- Quando o usuário disse "não comita ainda"
+
+**Após commitar:** avisar brevemente o usuário "Deploy em staging iniciado, testa em ~2 min em https://test.brm.tec.br"
+
+---
+
 ## Objetivo do Sistema
 
 **BRM — Business Relationship Management (Imobiliário)**
