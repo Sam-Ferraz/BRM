@@ -281,6 +281,52 @@ Campos: `id`, `client`, `value`, `status`, `date`, `description`.
 - Rotas frontend protegidas via `AuthContext` + `localStorage`
 - Date-fns com locale BR (dd/MM/yyyy), timezone selecionável pelo usuário (default: São Paulo)
 
+### 🔒 Convenção OBRIGATÓRIA: Dialog/Form scrollable (nunca cortar tela)
+
+Todo formulário em modal Dialog DEVE seguir este padrão para garantir que
+o conteúdo nunca seja cortado em viewports menores e que o focus ring de
+2px não seja recortado pelos containers de scroll:
+
+```tsx
+<Dialog open={open} onOpenChange={onOpenChange}>
+  <DialogContent className="sm:max-w-[520px] max-h-[90vh] flex flex-col">
+    <DialogHeader>
+      <DialogTitle>{titulo}</DialogTitle>
+    </DialogHeader>
+
+    {/* form ocupa o espaço restante do flex, com min-h-0 pra flex-1 funcionar */}
+    <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 space-y-4">
+
+      {/* APENAS esta área rola. p-1 dá 4px de folga em todos os lados para o
+          box-shadow do focus aparecer sem ser recortado pelo overflow:hidden */}
+      <div className="flex-1 overflow-y-auto p-1 space-y-4">
+        ...todos os campos do form...
+      </div>
+
+      {/* footer fica FORA da área scrollável — sempre visível no rodapé */}
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+        <Button type="submit">Salvar</Button>
+      </DialogFooter>
+    </form>
+  </DialogContent>
+</Dialog>
+```
+
+**Por quê cada parte:**
+- `max-h-[90vh] flex flex-col` no DialogContent → dialog nunca passa de 90% da viewport e usa flex column para distribuir espaço
+- `flex-1 flex flex-col min-h-0` no form → ocupa o espaço disponível (sem `min-h-0` o flex-1 não funciona dentro de flexbox)
+- `flex-1 overflow-y-auto p-1` no div interno → só esta área rola; `p-1` dá 4px de buffer para o focus ring de 2px aparecer inteiro (sem isso o ring é cortado pelo overflow:hidden)
+- DialogFooter FORA do scroll → botões sempre visíveis no rodapé, não somem
+
+**NÃO use:**
+- `max-h-[70vh]` ou `pr-2` (padrões antigos sem padding completo — ring é cortado em pelo menos um lado)
+- DialogFooter dentro da área scrollável (some quando o conteúdo é longo)
+- Container scrollável sem padding (`overflow-y-auto` puro corta o focus ring)
+
+Esta convenção foi consolidada após resolver bugs de tela cortada e focus
+ring cortado. Sempre aplique em forms novos.
+
 ---
 
 ## Fluxo de Autenticação

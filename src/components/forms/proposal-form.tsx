@@ -179,15 +179,21 @@ export function ProposalForm({ proposal, open, onOpenChange, onSubmit, loading }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
+      {/* Padrão de dialog scrollable (ver CLAUDE.md → Convenções → Dialog/Form):
+          max-h-[90vh] flex flex-col → dialog nunca passa de 90% da viewport
+          form flex-1 flex flex-col min-h-0 → ocupa o espaço disponível
+          div flex-1 overflow-y-auto p-1 → só esta área rola; p-1 dá folga
+          para o focus ring de 2px aparecer sem ser recortado */}
       <DialogContent
-        className="sm:max-w-[520px]"
+        className="sm:max-w-[520px] max-h-[90vh] flex flex-col"
         {...(isMobile && { onOpenAutoFocus: (e) => e.preventDefault() })}
       >
         <DialogHeader>
           <DialogTitle>{proposal ? t("editProposal") : t("newProposal")}</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 space-y-4">
+          <div className="flex-1 overflow-y-auto p-1 space-y-4">
           <div className="space-y-2">
             <Label htmlFor="deal_id">
               {t("deal")} <span className="text-red-500">*</span>
@@ -317,6 +323,7 @@ export function ProposalForm({ proposal, open, onOpenChange, onSubmit, loading }
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
             />
           </div>
+          </div>{/* fim da área scrollável */}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
