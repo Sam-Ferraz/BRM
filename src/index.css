@@ -114,6 +114,13 @@ textarea:focus-visible {
   outline-offset: 2px;
 }
 
+/* Remove o outline customizado do input dentro do Command (popover de busca).
+   O outline-offset: 2px combinado com overflow:hidden rounded-md do Command
+   recortava os cantos do ring — Popover já comunica visualmente o foco. */
+[cmdk-input-wrapper] input:focus-visible {
+  outline: none;
+}
+
 /* Loading animation */
 @keyframes spin {
   to {

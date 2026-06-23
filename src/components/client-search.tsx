@@ -106,10 +106,10 @@ export function ClientSearch({
   )
 
   const handleCreateNew = () => {
-    if (searchValue.trim()) {
-      setOpen(false)
-      setShowClientForm(true)
-    }
+    // Sempre permite criar — initialName pode estar vazio se o usuário
+    // não digitou nada; o ClientForm aceita.
+    setOpen(false)
+    setShowClientForm(true)
   }
 
   const handleClientFormSubmit = useCallback(async (clientData: Omit<Client, "id">) => {
@@ -149,8 +149,12 @@ export function ClientSearch({
   }
 
   const displayValue = value || ""
-  const showCreateNew = searchValue.trim() && 
-    !clients.some(client => client.name.toLowerCase() === searchValue.toLowerCase())
+  // "Criar novo cliente" aparece SEMPRE no topo da lista — só some quando
+  // o usuário digitou exatamente o nome de um cliente já existente
+  // (aí não faria sentido oferecer criar duplicado).
+  const showCreateNew = !clients.some(
+    client => client.name.toLowerCase() === searchValue.trim().toLowerCase() && searchValue.trim()
+  )
 
   return (
     <div>
@@ -189,7 +193,9 @@ export function ClientSearch({
                   className="text-primary"
                 >
                   <Plus className="mr-2 h-4 w-4" />
-                  {t('createNewClient')}: "{searchValue}"
+                  {searchValue.trim()
+                    ? `${t('createNewClient')}: "${searchValue}"`
+                    : t('createNewClient')}
                 </CommandItem>
               </CommandGroup>
             )}
