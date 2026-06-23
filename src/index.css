@@ -105,16 +105,19 @@ html {
   transition: all 0.2s ease-in-out;
 }
 
-/* Focus styles — outline-offset: 0 (sem espaço entre input e ring) evita que
-   o anel seja recortado quando o input está em containers com overflow:hidden
-   (Dialog, Popover, Command, cards com rounded-md, etc). Mantém o foco visível
-   sem perder em nenhum lugar do sistema. */
+/* Focus styles — usa box-shadow em vez de outline porque box-shadow segue
+   o border-radius do elemento e respeita melhor containers com overflow.
+   • outline: removido (era cortado nos cantos arredondados de Dialog/Popover)
+   • box-shadow: 0 0 0 2px ring → cria anel ao redor do elemento, casa
+     perfeitamente com border-radius do input
+   • Aplicado em inputs/buttons/selects/textareas com focus-visible */
 button:focus-visible,
 input:focus-visible,
 select:focus-visible,
-textarea:focus-visible {
-  outline: 2px solid hsl(var(--ring));
-  outline-offset: 0;
+textarea:focus-visible,
+[role="combobox"]:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px hsl(var(--ring));
 }
 
 /* Loading animation */
