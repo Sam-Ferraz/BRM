@@ -43,10 +43,18 @@ jobs:
         with:
           ref: ${{ github.event.inputs.ref }}
 
-      - name: Configura agente SSH com a chave privada do secret
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+      - name: Decodifica chave privada (base64) e configura agente SSH
+        env:
+          SSH_KEY_B64: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          echo "$SSH_KEY_B64" | base64 -d > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          eval "$(ssh-agent -s)"
+          ssh-add ~/.ssh/id_ed25519
+          echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> $GITHUB_ENV
+          echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> $GITHUB_ENV
 
       - name: Adiciona host ao known_hosts
         run: |
