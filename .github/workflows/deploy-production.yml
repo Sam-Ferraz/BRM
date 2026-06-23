@@ -7,6 +7,11 @@ name: Deploy to Production
 #   1. Push para trunk → auto-deploya staging
 #   2. Testa em https://test.brm.tec.br
 #   3. Se OK, vai em Actions → "Deploy to Production" → "Run workflow"
+#
+# Recursos:
+#   • Lista os commits que serão promovidos no início do log
+#   • Cria tag git "prod-YYYYMMDDHHMMSS" após deploy bem-sucedido
+#     (assim você tem histórico exato do que foi pra prod e quando)
 on:
   workflow_dispatch:
     inputs:
@@ -25,6 +30,10 @@ concurrency:
   group: deploy-production
   cancel-in-progress: false
 
+# Permissão necessária pra criar a tag de release no final.
+permissions:
+  contents: write
+
 jobs:
   deploy:
     name: Deploy production
@@ -38,10 +47,39 @@ jobs:
           fi
           echo "✅ Confirmação OK, prosseguindo com deploy de ${{ github.event.inputs.ref }}"
 
-      - name: Checkout (pra mostrar o commit no log)
+      # fetch-depth: 0 → traz histórico completo + todas as tags pra conseguirmos
+      # comparar com a última tag prod-* e listar os commits do lote.
+      - name: Checkout com histórico completo
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.ref }}
+          fetch-depth: 0
+
+      - name: Lista commits que serão promovidos pra produção
+        run: |
+          echo "::group::📦 Lote a promover"
+          LAST_PROD_TAG=$(git tag --sort=-creatordate -l "prod-*" | head -1)
+          if [ -n "$LAST_PROD_TAG" ]; then
+            COUNT=$(git rev-list --count "$LAST_PROD_TAG..HEAD" 2>/dev/null || echo "?")
+            echo "📌 Última promoção pra prod: $LAST_PROD_TAG"
+            echo "📊 Commits novos no lote: $COUNT"
+            echo ""
+            echo "Commits que serão deployados:"
+            echo "──────────────────────────────────────────────"
+            git log --pretty=format:'  • %h  %s%n     %an, %ar' "$LAST_PROD_TAG..HEAD" || \
+              echo "  (nenhum commit novo desde $LAST_PROD_TAG — vai promover o mesmo código)"
+            echo ""
+            echo "──────────────────────────────────────────────"
+          else
+            echo "📌 Primeiro deploy oficial pra produção."
+            echo ""
+            echo "Últimos 15 commits no ref:"
+            echo "──────────────────────────────────────────────"
+            git log --pretty=format:'  • %h  %s%n     %an, %ar' -15
+            echo ""
+            echo "──────────────────────────────────────────────"
+          fi
+          echo "::endgroup::"
 
       - name: Decodifica chave privada (base64) e configura agente SSH
         env:
@@ -76,3 +114,26 @@ jobs:
             exit 1
           fi
           echo "✅ Produção respondendo OK"
+
+      # Cria tag git "prod-YYYYMMDDHHMMSS" SOMENTE se tudo passou.
+      # Assim você tem rastro do que foi pra prod e quando, e no próximo
+      # deploy o step "Lista commits" usa essa tag pra mostrar o delta.
+      - name: Cria tag prod-{timestamp} e empurra pro GitHub
+        if: success()
+        run: |
+          TS=$(date -u +%Y%m%d%H%M%S)
+          TAG="prod-$TS"
+          SHA=$(git rev-parse --short HEAD)
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git tag -a "$TAG" -m "Deploy to production em $(date -u +%FT%TZ) — HEAD=$SHA"
+          git push origin "$TAG"
+
+          echo "::notice title=🏷️ Tag criada::$TAG marca este deploy (HEAD=$SHA)"
+          echo ""
+          echo "🏷️  Tag $TAG criada e empurrada com sucesso."
+          echo "    Pra ver o que cada deploy de prod levou:"
+          echo "      git tag --sort=-creatordate -l 'prod-*'"
+          echo "      git log <tag1>..<tag2> --oneline"
