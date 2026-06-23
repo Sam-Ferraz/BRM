@@ -6,12 +6,18 @@ name: Deploy to Production
 # Fluxo recomendado:
 #   1. Push para trunk → auto-deploya staging
 #   2. Testa em https://test.brm.tec.br
-#   3. Se OK, vai em Actions → "Deploy to Production" → "Run workflow"
+#   3. Vai em Actions → "Deploy to Production" → "Run workflow"
+#      (não precisa digitar nada — o environment 'production' bloqueia o
+#      job até receber aprovação. Você recebe email/push do GitHub com 1
+#      clique pra aprovar — funciona com Face ID no GitHub mobile.)
+#
+# Setup do environment (UNICA VEZ via UI do GitHub):
+#   Settings → Environments → New environment → "production"
+#   → Required reviewers → adiciona seu user → Save
 #
 # Recursos:
 #   • Lista os commits que serão promovidos no início do log
 #   • Cria tag git "prod-YYYYMMDDHHMMSS" após deploy bem-sucedido
-#     (assim você tem histórico exato do que foi pra prod e quando)
 on:
   workflow_dispatch:
     inputs:
@@ -19,10 +25,6 @@ on:
         description: 'Branch, tag ou SHA a promover (default: trunk)'
         required: false
         default: 'trunk'
-        type: string
-      confirm:
-        description: 'Digite "deploy" para confirmar (proteção contra cliques acidentais)'
-        required: true
         type: string
 
 # Evita rodar 2 deploys simultâneos pra prod (segura o primeiro, falha o segundo).
@@ -38,15 +40,11 @@ jobs:
   deploy:
     name: Deploy production
     runs-on: ubuntu-latest
+    # Required reviewers do environment 'production' aprovam antes do job rodar.
+    environment:
+      name: production
+      url: https://brm.tec.br
     steps:
-      - name: Confirma intenção de deploy
-        run: |
-          if [ "${{ github.event.inputs.confirm }}" != "deploy" ]; then
-            echo "❌ Você precisa digitar exatamente 'deploy' no campo de confirmação."
-            exit 1
-          fi
-          echo "✅ Confirmação OK, prosseguindo com deploy de ${{ github.event.inputs.ref }}"
-
       # fetch-depth: 0 → traz histórico completo + todas as tags pra conseguirmos
       # comparar com a última tag prod-* e listar os commits do lote.
       - name: Checkout com histórico completo
