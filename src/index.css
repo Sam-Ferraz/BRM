@@ -105,20 +105,16 @@ html {
   transition: all 0.2s ease-in-out;
 }
 
-/* Focus styles */
+/* Focus styles — outline-offset: 0 (sem espaço entre input e ring) evita que
+   o anel seja recortado quando o input está em containers com overflow:hidden
+   (Dialog, Popover, Command, cards com rounded-md, etc). Mantém o foco visível
+   sem perder em nenhum lugar do sistema. */
 button:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
   outline: 2px solid hsl(var(--ring));
-  outline-offset: 2px;
-}
-
-/* Remove o outline customizado do input dentro do Command (popover de busca).
-   O outline-offset: 2px combinado com overflow:hidden rounded-md do Command
-   recortava os cantos do ring — Popover já comunica visualmente o foco. */
-[cmdk-input-wrapper] input:focus-visible {
-  outline: none;
+  outline-offset: 0;
 }
 
 /* Loading animation */

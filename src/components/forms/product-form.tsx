@@ -61,6 +61,7 @@ export function ProductForm({ product, initialName, open, onOpenChange, onSubmit
     payment_condition: "",
     exchange_car: false,
     exchange_property: false,
+    exclusivity: false,
     bedrooms: "" as string | number,
     suites: "" as string | number,
     parking_spots: "" as string | number,
@@ -83,6 +84,10 @@ export function ProductForm({ product, initialName, open, onOpenChange, onSubmit
   }, [])
 
   const [formData, setFormData] = useState(emptyForm)
+  // Controla o modo do select de Captador: false = predefinido (Nenhum/usuário),
+  // true = modo "Outro" (mostra Input livre). Detectado automaticamente ao
+  // editar produto cujo capturer não bate com nenhum usuário cadastrado.
+  const [capturerOtherMode, setCapturerOtherMode] = useState(false)
   const [images, setImages] = useState<ProductImage[]>([])
   const [imageUploading, setImageUploading] = useState(false)
   const [showImageUpload, setShowImageUpload] = useState(false)
@@ -100,6 +105,18 @@ export function ProductForm({ product, initialName, open, onOpenChange, onSubmit
     }
   }
 
+  // Quando carrega produto existente OU lista de usuários muda, recalcula se o
+  // captador atual é "Outro" (= valor preenchido mas não bate com nenhum usuário).
+  useEffect(() => {
+    const capturer = product?.capturer || formData.capturer
+    if (capturer && users.length > 0) {
+      setCapturerOtherMode(!users.some(u => u.name === capturer))
+    } else {
+      setCapturerOtherMode(false)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product?.capturer, users.length])
+
   useEffect(() => {
     if (product) {
       setFormData({
@@ -113,6 +130,7 @@ export function ProductForm({ product, initialName, open, onOpenChange, onSubmit
         payment_condition: product.payment_condition || "",
         exchange_car: product.exchange_car || false,
         exchange_property: product.exchange_property || false,
+        exclusivity: product.exclusivity || false,
         bedrooms: product.bedrooms ?? "",
         suites: product.suites ?? "",
         parking_spots: product.parking_spots ?? "",
@@ -303,15 +321,35 @@ export function ProductForm({ product, initialName, open, onOpenChange, onSubmit
 
                 <div className="space-y-2">
                   <Label htmlFor="capturer">Captador</Label>
-                  <Select value={formData.capturer || "none"} onValueChange={(v) => setFormData({ ...formData, capturer: v === "none" ? "" : v })}>
+                  <Select
+                    value={capturerOtherMode ? "other" : (formData.capturer || "none")}
+                    onValueChange={(v) => {
+                      if (v === "other") {
+                        setCapturerOtherMode(true)
+                        setFormData({ ...formData, capturer: "" })
+                      } else {
+                        setCapturerOtherMode(false)
+                        setFormData({ ...formData, capturer: v === "none" ? "" : v })
+                      }
+                    }}
+                  >
                     <SelectTrigger><SelectValue placeholder="Selecione o captador" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Nenhum</SelectItem>
                       {users.map((u) => (
                         <SelectItem key={u.id} value={u.name}>{u.name}</SelectItem>
                       ))}
+                      <SelectItem value="other">Outro</SelectItem>
                     </SelectContent>
                   </Select>
+                  {capturerOtherMode && (
+                    <Input
+                      placeholder="Nome do captador"
+                      value={formData.capturer}
+                      onChange={(e) => setFormData({ ...formData, capturer: e.target.value })}
+                      autoFocus
+                    />
+                  )}
                 </div>
 
                 <div className="space-y-2 sm:col-span-2">
@@ -320,8 +358,8 @@ export function ProductForm({ product, initialName, open, onOpenChange, onSubmit
                 </div>
               </div>
 
-              {/* Permuta */}
-              <div className="grid grid-cols-2 gap-4">
+              {/* Permuta + Exclusividade */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label>Aceita permuta por automóvel?</Label>
                   <Select value={formData.exchange_car ? "sim" : "nao"} onValueChange={(v) => setFormData({ ...formData, exchange_car: v === "sim" })}>
@@ -336,6 +374,17 @@ export function ProductForm({ product, initialName, open, onOpenChange, onSubmit
                 <div className="space-y-2">
                   <Label>Aceita permuta por imóvel?</Label>
                   <Select value={formData.exchange_property ? "sim" : "nao"} onValueChange={(v) => setFormData({ ...formData, exchange_property: v === "sim" })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="sim">Sim</SelectItem>
+                      <SelectItem value="nao">Não</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Exclusividade?</Label>
+                  <Select value={formData.exclusivity ? "sim" : "nao"} onValueChange={(v) => setFormData({ ...formData, exclusivity: v === "sim" })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="sim">Sim</SelectItem>

@@ -115,8 +115,11 @@ export function createProductRoutes(productService: ProductService): Router {
 
   router.post('/', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      const { name, price, type, category, description } = req.body
-      const product = await productService.createProduct({ name, price, type, category, description })
+      // Aceita todos os campos do Product (capturer, exclusivity, bedrooms etc).
+      // O service/repository validam via tipagem TS antes do INSERT.
+      // user_id sempre vem do token, nunca do body, pra evitar spoofing.
+      const userId = req.user!.userId
+      const product = await productService.createProduct({ ...req.body, user_id: userId })
       res.json(product)
     } catch (error) {
       console.error('Error in create product route:', error)
@@ -127,8 +130,8 @@ export function createProductRoutes(productService: ProductService): Router {
   router.put('/:id', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const id = parseInt(req.params.id)
-      const { name, price, type, category, description } = req.body
-      const product = await productService.updateProduct(id, { name, price, type, category, description })
+      const userId = req.user!.userId
+      const product = await productService.updateProduct(id, { ...req.body, user_id: userId })
       res.json(product)
     } catch (error) {
       console.error('Error in update product route:', error)

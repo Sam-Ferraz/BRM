@@ -136,6 +136,7 @@ export interface Product {
   payment_condition?: string | null
   exchange_car?: boolean
   exchange_property?: boolean
+  exclusivity?: boolean
   bedrooms?: number | null
   suites?: number | null
   parking_spots?: number | null
