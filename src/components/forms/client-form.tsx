@@ -21,13 +21,69 @@ interface ClientFormProps {
   loading?: boolean
 }
 
+// Lista de países comuns para o seletor de DDI. Ordenada por dial code do mais
+// longo para o mais curto — isso garante que ao fazer parse de "+5547999..."
+// o "+55" seja detectado antes do "+5" (Estados Unidos).
+const COUNTRIES = [
+  { code: "BR", name: "Brasil",        dial: "+55",  flag: "🇧🇷" },
+  { code: "PT", name: "Portugal",      dial: "+351", flag: "🇵🇹" },
+  { code: "US", name: "Estados Unidos", dial: "+1",   flag: "🇺🇸" },
+  { code: "AR", name: "Argentina",     dial: "+54",  flag: "🇦🇷" },
+  { code: "CL", name: "Chile",         dial: "+56",  flag: "🇨🇱" },
+  { code: "UY", name: "Uruguai",       dial: "+598", flag: "🇺🇾" },
+  { code: "PY", name: "Paraguai",      dial: "+595", flag: "🇵🇾" },
+  { code: "ES", name: "Espanha",       dial: "+34",  flag: "🇪🇸" },
+  { code: "IT", name: "Itália",        dial: "+39",  flag: "🇮🇹" },
+  { code: "FR", name: "França",        dial: "+33",  flag: "🇫🇷" },
+  { code: "DE", name: "Alemanha",      dial: "+49",  flag: "🇩🇪" },
+  { code: "GB", name: "Reino Unido",   dial: "+44",  flag: "🇬🇧" },
+].sort((a, b) => b.dial.length - a.dial.length)
+
+const DEFAULT_DIAL = "+55"
+
+// Decompõe um telefone E.164 (ex.: "+5547123456789") em DDI, DDD e número.
+// Se não conseguir reconhecer o DDI, devolve Brasil como padrão e joga tudo
+// no campo número — assim cliente antigo com telefone "solto" continua editável.
+function parsePhone(phone: string | null | undefined): { ddi: string; ddd: string; number: string } {
+  if (!phone) return { ddi: DEFAULT_DIAL, ddd: "", number: "" }
+  const digits = phone.replace(/\D/g, "")
+  if (!digits) return { ddi: DEFAULT_DIAL, ddd: "", number: "" }
+
+  // Telefone começa com '+' explícito → tenta identificar o DDI
+  if (phone.trim().startsWith("+")) {
+    for (const c of COUNTRIES) {
+      const dialDigits = c.dial.replace("+", "")
+      if (digits.startsWith(dialDigits)) {
+        const rest = digits.slice(dialDigits.length)
+        return { ddi: c.dial, ddd: rest.slice(0, 2), number: rest.slice(2) }
+      }
+    }
+  }
+
+  // Sem '+': assume Brasil. Se houver 10-11 dígitos, separa DDD do número.
+  if (digits.length >= 10) {
+    return { ddi: DEFAULT_DIAL, ddd: digits.slice(0, 2), number: digits.slice(2) }
+  }
+  return { ddi: DEFAULT_DIAL, ddd: "", number: digits }
+}
+
+// Recompõe E.164 a partir das partes. Vazio se faltar DDD ou número.
+function composePhone(ddi: string, ddd: string, number: string): string {
+  const d = ddd.replace(/\D/g, "")
+  const n = number.replace(/\D/g, "")
+  if (!d || !n) return ""
+  return `${ddi}${d}${n}`
+}
+
 export function ClientForm({ client, initialName, open, onOpenChange, onSubmit, loading }: ClientFormProps) {
   const { t } = useTranslation()
   const isMobile = useMobileDetection()
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    phone: "",
+    phoneDdi: DEFAULT_DIAL,
+    phoneDdd: "",
+    phoneNumber: "",
     city: "",
     address: "",
     origin: "online_lead" as Client['origin'],
@@ -35,10 +91,13 @@ export function ClientForm({ client, initialName, open, onOpenChange, onSubmit, 
 
   useEffect(() => {
     if (client) {
+      const parsed = parsePhone(client.phone)
       setFormData({
         name: client.name || "",
         email: client.email || "",
-        phone: client.phone || "",
+        phoneDdi: parsed.ddi,
+        phoneDdd: parsed.ddd,
+        phoneNumber: parsed.number,
         city: client.city || "",
         address: client.address || "",
         origin: (client.origin || "online_lead") as Client['origin'],
@@ -47,7 +106,9 @@ export function ClientForm({ client, initialName, open, onOpenChange, onSubmit, 
       setFormData({
         name: initialName || "",
         email: "",
-        phone: "",
+        phoneDdi: DEFAULT_DIAL,
+        phoneDdd: "",
+        phoneNumber: "",
         city: "",
         address: "",
         origin: "online_lead",
@@ -58,16 +119,14 @@ export function ClientForm({ client, initialName, open, onOpenChange, onSubmit, 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    onSubmit(formData)
-  }
-
-  const handleOpenChange = (newOpen: boolean) => {
-    onOpenChange(newOpen)
+    const { phoneDdi, phoneDdd, phoneNumber, ...rest } = formData
+    const phone = composePhone(phoneDdi, phoneDdd, phoneNumber)
+    onSubmit({ ...rest, phone })
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent 
+      <DialogContent
         className="sm:max-w-[425px]"
         {...(isMobile && {
           onOpenAutoFocus: (e) => e.preventDefault()
@@ -101,22 +160,68 @@ export function ClientForm({ client, initialName, open, onOpenChange, onSubmit, 
                   {...(!isMobile && { tabIndex: 2 })}
                 />
               </div>
+
+              {/* Telefone: DDI (com bandeira) + DDD + número, todos obrigatórios.
+                  No submit, são concatenados em E.164 (+551147123456789). */}
               <div className="space-y-2">
-                <Label htmlFor="phone">{t('phone')}</Label>
-                <Input
-                  id="phone"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  {...(!isMobile && { tabIndex: 3 })}
-                />
+                <Label htmlFor="phoneNumber">
+                  {t('phone')} <span className="text-red-500">*</span>
+                </Label>
+                <div className="grid grid-cols-12 gap-2">
+                  <div className="col-span-5 sm:col-span-4">
+                    <Select
+                      value={formData.phoneDdi}
+                      onValueChange={(value) => setFormData({ ...formData, phoneDdi: value })}
+                    >
+                      <SelectTrigger aria-label="DDI">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {COUNTRIES.map((c) => (
+                          <SelectItem key={c.code} value={c.dial}>
+                            <span className="mr-2">{c.flag}</span>
+                            {c.dial}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="col-span-3 sm:col-span-2">
+                    <Input
+                      id="phoneDdd"
+                      placeholder="DDD"
+                      inputMode="numeric"
+                      maxLength={3}
+                      value={formData.phoneDdd}
+                      onChange={(e) => setFormData({ ...formData, phoneDdd: e.target.value.replace(/\D/g, '') })}
+                      required
+                      aria-label="DDD"
+                      {...(!isMobile && { tabIndex: 3 })}
+                    />
+                  </div>
+                  <div className="col-span-4 sm:col-span-6">
+                    <Input
+                      id="phoneNumber"
+                      placeholder={t('phone')}
+                      inputMode="numeric"
+                      maxLength={10}
+                      value={formData.phoneNumber}
+                      onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value.replace(/\D/g, '') })}
+                      required
+                      aria-label={t('phone')}
+                      {...(!isMobile && { tabIndex: 4 })}
+                    />
+                  </div>
+                </div>
               </div>
+
               <div className="space-y-2">
                 <Label htmlFor="city">{t('city')}</Label>
                 <Input
                   id="city"
                   value={formData.city}
                   onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                  {...(!isMobile && { tabIndex: 4 })}
+                  {...(!isMobile && { tabIndex: 5 })}
                 />
               </div>
               <div className="space-y-2">
@@ -125,7 +230,7 @@ export function ClientForm({ client, initialName, open, onOpenChange, onSubmit, 
                   id="address"
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  {...(!isMobile && { tabIndex: 5 })}
+                  {...(!isMobile && { tabIndex: 6 })}
                 />
               </div>
               <div className="space-y-2">
