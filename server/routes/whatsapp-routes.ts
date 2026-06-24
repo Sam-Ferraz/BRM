@@ -1,6 +1,7 @@
 import { Response, Router } from 'express'
 import { WhatsAppService } from '../services/index.js'
 import { WhatsAppProvider } from '../services/whatsapp-provider.js'
+import { WhatsAppSessionRepository } from '../repositories/index.js'
 import { authenticateToken, AuthenticatedRequest } from '../middleware/auth.js'
 
 /**
@@ -17,7 +18,8 @@ import { authenticateToken, AuthenticatedRequest } from '../middleware/auth.js'
  */
 export function createWhatsAppRoutes(
   whatsappService: WhatsAppService,
-  provider: WhatsAppProvider
+  provider: WhatsAppProvider,
+  sessionRepository: WhatsAppSessionRepository
 ): Router {
   const router = Router()
 
@@ -93,6 +95,59 @@ export function createWhatsAppRoutes(
       res.json({ data: state })
     } catch (error) {
       console.error('Error fetching whatsapp state:', error)
+      res.status(500).json({ error: 'Internal server error' })
+    }
+  })
+
+  // ------------------- Cloud API (BYOK) -----------------------------------
+
+  /**
+   * Cadastra/atualiza credenciais do WhatsApp Cloud API (Meta) para o
+   * usuário logado. Validação básica de presença; a validade real é
+   * confirmada na primeira chamada à Graph API.
+   */
+  router.post('/cloud-api/connect', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const userId = req.user!.userId
+      const {
+        phone_number,
+        display_name,
+        phone_number_id,
+        access_token,
+        app_secret,
+        verify_token,
+        business_account_id,
+      } = req.body
+
+      if (!phone_number || !phone_number_id || !access_token || !app_secret || !verify_token) {
+        res.status(400).json({
+          error: 'phone_number, phone_number_id, access_token, app_secret e verify_token são obrigatórios',
+        })
+        return
+      }
+
+      const session = await sessionRepository.upsertCloudApiCredentials({
+        userId,
+        phoneNumber: String(phone_number),
+        displayName: display_name ?? null,
+        phoneNumberId: String(phone_number_id),
+        accessToken: String(access_token),
+        appSecret: String(app_secret),
+        verifyToken: String(verify_token),
+        businessAccountId: business_account_id ? String(business_account_id) : null,
+      })
+
+      // Esconde o access_token e app_secret da resposta — UI só precisa saber
+      // que está conectado, não os valores em si.
+      res.json({
+        data: {
+          ...session,
+          access_token: '****',
+          app_secret: '****',
+        },
+      })
+    } catch (error) {
+      console.error('Error connecting cloud api:', error)
       res.status(500).json({ error: 'Internal server error' })
     }
   })

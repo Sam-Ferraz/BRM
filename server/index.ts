@@ -56,6 +56,7 @@ import { createWhatsAppRoutes } from './routes/whatsapp-routes.js'
 import { createChatRoutes } from './routes/chat-routes.js'
 import { createLeadRoutes } from './routes/lead-routes.js'
 import { createSaleRoutes } from './routes/sale-routes.js'
+import { createWhatsAppWebhookRoutes } from './routes/whatsapp-webhook-routes.js'
 
 dotenv.config()
 
@@ -70,7 +71,14 @@ app.use(cors({
   origin: process.env.CLIENT_URL || 'http://localhost:5173',
   credentials: true
 }))
-app.use(express.json())
+// `verify` salva o raw body em req.rawBody — necessário pro webhook do
+// WhatsApp Cloud API validar a assinatura X-Hub-Signature-256 (HMAC com
+// app_secret sobre o corpo original).
+app.use(express.json({
+  verify: (req, _res, buf) => {
+    (req as any).rawBody = buf.toString('utf8')
+  }
+}))
 
 // Serve static files from the Vite build
 // In Docker: __dirname = /app/server/dist, so ../../dist = /app/dist
@@ -196,10 +204,14 @@ app.use('/api/appointments', createAppointmentRoutes(appointmentService))
 app.use('/api/sales-agenda', createSalesAgendaRoutes(salesAgendaService))
 app.use('/api/follow-ups', createFollowUpRoutes(followUpService))
 app.use('/api/proposals', createProposalRoutes(proposalService))
-app.use('/api/whatsapp', createWhatsAppRoutes(whatsappService, whatsappProvider))
+app.use('/api/whatsapp', createWhatsAppRoutes(whatsappService, whatsappProvider, whatsappSessionRepository))
 app.use('/api/chat', createChatRoutes(chatService))
 app.use('/api/leads', createLeadRoutes(leadService, leadSourceRepository))
 app.use('/api/sales', createSaleRoutes(saleService))
+// Webhook público do WhatsApp Cloud API (Meta chama esse endpoint).
+// Sem autenticação — segurança via validação X-Hub-Signature-256 com
+// app_secret cadastrado por usuário.
+app.use('/api/whatsapp', createWhatsAppWebhookRoutes(whatsappSessionRepository, () => chatServiceRef))
 
 // Serve React app for all non-API routes (client-side routing)
 app.get('*', (req, res) => {

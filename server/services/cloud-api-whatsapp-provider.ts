@@ -94,15 +94,41 @@ export class CloudApiWhatsAppProvider implements WhatsAppProvider {
       throw new Error('whatsapp_not_connected')
     }
 
-    // TODO mini-entrega 2: chamar Graph API real
-    //   POST https://graph.facebook.com/v18.0/{phone_number_id}/messages
-    //   Authorization: Bearer {access_token}
-    //   Body: { messaging_product: 'whatsapp', to: '<digits>', text: { body: content } }
-    console.log(
-      `[CloudAPI Stub] user=${input.ownerUserId} ${input.from} → ${input.to}: ${input.content}`
-    )
+    // WhatsApp Cloud API espera o "to" só com dígitos (E.164 sem o +).
+    const to = input.to.replace(/\D/g, '')
+    const url = `https://graph.facebook.com/v18.0/${session.phone_number_id}/messages`
 
-    const providerMessageId = `cloud-api-stub-${Date.now()}`
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        to,
+        type: 'text',
+        text: { body: input.content },
+      }),
+    })
+
+    if (!response.ok) {
+      const errBody: any = await response.json().catch(() => ({}))
+      const errMsg = errBody?.error?.message || response.statusText
+      const errCode = errBody?.error?.code
+
+      // 401/403 = token inválido. Marca a sessão como invalid_credentials
+      // pra UI poder pedir que o user atualize as credenciais.
+      if (response.status === 401 || response.status === 403 || errCode === 190) {
+        await this.sessionRepository
+          .updateStatus(input.ownerUserId, 'invalid_credentials')
+          .catch(() => undefined)
+      }
+      throw new Error(`Cloud API error (${response.status}): ${errMsg}`)
+    }
+
+    const data: any = await response.json()
+    const providerMessageId = data?.messages?.[0]?.id || `cloud-api-${Date.now()}`
     return { providerMessageId }
   }
 }
