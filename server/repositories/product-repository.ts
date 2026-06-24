@@ -68,6 +68,11 @@ export class ProductRepository extends BaseRepository {
   async create(product: Omit<Product, 'id' | 'created_at' | 'updated_at' | 'has_thumbnail'>): Promise<Product> {
     const client = await this.getClient()
     try {
+      // Deriva status do available_for_sale se não veio explicitamente, pra
+      // manter os dois sincronizados (até remover available_for_sale).
+      const statusValue = product.status || (product.available_for_sale === false ? 'inactive' : 'available')
+      const availableValue = statusValue === 'available'
+
       const result = await client.query(
         `INSERT INTO products (
           name, price, type, category, description,
@@ -76,8 +81,8 @@ export class ProductRepository extends BaseRepository {
           bedrooms, suites, parking_spots, bathrooms,
           total_area, private_area, condo_fee,
           address, neighborhood, city, state, country,
-          available_for_sale, user_id
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25) RETURNING *`,
+          available_for_sale, status, user_id
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26) RETURNING *`,
         [
           product.name, product.price, product.type, product.category, product.description,
           product.capture_date || null, product.capturer || null, product.payment_condition || null,
@@ -85,7 +90,7 @@ export class ProductRepository extends BaseRepository {
           product.bedrooms || null, product.suites || null, product.parking_spots || null, product.bathrooms || null,
           product.total_area || null, product.private_area || null, product.condo_fee || null,
           product.address || null, product.neighborhood || null, product.city || null, product.state || null, product.country || 'Brasil',
-          product.available_for_sale !== false, product.user_id || null
+          availableValue, statusValue, product.user_id || null
         ]
       )
       return result.rows[0]
@@ -97,6 +102,10 @@ export class ProductRepository extends BaseRepository {
   async update(id: number, product: Omit<Product, 'id' | 'created_at' | 'updated_at' | 'has_thumbnail'>): Promise<Product | null> {
     const client = await this.getClient()
     try {
+      // Mantém status e available_for_sale sincronizados (até deprecate completo).
+      const statusValue = product.status || (product.available_for_sale === false ? 'inactive' : 'available')
+      const availableValue = statusValue === 'available'
+
       const result = await client.query(
         `UPDATE products SET
           name = $1, price = $2, type = $3, category = $4, description = $5,
@@ -105,9 +114,9 @@ export class ProductRepository extends BaseRepository {
           bedrooms = $12, suites = $13, parking_spots = $14, bathrooms = $15,
           total_area = $16, private_area = $17, condo_fee = $18,
           address = $19, neighborhood = $20, city = $21, state = $22, country = $23,
-          available_for_sale = $24, user_id = $25,
+          available_for_sale = $24, status = $25, user_id = $26,
           updated_at = CURRENT_TIMESTAMP
-        WHERE id = $26 RETURNING *`,
+        WHERE id = $27 RETURNING *`,
         [
           product.name, product.price, product.type, product.category, product.description,
           product.capture_date || null, product.capturer || null, product.payment_condition || null,
@@ -115,7 +124,7 @@ export class ProductRepository extends BaseRepository {
           product.bedrooms || null, product.suites || null, product.parking_spots || null, product.bathrooms || null,
           product.total_area || null, product.private_area || null, product.condo_fee || null,
           product.address || null, product.neighborhood || null, product.city || null, product.state || null, product.country || 'Brasil',
-          product.available_for_sale !== false, product.user_id || null, id
+          availableValue, statusValue, product.user_id || null, id
         ]
       )
       return result.rows.length > 0 ? result.rows[0] : null
@@ -157,9 +166,54 @@ export class ProductRepository extends BaseRepository {
   async setAvailability(id: number, available: boolean): Promise<Product | null> {
     const client = await this.getClient()
     try {
+      // Mantém available_for_sale e status sincronizados — durante a transição
+      // até remover available_for_sale completamente em migration futura.
+      const newStatus = available ? 'available' : 'inactive'
       const result = await client.query(
-        'UPDATE products SET available_for_sale = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *',
-        [available, id]
+        `UPDATE products
+           SET available_for_sale = $1, status = $2, updated_at = CURRENT_TIMESTAMP
+         WHERE id = $3 RETURNING *`,
+        [available, newStatus, id]
+      )
+      return result.rows.length > 0 ? result.rows[0] : null
+    } finally {
+      this.releaseClient(client)
+    }
+  }
+
+  /**
+   * Atualiza apenas o status do imóvel (available | inactive | sold).
+   * Sincroniza available_for_sale: 'available' → true, demais → false.
+   * Usado pelo SaleService quando uma venda é aprovada (vira 'sold') e
+   * pela tela de Imóveis quando o usuário muda o status manualmente.
+   */
+  async setStatus(id: number, status: 'available' | 'inactive' | 'sold'): Promise<Product | null> {
+    const client = await this.getClient()
+    try {
+      const available = status === 'available'
+      const result = await client.query(
+        `UPDATE products
+           SET status = $1, available_for_sale = $2, updated_at = CURRENT_TIMESTAMP
+         WHERE id = $3 RETURNING *`,
+        [status, available, id]
+      )
+      return result.rows.length > 0 ? result.rows[0] : null
+    } finally {
+      this.releaseClient(client)
+    }
+  }
+
+  /**
+   * Busca produto por nome exato (case-insensitive). Usado pelo SaleService
+   * pra encontrar o imóvel da venda a partir do deal.property_name e marcá-lo
+   * como vendido na aprovação.
+   */
+  async findByExactName(name: string): Promise<Product | null> {
+    const client = await this.getClient()
+    try {
+      const result = await client.query(
+        'SELECT * FROM products WHERE LOWER(name) = LOWER($1) LIMIT 1',
+        [name]
       )
       return result.rows.length > 0 ? result.rows[0] : null
     } finally {

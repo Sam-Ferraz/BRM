@@ -150,6 +150,7 @@ export interface Product {
   state?: string | null
   country?: string | null
   available_for_sale?: boolean
+  status?: ProductStatus
   user_id?: number
   images?: ProductImage[]
   thumbnail?: ProductImage
@@ -157,6 +158,8 @@ export interface Product {
   created_at?: string
   updated_at?: string
 }
+
+export type ProductStatus = 'available' | 'inactive' | 'sold'
 
 export interface SalesAgenda {
   id: number
@@ -230,6 +233,43 @@ export interface ProposalWithDetails extends Proposal {
   deal_client?: string
   deal_property_name?: string | null
   deal_property_price?: string | number | null  // preço do imóvel vinculado (JOIN)
+}
+
+// ---------------------------------------------------------------------------
+// Módulo Vendas
+// ---------------------------------------------------------------------------
+
+export type SaleStatus = 'pending_approval' | 'approved' | 'rejected'
+
+export interface Sale {
+  id: number
+  proposal_id: number
+  deal_id: number
+  seller_user_id: number
+  sale_date?: string | null
+  contract_url?: string | null
+  contract_filename?: string | null
+  status: SaleStatus
+  approved_by_user_id?: number | null
+  approved_at?: string | null
+  approval_notes?: string | null
+  created_at?: string
+  updated_at?: string
+}
+
+export interface SaleWithDetails extends Sale {
+  deal_client?: string
+  deal_property_name?: string | null
+  deal_property_price?: string | number | null
+  seller_name?: string
+  approver_name?: string | null
+  proposal_value?: string | number | null
+  proposal_date?: string | null
+  proposal_validity_date?: string | null
+  proposal_payment_condition?: string | null
+  proposal_vgv?: string | number | null
+  proposal_vgc?: string | number | null
+  proposal_intermediation_rate?: string | number | null
 }
 
 // ---------------------------------------------------------------------------
@@ -770,6 +810,55 @@ export const api = {
 
     delete: async (id: number): Promise<{ success: boolean }> => {
       return apiClient.delete<{ success: boolean }>(`/proposals/${id}`)
+    },
+  },
+
+  // Sales — vendas (nascem automaticamente de propostas aceitas)
+  sales: {
+    getAll: async (filters?: { status?: SaleStatus | 'all'; search?: string }): Promise<ApiResponse<SaleWithDetails>> => {
+      const params = new URLSearchParams()
+      if (filters?.status) params.append('status', filters.status)
+      if (filters?.search) params.append('search', filters.search)
+      const query = params.toString()
+      return apiClient.get<ApiResponse<SaleWithDetails>>(`/sales${query ? `?${query}` : ''}`)
+    },
+
+    getById: async (id: number): Promise<SaleWithDetails> => {
+      return apiClient.get<SaleWithDetails>(`/sales/${id}`)
+    },
+
+    // Atualiza apenas os campos editáveis (sale_date). Pra upload de contrato
+    // usar uploadContract(). Pra aprovar/rejeitar usar approve()/reject().
+    update: async (id: number, data: { sale_date?: string | null }): Promise<Sale> => {
+      return apiClient.patch<Sale>(`/sales/${id}`, data)
+    },
+
+    uploadContract: async (id: number, file: File): Promise<Sale> => {
+      const formData = new FormData()
+      formData.append('contract', file)
+      // Não usa apiClient.post diretamente porque ele força Content-Type JSON
+      // (formData precisa de multipart). Pega o token manualmente.
+      const token = localStorage.getItem('auth-token')
+      const headers: Record<string, string> = {}
+      if (token) headers['Authorization'] = `Bearer ${token}`
+      const response = await fetch(`/api/sales/${id}/contract`, {
+        method: 'POST',
+        headers,
+        body: formData,
+      })
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => ({}))
+        throw new Error(errorBody.error || `Upload failed: ${response.status}`)
+      }
+      return response.json()
+    },
+
+    approve: async (id: number, notes?: string | null): Promise<SaleWithDetails> => {
+      return apiClient.post<SaleWithDetails>(`/sales/${id}/approve`, { notes: notes ?? null })
+    },
+
+    reject: async (id: number, notes?: string | null): Promise<SaleWithDetails> => {
+      return apiClient.post<SaleWithDetails>(`/sales/${id}/reject`, { notes: notes ?? null })
     },
   },
 

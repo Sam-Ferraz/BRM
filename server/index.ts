@@ -18,7 +18,8 @@ import {
   ConversationRepository,
   MessageRepository,
   LeadSourceRepository,
-  LeadRepository
+  LeadRepository,
+  SaleRepository
 } from './repositories/index.js'
 
 // Import services
@@ -34,7 +35,8 @@ import {
   ProposalService,
   WhatsAppService,
   ChatService,
-  LeadService
+  LeadService,
+  SaleService
 } from './services/index.js'
 import { StubWhatsAppProvider } from './services/whatsapp-provider.js'
 import { BaileysWhatsAppProvider } from './services/baileys-whatsapp-provider.js'
@@ -52,6 +54,7 @@ import { createProposalRoutes } from './routes/proposal-routes.js'
 import { createWhatsAppRoutes } from './routes/whatsapp-routes.js'
 import { createChatRoutes } from './routes/chat-routes.js'
 import { createLeadRoutes } from './routes/lead-routes.js'
+import { createSaleRoutes } from './routes/sale-routes.js'
 
 dotenv.config()
 
@@ -102,6 +105,7 @@ const conversationRepository = new ConversationRepository()
 const messageRepository = new MessageRepository()
 const leadSourceRepository = new LeadSourceRepository()
 const leadRepository = new LeadRepository()
+const saleRepository = new SaleRepository()
 
 // Initialize services with dependency injection
 const authService = new AuthService(userRepository)
@@ -123,6 +127,11 @@ const appointmentService = new AppointmentService(appointmentRepository)
 const salesAgendaService = new SalesAgendaService(salesAgendaRepository)
 const followUpService = new FollowUpService(followUpRepository)
 const proposalService = new ProposalService(proposalRepository, dealRepository)
+// SaleService depende de proposalRepo/dealRepo/productRepo. ProposalService
+// recebe SaleService via setter pra evitar dependência circular na construção
+// e disparar auto-criação de Sale quando uma proposta vira 'accepted'.
+const saleService = new SaleService(saleRepository, proposalRepository, dealRepository, productRepository)
+proposalService.setSaleService(saleService)
 
 // Provider de WhatsApp:
 //   WHATSAPP_PROVIDER=stub    → não conversa de verdade (útil para CI / dev offline)
@@ -176,6 +185,7 @@ app.use('/api/proposals', createProposalRoutes(proposalService))
 app.use('/api/whatsapp', createWhatsAppRoutes(whatsappService, whatsappProvider))
 app.use('/api/chat', createChatRoutes(chatService))
 app.use('/api/leads', createLeadRoutes(leadService, leadSourceRepository))
+app.use('/api/sales', createSaleRoutes(saleService))
 
 // Serve React app for all non-API routes (client-side routing)
 app.get('*', (req, res) => {

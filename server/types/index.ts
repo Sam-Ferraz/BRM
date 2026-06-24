@@ -63,11 +63,14 @@ export interface Product {
   state?: string | null
   country?: string | null
   available_for_sale?: boolean
+  status?: ProductStatus
   user_id?: number
   has_thumbnail?: boolean
   created_at?: Date
   updated_at?: Date
 }
+
+export type ProductStatus = 'available' | 'inactive' | 'sold'
 
 export interface ProductImage {
   id: number
@@ -169,6 +172,44 @@ export interface ProposalWithDetails extends Proposal {
   deal_client?: string
   deal_property_name?: string | null
   deal_property_price?: string | number | null  // preço do imóvel via JOIN com products
+}
+
+// ---------------------------------------------------------------------------
+// Módulo Vendas
+// ---------------------------------------------------------------------------
+
+export type SaleStatus = 'pending_approval' | 'approved' | 'rejected'
+
+export interface Sale {
+  id: number
+  proposal_id: number
+  deal_id: number
+  seller_user_id: number
+  sale_date?: string | null
+  contract_url?: string | null
+  contract_filename?: string | null
+  status: SaleStatus
+  approved_by_user_id?: number | null
+  approved_at?: Date | string | null
+  approval_notes?: string | null
+  created_at?: Date
+  updated_at?: Date
+}
+
+export interface SaleWithDetails extends Sale {
+  // Vindos do JOIN com deals, products, users e proposals
+  deal_client?: string
+  deal_property_name?: string | null
+  deal_property_price?: string | number | null
+  seller_name?: string
+  approver_name?: string | null
+  proposal_value?: string | number | null
+  proposal_date?: string | null
+  proposal_validity_date?: string | null
+  proposal_payment_condition?: string | null
+  proposal_vgv?: string | number | null
+  proposal_vgc?: string | number | null
+  proposal_intermediation_rate?: string | number | null
 }
 
 // ---------------------------------------------------------------------------

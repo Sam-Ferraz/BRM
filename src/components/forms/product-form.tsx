@@ -13,7 +13,7 @@ import { CurrencyInput } from "@/components/ui/currency-input"
 import { Badge } from "@/components/ui/badge"
 import { ImageCarousel, FullscreenCarousel } from "@/components/ui/image-carousel"
 import { Upload, Star, Trash2, Eye } from "lucide-react"
-import { api, type Product, type ProductImage } from "@/lib/api-client"
+import { api, type Product, type ProductImage, type ProductStatus } from "@/lib/api-client"
 import { useMobileDetection } from "@/lib/mobile-utils"
 import { useToast } from "@/hooks/use-toast"
 
@@ -75,6 +75,7 @@ export function ProductForm({ product, initialName, open, onOpenChange, onSubmit
     state: "",
     country: "Brasil",
     available_for_sale: true,
+    status: "available" as ProductStatus,
   }
 
   const [users, setUsers] = useState<{ id: number; name: string }[]>([])
@@ -144,6 +145,7 @@ export function ProductForm({ product, initialName, open, onOpenChange, onSubmit
         state: product.state || "",
         country: product.country || "Brasil",
         available_for_sale: product.available_for_sale !== false,
+        status: (product.status || (product.available_for_sale === false ? 'inactive' : 'available')) as ProductStatus,
       })
       setShowImageUpload(true)
       loadProductImages(product.id)
@@ -454,15 +456,28 @@ export function ProductForm({ product, initialName, open, onOpenChange, onSubmit
                 </div>
               </div>
 
-              {/* Venda */}
+              {/* Status do imóvel + Preço.
+                  Status substitui o antigo 'Disponível para venda?' boolean.
+                  available_for_sale ainda existe e é sincronizado: status
+                  'available' → true, 'inactive'/'sold' → false. 'sold' é
+                  setado automaticamente quando uma venda do imóvel é aprovada
+                  no módulo Vendas — pode ser ajustado manualmente também. */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Disponível para venda?</Label>
-                  <Select value={formData.available_for_sale ? "sim" : "nao"} onValueChange={(v) => setFormData({ ...formData, available_for_sale: v === "sim" })}>
+                  <Label>Status do imóvel</Label>
+                  <Select
+                    value={formData.status}
+                    onValueChange={(v) => setFormData({
+                      ...formData,
+                      status: v as ProductStatus,
+                      available_for_sale: v === 'available',
+                    })}
+                  >
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="sim">Sim</SelectItem>
-                      <SelectItem value="nao">Não</SelectItem>
+                      <SelectItem value="available">Disponível</SelectItem>
+                      <SelectItem value="inactive">Inativo</SelectItem>
+                      <SelectItem value="sold">Vendido</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
