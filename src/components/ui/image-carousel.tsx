@@ -214,8 +214,11 @@ export function FullscreenCarousel({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
+      {/* !gap-0 remove o gap-4 default do DialogContent (que é display:grid) —
+          esse gap empurrava o conteúdo pra baixo dentro do dialog, reduzindo
+          o espaço disponível pra imagem e criando a impressão de corte. */}
       <DialogContent
-        className="!max-w-none w-screen h-screen p-0 bg-black border-0 rounded-none sm:rounded-none"
+        className="!max-w-none w-screen h-screen p-0 !gap-0 bg-black border-0 rounded-none sm:rounded-none"
         style={{ width: '100vw', height: '100vh', maxWidth: 'none' }}
       >
         <div className="relative h-full w-full flex flex-col">
@@ -234,11 +237,15 @@ export function FullscreenCarousel({
             {selectedIndex + 1} / {images.length}
           </div>
 
-          {/* Main carousel */}
-          <div className="flex-1 overflow-hidden" ref={emblaRef}>
+          {/* Main carousel — min-h-0 é essencial dentro de flex-col pra o
+              flex-1 conseguir encolher abaixo do conteúdo natural; sem isso
+              a imagem ultrapassava a viewport e ficava visualmente cortada.
+              Padding pequeno (p-2 sm:p-4) deixa espaço pros botões de
+              navegação não cobrirem as bordas da imagem. */}
+          <div className="flex-1 min-h-0 overflow-hidden" ref={emblaRef}>
             <div className="flex h-full">
               {images.map((image, index) => (
-                <div key={image.id} className="flex-[0_0_100%] min-w-0 relative flex items-center justify-center p-4 sm:p-8">
+                <div key={image.id} className="flex-[0_0_100%] min-w-0 h-full relative flex items-center justify-center p-2 sm:p-4">
                   <img
                     src={api.products.getImageUrl(productId, image.id)}
                     alt={image.alt_text || `Product image ${index + 1}`}
