@@ -20,7 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { ArrowLeft, Pencil, Search, Building2, FileText } from "lucide-react"
+import { ArrowLeft, Pencil, Search, Key, FileText } from "lucide-react"
 import { api, type SaleWithDetails, type SaleStatus } from "@/lib/api-client"
 import { SaleForm } from "@/components/forms/sale-form"
 import { useToast } from "@/hooks/use-toast"
@@ -124,7 +124,7 @@ export default function SalesPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Building2 className="w-5 h-5" />
+              <Key className="w-5 h-5" />
               {t("sales") || "Vendas"}
             </CardTitle>
           </CardHeader>
