@@ -219,7 +219,7 @@ export interface SaleWithDetails extends Sale {
 // Módulo Chat (WhatsApp)
 // ---------------------------------------------------------------------------
 
-export type WhatsAppSessionStatus = 'connected' | 'disconnected'
+export type WhatsAppSessionStatus = 'connected' | 'disconnected' | 'pending_setup' | 'invalid_credentials'
 
 export interface WhatsAppSession {
   id: number
@@ -228,6 +228,14 @@ export interface WhatsAppSession {
   display_name?: string | null
   status: WhatsAppSessionStatus
   connected_at?: Date | null
+  // Provider em uso: 'baileys' (legado) | 'cloud_api' (Meta oficial)
+  provider?: 'baileys' | 'cloud_api'
+  // Campos do Cloud API (BYOK — cadastrados pelo usuário via UI):
+  phone_number_id?: string | null      // ID do número na Meta
+  access_token?: string | null         // Token longa duração da WABA
+  app_secret?: string | null           // Pra validar assinatura do webhook
+  verify_token?: string | null         // Pra Meta challenge inicial
+  business_account_id?: string | null  // ID da WABA (templates etc.)
   created_at?: Date
   updated_at?: Date
 }

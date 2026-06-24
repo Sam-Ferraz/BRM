@@ -11,7 +11,14 @@ export interface SendMessageResult {
   providerMessageId: string
 }
 
-export type SessionStatus = 'idle' | 'pending_qr' | 'connecting' | 'connected' | 'disconnected'
+export type SessionStatus =
+  | 'idle'
+  | 'pending_qr'        // Baileys: aguardando scan do QR Code
+  | 'connecting'        // conexão em andamento
+  | 'connected'         // sessão ativa
+  | 'disconnected'      // sessão encerrada
+  | 'pending_setup'     // Cloud API: usuário ainda não configurou credenciais
+  | 'invalid_credentials' // Cloud API: token expirado / phone_number_id errado
 
 export interface SessionState {
   status: SessionStatus

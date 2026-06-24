@@ -40,6 +40,7 @@ import {
 } from './services/index.js'
 import { StubWhatsAppProvider } from './services/whatsapp-provider.js'
 import { BaileysWhatsAppProvider } from './services/baileys-whatsapp-provider.js'
+import { CloudApiWhatsAppProvider } from './services/cloud-api-whatsapp-provider.js'
 
 // Import routes
 import { createAuthRoutes } from './routes/auth-routes.js'
@@ -135,8 +136,14 @@ const saleService = new SaleService(saleRepository, proposalRepository, dealRepo
 proposalService.setSaleService(saleService)
 
 // Provider de WhatsApp:
-//   WHATSAPP_PROVIDER=stub    → não conversa de verdade (útil para CI / dev offline)
-//   WHATSAPP_PROVIDER=baileys → conecta no WhatsApp real via Baileys (padrão)
+//   WHATSAPP_PROVIDER=stub      → não conversa de verdade (útil para CI / dev offline)
+//   WHATSAPP_PROVIDER=baileys   → WhatsApp Web não-oficial via Baileys (DEFAULT, legado)
+//   WHATSAPP_PROVIDER=cloud_api → Meta Cloud API oficial (BYOK por usuário)
+//
+// Migração em andamento de Baileys → Cloud API. Default continua Baileys
+// pra não quebrar instâncias com sessões já conectadas. Quando a UI de
+// cadastro de credenciais Cloud API estiver pronta e os usuários tiverem
+// suas WABAs configuradas, mudamos o default por env var.
 //
 // Provider e ChatService têm uma dependência circular: o provider precisa
 // chamar chatService.receiveMessage quando chega mensagem entrante, mas
@@ -148,13 +155,19 @@ const incomingHandler = async (input: Parameters<NonNullable<ChatService['receiv
   return chatServiceRef.receiveMessage(input)
 }
 
+const providerKind = process.env.WHATSAPP_PROVIDER || 'baileys'
 const whatsappProvider =
-  process.env.WHATSAPP_PROVIDER === 'stub'
+  providerKind === 'stub'
     ? new StubWhatsAppProvider()
-    : new BaileysWhatsAppProvider({
-        incoming: incomingHandler,
-        sessionRepository: whatsappSessionRepository,
-      })
+    : providerKind === 'cloud_api'
+      ? new CloudApiWhatsAppProvider({
+          incoming: incomingHandler,
+          sessionRepository: whatsappSessionRepository,
+        })
+      : new BaileysWhatsAppProvider({
+          incoming: incomingHandler,
+          sessionRepository: whatsappSessionRepository,
+        })
 
 const whatsappService = new WhatsAppService(whatsappSessionRepository)
 const chatService = new ChatService(
