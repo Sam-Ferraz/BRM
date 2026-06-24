@@ -184,7 +184,7 @@ const resources = {
       approvalRequiresDataAndContract: 'Preencha data da venda e envie o contrato antes de aprovar',
       actions: 'Ações',
       close: 'Fechar',
-      createdFromLabel: 'Criada de',
+      createdFromLabel: 'De',
       createdToLabel: 'Até',
       clearDates: 'Limpar datas',
       lastModification: 'Última alteração',
