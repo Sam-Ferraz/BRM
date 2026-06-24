@@ -93,8 +93,8 @@ export class ProposalRepository extends BaseRepository {
       const result = await client.query(
         `INSERT INTO proposals (
           deal_id, proposal_value, payment_condition, proposal_date,
-          validity_date, status, notes, user_id
-        ) VALUES ($1, $2, $3, $4::date, $5::date, $6, $7, $8) RETURNING *`,
+          validity_date, status, notes, vgv, vgc, intermediation_rate, user_id
+        ) VALUES ($1, $2, $3, $4::date, $5::date, $6, $7, $8, $9, $10, $11) RETURNING *`,
         [
           proposal.deal_id,
           proposal.proposal_value,
@@ -103,6 +103,9 @@ export class ProposalRepository extends BaseRepository {
           proposal.validity_date ?? null,
           proposal.status,
           proposal.notes ?? null,
+          proposal.vgv ?? null,
+          proposal.vgc ?? null,
+          proposal.intermediation_rate ?? null,
           proposal.user_id,
         ]
       )
@@ -136,6 +139,9 @@ export class ProposalRepository extends BaseRepository {
       if (proposal.validity_date !== undefined) addField('validity_date', proposal.validity_date ?? null, 'date')
       if (proposal.status !== undefined) addField('status', proposal.status)
       if (proposal.notes !== undefined) addField('notes', proposal.notes ?? null)
+      if (proposal.vgv !== undefined) addField('vgv', proposal.vgv ?? null)
+      if (proposal.vgc !== undefined) addField('vgc', proposal.vgc ?? null)
+      if (proposal.intermediation_rate !== undefined) addField('intermediation_rate', proposal.intermediation_rate ?? null)
 
       if (fields.length === 0) {
         const existing = await this.findById(id)

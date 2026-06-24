@@ -156,6 +156,10 @@ export interface Proposal {
   validity_date?: string | null
   status: ProposalStatus
   notes?: string | null
+  // Campos financeiros adicionais (todos nullable, decimal/moeda):
+  vgv?: string | number | null                  // Valor Geral de Vendas
+  vgc?: string | number | null                  // Volume Geral de Comissão
+  intermediation_rate?: string | number | null  // Taxa de Intermediação (%, ex: 6 = 6%)
   user_id: number
   created_at?: Date
   updated_at?: Date
@@ -164,6 +168,7 @@ export interface Proposal {
 export interface ProposalWithDetails extends Proposal {
   deal_client?: string
   deal_property_name?: string | null
+  deal_property_price?: string | number | null  // preço do imóvel via JOIN com products
 }
 
 // ---------------------------------------------------------------------------

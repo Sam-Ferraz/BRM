@@ -120,6 +120,14 @@ textarea:focus-visible,
   box-shadow: 0 0 0 2px hsl(var(--ring));
 }
 
+/* Inputs dentro do Command (popover de busca de Cliente/Imóvel/Negócio):
+   o Command tem overflow:hidden + rounded-md que recorta o ring de 2px nos
+   cantos. Usa inset (ring por dentro do input) — nunca corta porque está
+   dentro da própria box do input. */
+[cmdk-input-wrapper] input:focus-visible {
+  box-shadow: inset 0 0 0 2px hsl(var(--ring));
+}
+
 /* Loading animation */
 @keyframes spin {
   to {
