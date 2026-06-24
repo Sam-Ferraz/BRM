@@ -1,0 +1,94 @@
+name: Apply Database Migrations
+
+# Aplica TODAS as migrations pendentes em db/migrations/ nos bancos brm_staging
+# e brm_prod via SSH no servidor. Idempotente: usa a tabela applied_migrations
+# pra saber o que já foi aplicado.
+#
+# Dispara:
+#   • Automaticamente em push a trunk que toque em db/migrations/** (típico)
+#   • Manualmente via "Run workflow" (workflow_dispatch)
+on:
+  push:
+    branches: [trunk]
+    paths:
+      - 'db/migrations/**'
+      - '.github/workflows/migrate.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: migrate-databases
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    name: Apply pending migrations (staging + prod)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Decodifica chave SSH e configura known_hosts
+        env:
+          SSH_KEY_B64: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          echo "$SSH_KEY_B64" | base64 -d > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Copia migrations pro servidor
+        run: |
+          # Pasta nova a cada execução pra evitar resíduos
+          REMOTE_DIR="/tmp/brm-migrations-${{ github.run_id }}"
+          ssh -i ~/.ssh/id_ed25519 "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" "mkdir -p $REMOTE_DIR"
+          scp -i ~/.ssh/id_ed25519 db/migrations/V*.sql "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:$REMOTE_DIR/"
+          echo "REMOTE_DIR=$REMOTE_DIR" >> $GITHUB_ENV
+
+      - name: Aplica migrations pendentes nos 2 bancos
+        run: |
+          ssh -i ~/.ssh/id_ed25519 "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" "REMOTE_DIR='${{ env.REMOTE_DIR }}' bash -s" <<'REMOTE_END'
+          set -euo pipefail
+
+          for DB in brm_staging brm_prod; do
+            echo ""
+            echo "============================================================"
+            echo "  Database: $DB"
+            echo "============================================================"
+
+            # Garante a tabela de controle (idempotente). Quando V0__... rodar,
+            # vai criar essa mesma tabela — sem conflito (IF NOT EXISTS).
+            sudo -u postgres psql -d "$DB" -v ON_ERROR_STOP=1 -q -c "CREATE TABLE IF NOT EXISTS applied_migrations (filename VARCHAR(255) PRIMARY KEY, applied_at TIMESTAMP NOT NULL DEFAULT NOW());"
+
+            applied_count=0
+            skipped_count=0
+
+            # Ordem alfabética garante V0__ → V2025__ → V2026__
+            for f in $(ls "$REMOTE_DIR"/V*.sql | sort); do
+              fname="$(basename "$f")"
+              already="$(sudo -u postgres psql -d "$DB" -t -A -c "SELECT 1 FROM applied_migrations WHERE filename = '$fname';")"
+              if [ "$already" = "1" ]; then
+                skipped_count=$((skipped_count + 1))
+                continue
+              fi
+              echo ">> Aplicando: $fname"
+              sudo -u postgres psql -d "$DB" -v ON_ERROR_STOP=1 -q -f "$f"
+              sudo -u postgres psql -d "$DB" -q -c "INSERT INTO applied_migrations (filename) VALUES ('$fname') ON CONFLICT (filename) DO NOTHING;"
+              applied_count=$((applied_count + 1))
+            done
+
+            echo "Resumo $DB: $applied_count aplicada(s), $skipped_count já estava(m)."
+          done
+
+          # Cleanup
+          rm -rf "$REMOTE_DIR"
+          echo ""
+          echo "Migrations concluídas em ambos os bancos."
+          REMOTE_END
+
+      - name: Resumo
+        if: always()
+        run: |
+          echo "Se este job foi verde, ambos os bancos (brm_staging e brm_prod) estão sincronizados com db/migrations/."
+          echo "Pra ver o histórico no servidor:"
+          echo "  sudo -u postgres psql -d brm_staging -c 'SELECT filename, applied_at FROM applied_migrations ORDER BY applied_at DESC;'"
