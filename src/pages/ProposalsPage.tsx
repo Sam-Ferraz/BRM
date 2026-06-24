@@ -43,6 +43,8 @@ export default function ProposalsPage() {
   const [formLoading, setFormLoading] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
+  const [createdFrom, setCreatedFrom] = useState<string>("")
+  const [createdTo, setCreatedTo] = useState<string>("")
   const [sortBy, setSortBy] = useState("proposal_date")
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc")
 
@@ -67,6 +69,8 @@ export default function ProposalsPage() {
       const filters: any = {}
       if (searchTerm) filters.search = searchTerm
       if (statusFilter !== "all") filters.status = statusFilter
+      if (createdFrom) filters.createdFrom = createdFrom
+      if (createdTo) filters.createdTo = createdTo
       if (sortBy) {
         filters.sortBy = sortBy
         filters.sortOrder = sortOrder
@@ -82,7 +86,7 @@ export default function ProposalsPage() {
     } finally {
       setLoading(false)
     }
-  }, [searchTerm, statusFilter, sortBy, sortOrder, toast, t])
+  }, [searchTerm, statusFilter, createdFrom, createdTo, sortBy, sortOrder, toast, t])
 
   useEffect(() => {
     fetchProposals()
@@ -180,8 +184,8 @@ export default function ProposalsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="relative flex-1">
+            <div className="flex flex-col sm:flex-row gap-4 flex-wrap">
+              <div className="relative flex-1 min-w-[220px]">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder={t("searchProposals")}
@@ -203,6 +207,32 @@ export default function ProposalsPage() {
                   <SelectItem value="expired">{t("proposalStatus_expired")}</SelectItem>
                 </SelectContent>
               </Select>
+              {/* Filtros de data de criação (inclusivos) */}
+              <div className="flex gap-2 items-center">
+                <span className="text-sm text-muted-foreground whitespace-nowrap">{t("createdFromLabel") || "Criada de"}</span>
+                <Input
+                  type="date"
+                  value={createdFrom}
+                  onChange={(e) => setCreatedFrom(e.target.value)}
+                  className="w-[160px]"
+                  aria-label={t("createdFromLabel") || "Data inicial"}
+                />
+              </div>
+              <div className="flex gap-2 items-center">
+                <span className="text-sm text-muted-foreground whitespace-nowrap">{t("createdToLabel") || "Até"}</span>
+                <Input
+                  type="date"
+                  value={createdTo}
+                  onChange={(e) => setCreatedTo(e.target.value)}
+                  className="w-[160px]"
+                  aria-label={t("createdToLabel") || "Data final"}
+                />
+              </div>
+              {(createdFrom || createdTo) && (
+                <Button variant="ghost" size="sm" onClick={() => { setCreatedFrom(""); setCreatedTo("") }}>
+                  {t("clearDates") || "Limpar datas"}
+                </Button>
+              )}
             </div>
 
             {loading ? (

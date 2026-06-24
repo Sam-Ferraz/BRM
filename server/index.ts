@@ -118,7 +118,8 @@ const dashboardService = new DashboardService(
   followUpRepository,
   proposalRepository,
   conversationRepository,
-  leadRepository
+  leadRepository,
+  saleRepository
 )
 const dealService = new DealService(dealRepository)
 const clientService = new ClientService(clientRepository)

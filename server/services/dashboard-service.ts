@@ -1,4 +1,4 @@
-import { DealRepository, ClientRepository, ProductRepository, AppointmentRepository, SalesAgendaRepository, FollowUpRepository, ProposalRepository, ConversationRepository, LeadRepository } from '../repositories/index.js'
+import { DealRepository, ClientRepository, ProductRepository, AppointmentRepository, SalesAgendaRepository, FollowUpRepository, ProposalRepository, ConversationRepository, LeadRepository, SaleRepository } from '../repositories/index.js'
 import { DashboardStats } from '../types/index.js'
 
 export class DashboardService {
@@ -11,6 +11,7 @@ export class DashboardService {
   private proposalRepository: ProposalRepository
   private conversationRepository: ConversationRepository
   private leadRepository: LeadRepository
+  private saleRepository: SaleRepository
 
   constructor(
     dealRepository: DealRepository,
@@ -21,7 +22,8 @@ export class DashboardService {
     followUpRepository: FollowUpRepository,
     proposalRepository: ProposalRepository,
     conversationRepository: ConversationRepository,
-    leadRepository: LeadRepository
+    leadRepository: LeadRepository,
+    saleRepository: SaleRepository
   ) {
     this.dealRepository = dealRepository
     this.clientRepository = clientRepository
@@ -32,6 +34,7 @@ export class DashboardService {
     this.proposalRepository = proposalRepository
     this.conversationRepository = conversationRepository
     this.leadRepository = leadRepository
+    this.saleRepository = saleRepository
   }
 
   async getDashboardStats(userId: number): Promise<DashboardStats> {
@@ -46,7 +49,8 @@ export class DashboardService {
       unreadMessages,
       unansweredCalls,
       leadCounts,
-      totalShowcaseProducts
+      totalShowcaseProducts,
+      totalSales,
     ] = await Promise.all([
       this.dealRepository.getCount(userId),
       this.clientRepository.getCount(),
@@ -56,18 +60,17 @@ export class DashboardService {
       this.appointmentRepository.getCount(userId),
       this.salesAgendaRepository.getCount(userId),
       this.followUpRepository.getCount(userId),
-      // Only "in-flight" proposals (pending/accepted/counter_proposal); rejected & expired excluded
+      // Propostas em andamento: apenas 'pending' (Em análise) e
+      // 'counter_proposal' (Contraproposta). 'accepted' migra pra Vendas,
+      // 'rejected' e 'expired' são terminais e não contam aqui.
       this.proposalRepository.getActiveCount(userId),
       // Pendências de comunicação — filtradas pelo usuário logado
-      // (cada user tem o próprio número WhatsApp).
-      //  • unreadMessages   = mensagens entrantes ainda não vistas pelo corretor
-      //  • unansweredCalls  = ligações (appointments type='call') sem answered=true
       this.conversationRepository.sumUnreadMessages(userId),
       this.appointmentRepository.getCountUnansweredCalls(userId),
-      // Leads aguardando triagem (status='novo', visíveis para todos os corretores)
       this.leadRepository.getCountByStatus(),
-      // Imóveis visíveis na Vitrine (available_for_sale = TRUE)
-      this.productRepository.getShowcaseCount()
+      this.productRepository.getShowcaseCount(),
+      // Total de vendas no sistema (todos os status — pending, approved, rejected)
+      this.saleRepository.getCount(),
     ])
 
     return {
@@ -79,6 +82,7 @@ export class DashboardService {
       totalShowcaseProducts,
       totalFollowUps,
       totalProposals,
+      totalSales,
       pendingChatAndCalls: unreadMessages + unansweredCalls,
       newLeads: leadCounts.novo
     }

@@ -13,7 +13,7 @@ export class ProposalRepository extends BaseRepository {
   async findAll(filters: QueryFilters = {}, userId?: number): Promise<ProposalWithDetails[]> {
     const client = await this.getClient()
     try {
-      const { search, status, sortBy, sortOrder } = filters
+      const { search, status, sortBy, sortOrder, createdFrom, createdTo } = filters as any
       let query = `
         SELECT
           p.*,
@@ -41,6 +41,18 @@ export class ProposalRepository extends BaseRepository {
       if (status && status !== 'all' && VALID_STATUSES.has(status)) {
         query += ` AND p.status = $${paramCount}`
         params.push(status)
+        paramCount++
+      }
+
+      // Filtro por data de criação (inclusivo nos 2 extremos)
+      if (createdFrom) {
+        query += ` AND p.created_at >= $${paramCount}::date`
+        params.push(createdFrom)
+        paramCount++
+      }
+      if (createdTo) {
+        query += ` AND p.created_at < ($${paramCount}::date + INTERVAL '1 day')`
+        params.push(createdTo)
         paramCount++
       }
 
@@ -193,7 +205,11 @@ export class ProposalRepository extends BaseRepository {
   async getActiveCount(userId?: number): Promise<number> {
     const client = await this.getClient()
     try {
-      let query = `SELECT COUNT(*) AS count FROM proposals WHERE status IN ('pending', 'accepted', 'counter_proposal')`
+      // O card "Propostas" do Dashboard mostra apenas o que ainda precisa de
+      // atenção do corretor: propostas 'pending' (Em análise) e
+      // 'counter_proposal' (Contraproposta). 'accepted' vira venda no módulo
+      // Vendas (e tem seu próprio card); 'rejected' e 'expired' são terminais.
+      let query = `SELECT COUNT(*) AS count FROM proposals WHERE status IN ('pending', 'counter_proposal')`
       const params: any[] = []
       if (userId) {
         query += ' AND user_id = $1'

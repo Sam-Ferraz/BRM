@@ -41,6 +41,8 @@ export default function SalesPage() {
   const [formLoading, setFormLoading] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
+  const [createdFrom, setCreatedFrom] = useState<string>("")
+  const [createdTo, setCreatedTo] = useState<string>("")
 
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingSale, setEditingSale] = useState<SaleWithDetails | undefined>()
@@ -58,9 +60,16 @@ export default function SalesPage() {
   const fetchSales = useCallback(async () => {
     try {
       setLoading(true)
-      const filters: { status?: SaleStatus | "all"; search?: string } = {}
+      const filters: {
+        status?: SaleStatus | "all"
+        search?: string
+        createdFrom?: string
+        createdTo?: string
+      } = {}
       if (searchTerm) filters.search = searchTerm
       if (statusFilter !== "all") filters.status = statusFilter as SaleStatus
+      if (createdFrom) filters.createdFrom = createdFrom
+      if (createdTo) filters.createdTo = createdTo
       const result = await api.sales.getAll(filters)
       setSales(result.data)
     } catch (error) {
@@ -72,7 +81,7 @@ export default function SalesPage() {
     } finally {
       setLoading(false)
     }
-  }, [searchTerm, statusFilter, toast, t])
+  }, [searchTerm, statusFilter, createdFrom, createdTo, toast, t])
 
   useEffect(() => {
     fetchSales()
@@ -120,9 +129,9 @@ export default function SalesPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Filtros */}
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="relative flex-1">
+            {/* Filtros — busca, status, range de data de criação */}
+            <div className="flex flex-col sm:flex-row gap-4 flex-wrap">
+              <div className="relative flex-1 min-w-[220px]">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   className="pl-9"
@@ -142,6 +151,31 @@ export default function SalesPage() {
                   <SelectItem value="rejected">{t("saleStatus_rejected") || "Rejeitada"}</SelectItem>
                 </SelectContent>
               </Select>
+              <div className="flex gap-2 items-center">
+                <span className="text-sm text-muted-foreground whitespace-nowrap">{t("createdFromLabel") || "Criada de"}</span>
+                <Input
+                  type="date"
+                  value={createdFrom}
+                  onChange={(e) => setCreatedFrom(e.target.value)}
+                  className="w-[160px]"
+                  aria-label={t("createdFromLabel") || "Data inicial"}
+                />
+              </div>
+              <div className="flex gap-2 items-center">
+                <span className="text-sm text-muted-foreground whitespace-nowrap">{t("createdToLabel") || "Até"}</span>
+                <Input
+                  type="date"
+                  value={createdTo}
+                  onChange={(e) => setCreatedTo(e.target.value)}
+                  className="w-[160px]"
+                  aria-label={t("createdToLabel") || "Data final"}
+                />
+              </div>
+              {(createdFrom || createdTo) && (
+                <Button variant="ghost" size="sm" onClick={() => { setCreatedFrom(""); setCreatedTo("") }}>
+                  {t("clearDates") || "Limpar datas"}
+                </Button>
+              )}
             </div>
 
             {/* Tabela */}

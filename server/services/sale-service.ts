@@ -34,7 +34,12 @@ export class SaleService {
     this.productRepo = productRepo
   }
 
-  async listAll(filters: { status?: SaleStatus | 'all'; search?: string } = {}): Promise<ApiResponse<SaleWithDetails[]>> {
+  async listAll(filters: {
+    status?: SaleStatus | 'all'
+    search?: string
+    createdFrom?: string
+    createdTo?: string
+  } = {}): Promise<ApiResponse<SaleWithDetails[]>> {
     const sales = await this.saleRepo.findAll(filters)
     return { data: sales, total: sales.length }
   }
@@ -67,17 +72,19 @@ export class SaleService {
     })
   }
 
-  async updateDetails(id: number, input: {
+  /**
+   * Atualiza dados editáveis. Permitido em qualquer status — incluindo
+   * approved/rejected — para o caso de corrigir contrato ou data depois.
+   * Sempre passa o usuário que fez a alteração pra registrar no tracking.
+   */
+  async updateDetails(id: number, modifiedByUserId: number, input: {
     sale_date?: string | null
     contract_url?: string | null
     contract_filename?: string | null
   }): Promise<Sale> {
     const sale = await this.saleRepo.findById(id)
     if (!sale) throw new Error('Sale not found')
-    if (sale.status !== 'pending_approval') {
-      throw new Error('Cannot edit sale that has already been approved/rejected')
-    }
-    const updated = await this.saleRepo.updateDetails(id, input)
+    const updated = await this.saleRepo.updateDetails(id, modifiedByUserId, input)
     if (!updated) throw new Error('Sale not found')
     return updated
   }

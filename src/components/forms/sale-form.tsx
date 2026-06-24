@@ -64,7 +64,10 @@ export function SaleForm({ sale, open, onOpenChange, onSaved, loading, setLoadin
   }
 
   const isPending = sale.status === "pending_approval"
-  const canEdit = isPending
+  // Edição liberada em qualquer status — usuário pode subir novo contrato
+  // ou corrigir data mesmo após aprovação/rejeição (auditado por
+  // last_modified_by_user_id / last_modified_at no backend).
+  const canEdit = true
   const canApprove = isPending && !!saleDate && !!contractUrl
 
   const handleSaveDetails = async () => {
@@ -272,17 +275,32 @@ export function SaleForm({ sale, open, onOpenChange, onSaved, loading, setLoadin
                 )}
               </div>
             )}
+
+            {/* Trilha de auditoria — quem alterou por último */}
+            {sale.last_modifier_name && (
+              <div className="rounded-md border bg-muted/20 p-3 text-sm space-y-1">
+                <div className="font-semibold text-muted-foreground text-xs uppercase tracking-wide">
+                  {t("lastModification") || "Última alteração"}
+                </div>
+                <div><span className="text-muted-foreground">{t("modifiedBy") || "Alterado por"}:</span> <strong>{sale.last_modifier_name}</strong></div>
+                {sale.last_modified_at && (
+                  <div><span className="text-muted-foreground">{t("modifiedAt") || "Em"}:</span> {formatDate(typeof sale.last_modified_at === 'string' ? sale.last_modified_at : String(sale.last_modified_at))}</div>
+                )}
+              </div>
+            )}
           </div>{/* fim da área scrollável */}
 
           <DialogFooter className="gap-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               {t("close") || "Fechar"}
             </Button>
+            {/* Botão Salvar sempre disponível (edição liberada após aprovação) */}
+            <Button type="button" variant="outline" onClick={handleSaveDetails} disabled={loading}>
+              {t("save")}
+            </Button>
+            {/* Aprovar/Rejeitar só fazem sentido enquanto pendente */}
             {isPending && (
               <>
-                <Button type="button" variant="outline" onClick={handleSaveDetails} disabled={loading}>
-                  {t("save")}
-                </Button>
                 <Button type="button" variant="destructive" onClick={handleReject} disabled={loading}>
                   <XCircle className="w-4 h-4 mr-2" />
                   {t("reject") || "Rejeitar"}

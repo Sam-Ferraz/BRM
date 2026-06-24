@@ -253,11 +253,14 @@ export interface Sale {
   approved_by_user_id?: number | null
   approved_at?: string | null
   approval_notes?: string | null
+  last_modified_by_user_id?: number | null
+  last_modified_at?: string | null
   created_at?: string
   updated_at?: string
 }
 
 export interface SaleWithDetails extends Sale {
+  last_modifier_name?: string | null
   deal_client?: string
   deal_property_name?: string | null
   deal_property_price?: string | number | null
@@ -399,6 +402,8 @@ export interface DashboardStats {
   totalShowcaseProducts: number
   totalFollowUps: number
   totalProposals: number
+  // Total de vendas (todos os status)
+  totalSales: number
   // Conversas não respondidas + ligações não atendidas
   pendingChatAndCalls: number
   // Leads aguardando triagem (status='novo')
@@ -786,12 +791,16 @@ export const api = {
       status?: string
       sortBy?: string
       sortOrder?: 'asc' | 'desc'
+      createdFrom?: string
+      createdTo?: string
     }): Promise<ApiResponse<ProposalWithDetails>> => {
       const params = new URLSearchParams()
       if (filters?.search) params.append('search', filters.search)
       if (filters?.status) params.append('status', filters.status)
       if (filters?.sortBy) params.append('sortBy', filters.sortBy)
       if (filters?.sortOrder) params.append('sortOrder', filters.sortOrder)
+      if (filters?.createdFrom) params.append('createdFrom', filters.createdFrom)
+      if (filters?.createdTo) params.append('createdTo', filters.createdTo)
       const query = params.toString()
       return apiClient.get<ApiResponse<ProposalWithDetails>>(`/proposals${query ? `?${query}` : ''}`)
     },
@@ -815,10 +824,17 @@ export const api = {
 
   // Sales — vendas (nascem automaticamente de propostas aceitas)
   sales: {
-    getAll: async (filters?: { status?: SaleStatus | 'all'; search?: string }): Promise<ApiResponse<SaleWithDetails>> => {
+    getAll: async (filters?: {
+      status?: SaleStatus | 'all'
+      search?: string
+      createdFrom?: string
+      createdTo?: string
+    }): Promise<ApiResponse<SaleWithDetails>> => {
       const params = new URLSearchParams()
       if (filters?.status) params.append('status', filters.status)
       if (filters?.search) params.append('search', filters.search)
+      if (filters?.createdFrom) params.append('createdFrom', filters.createdFrom)
+      if (filters?.createdTo) params.append('createdTo', filters.createdTo)
       const query = params.toString()
       return apiClient.get<ApiResponse<SaleWithDetails>>(`/sales${query ? `?${query}` : ''}`)
     },

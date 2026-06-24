@@ -16,7 +16,12 @@ export class SaleRepository extends BaseRepository {
    * Lista todas as vendas com detalhes do deal/produto/seller/proposta.
    * Filtros suportados: status, search (cliente / imóvel / corretor).
    */
-  async findAll(filters: { status?: SaleStatus | 'all'; search?: string } = {}): Promise<SaleWithDetails[]> {
+  async findAll(filters: {
+    status?: SaleStatus | 'all'
+    search?: string
+    createdFrom?: string  // YYYY-MM-DD (inclusivo)
+    createdTo?: string    // YYYY-MM-DD (inclusivo)
+  } = {}): Promise<SaleWithDetails[]> {
     const client = await this.getClient()
     try {
       let query = `
@@ -27,6 +32,7 @@ export class SaleRepository extends BaseRepository {
           prod.price                AS deal_property_price,
           seller.name               AS seller_name,
           approver.name             AS approver_name,
+          modifier.name             AS last_modifier_name,
           p.proposal_value          AS proposal_value,
           p.proposal_date           AS proposal_date,
           p.validity_date           AS proposal_validity_date,
@@ -39,6 +45,7 @@ export class SaleRepository extends BaseRepository {
         LEFT JOIN products prod  ON LOWER(prod.name) = LOWER(d.property_name)
         LEFT JOIN users seller   ON s.seller_user_id = seller.id
         LEFT JOIN users approver ON s.approved_by_user_id = approver.id
+        LEFT JOIN users modifier ON s.last_modified_by_user_id = modifier.id
         LEFT JOIN proposals p    ON s.proposal_id = p.id
         WHERE 1=1
       `
@@ -58,6 +65,18 @@ export class SaleRepository extends BaseRepository {
           seller.name ILIKE $${paramCount}
         )`
         params.push(`%${filters.search}%`)
+        paramCount++
+      }
+
+      // Filtro por data de criação (inclusivo nos dois extremos)
+      if (filters.createdFrom) {
+        query += ` AND s.created_at >= $${paramCount}::date`
+        params.push(filters.createdFrom)
+        paramCount++
+      }
+      if (filters.createdTo) {
+        query += ` AND s.created_at < ($${paramCount}::date + INTERVAL '1 day')`
+        params.push(filters.createdTo)
         paramCount++
       }
 
@@ -81,6 +100,7 @@ export class SaleRepository extends BaseRepository {
           prod.price                AS deal_property_price,
           seller.name               AS seller_name,
           approver.name             AS approver_name,
+          modifier.name             AS last_modifier_name,
           p.proposal_value          AS proposal_value,
           p.proposal_date           AS proposal_date,
           p.validity_date           AS proposal_validity_date,
@@ -93,6 +113,7 @@ export class SaleRepository extends BaseRepository {
         LEFT JOIN products prod  ON LOWER(prod.name) = LOWER(d.property_name)
         LEFT JOIN users seller   ON s.seller_user_id = seller.id
         LEFT JOIN users approver ON s.approved_by_user_id = approver.id
+        LEFT JOIN users modifier ON s.last_modified_by_user_id = modifier.id
         LEFT JOIN proposals p    ON s.proposal_id = p.id
         WHERE s.id = $1`,
         [id]
@@ -139,10 +160,12 @@ export class SaleRepository extends BaseRepository {
   }
 
   /**
-   * Atualiza dados editáveis pelo corretor (data da venda, contrato).
-   * Não altera status — pra mudar status usar approve/reject.
+   * Atualiza dados editáveis (data da venda, contrato). Agora permitido até
+   * mesmo após approval/rejection — é o caso de "subir novo contrato" ou
+   * corrigir dado. Sempre grava last_modified_by_user_id + last_modified_at
+   * pra rastreabilidade.
    */
-  async updateDetails(id: number, input: {
+  async updateDetails(id: number, modifiedByUserId: number, input: {
     sale_date?: string | null
     contract_url?: string | null
     contract_filename?: string | null
@@ -170,6 +193,11 @@ export class SaleRepository extends BaseRepository {
       }
       if (fields.length === 0) return this.findById(id) as any
 
+      // Tracking de alteração — sempre atualizado quando algo muda.
+      fields.push(`last_modified_by_user_id = $${paramCount}`)
+      values.push(modifiedByUserId)
+      paramCount++
+      fields.push('last_modified_at = CURRENT_TIMESTAMP')
       fields.push('updated_at = CURRENT_TIMESTAMP')
       values.push(id)
 

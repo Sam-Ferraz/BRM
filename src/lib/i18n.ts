@@ -184,6 +184,12 @@ const resources = {
       approvalRequiresDataAndContract: 'Preencha data da venda e envie o contrato antes de aprovar',
       actions: 'Ações',
       close: 'Fechar',
+      createdFromLabel: 'Criada de',
+      createdToLabel: 'Até',
+      clearDates: 'Limpar datas',
+      lastModification: 'Última alteração',
+      modifiedBy: 'Alterado por',
+      modifiedAt: 'Em',
       // --- /Vendas ---
       propertyPrice: 'Preço do Imóvel',
       propertyPricePlaceholder: 'Selecione o imóvel para ver o preço',

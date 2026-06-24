@@ -192,11 +192,14 @@ export interface Sale {
   approved_by_user_id?: number | null
   approved_at?: Date | string | null
   approval_notes?: string | null
+  last_modified_by_user_id?: number | null
+  last_modified_at?: Date | string | null
   created_at?: Date
   updated_at?: Date
 }
 
 export interface SaleWithDetails extends Sale {
+  last_modifier_name?: string | null
   // Vindos do JOIN com deals, products, users e proposals
   deal_client?: string
   deal_property_name?: string | null
@@ -320,6 +323,8 @@ export interface DashboardStats {
   totalShowcaseProducts: number
   totalFollowUps: number
   totalProposals: number
+  // Total de vendas (todos os status)
+  totalSales: number
   // Pendências de comunicação: conversas não respondidas + ligações não atendidas
   pendingChatAndCalls: number
   // Leads aguardando triagem (status='novo')
@@ -359,4 +364,8 @@ export interface QueryFilters {
   category?: string
   sortBy?: string
   sortOrder?: 'asc' | 'desc'
+  // Filtros de data de criação (inclusivo, formato YYYY-MM-DD).
+  // Usado nos módulos Propostas e Vendas.
+  createdFrom?: string
+  createdTo?: string
 }

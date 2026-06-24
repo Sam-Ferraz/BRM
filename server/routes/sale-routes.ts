@@ -25,12 +25,14 @@ const uploadContract = multer({
 export function createSaleRoutes(saleService: SaleService): Router {
   const router = Router()
 
-  // GET /api/sales — lista com filtros opcionais (status, search)
+  // GET /api/sales — lista com filtros opcionais (status, search, range de data)
   router.get('/', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const status = (req.query.status as SaleStatus | 'all' | undefined) || 'all'
       const search = req.query.search as string | undefined
-      const result = await saleService.listAll({ status, search })
+      const createdFrom = req.query.createdFrom as string | undefined
+      const createdTo = req.query.createdTo as string | undefined
+      const result = await saleService.listAll({ status, search, createdFrom, createdTo })
       res.json(result)
     } catch (error) {
       console.error('Error in get sales route:', error)
@@ -58,13 +60,13 @@ export function createSaleRoutes(saleService: SaleService): Router {
   router.patch('/:id', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const id = parseInt(req.params.id)
+      const userId = req.user!.userId
       const { sale_date } = req.body
-      const updated = await saleService.updateDetails(id, { sale_date })
+      const updated = await saleService.updateDetails(id, userId, { sale_date })
       res.json(updated)
     } catch (error) {
-      if (error instanceof Error && (error.message === 'Sale not found' ||
-          error.message.startsWith('Cannot edit'))) {
-        res.status(400).json({ error: error.message })
+      if (error instanceof Error && error.message === 'Sale not found') {
+        res.status(404).json({ error: error.message })
         return
       }
       console.error('Error in patch sale route:', error)
@@ -81,29 +83,27 @@ export function createSaleRoutes(saleService: SaleService): Router {
       }
       try {
         const id = parseInt(req.params.id)
+        const userId = req.user!.userId
         const file = (req as any).file as Express.Multer.File | undefined
         if (!file) {
           res.status(400).json({ error: 'Arquivo de contrato é obrigatório' })
           return
         }
         // Reutiliza o storage existente — salva em pasta contracts/<sale-id>/.
-        // O storage-service abstrai S3 vs local; usamos o sale id como "scope"
-        // (mesmo padrão usado pelas imagens dos produtos).
         const filePath = await storageService.uploadFile(
           file.buffer,
           file.originalname,
           file.mimetype,
           id
         )
-        const updated = await saleService.updateDetails(id, {
+        const updated = await saleService.updateDetails(id, userId, {
           contract_url: filePath,
           contract_filename: file.originalname,
         })
         res.json(updated)
       } catch (error) {
-        if (error instanceof Error && (error.message === 'Sale not found' ||
-            error.message.startsWith('Cannot edit'))) {
-          res.status(400).json({ error: error.message })
+        if (error instanceof Error && error.message === 'Sale not found') {
+          res.status(404).json({ error: error.message })
           return
         }
         console.error('Error in upload contract route:', error)

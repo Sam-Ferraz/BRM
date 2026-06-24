@@ -14,6 +14,8 @@ export function createProposalRoutes(proposalService: ProposalService): Router {
         status: req.query.status as string,
         sortBy: req.query.sortBy as string,
         sortOrder: req.query.sortOrder as 'asc' | 'desc',
+        createdFrom: req.query.createdFrom as string | undefined,
+        createdTo: req.query.createdTo as string | undefined,
       }
       const result = await proposalService.getAllProposals(filters, userId)
       res.json(result)
