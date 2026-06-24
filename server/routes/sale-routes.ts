@@ -7,12 +7,12 @@ import { SaleStatus } from '../types/index.js'
 
 /**
  * Upload de contrato em PDF — middleware customizado por estar restrito a
- * application/pdf (até 10MB). Fica isolado pra não interferir com o middleware
- * de imagens que é usado pelo módulo Produtos.
+ * application/pdf (até 30.000KB ≈ 30MB). Fica isolado pra não interferir
+ * com o middleware de imagens que é usado pelo módulo Produtos.
  */
 const uploadContract = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  limits: { fileSize: 30_000 * 1024 }, // 30.000 KB
   fileFilter: (_req, file, cb) => {
     if (file.mimetype !== 'application/pdf') {
       cb(new Error('O contrato deve ser um arquivo PDF'))
