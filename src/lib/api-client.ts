@@ -279,7 +279,7 @@ export interface SaleWithDetails extends Sale {
 // Módulo Chat (WhatsApp)
 // ---------------------------------------------------------------------------
 
-export type WhatsAppSessionStatus = 'connected' | 'disconnected'
+export type WhatsAppSessionStatus = 'connected' | 'disconnected' | 'pending_setup' | 'invalid_credentials'
 
 // Estado vindo do provedor (Baileys) durante o pareamento
 export type WhatsAppProviderStatus =
@@ -303,6 +303,13 @@ export interface WhatsAppSession {
   display_name?: string | null
   status: WhatsAppSessionStatus
   connected_at?: string | null
+  // Cloud API (Meta): campos do BYOK. access_token e app_secret são mascarados ("****") na resposta da API.
+  provider?: 'baileys' | 'cloud_api'
+  phone_number_id?: string | null
+  access_token?: string | null
+  app_secret?: string | null
+  verify_token?: string | null
+  business_account_id?: string | null
   created_at?: string
   updated_at?: string
 }
@@ -899,6 +906,19 @@ export const api = {
     },
     getState: async (): Promise<{ data: WhatsAppProviderState }> => {
       return apiClient.get<{ data: WhatsAppProviderState }>('/whatsapp/state')
+    },
+
+    // Conexão via WhatsApp Cloud API (Meta oficial) — BYOK
+    cloudApiConnect: async (input: {
+      phone_number: string
+      display_name?: string | null
+      phone_number_id: string
+      access_token: string
+      app_secret: string
+      verify_token: string
+      business_account_id?: string | null
+    }): Promise<{ data: WhatsAppSession }> => {
+      return apiClient.post<{ data: WhatsAppSession }>('/whatsapp/cloud-api/connect', input)
     },
   },
 
