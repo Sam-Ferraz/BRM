@@ -12,10 +12,14 @@ const Command = React.forwardRef<
   React.ElementRef<typeof CommandPrimitive>,
   React.ComponentPropsWithoutRef<typeof CommandPrimitive>
 >(({ className, ...props }, ref) => (
+  // overflow-hidden REMOVIDO: ele recortava o focus ring de 2px do CommandInput
+  // nos cantos arredondados do popover. O CommandList interno já tem overflow
+  // próprio pra scroll, e o DialogContent dentro do CommandDialog também tem
+  // overflow-hidden — então remover daqui não causa vazamento visual.
   <CommandPrimitive
     ref={ref}
     className={cn(
-      "flex h-full w-full flex-col overflow-hidden rounded-md bg-popover text-popover-foreground",
+      "flex h-full w-full flex-col rounded-md bg-popover text-popover-foreground",
       className
     )}
     {...props}
