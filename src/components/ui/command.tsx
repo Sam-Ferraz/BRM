@@ -44,14 +44,13 @@ const CommandInput = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof CommandPrimitive.Input>
 >(({ className, ...props }, ref) => (
   <div className="flex items-center border-b px-3" cmdk-input-wrapper="">
-    {/* mr-5 (20px ≈ 2 caracteres) entre a lupa e o placeholder "Buscar..." —
-        valor escolhido depois de mr-2 (8px) e mr-3 (12px) parecerem muito
-        apertados visualmente. Afeta todas as buscas que usam CommandInput. */}
-    <Search className="mr-5 h-4 w-4 shrink-0 opacity-50" />
+    <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
     <CommandPrimitive.Input
       ref={ref}
       className={cn(
-        "flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50",
+        // pl-2 dá espaço entre o texto e a borda interna do input — sem isso
+        // o "Buscar..." fica colado na borda esquerda do ring azul de foco.
+        "flex h-11 w-full rounded-md bg-transparent pl-2 py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50",
         className
       )}
       {...props}
