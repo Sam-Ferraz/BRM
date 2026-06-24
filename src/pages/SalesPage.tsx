@@ -20,7 +20,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { ArrowLeft, Pencil, Search, Key, FileText } from "lucide-react"
+import { ArrowLeft, Pencil, Search, Key, FileText, Trash2 } from "lucide-react"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { api, type SaleWithDetails, type SaleStatus } from "@/lib/api-client"
 import { SaleForm } from "@/components/forms/sale-form"
 import { useToast } from "@/hooks/use-toast"
@@ -46,6 +56,8 @@ export default function SalesPage() {
 
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingSale, setEditingSale] = useState<SaleWithDetails | undefined>()
+  const [deletingSale, setDeletingSale] = useState<SaleWithDetails | undefined>()
+  const [deleting, setDeleting] = useState(false)
 
   const formatCurrency = (value: string | number | undefined | null): string => {
     if (value === undefined || value === null || value === "") return "-"
@@ -101,6 +113,28 @@ export default function SalesPage() {
     setIsFormOpen(false)
     setEditingSale(undefined)
     fetchSales()
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!deletingSale) return
+    try {
+      setDeleting(true)
+      await api.sales.delete(deletingSale.id)
+      toast({
+        title: t("success") || "Sucesso",
+        description: t("saleDeleted") || "Venda excluída",
+      })
+      setDeletingSale(undefined)
+      fetchSales()
+    } catch (error) {
+      toast({
+        title: t("error"),
+        description: error instanceof Error ? error.message : "Erro ao excluir",
+        variant: "destructive",
+      })
+    } finally {
+      setDeleting(false)
+    }
   }
 
   return (
@@ -227,14 +261,25 @@ export default function SalesPage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleOpenEdit(sale)}
-                            title={t("editSale") || "Abrir venda"}
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </Button>
+                          <div className="flex justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleOpenEdit(sale)}
+                              title={t("editSale") || "Abrir venda"}
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setDeletingSale(sale)}
+                              title={t("deleteSale") || "Excluir venda"}
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))
@@ -256,6 +301,36 @@ export default function SalesPage() {
           setLoading={setFormLoading}
         />
       )}
+
+      <AlertDialog open={!!deletingSale} onOpenChange={(open) => !open && setDeletingSale(undefined)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t("confirmDeleteSaleTitle") || "Excluir venda?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("confirmDeleteSaleBody") ||
+                "Esta ação é permanente. A venda será removida do histórico. O status do imóvel NÃO é alterado automaticamente — se quiser liberar o imóvel pra Vitrine, ajuste o status manualmente em Imóveis."}
+              {deletingSale?.deal_client && (
+                <span className="block mt-2 font-medium text-foreground">
+                  {deletingSale.deal_client}
+                  {deletingSale.deal_property_name ? ` — ${deletingSale.deal_property_name}` : ""}
+                </span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>{t("cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? (t("deleting") || "Excluindo...") : (t("delete") || "Excluir")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

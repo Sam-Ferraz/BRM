@@ -138,6 +138,22 @@ export function createSaleRoutes(saleService: SaleService): Router {
     }
   })
 
+  // DELETE /api/sales/:id — exclui a venda permanentemente
+  router.delete('/:id', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const id = parseInt(req.params.id)
+      const result = await saleService.deleteSale(id)
+      res.json(result)
+    } catch (error) {
+      if (error instanceof Error && error.message === 'Sale not found') {
+        res.status(404).json({ error: error.message })
+        return
+      }
+      console.error('Error in delete sale route:', error)
+      res.status(500).json({ error: 'Internal server error' })
+    }
+  })
+
   // POST /api/sales/:id/reject
   router.post('/:id/reject', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {

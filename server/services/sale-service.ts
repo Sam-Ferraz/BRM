@@ -124,6 +124,20 @@ export class SaleService {
     return refreshed!
   }
 
+  /**
+   * Exclui uma venda permanentemente. NÃO reverte o status do imóvel
+   * (se a venda estava aprovada e o produto está como 'sold', ele continua
+   * sold). Se o usuário quiser liberar o imóvel pra Vitrine, deve fazer
+   * manualmente no formulário do imóvel — evita efeito colateral inesperado.
+   */
+  async deleteSale(id: number): Promise<{ success: boolean }> {
+    const sale = await this.saleRepo.findById(id)
+    if (!sale) throw new Error('Sale not found')
+    const deleted = await this.saleRepo.delete(id)
+    if (!deleted) throw new Error('Sale not found')
+    return { success: true }
+  }
+
   async reject(id: number, approverUserId: number, notes?: string | null): Promise<SaleWithDetails> {
     const sale = await this.saleRepo.findById(id)
     if (!sale) throw new Error('Sale not found')

@@ -876,6 +876,10 @@ export const api = {
     reject: async (id: number, notes?: string | null): Promise<SaleWithDetails> => {
       return apiClient.post<SaleWithDetails>(`/sales/${id}/reject`, { notes: notes ?? null })
     },
+
+    delete: async (id: number): Promise<{ success: boolean }> => {
+      return apiClient.delete<{ success: boolean }>(`/sales/${id}`)
+    },
   },
 
   // WhatsApp — sessão (vínculo entre usuário do BRM e número WhatsApp)

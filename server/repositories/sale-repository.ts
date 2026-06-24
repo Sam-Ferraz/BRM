@@ -251,6 +251,16 @@ export class SaleRepository extends BaseRepository {
     }
   }
 
+  async delete(id: number): Promise<boolean> {
+    const client = await this.getClient()
+    try {
+      const result = await client.query('DELETE FROM sales WHERE id = $1 RETURNING id', [id])
+      return result.rows.length > 0
+    } finally {
+      this.releaseClient(client)
+    }
+  }
+
   async getCount(): Promise<number> {
     const client = await this.getClient()
     try {

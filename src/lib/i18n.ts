@@ -190,6 +190,12 @@ const resources = {
       lastModification: 'Última alteração',
       modifiedBy: 'Alterado por',
       modifiedAt: 'Em',
+      deleteSale: 'Excluir venda',
+      saleDeleted: 'Venda excluída',
+      confirmDeleteSaleTitle: 'Excluir venda?',
+      confirmDeleteSaleBody: 'Esta ação é permanente. A venda será removida do histórico. O status do imóvel NÃO é alterado automaticamente — se quiser liberar o imóvel pra Vitrine, ajuste o status manualmente em Imóveis.',
+      delete: 'Excluir',
+      deleting: 'Excluindo...',
       // --- /Vendas ---
       propertyPrice: 'Preço do Imóvel',
       propertyPricePlaceholder: 'Selecione o imóvel para ver o preço',
