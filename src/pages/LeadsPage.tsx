@@ -73,7 +73,6 @@ export default function LeadsPage() {
 
   const [actingLeadId, setActingLeadId] = useState<number | null>(null)
 
-  const [isManualOpen, setIsManualOpen] = useState(false)
   const [isSourceOpen, setIsSourceOpen] = useState(false)
   const [editingSource, setEditingSource] = useState<LeadSource | undefined>(undefined)
 
@@ -182,10 +181,6 @@ export default function LeadsPage() {
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 {t("backButton")}
               </Link>
-            </Button>
-            <Button size="sm" onClick={() => setIsManualOpen(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              {t("newManualLead")}
             </Button>
           </div>
         </div>
@@ -343,15 +338,6 @@ export default function LeadsPage() {
           )}
         </Tabs>
       </div>
-
-      <ManualLeadDialog
-        open={isManualOpen}
-        onOpenChange={setIsManualOpen}
-        onCreated={() => {
-          fetchLeads()
-          fetchCounts()
-        }}
-      />
 
       {isAdmin && (
         <LeadSourceDialog
@@ -750,94 +736,3 @@ function LeadSourceDialog({ open, onOpenChange, source }: LeadSourceDialogProps)
   )
 }
 
-// ===========================================================================
-// Diálogo para cadastro manual de Lead
-// ===========================================================================
-
-interface ManualLeadDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  onCreated: () => void
-}
-
-function ManualLeadDialog({ open, onOpenChange, onCreated }: ManualLeadDialogProps) {
-  const { t } = useTranslation()
-  const { toast } = useToast()
-  const [name, setName] = useState("")
-  const [email, setEmail] = useState("")
-  const [phone, setPhone] = useState("")
-  const [notes, setNotes] = useState("")
-  const [saving, setSaving] = useState(false)
-
-  useEffect(() => {
-    if (open) {
-      setName("")
-      setEmail("")
-      setPhone("")
-      setNotes("")
-    }
-  }, [open])
-
-  const handleSave = async () => {
-    if (!name.trim() && !email.trim() && !phone.trim()) {
-      toast({ title: t("error"), description: t("leadMinFieldRequired"), variant: "destructive" })
-      return
-    }
-    try {
-      setSaving(true)
-      await api.leads.createManual({
-        name: name.trim() || null,
-        email: email.trim() || null,
-        phone: phone.trim() || null,
-        notes: notes.trim() || null,
-      })
-      toast({ title: t("success"), description: t("leadCreatedSuccess") })
-      onCreated()
-      onOpenChange(false)
-    } catch (error) {
-      toast({
-        title: t("error"),
-        description: t("leadCreateError"),
-        variant: "destructive",
-      })
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[420px] max-h-[90vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle>{t("newManualLead")}</DialogTitle>
-        </DialogHeader>
-        <div className="flex-1 overflow-y-auto p-1 space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="lead_name">{t("name")}</Label>
-            <Input id="lead_name" value={name} onChange={(e) => setName(e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="lead_email">{t("email")}</Label>
-            <Input id="lead_email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="lead_phone">{t("phone")}</Label>
-            <Input id="lead_phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="lead_notes">{t("notes")}</Label>
-            <Textarea id="lead_notes" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            {t("cancel")}
-          </Button>
-          <Button onClick={handleSave} disabled={saving}>
-            {saving ? t("saving") : t("save")}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  )
-}
