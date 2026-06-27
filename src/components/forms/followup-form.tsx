@@ -95,7 +95,7 @@ export function FollowUpForm({ followUp, appointment, open, onOpenChange, onSubm
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="sm:max-w-[425px]"
+        className="sm:max-w-[425px] max-h-[90vh] flex flex-col"
         {...(isMobile && {
           onOpenAutoFocus: (e) => e.preventDefault()
         })}
@@ -103,7 +103,8 @@ export function FollowUpForm({ followUp, appointment, open, onOpenChange, onSubm
         <DialogHeader>
           <DialogTitle>{followUp ? t('editFollowUp') : t('newFollowUp')}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 space-y-4">
+          <div className="flex-1 overflow-y-auto p-1 space-y-4">
           <div className="space-y-2">
             <Label htmlFor="client_name">
               {t('client')} <span className="text-red-500">*</span>
@@ -162,6 +163,7 @@ export function FollowUpForm({ followUp, appointment, open, onOpenChange, onSubm
               <p className="text-sm text-red-500">{errors.next_action_date}</p>
             )}
           </div>
+          </div>{/* fim da área scrollável */}
 
           <DialogFooter>
             <Button

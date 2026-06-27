@@ -612,11 +612,11 @@ function LeadSourceDialog({ open, onOpenChange, source }: LeadSourceDialogProps)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[520px]">
+      <DialogContent className="sm:max-w-[520px] max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>{source ? t("editIntegration") : t("newIntegration")}</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4">
+        <div className="flex-1 overflow-y-auto p-1 space-y-4">
           <div className="space-y-2">
             <Label htmlFor="source_name">
               {t("name")} <span className="text-red-500">*</span>
@@ -807,11 +807,11 @@ function ManualLeadDialog({ open, onOpenChange, onCreated }: ManualLeadDialogPro
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[420px]">
+      <DialogContent className="sm:max-w-[420px] max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>{t("newManualLead")}</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4">
+        <div className="flex-1 overflow-y-auto p-1 space-y-4">
           <div className="space-y-2">
             <Label htmlFor="lead_name">{t("name")}</Label>
             <Input id="lead_name" value={name} onChange={(e) => setName(e.target.value)} />

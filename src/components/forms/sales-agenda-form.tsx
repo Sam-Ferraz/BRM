@@ -73,8 +73,8 @@ export function SalesAgendaForm({ salesAgenda, open, onOpenChange, onSubmit, loa
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent 
-        className="sm:max-w-[425px]"
+      <DialogContent
+        className="sm:max-w-[425px] max-h-[90vh] flex flex-col"
         {...(isMobile && {
           onOpenAutoFocus: (e) => e.preventDefault()
         })}
@@ -82,7 +82,8 @@ export function SalesAgendaForm({ salesAgenda, open, onOpenChange, onSubmit, loa
         <DialogHeader>
           <DialogTitle>{salesAgenda ? t('editSalesAgenda') : t('newSalesAgenda')}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 space-y-4">
+          <div className="flex-1 overflow-y-auto p-1 space-y-4">
           <div className="space-y-2">
             <Label htmlFor="titulo">
               {t('title')} <span className="text-red-500">*</span>
@@ -124,6 +125,7 @@ export function SalesAgendaForm({ salesAgenda, open, onOpenChange, onSubmit, loa
               </SelectContent>
             </Select>
           </div>
+          </div>{/* fim da área scrollável */}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               {t('cancel')}

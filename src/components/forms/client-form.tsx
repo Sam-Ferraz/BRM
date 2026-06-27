@@ -127,7 +127,7 @@ export function ClientForm({ client, initialName, open, onOpenChange, onSubmit, 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="sm:max-w-[425px]"
+        className="sm:max-w-[425px] max-h-[90vh] flex flex-col"
         {...(isMobile && {
           onOpenAutoFocus: (e) => e.preventDefault()
         })}
@@ -135,8 +135,8 @@ export function ClientForm({ client, initialName, open, onOpenChange, onSubmit, 
         <DialogHeader>
           <DialogTitle>{client ? t('editClient') : t('newClient')}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="max-h-[70vh] overflow-y-auto p-1">
+        <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 space-y-4">
+          <div className="flex-1 overflow-y-auto p-1">
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="name">

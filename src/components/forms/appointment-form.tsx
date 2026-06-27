@@ -194,8 +194,8 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent 
-        className="sm:max-w-[425px]"
+      <DialogContent
+        className="sm:max-w-[425px] max-h-[90vh] flex flex-col"
         {...(isMobile && {
           onOpenAutoFocus: (e) => e.preventDefault()
         })}
@@ -203,7 +203,7 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
         <DialogHeader>
           <DialogTitle>{appointment ? t('editAppointment') : t('newAppointment')}</DialogTitle>
         </DialogHeader>
-        <div className="max-h-[70vh] overflow-y-auto p-1">
+        <div className="flex-1 overflow-y-auto p-1">
         <form onSubmit={handleSubmit} className="space-y-4 pb-4">
           <div className="space-y-2">
             <Label htmlFor="scheduled_datetime">

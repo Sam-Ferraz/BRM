@@ -206,8 +206,8 @@ export function DealForm({ deal, open, onOpenChange, onSubmit, loading }: DealFo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent 
-        className="sm:max-w-[620px]"
+      <DialogContent
+        className="sm:max-w-[620px] max-h-[90vh] flex flex-col"
         {...(isMobile && {
           onOpenAutoFocus: (e) => e.preventDefault()
         })}
@@ -215,7 +215,7 @@ export function DealForm({ deal, open, onOpenChange, onSubmit, loading }: DealFo
         <DialogHeader>
           <DialogTitle>{deal ? t('editDeal') : t('newDeal')}</DialogTitle>
         </DialogHeader>
-        <div className="max-h-[70vh] overflow-y-auto p-1">
+        <div className="flex-1 overflow-y-auto p-1">
         <form onSubmit={handleSubmit} className="space-y-4 pb-4">
           <div className="space-y-2">
             <Label htmlFor="origin_date">

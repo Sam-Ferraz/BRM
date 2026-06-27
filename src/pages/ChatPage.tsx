@@ -880,11 +880,11 @@ function NewConversationDialog({ open, onOpenChange, onCreated }: NewConversatio
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[460px]">
+      <DialogContent className="sm:max-w-[460px] max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>{t("newConversation")}</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4">
+        <div className="flex-1 overflow-y-auto p-1 space-y-4">
           <div className="space-y-2">
             <Label htmlFor="contact_phone">
               {t("contactPhone")} <span className="text-red-500">*</span>
