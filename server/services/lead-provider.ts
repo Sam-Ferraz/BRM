@@ -18,57 +18,78 @@ export interface NormalizedLead {
 export interface LeadProvider {
   /**
    * Extrai 0..N leads de um payload bruto recebido no webhook.
-   * Meta pode enviar um array de "entry"; outros podem enviar um por request.
+   * Async porque algumas integrações (Meta) precisam fazer fetch adicional
+   * via Graph API pra completar os dados antes de devolver.
    * Retornar array vazio se o payload não contiver leads válidos.
    */
-  parsePayload(payload: any, config?: Record<string, any> | null): NormalizedLead[]
+  parsePayload(payload: any, config?: Record<string, any> | null): Promise<NormalizedLead[]>
 }
 
 // ===========================================================================
 // MetaLeadProvider — Meta (Facebook/Instagram) Lead Ads
 // ===========================================================================
 //
-// O Meta envia leads via webhook em dois formatos principais:
+// Aceita dois formatos de webhook:
 //
-//   • "Leadgen" do Webhooks da página: notificação leve com leadgen_id, depois
-//     o BRM precisa chamar Graph API para buscar os field_data. Esse caminho
-//     requer access_token e está implementado aqui de forma simplificada
-//     (apenas registra o leadgen_id; fetch dos detalhes é TODO).
+//   • "Leadgen" do Webhooks da Page (formato nativo, recomendado pra produção):
+//     Meta envia um pequeno payload só com leadgen_id, page_id e form_id.
+//     O BRM precisa fazer GET na Graph API com o leadgen_id pra obter os
+//     field_data reais (nome, email, telefone). Isso requer page_access_token
+//     na config da source.
 //
-//   • Payload já expandido (via Zapier / Make / integrações intermediárias):
-//     vem direto o JSON com {field_name, values: [...]}. Esse caminho é o
-//     mais simples e o que recomendamos para começar.
+//   • Payload já expandido (formato Zapier/Make ou teste manual):
+//     vem direto o JSON com {field_name, values: [...]}. Não requer access_token.
+//     Útil pra testes e pra usuários que preferem usar Zapier no meio do
+//     caminho.
 //
-// Suportamos ambos sem precisar de token Meta colado: se vier expandido,
-// processa direto; se vier só o ID, ignora silenciosamente (registra log).
+// Suporta ambos: se vier expandido, processa direto; se vier só ID e tiver
+// access_token na config, faz fetch via Graph API; se vier só ID e NÃO tiver
+// access_token, registra um lead "magro" (só leadgen_id) que pode ser
+// completado depois.
 // ===========================================================================
 
-export class MetaLeadProvider implements LeadProvider {
-  parsePayload(payload: any): NormalizedLead[] {
-    const leads: NormalizedLead[] = []
+const META_GRAPH_VERSION = 'v18.0'
 
-    // Forma 1: webhook nativo da Meta (sem expandir)
-    //   { "object": "page", "entry": [{ "changes": [{ "value": { "leadgen_id": "..." } }] }] }
+export class MetaLeadProvider implements LeadProvider {
+  async parsePayload(payload: any, config?: Record<string, any> | null): Promise<NormalizedLead[]> {
+    const leads: NormalizedLead[] = []
+    const accessToken = (config?.page_access_token as string) || (config?.access_token as string) || null
+
+    // Forma 1: webhook nativo da Meta (notificação leve)
+    //   { "object": "page", "entry": [{ "id": "<page_id>", "changes": [{
+    //       "value": { "leadgen_id": "...", "page_id": "...", "form_id": "..." }
+    //   }] }] }
     if (payload?.object === 'page' && Array.isArray(payload.entry)) {
       for (const entry of payload.entry) {
         for (const change of entry.changes || []) {
+          if (change?.field !== 'leadgen' && change?.field !== undefined) continue
           const leadgenId = change?.value?.leadgen_id
-          if (leadgenId) {
-            // Sem expansão via Graph API, apenas guardamos o id. O usuário
-            // pode complementar manualmente ou configurar Zapier para
-            // expandir antes de enviar.
-            leads.push({
-              external_id: String(leadgenId),
-              form_data: { meta_raw: change.value },
-            })
+          if (!leadgenId) continue
+
+          if (accessToken) {
+            // Faz fetch dos detalhes via Graph API. Em caso de falha,
+            // grava o lead "magro" mesmo assim pra não perder o sinal.
+            try {
+              const details = await fetchLeadDetails(String(leadgenId), accessToken)
+              leads.push(toNormalizedFromGraphResponse(details, String(leadgenId)))
+              continue
+            } catch (err) {
+              console.error('[MetaLeadProvider] Falha no fetch Graph API:', err)
+            }
           }
+
+          // Sem token ou fetch falhou — registra lead apenas com leadgen_id
+          leads.push({
+            external_id: String(leadgenId),
+            form_data: { meta_raw: change.value, _fetch_pending: !accessToken },
+          })
         }
       }
       return leads
     }
 
-    // Forma 2: payload já expandido (Zapier/Make ou teste manual)
-    //   { "leadgen_id": "...", "field_data": [{ "name": "full_name", "values": ["João"] }, ...] }
+    // Forma 2: payload já expandido (Zapier/Make/teste)
+    //   { "leadgen_id": "...", "field_data": [{ "name": "full_name", "values": ["..."] }, ...] }
     // ou um array de leads.
     const items = Array.isArray(payload) ? payload : [payload]
     for (const item of items) {
@@ -93,6 +114,46 @@ export class MetaLeadProvider implements LeadProvider {
   }
 }
 
+/**
+ * GET /{leadgen-id}?access_token={page-access-token}&fields=field_data,created_time,form_id,ad_id
+ * Resposta: { id, field_data: [...], created_time, form_id, ad_id }
+ */
+async function fetchLeadDetails(leadgenId: string, accessToken: string): Promise<any> {
+  const url = `https://graph.facebook.com/${META_GRAPH_VERSION}/${leadgenId}?fields=field_data,created_time,form_id,ad_id,campaign_id,adset_id,is_organic`
+  const response = await fetch(url, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  })
+  if (!response.ok) {
+    const errBody = await response.json().catch(() => ({}))
+    throw new Error(
+      `Graph API ${response.status}: ${(errBody as any)?.error?.message || response.statusText}`
+    )
+  }
+  return response.json()
+}
+
+function toNormalizedFromGraphResponse(details: any, leadgenId: string): NormalizedLead {
+  const fieldData = extractFieldData(details)
+  return {
+    external_id: details.id || leadgenId,
+    name: pickFromFields(fieldData, ['full_name', 'name', 'nome']) ?? null,
+    email: pickFromFields(fieldData, ['email', 'e-mail']) ?? null,
+    phone: pickFromFields(fieldData, ['phone_number', 'phone', 'telefone', 'celular']) ?? null,
+    form_data: {
+      ...(fieldData ? Object.fromEntries(fieldData) : {}),
+      _meta: {
+        leadgen_id: details.id,
+        created_time: details.created_time,
+        form_id: details.form_id,
+        ad_id: details.ad_id,
+        campaign_id: details.campaign_id,
+        adset_id: details.adset_id,
+        is_organic: details.is_organic,
+      },
+    },
+  }
+}
+
 // ===========================================================================
 // GenericWebhookLeadProvider — aceita qualquer JSON
 // ===========================================================================
@@ -102,7 +163,7 @@ export class MetaLeadProvider implements LeadProvider {
 // objeto ou um array, e tenta extrair name/email/phone heuristicamente.
 
 export class GenericWebhookLeadProvider implements LeadProvider {
-  parsePayload(payload: any): NormalizedLead[] {
+  async parsePayload(payload: any): Promise<NormalizedLead[]> {
     const items = Array.isArray(payload) ? payload : [payload]
     const leads: NormalizedLead[] = []
     for (const item of items) {

@@ -550,6 +550,8 @@ function LeadSourceDialog({ open, onOpenChange, source }: LeadSourceDialogProps)
   const [verifyToken, setVerifyToken] = useState("")
   const [pageAccessToken, setPageAccessToken] = useState("")
   const [formId, setFormId] = useState("")
+  const [appSecret, setAppSecret] = useState("")
+  const [pageId, setPageId] = useState("")
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -560,12 +562,16 @@ function LeadSourceDialog({ open, onOpenChange, source }: LeadSourceDialogProps)
         setVerifyToken(source.config?.verify_token ?? "")
         setPageAccessToken(source.config?.page_access_token ?? "")
         setFormId(source.config?.form_id ?? "")
+        setAppSecret(source.config?.app_secret ?? "")
+        setPageId(source.config?.page_id ?? "")
       } else {
         setName("")
         setType("meta")
         setVerifyToken("")
         setPageAccessToken("")
         setFormId("")
+        setAppSecret("")
+        setPageId("")
       }
     }
   }, [open, source])
@@ -580,6 +586,8 @@ function LeadSourceDialog({ open, onOpenChange, source }: LeadSourceDialogProps)
           verify_token: verifyToken.trim() || null,
           page_access_token: pageAccessToken.trim() || null,
           form_id: formId.trim() || null,
+          app_secret: appSecret.trim() || null,
+          page_id: pageId.trim() || null,
         }
       : null
     try {
@@ -648,37 +656,83 @@ function LeadSourceDialog({ open, onOpenChange, source }: LeadSourceDialogProps)
                   <li>{t("metaSetupStep3")}</li>
                   <li>{t("metaSetupStep4")}</li>
                 </ol>
+                {source?.webhook_token && (
+                  <p className="pt-2 border-t mt-2">
+                    <span className="text-muted-foreground">URL do webhook (cole na Meta):</span>
+                    <code className="block bg-background px-2 py-1 rounded mt-1 text-[11px] break-all">
+                      {window.location.origin}/api/leads/webhook/{source.webhook_token}
+                    </code>
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="verify_token">{t("verifyToken")}</Label>
+                <Label htmlFor="verify_token">
+                  Verify Token <span className="text-red-500">*</span>
+                </Label>
                 <Input
                   id="verify_token"
                   value={verifyToken}
                   onChange={(e) => setVerifyToken(e.target.value)}
-                  placeholder={t("optional")}
+                  placeholder="invente uma string segura (use a mesma na Meta)"
                 />
+                <p className="text-xs text-muted-foreground">
+                  String que você escolhe e cola IGUAL no campo "Verify Token" do webhook na Meta.
+                </p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="page_access_token">{t("pageAccessToken")}</Label>
-                <Input
+                <Label htmlFor="page_access_token">
+                  Page Access Token <span className="text-red-500">*</span>
+                </Label>
+                <Textarea
                   id="page_access_token"
+                  rows={3}
                   value={pageAccessToken}
                   onChange={(e) => setPageAccessToken(e.target.value)}
-                  placeholder={t("optional")}
-                  type="password"
+                  placeholder="EAAG..."
+                  className="font-mono text-xs"
                 />
+                <p className="text-xs text-muted-foreground">
+                  Token de longa duração da Page (Graph API Explorer ou System User).
+                  Necessário pro BRM fazer fetch dos detalhes do lead via Graph API.
+                </p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="form_id">{t("formId")}</Label>
+                <Label htmlFor="app_secret">App Secret</Label>
                 <Input
-                  id="form_id"
-                  value={formId}
-                  onChange={(e) => setFormId(e.target.value)}
-                  placeholder={t("optional")}
+                  id="app_secret"
+                  value={appSecret}
+                  onChange={(e) => setAppSecret(e.target.value)}
+                  placeholder="opcional mas recomendado"
+                  type="password"
                 />
+                <p className="text-xs text-muted-foreground">
+                  App Secret do seu app Meta (Configurações → Básico). Quando preenchido,
+                  o BRM valida X-Hub-Signature-256 em cada webhook — evita falsificação.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-2">
+                  <Label htmlFor="page_id">Page ID</Label>
+                  <Input
+                    id="page_id"
+                    value={pageId}
+                    onChange={(e) => setPageId(e.target.value)}
+                    placeholder="opcional"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="form_id">Form ID</Label>
+                  <Input
+                    id="form_id"
+                    value={formId}
+                    onChange={(e) => setFormId(e.target.value)}
+                    placeholder="opcional"
+                  />
+                </div>
               </div>
             </>
           )}

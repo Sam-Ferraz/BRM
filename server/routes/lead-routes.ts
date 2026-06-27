@@ -1,4 +1,5 @@
 import { Request, Response, Router } from 'express'
+import crypto from 'crypto'
 import { LeadService } from '../services/index.js'
 import { LeadSourceRepository } from '../repositories/index.js'
 import { authenticateToken, AuthenticatedRequest } from '../middleware/auth.js'
@@ -29,6 +30,16 @@ export function createLeadRoutes(
   // hub.challenge e espera receber o challenge de volta como texto puro.
   // =========================================================================
 
+  /**
+   * GET handshake da Meta.
+   * Meta envia: ?hub.mode=subscribe&hub.verify_token=XXX&hub.challenge=YYY
+   * Precisamos validar:
+   *   1. token na URL bate com algum LeadSource cadastrado
+   *   2. hub.verify_token bate com source.config.verify_token (Meta-specific)
+   *   3. devolver o hub.challenge como texto puro
+   * Sem a validação do (2), qualquer um que conhecesse o webhook token
+   * conseguiria "verificar" um webhook que não é dele na Meta.
+   */
   router.get('/webhook/:token', async (req: Request, res: Response): Promise<void> => {
     try {
       const source = await leadSourceRepository.findByWebhookToken(req.params.token)
@@ -36,8 +47,27 @@ export function createLeadRoutes(
         res.status(404).type('text/plain').send('Not found')
         return
       }
+      const mode = req.query['hub.mode']
+      const verifyToken = req.query['hub.verify_token']
       const challenge = req.query['hub.challenge']
-      // Devolve o challenge como texto puro (formato esperado pela Meta)
+
+      // Pra fontes 'meta' validamos verify_token. Pra outras (genérico/manual)
+      // mantemos o comportamento permissivo (algumas ferramentas não fazem
+      // handshake).
+      if (source.type === 'meta') {
+        const expected = (source.config as any)?.verify_token
+        if (!expected) {
+          console.warn(`[Leads] verify_token não configurado em source id=${source.id}`)
+          res.status(500).type('text/plain').send('verify_token not configured')
+          return
+        }
+        if (mode !== 'subscribe' || verifyToken !== expected) {
+          console.warn(`[Leads] Handshake recusado em source id=${source.id} (verify_token mismatch)`)
+          res.status(403).type('text/plain').send('Forbidden')
+          return
+        }
+      }
+
       res.status(200).type('text/plain').send(typeof challenge === 'string' ? challenge : 'ok')
     } catch (error) {
       console.error('Error in webhook handshake:', error)
@@ -45,6 +75,11 @@ export function createLeadRoutes(
     }
   })
 
+  /**
+   * POST recebe os eventos. Para fontes 'meta' valida assinatura HMAC SHA-256
+   * com app_secret (X-Hub-Signature-256). Sempre respondemos 200 (mesmo em
+   * erro de processamento) pra evitar retries da Meta — erros ficam no log.
+   */
   router.post('/webhook/:token', async (req: Request, res: Response): Promise<void> => {
     try {
       const source = await leadSourceRepository.findByWebhookToken(req.params.token)
@@ -52,11 +87,35 @@ export function createLeadRoutes(
         res.status(404).json({ error: 'Webhook not found' })
         return
       }
+
+      // Valida assinatura HMAC pra fontes Meta
+      if (source.type === 'meta') {
+        const appSecret = (source.config as any)?.app_secret
+        const signature = req.headers['x-hub-signature-256'] as string | undefined
+        const rawBody = (req as any).rawBody as string | undefined
+
+        if (appSecret && signature && rawBody) {
+          const expected =
+            'sha256=' + crypto.createHmac('sha256', appSecret).update(rawBody).digest('hex')
+          if (signature !== expected) {
+            console.warn(`[Leads] Assinatura inválida em source id=${source.id}`)
+            res.status(403).json({ error: 'invalid signature' })
+            return
+          }
+        } else if (appSecret && !signature) {
+          // Tem app_secret configurado mas o request veio sem signature —
+          // pode ser teste manual ou Zapier (que não assina). Permitimos
+          // mas registramos.
+          console.warn(`[Leads] Source meta id=${source.id} sem assinatura no payload`)
+        }
+      }
+
       const created = await leadService.ingestPayload(source, req.body)
       res.json({ received: created.length })
     } catch (error) {
       console.error('Error processing lead webhook:', error)
-      res.status(500).json({ error: 'Internal server error' })
+      // 200 mesmo em erro pra evitar retry da Meta (erro fica no log)
+      res.status(200).json({ received: 0, error: 'processed with errors' })
     }
   })
 

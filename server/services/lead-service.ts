@@ -76,7 +76,9 @@ export class LeadService {
     }
 
     const provider = getProviderForType(source.type)
-    const normalized: NormalizedLead[] = provider.parsePayload(payload, source.config)
+    // parsePayload é async porque o Meta pode precisar fazer fetch via Graph API
+    // pra completar dados do lead (quando recebe só o leadgen_id).
+    const normalized: NormalizedLead[] = await provider.parsePayload(payload, source.config)
 
     const created: Lead[] = []
     for (const lead of normalized) {
