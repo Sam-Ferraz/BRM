@@ -17,6 +17,7 @@ import ProposalsPage from './pages/ProposalsPage'
 import SalesPage from './pages/SalesPage'
 import ChatPage from './pages/ChatPage'
 import LeadsPage from './pages/LeadsPage'
+import AgendaPage from './pages/AgendaPage'
 import ConfigPage from './pages/ConfigPage'
 import './lib/i18n'
 import './index.css'
@@ -87,6 +88,11 @@ function App() {
               <Route path="/leads" element={
                 <ProtectedRoute>
                   <LeadsPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/agenda" element={
+                <ProtectedRoute>
+                  <AgendaPage />
                 </ProtectedRoute>
               } />
               <Route path="/settings" element={

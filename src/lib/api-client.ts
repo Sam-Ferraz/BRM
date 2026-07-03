@@ -161,6 +161,57 @@ export interface Product {
 
 export type ProductStatus = 'available' | 'inactive' | 'sold'
 
+// ---------------------------------------------------------------------------
+// Módulo Agenda
+// ---------------------------------------------------------------------------
+
+export type CalendarEventStatus = 'scheduled' | 'completed' | 'cancelled'
+
+export interface CalendarEvent {
+  id: number
+  user_id: number
+  title: string
+  description?: string | null
+  location?: string | null
+  start_at: string
+  end_at?: string | null
+  all_day: boolean
+  color?: string | null
+  client_id?: number | null
+  deal_id?: number | null
+  product_id?: number | null
+  status: CalendarEventStatus
+  created_at?: string
+  updated_at?: string
+}
+
+export interface CalendarEventWithDetails extends CalendarEvent {
+  user_name?: string
+  client_name?: string | null
+  deal_client?: string | null
+  product_name?: string | null
+}
+
+export type AgendaItemKind = 'event' | 'followup'
+
+export interface AgendaItem {
+  kind: AgendaItemKind
+  id: number
+  user_id: number
+  user_name?: string | null
+  title: string
+  description?: string | null
+  start_at: string
+  end_at?: string | null
+  all_day: boolean
+  color?: string | null
+  status: string
+  client_name?: string | null
+  deal_client?: string | null
+  product_name?: string | null
+  followup_next_action?: string | null
+}
+
 export interface SalesAgenda {
   id: number
   title: string
@@ -886,6 +937,42 @@ export const api = {
 
     delete: async (id: number): Promise<{ success: boolean }> => {
       return apiClient.delete<{ success: boolean }>(`/sales/${id}`)
+    },
+  },
+
+  // Agenda — compromissos manuais + follow-ups em aberto
+  calendar: {
+    getAgenda: async (filters?: {
+      from?: string
+      to?: string
+      viewAll?: boolean
+    }): Promise<ApiResponse<AgendaItem>> => {
+      const params = new URLSearchParams()
+      if (filters?.from) params.append('from', filters.from)
+      if (filters?.to) params.append('to', filters.to)
+      if (filters?.viewAll) params.append('viewAll', '1')
+      const q = params.toString()
+      return apiClient.get<ApiResponse<AgendaItem>>(`/calendar/agenda${q ? `?${q}` : ''}`)
+    },
+    listEvents: async (filters?: { from?: string; to?: string; viewAll?: boolean }): Promise<ApiResponse<CalendarEventWithDetails>> => {
+      const params = new URLSearchParams()
+      if (filters?.from) params.append('from', filters.from)
+      if (filters?.to) params.append('to', filters.to)
+      if (filters?.viewAll) params.append('viewAll', '1')
+      const q = params.toString()
+      return apiClient.get<ApiResponse<CalendarEventWithDetails>>(`/calendar/events${q ? `?${q}` : ''}`)
+    },
+    getEvent: async (id: number): Promise<{ data: CalendarEventWithDetails }> => {
+      return apiClient.get<{ data: CalendarEventWithDetails }>(`/calendar/events/${id}`)
+    },
+    createEvent: async (input: Partial<CalendarEvent>): Promise<{ data: CalendarEvent }> => {
+      return apiClient.post<{ data: CalendarEvent }>('/calendar/events', input)
+    },
+    updateEvent: async (id: number, input: Partial<CalendarEvent>): Promise<{ data: CalendarEvent }> => {
+      return apiClient.put<{ data: CalendarEvent }>(`/calendar/events/${id}`, input)
+    },
+    deleteEvent: async (id: number): Promise<{ success: boolean }> => {
+      return apiClient.delete<{ success: boolean }>(`/calendar/events/${id}`)
     },
   },
 

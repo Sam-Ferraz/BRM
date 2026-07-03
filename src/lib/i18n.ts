@@ -34,6 +34,11 @@ const resources = {
       pendingChatAndCallsTooltip: 'Conversas não respondidas + ligações não atendidas',
       leads: 'Leads',
       newLeadsTooltip: 'Leads aguardando triagem',
+      agenda: 'Agenda',
+      newEvent: 'Novo compromisso',
+      day: 'Dia',
+      week: 'Semana',
+      month: 'Mês',
 
       // Leads
       leadStatusNovo: 'Novos',
@@ -638,6 +643,11 @@ const resources = {
       pendingChatAndCallsTooltip: 'Unanswered conversations + missed calls',
       leads: 'Leads',
       newLeadsTooltip: 'Leads awaiting triage',
+      agenda: 'Agenda',
+      newEvent: 'New event',
+      day: 'Day',
+      week: 'Week',
+      month: 'Month',
 
       // Leads
       leadStatusNovo: 'New',
@@ -1198,6 +1208,11 @@ const resources = {
       pendingChatAndCallsTooltip: 'Conversaciones sin responder + llamadas no contestadas',
       leads: 'Leads',
       newLeadsTooltip: 'Leads esperando clasificación',
+      agenda: 'Agenda',
+      newEvent: 'Nuevo compromiso',
+      day: 'Día',
+      week: 'Semana',
+      month: 'Mes',
 
       // Leads
       leadStatusNovo: 'Nuevos',

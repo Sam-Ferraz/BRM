@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Users, Briefcase, Package, HeadphonesIcon, Settings, LogOut, FileText, Plus, BarChart3, ClipboardCheck, FileSignature, Store, MessageCircle, Inbox, Key } from "lucide-react"
+import { Users, Briefcase, Package, HeadphonesIcon, Settings, LogOut, FileText, Plus, BarChart3, ClipboardCheck, FileSignature, Store, MessageCircle, Inbox, Key, CalendarDays } from "lucide-react"
 import { ChartContainer } from "@/components/ui/chart-simple"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from "recharts"
 import { useAuth } from "@/hooks/use-auth"
@@ -328,6 +328,7 @@ export default function DashboardPage() {
             Vitrine recebem md:col-start-1 para forçar nova linha à esquerda. */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
               {([
+                { path: '/agenda',      label: t('agenda'),      icon: CalendarDays,   bg: 'bg-sky-100',     iconColor: 'text-sky-600',      value: '' },
                 { path: '/appointments',label: t('services'),    icon: HeadphonesIcon, bg: 'bg-purple-100',  iconColor: 'text-purple-600',   value: stats.totalAppointments },
                 { path: '/deals',       label: t('deals'),       icon: Briefcase,      bg: 'bg-blue-100',    iconColor: 'text-blue-600',     value: stats.totalDeals },
                 { path: '/proposals',   label: t('proposals'),   icon: FileSignature,  bg: 'bg-rose-100',    iconColor: 'text-rose-600',     value: stats.totalProposals },
