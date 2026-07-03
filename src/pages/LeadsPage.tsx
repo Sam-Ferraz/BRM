@@ -256,14 +256,7 @@ export default function LeadsPage() {
                         </div>
 
                         {lead.form_data && Object.keys(lead.form_data).length > 0 && (
-                          <details className="text-xs mt-1">
-                            <summary className="cursor-pointer text-muted-foreground">
-                              {t("formDataPreview")}
-                            </summary>
-                            <pre className="mt-1 p-2 bg-muted rounded text-[10px] overflow-x-auto max-h-32">
-                              {JSON.stringify(lead.form_data, null, 2)}
-                            </pre>
-                          </details>
+                          <LeadFormDataView formData={lead.form_data as Record<string, any>} />
                         )}
 
                         {/* Vínculos quando aceito */}
@@ -733,6 +726,181 @@ function LeadSourceDialog({ open, onOpenChange, source }: LeadSourceDialogProps)
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  )
+}
+
+// ===========================================================================
+// LeadFormDataView — exibe form_data de forma estruturada
+// ===========================================================================
+//
+// Separa o objeto em 3 blocos:
+//   1) Meta (campanha/ad/form)  — canto superior, badges compactas
+//   2) Respostas do formulário  — pares chave/valor legíveis
+//   3) Debug bruto (opcional)   — colapsado, só se houver campos desconhecidos
+//
+// Rótulos são humanizados (full_name → "Nome completo", etc). Se vier um
+// campo desconhecido, mostra o nome bruto capitalizado.
+
+interface LeadFormDataViewProps {
+  formData: Record<string, any>
+}
+
+const FIELD_LABELS: Record<string, string> = {
+  full_name: "Nome completo",
+  first_name: "Primeiro nome",
+  last_name: "Sobrenome",
+  name: "Nome",
+  nome: "Nome",
+  email: "Email",
+  "e-mail": "Email",
+  phone: "Telefone",
+  phone_number: "Telefone",
+  telefone: "Telefone",
+  celular: "Celular",
+  city: "Cidade",
+  cidade: "Cidade",
+  state: "Estado",
+  estado: "Estado",
+  address: "Endereço",
+  endereco: "Endereço",
+  company: "Empresa",
+  empresa: "Empresa",
+  job_title: "Cargo",
+  message: "Mensagem",
+  mensagem: "Mensagem",
+  budget: "Orçamento",
+  orcamento: "Orçamento",
+}
+
+function humanize(key: string): string {
+  if (FIELD_LABELS[key]) return FIELD_LABELS[key]
+  return key
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+}
+
+function LeadFormDataView({ formData }: LeadFormDataViewProps) {
+  const { t } = useTranslation()
+
+  // Extrai o _meta (info de campanha/ad da Meta Lead Ads) — populado pelo
+  // MetaLeadProvider quando o BRM faz fetch da Graph API.
+  const meta = (formData._meta || {}) as Record<string, any>
+  const hasMeta = Object.keys(meta).length > 0
+
+  // Campos "conhecidos" do formulário (todos exceto _meta e keys internos)
+  const formFields = Object.entries(formData).filter(
+    ([k]) => k !== "_meta" && k !== "meta_raw" && k !== "_fetch_pending" && !k.startsWith("_")
+  )
+
+  const leadgenId = meta.leadgen_id || formData.leadgen_id
+  const formatMetaDate = (t: any): string | null => {
+    if (!t) return null
+    try {
+      const d = new Date(t)
+      if (Number.isNaN(d.getTime())) return null
+      return new Intl.DateTimeFormat("pt-BR", {
+        day: "2-digit", month: "2-digit", year: "numeric",
+        hour: "2-digit", minute: "2-digit",
+      }).format(d)
+    } catch {
+      return null
+    }
+  }
+
+  return (
+    <div className="mt-2 pt-2 border-t space-y-2">
+      {/* Bloco Meta (campanha/ad) — só aparece se veio via Meta Lead Ads */}
+      {hasMeta && (
+        <div className="text-xs space-y-1 bg-muted/40 p-2 rounded">
+          <div className="font-semibold text-muted-foreground uppercase tracking-wide text-[10px]">
+            {t("origin") || "Origem"}
+          </div>
+          <div className="flex flex-wrap gap-1">
+            {meta.campaign_id && (
+              <Badge variant="secondary" className="text-[10px] font-mono">
+                {t("campaign") || "Campanha"}: {meta.campaign_id}
+              </Badge>
+            )}
+            {meta.adset_id && (
+              <Badge variant="secondary" className="text-[10px] font-mono">
+                {t("adset") || "Conjunto"}: {meta.adset_id}
+              </Badge>
+            )}
+            {meta.ad_id && (
+              <Badge variant="secondary" className="text-[10px] font-mono">
+                {t("ad") || "Anúncio"}: {meta.ad_id}
+              </Badge>
+            )}
+            {meta.form_id && (
+              <Badge variant="secondary" className="text-[10px] font-mono">
+                {t("form") || "Form"}: {meta.form_id}
+              </Badge>
+            )}
+            {meta.is_organic === true && (
+              <Badge className="text-[10px] bg-emerald-600 hover:bg-emerald-700">
+                {t("organic") || "Orgânico"}
+              </Badge>
+            )}
+            {meta.is_organic === false && (
+              <Badge className="text-[10px] bg-blue-600 hover:bg-blue-700">
+                {t("paid") || "Pago"}
+              </Badge>
+            )}
+          </div>
+          {meta.created_time && (
+            <p className="text-muted-foreground text-[10px]">
+              {t("submittedAt") || "Enviado em"}: {formatMetaDate(meta.created_time)}
+            </p>
+          )}
+          {leadgenId && (
+            <a
+              href={`https://www.facebook.com/ads/manager/lead_center/leads/${leadgenId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline text-[10px] inline-block"
+            >
+              {t("viewOnMeta") || "Ver no Meta Ads Manager →"}
+            </a>
+          )}
+        </div>
+      )}
+
+      {/* Bloco Respostas do formulário */}
+      {formFields.length > 0 && (
+        <div className="text-xs space-y-1">
+          <div className="font-semibold text-muted-foreground uppercase tracking-wide text-[10px]">
+            {t("formResponses") || "Respostas do formulário"}
+          </div>
+          <div className="space-y-0.5">
+            {formFields.map(([key, value]) => {
+              const displayValue = value === null || value === undefined
+                ? "—"
+                : typeof value === "object"
+                ? JSON.stringify(value)
+                : String(value)
+              return (
+                <div key={key} className="grid grid-cols-[minmax(80px,auto)_1fr] gap-2 text-[11px]">
+                  <span className="text-muted-foreground">{humanize(key)}:</span>
+                  <span className="font-medium break-all">{displayValue}</span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Debug: dados brutos (colapsado) — útil quando algo desconhecido chega */}
+      {(formData._fetch_pending || formData.meta_raw) && (
+        <details className="text-[10px]">
+          <summary className="cursor-pointer text-muted-foreground">
+            {t("rawPayload") || "Payload bruto"}
+          </summary>
+          <pre className="mt-1 p-2 bg-muted rounded overflow-x-auto max-h-32">
+            {JSON.stringify(formData, null, 2)}
+          </pre>
+        </details>
+      )}
+    </div>
   )
 }
 
