@@ -150,6 +150,62 @@ export interface FollowUpWithDetails extends FollowUp {
 
 export type ProposalStatus = 'pending' | 'accepted' | 'rejected' | 'counter_proposal' | 'expired'
 
+// ---------------------------------------------------------------------------
+// Módulo Agenda
+// ---------------------------------------------------------------------------
+
+export type CalendarEventStatus = 'scheduled' | 'completed' | 'cancelled'
+
+export interface CalendarEvent {
+  id: number
+  user_id: number
+  title: string
+  description?: string | null
+  location?: string | null
+  start_at: string | Date
+  end_at?: string | Date | null
+  all_day: boolean
+  color?: string | null
+  client_id?: number | null
+  deal_id?: number | null
+  product_id?: number | null
+  status: CalendarEventStatus
+  created_at?: Date
+  updated_at?: Date
+}
+
+export interface CalendarEventWithDetails extends CalendarEvent {
+  user_name?: string          // dono do evento (via JOIN users)
+  client_name?: string | null
+  deal_client?: string | null // deal.client (nome no negócio)
+  product_name?: string | null
+}
+
+/**
+ * Item unificado da agenda — pode ser calendar_event (manual) ou follow-up
+ * em aberto. Serve pra endpoint /api/agenda que devolve tudo agregado.
+ */
+export type AgendaItemKind = 'event' | 'followup'
+
+export interface AgendaItem {
+  kind: AgendaItemKind
+  id: number                    // id na tabela de origem (calendar_events ou follow_ups)
+  user_id: number
+  user_name?: string | null
+  title: string
+  description?: string | null
+  start_at: string              // ISO string
+  end_at?: string | null
+  all_day: boolean
+  color?: string | null
+  status: string                // scheduled/completed/cancelled (event) ou completed=false (followup)
+  // Contexto adicional (varia por kind)
+  client_name?: string | null
+  deal_client?: string | null
+  product_name?: string | null
+  followup_next_action?: string | null  // só quando kind='followup'
+}
+
 export interface Proposal {
   id: number
   deal_id: number
