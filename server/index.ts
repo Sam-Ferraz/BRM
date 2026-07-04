@@ -20,7 +20,8 @@ import {
   LeadSourceRepository,
   LeadRepository,
   SaleRepository,
-  CalendarEventRepository
+  CalendarEventRepository,
+  GoogleCalendarRepository
 } from './repositories/index.js'
 
 // Import services
@@ -38,7 +39,8 @@ import {
   ChatService,
   LeadService,
   SaleService,
-  CalendarEventService
+  CalendarEventService,
+  GoogleCalendarService
 } from './services/index.js'
 import { StubWhatsAppProvider } from './services/whatsapp-provider.js'
 import { BaileysWhatsAppProvider } from './services/baileys-whatsapp-provider.js'
@@ -60,6 +62,7 @@ import { createLeadRoutes } from './routes/lead-routes.js'
 import { createSaleRoutes } from './routes/sale-routes.js'
 import { createWhatsAppWebhookRoutes } from './routes/whatsapp-webhook-routes.js'
 import { createCalendarRoutes } from './routes/calendar-routes.js'
+import { createGoogleCalendarRoutes } from './routes/google-calendar-routes.js'
 
 dotenv.config()
 
@@ -119,6 +122,7 @@ const leadSourceRepository = new LeadSourceRepository()
 const leadRepository = new LeadRepository()
 const saleRepository = new SaleRepository()
 const calendarEventRepository = new CalendarEventRepository()
+const googleCalendarRepository = new GoogleCalendarRepository()
 
 // Initialize services with dependency injection
 const authService = new AuthService(userRepository)
@@ -146,7 +150,8 @@ const proposalService = new ProposalService(proposalRepository, dealRepository)
 // e disparar auto-criação de Sale quando uma proposta vira 'accepted'.
 const saleService = new SaleService(saleRepository, proposalRepository, dealRepository, productRepository)
 proposalService.setSaleService(saleService)
-const calendarEventService = new CalendarEventService(calendarEventRepository)
+const googleCalendarService = new GoogleCalendarService(googleCalendarRepository)
+const calendarEventService = new CalendarEventService(calendarEventRepository, googleCalendarService)
 
 // Provider de WhatsApp:
 //   WHATSAPP_PROVIDER=stub      → não conversa de verdade (útil para CI / dev offline)
@@ -214,6 +219,7 @@ app.use('/api/chat', createChatRoutes(chatService))
 app.use('/api/leads', createLeadRoutes(leadService, leadSourceRepository))
 app.use('/api/sales', createSaleRoutes(saleService))
 app.use('/api/calendar', createCalendarRoutes(calendarEventService))
+app.use('/api/google-calendar', createGoogleCalendarRoutes(googleCalendarService))
 // Webhook público do WhatsApp Cloud API (Meta chama esse endpoint).
 // Sem autenticação — segurança via validação X-Hub-Signature-256 com
 // app_secret cadastrado por usuário.

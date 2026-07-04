@@ -185,11 +185,11 @@ export interface CalendarEventWithDetails extends CalendarEvent {
  * Item unificado da agenda — pode ser calendar_event (manual) ou follow-up
  * em aberto. Serve pra endpoint /api/agenda que devolve tudo agregado.
  */
-export type AgendaItemKind = 'event' | 'followup'
+export type AgendaItemKind = 'event' | 'followup' | 'google'
 
 export interface AgendaItem {
   kind: AgendaItemKind
-  id: number                    // id na tabela de origem (calendar_events ou follow_ups)
+  id: number | string           // id numérico nas tabelas locais; string no Google (event id da API)
   user_id: number
   user_name?: string | null
   title: string
@@ -204,6 +204,31 @@ export interface AgendaItem {
   deal_client?: string | null
   product_name?: string | null
   followup_next_action?: string | null  // só quando kind='followup'
+  location?: string | null              // usado no kind='google'
+  html_link?: string | null             // link pro evento no Google Calendar (kind='google')
+}
+
+// -----------------------------------------------------------------------------
+// Integração Google Calendar (unidirecional Google → BRM)
+// -----------------------------------------------------------------------------
+
+export interface GoogleCalendarConnection {
+  id: number
+  user_id: number
+  connected_email: string
+  access_token: string
+  refresh_token: string
+  token_expires_at: string
+  scope?: string | null
+  last_sync_at?: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface GoogleCalendarStatus {
+  connected: boolean
+  email?: string
+  last_sync_at?: string | null
 }
 
 export interface Proposal {

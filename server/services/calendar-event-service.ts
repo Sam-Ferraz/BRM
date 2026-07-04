@@ -1,4 +1,5 @@
 import { CalendarEventRepository } from '../repositories/index.js'
+import { GoogleCalendarService } from './google-calendar-service.js'
 import { CalendarEvent, CalendarEventWithDetails, CalendarEventStatus, AgendaItem, ApiResponse } from '../types/index.js'
 
 /**
@@ -13,9 +14,11 @@ import { CalendarEvent, CalendarEventWithDetails, CalendarEventStatus, AgendaIte
  */
 export class CalendarEventService {
   private repo: CalendarEventRepository
+  private googleService?: GoogleCalendarService
 
-  constructor(repo: CalendarEventRepository) {
+  constructor(repo: CalendarEventRepository, googleService?: GoogleCalendarService) {
     this.repo = repo
+    this.googleService = googleService
   }
 
   async list(filters: {
@@ -80,11 +83,37 @@ export class CalendarEventService {
   }
 
   /**
-   * Agenda unificada: eventos + follow-ups em aberto, ambos com status
-   * agendado, dentro do range de datas.
+   * Agenda unificada: eventos + follow-ups em aberto + eventos do Google
+   * Calendar (se o usuário estiver conectado), tudo dentro do range de datas.
+   *
+   * Google Calendar só é consultado quando `filters.userId` é definido
+   * (usuário individual). Modo "ver time" (userId=undefined) NÃO agrega
+   * Google — cada corretor tem sua própria conta Google conectada e não faz
+   * sentido misturar tudo num agregado do gestor.
    */
   async getAgenda(filters: { userId?: number; from?: string; to?: string }): Promise<ApiResponse<AgendaItem[]>> {
     const items = await this.repo.getAgenda(filters)
+
+    if (this.googleService && filters.userId && filters.from && filters.to) {
+      try {
+        const from = new Date(filters.from)
+        const to = new Date(filters.to)
+        // Estende o `to` pra incluir o dia inteiro (endOfDay do último dia)
+        to.setHours(23, 59, 59, 999)
+        const googleItems = await this.googleService.listEventsAsAgendaItems(
+          filters.userId,
+          from,
+          to
+        )
+        items.push(...googleItems)
+        // Reordena por start_at pra manter a lista cronológica
+        items.sort((a, b) => a.start_at.localeCompare(b.start_at))
+      } catch (err) {
+        // Falha na integração Google não deve derrubar a agenda — loga e segue
+        console.error('[getAgenda] Falha ao buscar eventos do Google:', err)
+      }
+    }
+
     return { data: items, total: items.length }
   }
 }
