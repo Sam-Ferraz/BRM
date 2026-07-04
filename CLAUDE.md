@@ -143,6 +143,38 @@ Para uso apenas em ambiente local. Variáveis também disponíveis no `.env` com
 
 ---
 
+## Integração Google Calendar
+
+Sincronização **unidirecional** Google Calendar → BRM. Cada corretor conecta a
+própria conta Google via OAuth 2.0 dentro de `/settings`. Eventos do calendário
+`primary` aparecem misturados aos compromissos manuais e follow-ups na Agenda,
+identificados por um badge azul "G" (read-only — clique abre no Google).
+
+**Env vars obrigatórias no backend (`.env`)**:
+```env
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+GOOGLE_REDIRECT_URI=https://test.brm.tec.br/api/google-calendar/callback
+```
+
+**Setup no Google Cloud Console (1x, por conta do dono da plataforma):**
+1. Criar projeto em https://console.cloud.google.com/
+2. Habilitar "Google Calendar API"
+3. Configurar consent screen (External, adicionar escopo `.../auth/calendar.readonly`)
+4. Credentials → "Create OAuth client ID" → Web application
+5. Authorized redirect URIs: adicionar `<host>/api/google-calendar/callback` pra
+   staging (test.brm.tec.br), prod (brm.tec.br) e localhost:3001 se testar local
+6. Copiar Client ID / Secret pro `.env` de cada ambiente
+
+**Escopo utilizado**: `calendar.readonly + openid + email` (só leitura + descobrir
+o email da conta conectada).
+
+**State CSRF**: JWT assinado com `JWT_SECRET`, expira em 10min. Sem passar por essa
+verificação no callback, o request é rejeitado — impede ataques onde alguém força
+outra conta pra ficar conectada.
+
+---
+
 ## Repositório GitHub
 
 - **URL**: https://github.com/Sam-Ferraz/BRM

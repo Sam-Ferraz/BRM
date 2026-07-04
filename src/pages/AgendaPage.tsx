@@ -119,14 +119,27 @@ export default function AgendaPage() {
   }
 
   const handleEditEvent = (item: AgendaItem) => {
-    if (item.kind !== "event") {
+    if (item.kind === "google") {
+      // Evento vindo do Google Calendar é read-only. Abre no próprio Google
+      // se tiver htmlLink (tem em quase todos os eventos).
+      if (item.html_link) {
+        window.open(item.html_link, "_blank", "noopener,noreferrer")
+      } else {
+        toast({
+          title: t("info") || "Info",
+          description: "Este evento vem do Google Calendar (somente leitura).",
+        })
+      }
+      return
+    }
+    if (item.kind === "followup") {
       toast({
         title: t("info") || "Info",
         description: "Follow-ups só podem ser editados no módulo Follow-ups",
       })
       return
     }
-    setEditingId(item.id)
+    setEditingId(typeof item.id === "number" ? item.id : null)
     setFormInitialDate(null)
     setIsFormOpen(true)
   }
@@ -245,13 +258,15 @@ export default function AgendaPage() {
 
 function itemBadgeVariant(item: AgendaItem): "default" | "secondary" | "outline" {
   if (item.kind === "followup") return "secondary"
+  if (item.kind === "google") return "outline"
   return "default"
 }
 
 function ItemCard({ item, onEdit }: { item: AgendaItem; onEdit: (i: AgendaItem) => void }) {
   const start = parseISO(item.start_at)
   const timeLabel = item.all_day ? "Dia todo" : format(start, "HH:mm")
-  const context = item.client_name || item.deal_client || item.product_name
+  const context = item.client_name || item.deal_client || item.product_name || item.location
+  const isGoogle = item.kind === "google"
   return (
     <button
       onClick={() => onEdit(item)}
@@ -259,7 +274,18 @@ function ItemCard({ item, onEdit }: { item: AgendaItem; onEdit: (i: AgendaItem) 
       style={item.color ? { borderLeftColor: item.color, borderLeftWidth: 3 } : undefined}
     >
       <div className="flex items-center justify-between gap-2">
-        <span className="font-medium truncate">{item.title}</span>
+        <div className="flex items-center gap-1 min-w-0 flex-1">
+          {isGoogle && (
+            <span
+              className="text-[9px] font-semibold px-1 rounded shrink-0"
+              style={{ backgroundColor: "#4285F4", color: "white" }}
+              title="Evento sincronizado do Google Calendar (somente leitura)"
+            >
+              G
+            </span>
+          )}
+          <span className="font-medium truncate">{item.title}</span>
+        </div>
         <Badge variant={itemBadgeVariant(item)} className="text-[10px] shrink-0">
           {timeLabel}
         </Badge>

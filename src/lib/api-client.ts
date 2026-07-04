@@ -192,11 +192,11 @@ export interface CalendarEventWithDetails extends CalendarEvent {
   product_name?: string | null
 }
 
-export type AgendaItemKind = 'event' | 'followup'
+export type AgendaItemKind = 'event' | 'followup' | 'google'
 
 export interface AgendaItem {
   kind: AgendaItemKind
-  id: number
+  id: number | string
   user_id: number
   user_name?: string | null
   title: string
@@ -210,6 +210,14 @@ export interface AgendaItem {
   deal_client?: string | null
   product_name?: string | null
   followup_next_action?: string | null
+  location?: string | null
+  html_link?: string | null
+}
+
+export interface GoogleCalendarStatus {
+  connected: boolean
+  email?: string
+  last_sync_at?: string | null
 }
 
 export interface SalesAgenda {
@@ -973,6 +981,19 @@ export const api = {
     },
     deleteEvent: async (id: number): Promise<{ success: boolean }> => {
       return apiClient.delete<{ success: boolean }>(`/calendar/events/${id}`)
+    },
+  },
+
+  // Google Calendar — integração unidirecional Google → BRM (read-only)
+  googleCalendar: {
+    getStatus: async (): Promise<{ data: GoogleCalendarStatus }> => {
+      return apiClient.get<{ data: GoogleCalendarStatus }>('/google-calendar/status')
+    },
+    getAuthUrl: async (): Promise<{ data: { url: string } }> => {
+      return apiClient.get<{ data: { url: string } }>('/google-calendar/auth-url')
+    },
+    disconnect: async (): Promise<{ success: boolean }> => {
+      return apiClient.delete<{ success: boolean }>('/google-calendar/disconnect')
     },
   },
 
