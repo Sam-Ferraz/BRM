@@ -39,7 +39,7 @@ export class DashboardService {
 
   async getDashboardStats(userId: number): Promise<DashboardStats> {
     const [
-      totalDeals,
+      activeDealsCount,
       totalClients,
       totalProducts,
       totalAppointments,
@@ -52,7 +52,10 @@ export class DashboardService {
       totalShowcaseProducts,
       totalSales,
     ] = await Promise.all([
-      this.dealRepository.getCount(userId),
+      // Card "Negócios" reflete tudo que está em jogo: deals ativos (todos
+      // exceto descartados) + leads em aberto (status='novo' aguardando
+      // triagem). Independe da origem — engloba manuais e vindos de integração.
+      this.dealRepository.getActiveCount(userId),
       this.clientRepository.getCount(),
       this.productRepository.getCount(),
       // Inclui atendimentos manuais E os auto-criados pelo ChatService a partir
@@ -74,7 +77,8 @@ export class DashboardService {
     ])
 
     return {
-      totalDeals,
+      // Total exibido no card = deals ativos + leads em triagem
+      totalDeals: activeDealsCount + (leadCounts.novo || 0),
       totalClients,
       totalProducts,
       totalAppointments,

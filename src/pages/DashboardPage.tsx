@@ -330,7 +330,7 @@ export default function DashboardPage() {
               {([
                 { path: '/agenda',      label: t('agenda'),      icon: CalendarDays,   bg: 'bg-sky-100',     iconColor: 'text-sky-600',      value: '' },
                 { path: '/appointments',label: t('services'),    icon: HeadphonesIcon, bg: 'bg-purple-100',  iconColor: 'text-purple-600',   value: stats.totalAppointments },
-                { path: '/deals',       label: t('deals'),       icon: Briefcase,      bg: 'bg-blue-100',    iconColor: 'text-blue-600',     value: stats.totalDeals },
+                { path: '/deals',       label: t('deals'),       icon: Briefcase,      bg: 'bg-blue-100',    iconColor: 'text-blue-600',     value: stats.totalDeals, valueTitle: 'Negócios ativos (todos exceto descartados) + leads em triagem' },
                 { path: '/proposals',   label: t('proposals'),   icon: FileSignature,  bg: 'bg-rose-100',    iconColor: 'text-rose-600',     value: stats.totalProposals },
                 { path: '/sales',       label: t('sales'),       icon: Key,            bg: 'bg-emerald-100', iconColor: 'text-emerald-600',  value: stats.totalSales },
                 { path: '/chat',        label: t('chat'),        icon: MessageCircle,  bg: 'bg-green-100',   iconColor: 'text-green-600',    value: stats.pendingChatAndCalls,  valueTitle: t('pendingChatAndCallsTooltip') },

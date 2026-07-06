@@ -183,6 +183,29 @@ export class DealRepository extends BaseRepository {
     }
   }
 
+  /**
+   * Conta deals ATIVOS — todos exceto os descartados (4 variantes de discarded_*).
+   * Vendidos entram (o negócio existe, tá finalizado com sucesso), só descartes
+   * saem por serem terminal-negativo.
+   */
+  async getActiveCount(userId?: number): Promise<number> {
+    const client = await this.getClient()
+    try {
+      let query = `SELECT COUNT(*) as count FROM deals WHERE status NOT LIKE 'discarded_%'`
+      const params: any[] = []
+
+      if (userId) {
+        query += ' AND user_id = $1'
+        params.push(userId)
+      }
+
+      const result = await client.query(query, params)
+      return parseInt(result.rows[0].count)
+    } finally {
+      this.releaseClient(client)
+    }
+  }
+
   async findWithoutOpenFollowUps(userId?: number): Promise<Deal[]> {
     const client = await this.getClient()
     try {
