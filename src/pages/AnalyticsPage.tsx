@@ -420,18 +420,31 @@ export default function AnalyticsPage() {
                         <stop offset="100%" stopColor="#8d834a" stopOpacity={0.85} />
                       </linearGradient>
                     </defs>
-                    {/* Legenda customizada: mostra so 2 categorias (Atendimentos
-                        e Apresentacoes) usando as cores dos tons ESCUROS (respondidos)
-                        como representantes. */}
+                    {/* Legenda customizada via content: mostra so 2 categorias
+                        (Atendimentos e Apresentacoes). O payload prop nao surtiu
+                        efeito com esta versao do recharts, entao renderizo o HTML
+                        direto com content. */}
                     <Legend
                       verticalAlign="bottom"
                       height={36}
-                      iconType="circle"
-                      wrapperStyle={{ paddingTop: 8, fontSize: 13 }}
-                      payload={[
-                        { value: 'Atendimentos',  type: 'circle', color: '#0c343d', id: 'atd' },
-                        { value: 'Apresentações', type: 'circle', color: '#3d340c', id: 'apr' },
-                      ]}
+                      content={() => (
+                        <div className="flex gap-6 justify-center items-center pt-3 text-sm">
+                          <span className="flex items-center gap-2">
+                            <span
+                              className="w-3 h-3 rounded-full inline-block"
+                              style={{ backgroundColor: '#0c343d' }}
+                            />
+                            <span className="font-medium text-foreground">Atendimentos</span>
+                          </span>
+                          <span className="flex items-center gap-2">
+                            <span
+                              className="w-3 h-3 rounded-full inline-block"
+                              style={{ backgroundColor: '#3d340c' }}
+                            />
+                            <span className="font-medium text-foreground">Apresentações</span>
+                          </span>
+                        </div>
+                      )}
                     />
                     <CartesianGrid
                       strokeDasharray="3 3"
