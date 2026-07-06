@@ -260,7 +260,7 @@ const resources = {
       dealStatus_visit_foreseen_mild: 'Agendamento Morno',
       dealStatus_visit_foreseen_cold: 'Agendamento Frio',
       dealStatus_visit_done_warm: 'Apresentação Quente',
-      dealStatus_visit_done_mild: 'Apresentação Morna',
+      dealStatus_visit_done_mild: 'Apresentação Morno',
       dealStatus_visit_done_cold: 'Apresentação Fria',
       dealStatus_proposal: 'Proposta',
       dealStatus_sold: 'Vendido',

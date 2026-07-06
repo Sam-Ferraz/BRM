@@ -690,8 +690,8 @@ function LastProposalsCard({ proposals }: { proposals: ProposalWithDetails[] }) 
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-base font-semibold flex items-center gap-2">
-          <div className="w-1.5 h-6 bg-rose-500 rounded-full" />
-          Últimas propostas
+          <div className="w-1.5 h-6 bg-primary rounded-full" />
+          Propostas
           <span className="text-xs text-muted-foreground font-normal ml-1">
             ({proposals.length})
           </span>
@@ -741,7 +741,7 @@ function LastProposalsCard({ proposals }: { proposals: ProposalWithDetails[] }) 
 
 function presentationTempBadge(status: string): { label: string; className: string } {
   if (status.endsWith("_warm")) return { label: "Quente", className: "bg-red-100 text-red-800 border-red-200" }
-  if (status.endsWith("_mild")) return { label: "Morna", className: "bg-amber-100 text-amber-800 border-amber-200" }
+  if (status.endsWith("_mild")) return { label: "Morno", className: "bg-amber-100 text-amber-800 border-amber-200" }
   if (status.endsWith("_cold")) return { label: "Fria", className: "bg-blue-100 text-blue-800 border-blue-200" }
   return { label: "—", className: "bg-slate-100 text-slate-800" }
 }
@@ -751,8 +751,8 @@ function LastPresentationsCard({ presentations }: { presentations: Deal[] }) {
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-base font-semibold flex items-center gap-2">
-          <div className="w-1.5 h-6 bg-orange-500 rounded-full" />
-          Últimas apresentações
+          <div className="w-1.5 h-6 bg-primary rounded-full" />
+          Últimas Apresentações
           <span className="text-xs text-muted-foreground font-normal ml-1">
             ({presentations.length})
           </span>

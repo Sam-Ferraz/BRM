@@ -41,15 +41,19 @@ const DISCARDED_ORDER: string[] = [
  * Proposal = indigo; Sold = emerald. Discarded = slate (used in side cards).
  */
 const STAGE_COLOR: Record<string, string> = {
-  service_warm: '#ef4444',          // red-500
-  service_mild: '#f59e0b',          // amber-500
-  service_cold: '#0ea5e9',          // sky-500
-  visit_foreseen_warm: '#dc2626',   // red-600
-  visit_foreseen_mild: '#d97706',   // amber-600
-  visit_foreseen_cold: '#0284c7',   // sky-600
-  visit_done_warm: '#b91c1c',       // red-700
-  visit_done_mild: '#b45309',       // amber-700
-  visit_done_cold: '#0369a1',       // sky-700
+  // Paleta monocromatica da marca: 3 tons de #0c343d pra Quente/Morno/Frio.
+  // Todas as fases com temperatura compartilham essa escala pra criar
+  // um visual coeso e institucional em vez de cores primarias saturadas.
+  service_warm: '#0c343d',          // primary (base)
+  service_mild: '#2a5766',          // clareado
+  service_cold: '#567b87',          // ainda mais claro
+  visit_foreseen_warm: '#0c343d',
+  visit_foreseen_mild: '#2a5766',
+  visit_foreseen_cold: '#567b87',
+  visit_done_warm: '#0c343d',
+  visit_done_mild: '#2a5766',
+  visit_done_cold: '#567b87',
+  // Estagios finais mantidos com cor propria pra destaque visual do desfecho
   proposal: '#6366f1',              // indigo-500
   sold: '#10b981',                  // emerald-500
 }
