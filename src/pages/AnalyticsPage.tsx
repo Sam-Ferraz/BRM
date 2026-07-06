@@ -26,6 +26,51 @@ const formatAppointmentAnalytics = (analytics: AppointmentAnalytics[], t: any) =
   }))
 }
 
+/**
+ * Combina TUDO num único dataset com 4 séries por dia:
+ *   - Atendimentos respondidos    (soma de chat+call+in_person answered)
+ *   - Atendimentos não respondidos
+ *   - Apresentações respondidas   (visit answered)
+ *   - Apresentações não respondidas
+ *
+ * "Apresentação" no contexto do BRM = visita presencial ao imóvel
+ * (appointment type='visit'). Os demais tipos (chat, call, in_person)
+ * são "atendimentos" pré-visita.
+ */
+const formatCombinedAnalytics = (byType: AppointmentAnalyticsByType, t: any) => {
+  // Coleta todas as datas de todos os tipos e agrega
+  const map = new Map<string, {
+    atendResp: number; atendNao: number;
+    apresResp: number; apresNao: number;
+  }>()
+
+  for (const [type, series] of Object.entries(byType || {})) {
+    for (const item of series || []) {
+      const cur = map.get(item.date) ?? { atendResp: 0, atendNao: 0, apresResp: 0, apresNao: 0 }
+      const answered = parseInt(item.answered) || 0
+      const notAnswered = parseInt(item.not_answered) || 0
+      if (type === 'visit') {
+        cur.apresResp += answered
+        cur.apresNao += notAnswered
+      } else {
+        cur.atendResp += answered
+        cur.atendNao += notAnswered
+      }
+      map.set(item.date, cur)
+    }
+  }
+
+  return Array.from(map.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, v]) => ({
+      date: formatDateForChart(date, t),
+      'Atendimentos respondidos': v.atendResp,
+      'Atendimentos não respondidos': v.atendNao,
+      'Apresentações respondidas': v.apresResp,
+      'Apresentações não respondidas': v.apresNao,
+    }))
+}
+
 // Generate header colors for appointment types (for the type indicator)
 const getTypeHeaderColor = (index: number) => {
   const colors = [
@@ -325,42 +370,46 @@ export default function AnalyticsPage() {
             </Card>
           </div>
 
-            {/* Main Appointments Analytics Chart */}
+            {/* Main Chart: Atendimento e Apresentações — 4 séries combinadas */}
             <Card className="w-full bg-gradient-to-br from-slate-50 to-white dark:from-slate-900/50 dark:to-slate-800/50 border-slate-200 dark:border-slate-700 dark:backdrop-blur-sm dark:bg-slate-900/80">
               <CardHeader className="pb-4 px-3 sm:px-6">
                 <CardTitle className="text-xl font-semibold text-foreground flex items-center gap-3">
                   <div className="w-2 h-8 bg-gradient-to-b from-blue-500 to-purple-600 dark:from-blue-400 dark:to-purple-400 rounded-full"></div>
-                  {t('appointmentsInPeriod')}
+                  Atendimento e Apresentações
                 </CardTitle>
               </CardHeader>
             <CardContent className="pt-0 px-3 sm:px-6">
               <ChartContainer
                 config={{
-                  [t('answered')]: {
-                    label: t('answered'),
-                    color: "hsl(142, 76%, 36%)",
-                  },
-                  [t('notAnswered')]: {
-                    label: t('notAnswered'),
-                    color: "hsl(0, 84%, 60%)",
-                  },
+                  'Atendimentos respondidos':      { label: 'Atendimentos respondidos',      color: 'hsl(142, 76%, 36%)' },
+                  'Atendimentos não respondidos':  { label: 'Atendimentos não respondidos',  color: 'hsl(0, 84%, 60%)' },
+                  'Apresentações respondidas':    { label: 'Apresentações respondidas',    color: 'hsl(190, 67%, 24%)' },
+                  'Apresentações não respondidas': { label: 'Apresentações não respondidas', color: 'hsl(30, 90%, 55%)' },
                 }}
-                className="h-[125px]"
+                className="h-[220px]"
               >
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
-                    data={formatAppointmentAnalytics(appointmentAnalytics, t)}
+                    data={formatCombinedAnalytics(appointmentAnalyticsByType, t)}
                     margin={{ top: 20, right: 5, left: 0, bottom: 20 }}
                     barCategoryGap="15%"
                   >
                     <defs>
-                      <linearGradient id="answeredGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="hsl(var(--chart-2))" stopOpacity={1} />
-                        <stop offset="100%" stopColor="hsl(var(--chart-2))" stopOpacity={0.8} />
+                      <linearGradient id="atendRespGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="hsl(142, 76%, 36%)" stopOpacity={1} />
+                        <stop offset="100%" stopColor="hsl(142, 76%, 36%)" stopOpacity={0.8} />
                       </linearGradient>
-                      <linearGradient id="notAnsweredGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="hsl(var(--destructive))" stopOpacity={1} />
-                        <stop offset="100%" stopColor="hsl(var(--destructive))" stopOpacity={0.8} />
+                      <linearGradient id="atendNaoGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="hsl(0, 84%, 60%)" stopOpacity={1} />
+                        <stop offset="100%" stopColor="hsl(0, 84%, 60%)" stopOpacity={0.8} />
+                      </linearGradient>
+                      <linearGradient id="apresRespGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="hsl(190, 67%, 24%)" stopOpacity={1} />
+                        <stop offset="100%" stopColor="hsl(190, 67%, 24%)" stopOpacity={0.8} />
+                      </linearGradient>
+                      <linearGradient id="apresNaoGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="hsl(30, 90%, 55%)" stopOpacity={1} />
+                        <stop offset="100%" stopColor="hsl(30, 90%, 55%)" stopOpacity={0.8} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid
@@ -438,34 +487,62 @@ export default function AnalyticsPage() {
                       }}
                     />
                     <Bar
-                      dataKey={t('answered')}
-                      fill="url(#answeredGradient)"
-                      radius={[6, 6, 0, 0]}
-                      stroke="hsl(var(--chart-2))"
+                      dataKey="Atendimentos respondidos"
+                      fill="url(#atendRespGradient)"
+                      radius={[4, 4, 0, 0]}
+                      stroke="hsl(142, 76%, 36%)"
                       strokeWidth={1}
-                      style={{ cursor: 'pointer' }}
-                      maxBarSize={20}
+                      maxBarSize={16}
                     >
                       <LabelList
-                        dataKey={t('answered')}
+                        dataKey="Atendimentos respondidos"
                         position="top"
-                        style={{ fontSize: 10, fill: 'hsl(var(--chart-2))', fontWeight: 600 }}
+                        style={{ fontSize: 10, fill: 'hsl(142, 76%, 36%)', fontWeight: 600 }}
                         formatter={(v: any) => (v && v > 0 ? v : '')}
                       />
                     </Bar>
                     <Bar
-                      dataKey={t('notAnswered')}
-                      fill="url(#notAnsweredGradient)"
-                      radius={[6, 6, 0, 0]}
-                      stroke="hsl(var(--destructive))"
+                      dataKey="Atendimentos não respondidos"
+                      fill="url(#atendNaoGradient)"
+                      radius={[4, 4, 0, 0]}
+                      stroke="hsl(0, 84%, 60%)"
                       strokeWidth={1}
-                      style={{ cursor: 'pointer' }}
-                      maxBarSize={20}
+                      maxBarSize={16}
                     >
                       <LabelList
-                        dataKey={t('notAnswered')}
+                        dataKey="Atendimentos não respondidos"
                         position="top"
-                        style={{ fontSize: 10, fill: 'hsl(var(--destructive))', fontWeight: 600 }}
+                        style={{ fontSize: 10, fill: 'hsl(0, 84%, 60%)', fontWeight: 600 }}
+                        formatter={(v: any) => (v && v > 0 ? v : '')}
+                      />
+                    </Bar>
+                    <Bar
+                      dataKey="Apresentações respondidas"
+                      fill="url(#apresRespGradient)"
+                      radius={[4, 4, 0, 0]}
+                      stroke="hsl(190, 67%, 24%)"
+                      strokeWidth={1}
+                      maxBarSize={16}
+                    >
+                      <LabelList
+                        dataKey="Apresentações respondidas"
+                        position="top"
+                        style={{ fontSize: 10, fill: 'hsl(190, 67%, 24%)', fontWeight: 600 }}
+                        formatter={(v: any) => (v && v > 0 ? v : '')}
+                      />
+                    </Bar>
+                    <Bar
+                      dataKey="Apresentações não respondidas"
+                      fill="url(#apresNaoGradient)"
+                      radius={[4, 4, 0, 0]}
+                      stroke="hsl(30, 90%, 55%)"
+                      strokeWidth={1}
+                      maxBarSize={16}
+                    >
+                      <LabelList
+                        dataKey="Apresentações não respondidas"
+                        position="top"
+                        style={{ fontSize: 10, fill: 'hsl(30, 90%, 55%)', fontWeight: 600 }}
                         formatter={(v: any) => (v && v > 0 ? v : '')}
                       />
                     </Bar>
@@ -475,168 +552,8 @@ export default function AnalyticsPage() {
             </CardContent>
           </Card>
 
-            {/* Dynamic Appointment Type Charts */}
-            {Object.keys(appointmentAnalyticsByType).length > 0 && (
-              <Card className="max-w-[50%] bg-gradient-to-br from-slate-50 to-white dark:from-slate-900/50 dark:to-slate-800/50 border-slate-200 dark:border-slate-700 dark:backdrop-blur-sm dark:bg-slate-900/80">
-                <CardHeader className="pb-4 px-3 sm:px-6">
-                  <CardTitle className="text-xl font-semibold text-foreground flex items-center gap-3">
-                    <div className="w-2 h-8 bg-gradient-to-b from-indigo-500 to-purple-600 dark:from-indigo-400 dark:to-purple-400 rounded-full"></div>
-                    {t('visits')}
-                  </CardTitle>
-                </CardHeader>
-              <CardContent className="pt-0 px-3 sm:px-6">
-                <div>
-                  {Object.entries(appointmentAnalyticsByType)
-                    .filter(([appointmentType]) => appointmentType === 'visit')
-                    .map(([appointmentType, data], index) => {
-                    const headerColor = getTypeHeaderColor(index)
-                    const answerColors = getAnswerColors()
-                    const formattedData = formatAppointmentAnalytics(data, t)
-
-                    return (
-                      <div key={appointmentType} className="space-y-4">
-                        <ChartContainer
-                          config={{
-                            [t('answered')]: {
-                              label: t('answered'),
-                              color: answerColors.answered.primary,
-                            },
-                            [t('notAnswered')]: {
-                              label: t('notAnswered'),
-                              color: answerColors.notAnswered.primary,
-                            },
-                          }}
-                          className="h-[125px]"
-                        >
-                          <ResponsiveContainer width="100%" height="100%">
-                            <BarChart
-                              data={formattedData}
-                              margin={{ top: 10, right: 10, left: 0, bottom: 10 }}
-                              barCategoryGap="10%"
-                            >
-                              <defs>
-                                <linearGradient id={`answeredGradient${index}`} x1="0" y1="0" x2="0" y2="1">
-                                  <stop offset="0%" stopColor={answerColors.answered.primary} stopOpacity={1} />
-                                  <stop offset="100%" stopColor={answerColors.answered.secondary} stopOpacity={0.8} />
-                                </linearGradient>
-                                <linearGradient id={`notAnsweredGradient${index}`} x1="0" y1="0" x2="0" y2="1">
-                                  <stop offset="0%" stopColor={answerColors.notAnswered.primary} stopOpacity={1} />
-                                  <stop offset="100%" stopColor={answerColors.notAnswered.secondary} stopOpacity={0.8} />
-                                </linearGradient>
-                              </defs>
-                              <CartesianGrid
-                                strokeDasharray="3 3"
-                                stroke="hsl(var(--border))"
-                                strokeOpacity={0.6}
-                                horizontal={true}
-                                vertical={false}
-                              />
-                              <XAxis
-                                dataKey="date"
-                                axisLine={false}
-                                tickLine={false}
-                                tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
-                                tickMargin={6}
-                              />
-                              <YAxis
-                                axisLine={false}
-                                tickLine={false}
-                                tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
-                                tickMargin={2}
-                                width={25}
-                                domain={[0, 10]}
-                                allowDataOverflow
-                              />
-                              <Tooltip
-                                cursor={{ fill: 'rgba(59, 130, 246, 0.1)' }}
-                                content={({ active, payload, label }) => {
-                                  if (active && payload && payload.length) {
-                                    const total = payload.reduce((sum, entry) => sum + (Number(entry.value) || 0), 0)
-                                    const answeredEntry = payload.find(entry => entry.dataKey === t('answered'))
-                                    const responseRate = total > 0 ? ((Number(answeredEntry?.value) || 0) / total * 100).toFixed(1) : '0.0'
-
-                                    return (
-                                      <div className="bg-card border border-border rounded-lg shadow-xl p-3 min-w-[180px]">
-                                        <div className="flex items-center gap-2 mb-2 pb-1 border-b border-border">
-                                          <div
-                                            className="w-2 h-2 rounded-full"
-                                            style={{ backgroundColor: answerColors.answered.primary }}
-                                          ></div>
-                                          <p className="font-semibold text-foreground text-sm">{label}</p>
-                                        </div>
-
-                                        {payload.map((entry, idx) => (
-                                          <div key={idx} className="flex items-center justify-between gap-3 mb-1">
-                                            <div className="flex items-center gap-1">
-                                              <div
-                                                className="w-2 h-2 rounded-full"
-                                                style={{ backgroundColor: entry.color }}
-                                              ></div>
-                                              <span className="text-muted-foreground text-xs">{entry.dataKey}</span>
-                                            </div>
-                                            <div className="flex items-center gap-1">
-                                              <span className="font-bold text-foreground text-sm">{entry.value}</span>
-                                              <span className="text-xs text-muted-foreground">
-                                                ({total > 0 ? ((Number(entry.value) || 0) / total * 100).toFixed(1) : '0.0'}%)
-                                              </span>
-                                            </div>
-                                          </div>
-                                        ))}
-
-                                        <div className="mt-2 pt-1 border-t border-border">
-                                          <div className="flex items-center justify-between text-xs">
-                                            <span className="text-muted-foreground font-medium">{t('responseRate')}:</span>
-                                            <span className={`font-bold ${parseFloat(responseRate) >= 50 ? 'text-emerald-600' : 'text-amber-600'}`}>
-                                              {responseRate}%
-                                            </span>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    )
-                                  }
-                                  return null
-                                }}
-                              />
-                              <Bar
-                                dataKey={t('answered')}
-                                fill={`url(#answeredGradient${index})`}
-                                radius={[3, 3, 0, 0]}
-                                stroke={answerColors.answered.secondary}
-                                strokeWidth={1}
-                                maxBarSize={20}
-                              >
-                                <LabelList
-                                  dataKey={t('answered')}
-                                  position="top"
-                                  style={{ fontSize: 9, fill: answerColors.answered.primary, fontWeight: 600 }}
-                                  formatter={(v: any) => (v && v > 0 ? v : '')}
-                                />
-                              </Bar>
-                              <Bar
-                                dataKey={t('notAnswered')}
-                                fill={`url(#notAnsweredGradient${index})`}
-                                radius={[3, 3, 0, 0]}
-                                stroke={answerColors.notAnswered.secondary}
-                                strokeWidth={1}
-                                maxBarSize={20}
-                              >
-                                <LabelList
-                                  dataKey={t('notAnswered')}
-                                  position="top"
-                                  style={{ fontSize: 9, fill: answerColors.notAnswered.primary, fontWeight: 600 }}
-                                  formatter={(v: any) => (v && v > 0 ? v : '')}
-                                />
-                              </Bar>
-                            </BarChart>
-                          </ResponsiveContainer>
-                        </ChartContainer>
-                      </div>
-                    )
-                  })}
-                </div>
-                </CardContent>
-              </Card>
-            )}
+            {/* Card "Visitas" removido — Apresentações agora sao 2 series
+                dentro do grafico principal "Atendimento e Apresentacoes" acima. */}
           </section>
         </div>
       </div>
