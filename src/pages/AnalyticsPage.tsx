@@ -7,7 +7,7 @@ import { ArrowLeft, BarChart3, TrendingUp } from "lucide-react"
 import { ChartContainer } from "@/components/ui/chart-simple"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, LabelList } from "recharts"
 import { useAuth } from "@/hooks/use-auth"
-import { api, AppointmentAnalytics, AppointmentAnalyticsByType, DealFunnelStage } from "@/lib/api-client"
+import { api, AppointmentAnalytics, AppointmentAnalyticsByType, DealFunnelStage, ProposalWithDetails, Deal } from "@/lib/api-client"
 import { formatDateForChart } from "@/lib/datetime"
 import { useTimezone } from "@/hooks/use-timezone"
 import { DealFunnelChart } from "@/components/charts/deal-funnel-chart"
@@ -86,6 +86,9 @@ export default function AnalyticsPage() {
   const [appointmentAnalytics, setAppointmentAnalytics] = useState<AppointmentAnalytics[]>([])
   const [appointmentAnalyticsByType, setAppointmentAnalyticsByType] = useState<AppointmentAnalyticsByType>({})
   const [funnelData, setFunnelData] = useState<DealFunnelStage[]>([])
+  // Ao lado do funil: 15 últimas propostas + 15 últimas apresentações (deals visit_done_*)
+  const [lastProposals, setLastProposals] = useState<ProposalWithDetails[]>([])
+  const [lastPresentations, setLastPresentations] = useState<Deal[]>([])
   const [initialLoading, setInitialLoading] = useState(true)
   const [refetching, setRefetching] = useState(false)
 
@@ -111,7 +114,7 @@ export default function AnalyticsPage() {
     const fetchData = async () => {
       try {
         setRefetching(true)
-        const [analytics, analyticsByType, funnel] = await Promise.all([
+        const [analytics, analyticsByType, funnel, proposals, deals] = await Promise.all([
           // Atendimentos: sempre passa from/to (mantém comportamento atual)
           appointmentsFromIso && appointmentsToIso
             ? api.appointments.getAnalyticsByDateRange({
@@ -135,16 +138,27 @@ export default function AnalyticsPage() {
               ? { from: funnelFromIso, to: funnelToIso, timezone, dateField: 'origin_date' }
               : { timezone, dateField: 'origin_date' }
           ),
+          // Últimas 15 propostas (ordenadas por data desc)
+          api.proposals.getAll({ sortBy: 'proposal_date', sortOrder: 'desc' }),
+          // Todos os deals — filtramos as apresentações (visit_done_*) no frontend
+          // porque o backend só aceita status único e queremos os 3 variantes
+          api.deals.getAll({ sortBy: 'updated_at', sortOrder: 'desc' }),
         ])
 
         setAppointmentAnalytics(analytics.data)
         setAppointmentAnalyticsByType(analyticsByType.data)
         setFunnelData(funnel.data)
+        setLastProposals((proposals.data ?? []).slice(0, 15))
+        setLastPresentations(
+          (deals.data ?? []).filter((d) => d.status?.startsWith('visit_done_')).slice(0, 15)
+        )
       } catch (error) {
         console.error('Error fetching analytics data:', error)
         setAppointmentAnalytics([])
         setAppointmentAnalyticsByType({})
         setFunnelData([])
+        setLastProposals([])
+        setLastPresentations([])
       } finally {
         setRefetching(false)
         setInitialLoading(false)
@@ -227,17 +241,26 @@ export default function AnalyticsPage() {
               <DateRangeFilter value={funnelDateRange} onChange={setFunnelDateRange} />
             </div>
 
-            <Card className="max-w-3xl mx-auto bg-gradient-to-br from-slate-50 to-white dark:from-slate-900/50 dark:to-slate-800/50 border-slate-200 dark:border-slate-700 dark:backdrop-blur-sm dark:bg-slate-900/80">
-              <CardHeader className="pb-4 px-3 sm:px-6">
-                <CardTitle className="text-xl font-semibold text-foreground flex items-center gap-3">
-                  <div className="w-2 h-8 bg-gradient-to-b from-amber-500 to-rose-500 dark:from-amber-400 dark:to-rose-400 rounded-full"></div>
-                  {t('dealFunnel')}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0 px-3 sm:px-6">
-                <DealFunnelChart data={funnelData} />
-              </CardContent>
-            </Card>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              {/* Coluna esquerda 2/3: Funil */}
+              <Card className="lg:col-span-2 bg-gradient-to-br from-slate-50 to-white dark:from-slate-900/50 dark:to-slate-800/50 border-slate-200 dark:border-slate-700 dark:backdrop-blur-sm dark:bg-slate-900/80">
+                <CardHeader className="pb-4 px-3 sm:px-6">
+                  <CardTitle className="text-xl font-semibold text-foreground flex items-center gap-3">
+                    <div className="w-2 h-8 bg-gradient-to-b from-amber-500 to-rose-500 dark:from-amber-400 dark:to-rose-400 rounded-full"></div>
+                    {t('dealFunnel')}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0 px-3 sm:px-6">
+                  <DealFunnelChart data={funnelData} />
+                </CardContent>
+              </Card>
+
+              {/* Coluna direita 1/3: Propostas + Últimas apresentações */}
+              <div className="lg:col-span-1 space-y-4">
+                <LastProposalsCard proposals={lastProposals} />
+                <LastPresentationsCard presentations={lastPresentations} />
+              </div>
+            </div>
           </section>
 
           {/* === APPOINTMENTS SECTION === */}
@@ -618,5 +641,155 @@ export default function AnalyticsPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+// ===========================================================================
+// LastProposalsCard — mostra as 15 últimas propostas ao lado do funil
+// ===========================================================================
+
+function formatCurrencyBRL(v: string | number | null | undefined): string {
+  if (v === null || v === undefined || v === "") return "—"
+  const n = typeof v === "string" ? parseFloat(v) : v
+  if (isNaN(n)) return "—"
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+    maximumFractionDigits: 0,
+  }).format(n)
+}
+
+function formatShortDate(d: string | null | undefined): string {
+  if (!d) return "—"
+  try {
+    const date = new Date(d)
+    if (isNaN(date.getTime())) return "—"
+    return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit" }).format(date)
+  } catch {
+    return "—"
+  }
+}
+
+function proposalStatusBadge(status: string): { label: string; className: string } {
+  switch (status) {
+    case "accepted":
+      return { label: "Aceita", className: "bg-emerald-100 text-emerald-800 border-emerald-200" }
+    case "rejected":
+      return { label: "Rejeitada", className: "bg-red-100 text-red-800 border-red-200" }
+    case "counter_proposal":
+      return { label: "Contra", className: "bg-amber-100 text-amber-800 border-amber-200" }
+    case "expired":
+      return { label: "Expirada", className: "bg-slate-100 text-slate-800 border-slate-200" }
+    default:
+      return { label: "Pendente", className: "bg-blue-100 text-blue-800 border-blue-200" }
+  }
+}
+
+function LastProposalsCard({ proposals }: { proposals: ProposalWithDetails[] }) {
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base font-semibold flex items-center gap-2">
+          <div className="w-1.5 h-6 bg-rose-500 rounded-full" />
+          Últimas propostas
+          <span className="text-xs text-muted-foreground font-normal ml-1">
+            ({proposals.length})
+          </span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="p-0">
+        {proposals.length === 0 ? (
+          <p className="text-xs text-muted-foreground text-center py-6 px-4">
+            Nenhuma proposta ainda.
+          </p>
+        ) : (
+          <div className="divide-y divide-border max-h-[500px] overflow-y-auto">
+            {proposals.map((p) => {
+              const badge = proposalStatusBadge(p.status)
+              return (
+                <div key={p.id} className="px-3 py-2 hover:bg-accent/50 transition-colors text-xs">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium truncate flex-1">
+                      {p.deal_client || `Deal #${p.deal_id}`}
+                    </span>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded border ${badge.className}`}>
+                      {badge.label}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-muted-foreground mt-0.5">
+                    <span className="truncate">{p.deal_property_name || "—"}</span>
+                    <span className="font-medium text-foreground shrink-0 ml-2">
+                      {formatCurrencyBRL(p.proposal_value)}
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-muted-foreground mt-0.5">
+                    {formatShortDate(p.proposal_date)}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+// ===========================================================================
+// LastPresentationsCard — 15 deals mais recentes com status visit_done_*
+// ===========================================================================
+
+function presentationTempBadge(status: string): { label: string; className: string } {
+  if (status.endsWith("_warm")) return { label: "Quente", className: "bg-red-100 text-red-800 border-red-200" }
+  if (status.endsWith("_mild")) return { label: "Morna", className: "bg-amber-100 text-amber-800 border-amber-200" }
+  if (status.endsWith("_cold")) return { label: "Fria", className: "bg-blue-100 text-blue-800 border-blue-200" }
+  return { label: "—", className: "bg-slate-100 text-slate-800" }
+}
+
+function LastPresentationsCard({ presentations }: { presentations: Deal[] }) {
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base font-semibold flex items-center gap-2">
+          <div className="w-1.5 h-6 bg-orange-500 rounded-full" />
+          Últimas apresentações
+          <span className="text-xs text-muted-foreground font-normal ml-1">
+            ({presentations.length})
+          </span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="p-0">
+        {presentations.length === 0 ? (
+          <p className="text-xs text-muted-foreground text-center py-6 px-4">
+            Nenhuma apresentação ainda.
+          </p>
+        ) : (
+          <div className="divide-y divide-border max-h-[500px] overflow-y-auto">
+            {presentations.map((d) => {
+              const badge = presentationTempBadge(d.status)
+              return (
+                <div key={d.id} className="px-3 py-2 hover:bg-accent/50 transition-colors text-xs">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium truncate flex-1">{d.client}</span>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded border ${badge.className}`}>
+                      {badge.label}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-muted-foreground mt-0.5">
+                    <span className="truncate">{d.property_name || "—"}</span>
+                    <span className="font-medium text-foreground shrink-0 ml-2">
+                      {formatCurrencyBRL(d.gsv)}
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-muted-foreground mt-0.5">
+                    {formatShortDate(d.origin_date)}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   )
 }
