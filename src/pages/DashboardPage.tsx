@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Users, Briefcase, Package, HeadphonesIcon, Settings, LogOut, FileText, Plus, BarChart3, ClipboardCheck, FileSignature, Store, MessageCircle, Inbox, Key, CalendarDays } from "lucide-react"
+import { Users, Briefcase, Package, HeadphonesIcon, Settings, LogOut, FileText, Plus, BarChart3, ClipboardCheck, FileSignature, Store, MessageCircle, Inbox, Key, CalendarDays, UserCog } from "lucide-react"
 import { ChartContainer } from "@/components/ui/chart-simple"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from "recharts"
 import { useAuth } from "@/hooks/use-auth"
@@ -340,7 +340,8 @@ export default function DashboardPage() {
                 { path: '/clients',     label: t('clients'),     icon: Users,          bg: 'bg-green-100',   iconColor: 'text-green-600',    value: stats.totalClients,         position: 'md:col-start-1' },
                 { path: '/follow-ups',  label: t('followUps'),   icon: ClipboardCheck, bg: 'bg-teal-100',    iconColor: 'text-teal-600',     value: stats.totalFollowUps },
                 { path: '/sales-agenda',label: t('salesAgenda'), icon: Store,          bg: 'bg-indigo-100',  iconColor: 'text-indigo-600',   value: stats.totalShowcaseProducts, position: 'md:col-start-1' },
-              ] as const).map((c) => {
+                { path: '/users',       label: 'Usuários',       icon: UserCog,        bg: 'bg-slate-100',   iconColor: 'text-slate-700',    value: '',                         adminOnly: true },
+              ] as const).filter((c) => !('adminOnly' in c && c.adminOnly) || user?.role === 'admin').map((c) => {
                 const Icon = c.icon
                 const positionClass = 'position' in c && c.position ? c.position : ''
                 return (

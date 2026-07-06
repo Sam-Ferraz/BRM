@@ -32,19 +32,29 @@ export class AuthService {
   async loginUser(email: string, password: string): Promise<AuthResult> {
     try {
       const user = await this.userRepository.findByEmail(email)
-      
+
       if (!user) {
         return { success: false, error: 'Credenciais inválidas' }
       }
-      
+
+      // Usuário desativado não loga (soft delete via módulo Usuários)
+      if (user.active === false) {
+        return { success: false, error: 'Usuário desativado. Contate o administrador.' }
+      }
+
       const isPasswordValid = await bcrypt.compare(password, user.password_hash!)
-      
+
       if (!isPasswordValid) {
         return { success: false, error: 'Credenciais inválidas' }
       }
-      
+
+      // Atualiza last_login_at (fire and forget — não bloqueia o login se falhar)
+      this.userRepository.touchLastLogin(user.id).catch((err) => {
+        console.error('[auth] touchLastLogin failed:', err)
+      })
+
       const token = this.generateToken(user.id, user.email, user.role)
-      
+
       return {
         success: true,
         token,
@@ -52,7 +62,8 @@ export class AuthService {
           id: user.id,
           name: user.name,
           email: user.email,
-          role: user.role
+          role: user.role,
+          active: user.active ?? true,
         }
       }
     } catch (error) {
@@ -61,20 +72,28 @@ export class AuthService {
     }
   }
 
-  async registerUser(name: string, email: string, password: string, role: string = 'user'): Promise<AuthResult> {
+  async registerUser(name: string, email: string, password: string, role: string = 'broker'): Promise<AuthResult> {
     try {
       // Check if user already exists
       const existingUser = await this.userRepository.findByEmail(email)
-      
+
       if (existingUser) {
         return { success: false, error: 'Usuário já existe' }
       }
-      
+
       // Hash password
       const passwordHash = await bcrypt.hash(password, 10)
-      
+
+      // Normaliza role — só aceita os 3 valores oficiais; qualquer outro vira 'broker'
+      const safeRole = (role === 'admin' || role === 'manager' || role === 'broker') ? role : 'broker'
+
       // Create new user
-      const user = await this.userRepository.create(name, email, passwordHash, role)
+      const user = await this.userRepository.create({
+        name,
+        email,
+        passwordHash,
+        role: safeRole as any,
+      })
       const token = this.generateToken(user.id, user.email, user.role)
       
       return {
@@ -84,7 +103,8 @@ export class AuthService {
           id: user.id,
           name: user.name,
           email: user.email,
-          role: user.role
+          role: user.role,
+          active: user.active ?? true,
         }
       }
     } catch (error) {

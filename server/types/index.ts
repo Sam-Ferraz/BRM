@@ -1,11 +1,21 @@
+/**
+ * 3 tipos de acesso:
+ *   • admin   — total (gerencia usuários e integrações Meta/Google)
+ *   • manager — vê o time inteiro (leads/deals/atendimentos/agenda de todos os corretores)
+ *   • broker  — corretor, só os próprios dados
+ */
+export type UserRole = 'admin' | 'manager' | 'broker'
+
 export interface User {
   id: number
   name: string
   email: string
-  role: string
+  role: UserRole
+  active: boolean
+  last_login_at?: string | null
   password_hash?: string
-  created_at?: Date
-  updated_at?: Date
+  created_at?: string
+  updated_at?: string
 }
 
 export interface Deal {

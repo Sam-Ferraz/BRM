@@ -79,6 +79,19 @@ class ApiClient {
 export const apiClient = new ApiClient()
 
 // API endpoints with type safety
+// Usuário exposto pela API de gestão (nunca inclui password_hash)
+export type UserRole = 'admin' | 'manager' | 'broker'
+export interface UserManaged {
+  id: number
+  name: string
+  email: string
+  role: UserRole
+  active: boolean
+  last_login_at?: string | null
+  created_at?: string
+  updated_at?: string
+}
+
 export interface Deal {
   id: number
   client: string
@@ -981,6 +994,35 @@ export const api = {
     },
     deleteEvent: async (id: number): Promise<{ success: boolean }> => {
       return apiClient.delete<{ success: boolean }>(`/calendar/events/${id}`)
+    },
+  },
+
+  // Gestão de usuários (admin only)
+  users: {
+    list: async (): Promise<{ data: UserManaged[] }> => {
+      return apiClient.get<{ data: UserManaged[] }>('/users')
+    },
+    getById: async (id: number): Promise<{ data: UserManaged }> => {
+      return apiClient.get<{ data: UserManaged }>(`/users/${id}`)
+    },
+    create: async (input: {
+      name: string
+      email: string
+      password: string
+      role: UserRole
+    }): Promise<{ data: UserManaged }> => {
+      return apiClient.post<{ data: UserManaged }>('/users', input)
+    },
+    update: async (
+      id: number,
+      input: Partial<{ name: string; email: string; role: UserRole; active: boolean }>
+    ): Promise<{ data: UserManaged }> => {
+      return apiClient.put<{ data: UserManaged }>(`/users/${id}`, input)
+    },
+    resetPassword: async (id: number, newPassword: string): Promise<{ success: boolean }> => {
+      return apiClient.post<{ success: boolean }>(`/users/${id}/reset-password`, {
+        new_password: newPassword,
+      })
     },
   },
 
