@@ -761,14 +761,14 @@ function LeadSourceDialog({ open, onOpenChange, source }: LeadSourceDialogProps)
                 </p>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="form_id">Form ID (opcional)</Label>
-                <Input
-                  id="form_id"
-                  value={formId}
-                  onChange={(e) => setFormId(e.target.value)}
-                  placeholder="filtra pra receber leads só desse formulário"
-                />
+              <div className="bg-blue-50 border border-blue-200 rounded p-3 text-xs text-blue-800">
+                <p className="font-medium mb-1">Recepção de leads</p>
+                <p>
+                  Esta integração recebe leads de <strong>TODOS os formulários</strong> ativos
+                  da Página <code className="bg-white px-1 rounded">{pageId || "(configure Page ID)"}</code>.
+                  Se o cliente criar novos formulários no Ads Manager, os leads deles caem aqui automaticamente
+                  — sem precisar mexer no BRM.
+                </p>
               </div>
             </>
           )}
