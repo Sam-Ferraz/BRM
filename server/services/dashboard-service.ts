@@ -77,8 +77,10 @@ export class DashboardService {
     ])
 
     return {
-      // Total exibido no card = deals ativos + leads em triagem
-      totalDeals: activeDealsCount + (leadCounts.novo || 0),
+      // Card "Negócios" = deals ativos (todos exceto descartados).
+      // NÃO soma leads em triagem — esses aparecem em card separado
+      // ("Leads") ate serem aceitos e virarem deals.
+      totalDeals: activeDealsCount,
       totalClients,
       totalProducts,
       totalAppointments,
