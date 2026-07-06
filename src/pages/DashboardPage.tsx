@@ -513,11 +513,12 @@ function formatCurrencyBRLShort(v: number | null | undefined): string {
 
 function RecentProductCard({ product }: { product: Product }) {
   const highlights = buildProductHighlights(product)
-  // Foto de capa: thumbnail explícita > primeira imagem > fallback placeholder
-  const coverUrl =
-    product.thumbnail?.image_url ||
-    product.images?.[0]?.image_url ||
-    '/placeholder.svg'
+  // Foto de capa: usa o endpoint /api/products/:id/thumbnail que serve
+  // a imagem marcada como is_thumbnail. Só quando has_thumbnail=true (garantia
+  // do backend). Sem thumbnail, mostra placeholder.
+  const coverUrl = product.has_thumbnail
+    ? api.products.getThumbnailUrl(product.id, product.updated_at)
+    : '/placeholder.svg'
 
   return (
     <Link
