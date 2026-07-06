@@ -12,6 +12,7 @@ import {
   ApiResponse,
 } from '../types/index.js'
 import { getProviderForType, NormalizedLead } from './lead-provider.js'
+import { MetaTokenService } from './meta-token-service.js'
 
 /**
  * LeadService — orquestra a captação e o ciclo de vida do Lead.
@@ -195,10 +196,11 @@ export class LeadService {
     config?: Record<string, any> | null
   }): Promise<LeadSource> {
     if (!input.name?.trim()) throw new Error('name is required')
+    const finalConfig = await this.maybeUpgradeMetaToken(input.type, input.config ?? null)
     return this.leadSourceRepository.create({
       name: input.name.trim(),
       type: input.type,
-      config: input.config ?? null,
+      config: finalConfig,
     })
   }
 
@@ -206,9 +208,74 @@ export class LeadService {
     id: number,
     input: Partial<{ name: string; config: Record<string, any> | null; status: 'active' | 'paused' }>
   ): Promise<LeadSource> {
+    // Faz upgrade do token Meta antes de gravar (só quando config foi enviada)
+    if (input.config !== undefined) {
+      const existing = await this.leadSourceRepository.findById(id)
+      const type = existing?.type
+      if (type === 'meta') {
+        input = { ...input, config: await this.maybeUpgradeMetaToken(type, input.config ?? null) }
+      }
+    }
     const updated = await this.leadSourceRepository.update(id, input)
     if (!updated) throw new Error('LeadSource not found')
     return updated
+  }
+
+  /**
+   * Se a source é Meta e a config traz um page_access_token, tenta transformar
+   * em Page Token permanente (que não expira). Faz nada se:
+   *   - não é Meta
+   *   - não veio token
+   *   - já é token permanente (upgrade detecta e devolve como está)
+   * Em caso de erro (token inválido, page_id ausente, etc.), joga exceção
+   * com mensagem clara pra UI mostrar pro usuário.
+   */
+  private async maybeUpgradeMetaToken(
+    type: string,
+    config: Record<string, any> | null
+  ): Promise<Record<string, any> | null> {
+    if (type !== 'meta' || !config) return config
+    const inputToken = (config.page_access_token as string) || (config.access_token as string)
+    if (!inputToken) return config
+
+    const pageId = (config.page_id as string) || ''
+    const appId = process.env.META_APP_ID || (config.app_id as string) || ''
+    const appSecret = (config.app_secret as string) || process.env.META_APP_SECRET || ''
+
+    if (!appId) {
+      throw new Error(
+        'Pra transformar o token em permanente preciso do App ID. Preenche o campo "App ID" na integração.'
+      )
+    }
+    if (!appSecret) {
+      throw new Error(
+        'Pra transformar o token em permanente preciso do App Secret. Preenche o campo "App Secret" na integração.'
+      )
+    }
+    if (!pageId) {
+      throw new Error(
+        'Pra transformar o token em permanente preciso do Page ID. Preenche o campo "Page ID" na integração (é o ID numérico da Página do Facebook).'
+      )
+    }
+
+    const svc = new MetaTokenService()
+    const result = await svc.upgradeToPermanentPageToken({
+      inputToken,
+      pageId,
+      appId,
+      appSecret,
+    })
+
+    return {
+      ...config,
+      page_access_token: result.token,
+      // Marca metadata pra UI mostrar status
+      _token_meta: {
+        upgraded: result.upgraded,
+        page_name: result.page_name,
+        upgraded_at: new Date().toISOString(),
+      },
+    }
   }
 
   async deleteSource(id: number): Promise<{ success: boolean }> {

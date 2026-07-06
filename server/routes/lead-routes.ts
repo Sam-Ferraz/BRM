@@ -157,7 +157,9 @@ export function createLeadRoutes(
         return
       }
       console.error('Error creating lead source:', error)
-      res.status(500).json({ error: 'Internal server error' })
+      // Propaga a mensagem do serviço (ex.: erro de upgrade de token) pro cliente
+      const msg = error instanceof Error ? error.message : 'Internal server error'
+      res.status(400).json({ error: msg })
     }
   })
 
@@ -178,7 +180,8 @@ export function createLeadRoutes(
         return
       }
       console.error('Error updating lead source:', error)
-      res.status(500).json({ error: 'Internal server error' })
+      const msg = error instanceof Error ? error.message : 'Internal server error'
+      res.status(400).json({ error: msg })
     }
   })
 

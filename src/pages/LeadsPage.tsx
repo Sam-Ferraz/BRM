@@ -531,7 +531,9 @@ function LeadSourceDialog({ open, onOpenChange, source }: LeadSourceDialogProps)
   const [formId, setFormId] = useState("")
   const [appSecret, setAppSecret] = useState("")
   const [pageId, setPageId] = useState("")
+  const [appId, setAppId] = useState("")
   const [saving, setSaving] = useState(false)
+  const [tokenMeta, setTokenMeta] = useState<{ upgraded?: boolean; page_name?: string; upgraded_at?: string } | null>(null)
 
   useEffect(() => {
     if (open) {
@@ -543,6 +545,8 @@ function LeadSourceDialog({ open, onOpenChange, source }: LeadSourceDialogProps)
         setFormId(source.config?.form_id ?? "")
         setAppSecret(source.config?.app_secret ?? "")
         setPageId(source.config?.page_id ?? "")
+        setAppId(source.config?.app_id ?? "")
+        setTokenMeta(source.config?._token_meta ?? null)
       } else {
         setName("")
         setType("meta")
@@ -551,6 +555,8 @@ function LeadSourceDialog({ open, onOpenChange, source }: LeadSourceDialogProps)
         setFormId("")
         setAppSecret("")
         setPageId("")
+        setAppId("")
+        setTokenMeta(null)
       }
     }
   }, [open, source])
@@ -567,6 +573,7 @@ function LeadSourceDialog({ open, onOpenChange, source }: LeadSourceDialogProps)
           form_id: formId.trim() || null,
           app_secret: appSecret.trim() || null,
           page_id: pageId.trim() || null,
+          app_id: appId.trim() || null,
         }
       : null
     try {
@@ -579,9 +586,14 @@ function LeadSourceDialog({ open, onOpenChange, source }: LeadSourceDialogProps)
       toast({ title: t("success"), description: t("leadSourceSavedSuccess") })
       onOpenChange(false)
     } catch (error) {
+      // Extrai mensagem específica do backend quando disponível (ex.: erro de upgrade de token)
+      const msg =
+        error instanceof Error
+          ? error.message
+          : (typeof error === "string" ? error : t("leadSourceSaveError"))
       toast({
         title: t("error"),
-        description: t("leadSourceSaveError"),
+        description: msg,
         variant: "destructive",
       })
     } finally {
@@ -662,7 +674,7 @@ function LeadSourceDialog({ open, onOpenChange, source }: LeadSourceDialogProps)
 
               <div className="space-y-2">
                 <Label htmlFor="page_access_token">
-                  Page Access Token <span className="text-red-500">*</span>
+                  Access Token <span className="text-red-500">*</span>
                 </Label>
                 <Textarea
                   id="page_access_token"
@@ -673,9 +685,42 @@ function LeadSourceDialog({ open, onOpenChange, source }: LeadSourceDialogProps)
                   className="font-mono text-xs"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Token de longa duração da Page (Graph API Explorer ou System User).
-                  Necessário pro BRM fazer fetch dos detalhes do lead via Graph API.
+                  Cole aqui o <strong>User Access Token</strong> gerado no Graph API Explorer.
+                  O BRM converte automaticamente pra Page Token permanente (que nunca expira).
+                  Se colar um Page Token temporário, o BRM avisa e pede pra colar o User Token.
                 </p>
+                {tokenMeta?.upgraded && (
+                  <div className="text-xs bg-emerald-50 border border-emerald-200 text-emerald-800 rounded px-2 py-1.5">
+                    ✓ Token da Page <strong>{tokenMeta.page_name}</strong> permanente
+                    (não expira). Atualizado em{" "}
+                    {tokenMeta.upgraded_at ? new Date(tokenMeta.upgraded_at).toLocaleString("pt-BR") : "—"}.
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-2">
+                  <Label htmlFor="app_id">
+                    App ID <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="app_id"
+                    value={appId}
+                    onChange={(e) => setAppId(e.target.value)}
+                    placeholder="1023122900334406"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="page_id">
+                    Page ID <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="page_id"
+                    value={pageId}
+                    onChange={(e) => setPageId(e.target.value)}
+                    placeholder="121870564181434"
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -693,25 +738,14 @@ function LeadSourceDialog({ open, onOpenChange, source }: LeadSourceDialogProps)
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-2">
-                  <Label htmlFor="page_id">Page ID</Label>
-                  <Input
-                    id="page_id"
-                    value={pageId}
-                    onChange={(e) => setPageId(e.target.value)}
-                    placeholder="opcional"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="form_id">Form ID</Label>
-                  <Input
-                    id="form_id"
-                    value={formId}
-                    onChange={(e) => setFormId(e.target.value)}
-                    placeholder="opcional"
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="form_id">Form ID (opcional)</Label>
+                <Input
+                  id="form_id"
+                  value={formId}
+                  onChange={(e) => setFormId(e.target.value)}
+                  placeholder="filtra pra receber leads só desse formulário"
+                />
               </div>
             </>
           )}
