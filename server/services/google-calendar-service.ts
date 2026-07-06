@@ -16,14 +16,18 @@ import { AgendaItem, GoogleCalendarStatus } from '../types/index.js'
  * .env (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI). Cada corretor
  * autoriza com a própria conta Google.
  *
- * MVP: só calendário `primary` (o principal da conta Google conectada).
+ * Puxa eventos de TODOS os calendários que o usuário deixou visíveis (`selected: true`)
+ * no Google Calendar dele. Cada evento herda a cor do próprio calendário na exibição.
+ * Se o usuário desmarcar um calendário direto no Google, o BRM automaticamente para
+ * de puxar. Calendários de aniversário e feriados são ignorados por default (poluem).
  * Escopo: `calendar.readonly` — a plataforma NÃO cria/edita eventos no Google.
  */
 
-const GOOGLE_AUTH_URL     = 'https://accounts.google.com/o/oauth2/v2/auth'
-const GOOGLE_TOKEN_URL    = 'https://oauth2.googleapis.com/token'
-const GOOGLE_USERINFO_URL = 'https://openidconnect.googleapis.com/v1/userinfo'
-const GOOGLE_EVENTS_URL   = 'https://www.googleapis.com/calendar/v3/calendars/primary/events'
+const GOOGLE_AUTH_URL          = 'https://accounts.google.com/o/oauth2/v2/auth'
+const GOOGLE_TOKEN_URL         = 'https://oauth2.googleapis.com/token'
+const GOOGLE_USERINFO_URL      = 'https://openidconnect.googleapis.com/v1/userinfo'
+const GOOGLE_CALENDAR_LIST_URL = 'https://www.googleapis.com/calendar/v3/users/me/calendarList'
+const GOOGLE_EVENTS_BASE_URL   = 'https://www.googleapis.com/calendar/v3/calendars'
 
 const SCOPES = [
   'https://www.googleapis.com/auth/calendar.readonly',
@@ -203,10 +207,35 @@ export class GoogleCalendarService {
   }
 
   /**
-   * Lista eventos do calendário `primary` dentro do range.
+   * Busca calendarList do usuário — todos os calendários aos quais ele tem acesso.
+   * Filtra pra manter só os "úteis": visíveis (selected=true), não deletados,
+   * excluindo aniversários/feriados que geralmente só poluem a agenda de trabalho.
+   */
+  private async listVisibleCalendars(token: string): Promise<GoogleCalendarListEntry[]> {
+    const res = await fetch(GOOGLE_CALENDAR_LIST_URL, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (!res.ok) {
+      const text = await res.text()
+      throw new Error(`Google calendarList falhou: ${res.status} ${text}`)
+    }
+    const data = (await res.json()) as { items?: GoogleCalendarListEntry[] }
+    return (data.items || []).filter((cal) => {
+      if (cal.deleted) return false
+      if (cal.selected === false) return false                   // usuário escondeu no Google
+      if (cal.id?.endsWith('#holiday@group.v.calendar.google.com')) return false // feriados
+      if (cal.id?.includes('addressbook#contacts@group')) return false           // aniversários
+      return true
+    })
+  }
+
+  /**
+   * Lista eventos de TODOS os calendários visíveis do usuário dentro do range.
+   * Faz um fetch por calendário em paralelo (Promise.all). Se um calendário
+   * falhar, os outros ainda retornam (falha isolada por calendário, não derruba tudo).
+   *
    * Devolve no formato AgendaItem pra unificar com follow-ups + calendar_events.
-   * Retorna [] se o usuário não estiver conectado (silencioso — permite chamar
-   * do getAgenda sem quebrar quem não conectou).
+   * Retorna [] se o usuário não estiver conectado.
    */
   async listEventsAsAgendaItems(
     userId: number,
@@ -216,33 +245,59 @@ export class GoogleCalendarService {
     const token = await this.getValidAccessToken(userId)
     if (!token) return []
 
+    let calendars: GoogleCalendarListEntry[]
+    try {
+      calendars = await this.listVisibleCalendars(token)
+    } catch (err) {
+      console.error('[Google] Falha ao listar calendários:', err)
+      return []
+    }
+
     const params = new URLSearchParams({
       timeMin: from.toISOString(),
       timeMax: to.toISOString(),
-      singleEvents: 'true',      // expande recorrentes em instâncias
+      singleEvents: 'true',    // expande recorrentes em instâncias
       orderBy: 'startTime',
       maxResults: '250',
     })
 
-    const res = await fetch(`${GOOGLE_EVENTS_URL}?${params.toString()}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-    if (!res.ok) {
-      const text = await res.text()
-      // 401 aqui é raríssimo (getValidAccessToken já cuida), mas por robustez
-      // desconecta se aconteceu — sinaliza que o refresh_token pifou.
-      if (res.status === 401) {
-        await this.repo.deleteByUserId(userId)
-      }
-      throw new Error(`Google Calendar API falhou: ${res.status} ${text}`)
-    }
+    // Busca em paralelo — 1 request por calendário
+    const results = await Promise.all(
+      calendars.map(async (cal) => {
+        const calendarId = encodeURIComponent(cal.id)
+        const url = `${GOOGLE_EVENTS_BASE_URL}/${calendarId}/events?${params.toString()}`
+        try {
+          const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+          if (!res.ok) {
+            // 401 desconecta (refresh_token pifou); outros erros só logam e seguem
+            if (res.status === 401) await this.repo.deleteByUserId(userId)
+            console.error(`[Google] events.list falhou pro calendário "${cal.summary}": ${res.status}`)
+            return [] as AgendaItem[]
+          }
+          const data = (await res.json()) as { items?: GoogleApiEvent[] }
+          return this.mapEventsToAgendaItems(data.items || [], userId, cal)
+        } catch (err) {
+          console.error(`[Google] Erro ao buscar eventos de "${cal.summary}":`, err)
+          return [] as AgendaItem[]
+        }
+      })
+    )
 
-    const data = (await res.json()) as { items?: GoogleApiEvent[] }
     await this.repo.markSynced(userId)
+    return results.flat()
+  }
 
+  private mapEventsToAgendaItems(
+    events: GoogleApiEvent[],
+    userId: number,
+    calendar: GoogleCalendarListEntry
+  ): AgendaItem[] {
     const items: AgendaItem[] = []
-    for (const ev of data.items || []) {
-      // Ignora eventos cancelados que o Google devolve pra sincronização incremental
+    // Prefere a cor que o usuário escolheu (backgroundColor); se não tiver, usa azul Google.
+    const calendarColor = calendar.backgroundColor || '#4285F4'
+    const calendarLabel = calendar.summaryOverride || calendar.summary || 'Google'
+
+    for (const ev of events) {
       if (ev.status === 'cancelled') continue
 
       const isAllDay = !!ev.start?.date && !ev.start?.dateTime
@@ -252,15 +307,18 @@ export class GoogleCalendarService {
 
       items.push({
         kind: 'google',
-        id: ev.id,
+        // Prefixa com calendarId pra não colidir entre calendários diferentes
+        id: `${calendar.id}::${ev.id}`,
         user_id: userId,
         title: ev.summary || '(sem título)',
         description: ev.description || null,
         start_at: startAt,
         end_at: endAt || null,
         all_day: isAllDay,
-        color: '#4285F4',                    // azul característico do Google
+        color: calendarColor,
         status: 'scheduled',
+        // Sobe o nome do calendário como user_name pra aparecer discretamente no card
+        user_name: calendarLabel,
         location: ev.location || null,
         html_link: ev.htmlLink || null,
       })
@@ -281,4 +339,17 @@ interface GoogleApiEvent {
   htmlLink?: string
   start?: { dateTime?: string; date?: string; timeZone?: string }
   end?:   { dateTime?: string; date?: string; timeZone?: string }
+}
+
+interface GoogleCalendarListEntry {
+  id: string
+  summary?: string
+  summaryOverride?: string
+  description?: string
+  backgroundColor?: string
+  foregroundColor?: string
+  selected?: boolean
+  deleted?: boolean
+  accessRole?: string
+  primary?: boolean
 }
