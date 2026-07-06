@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, BarChart3, TrendingUp } from "lucide-react"
 import { ChartContainer } from "@/components/ui/chart-simple"
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, LabelList } from "recharts"
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, LabelList, Legend } from "recharts"
 import { useAuth } from "@/hooks/use-auth"
 import { api, AppointmentAnalytics, AppointmentAnalyticsByType, DealFunnelStage, ProposalWithDetails, Deal } from "@/lib/api-client"
 import { formatDateForChart } from "@/lib/datetime"
@@ -381,37 +381,49 @@ export default function AnalyticsPage() {
             <CardContent className="pt-0 px-3 sm:px-6">
               <ChartContainer
                 config={{
-                  'Atendimentos respondidos':      { label: 'Atendimentos respondidos',      color: 'hsl(142, 76%, 36%)' },
-                  'Atendimentos não respondidos':  { label: 'Atendimentos não respondidos',  color: 'hsl(0, 84%, 60%)' },
-                  'Apresentações respondidas':    { label: 'Apresentações respondidas',    color: 'hsl(190, 67%, 24%)' },
-                  'Apresentações não respondidas': { label: 'Apresentações não respondidas', color: 'hsl(30, 90%, 55%)' },
+                  // Atendimentos = tons de AZUL (categoria "contato")
+                  //   - Respondidos: azul escuro (positivo, ação concluída)
+                  //   - Não respondidos: azul claro (menos intenso)
+                  // Apresentações = tons de LARANJA/ÂMBAR (categoria "visita presencial")
+                  //   - Respondidas: âmbar escuro (positivo)
+                  //   - Não respondidas: âmbar claro
+                  'Atendimentos respondidos':      { label: 'Atendimentos respondidos',      color: '#1e40af' },
+                  'Atendimentos não respondidos':  { label: 'Atendimentos não respondidos',  color: '#93c5fd' },
+                  'Apresentações respondidas':    { label: 'Apresentações respondidas',    color: '#c2410c' },
+                  'Apresentações não respondidas': { label: 'Apresentações não respondidas', color: '#fdba74' },
                 }}
-                className="h-[220px]"
+                className="h-[280px]"
               >
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     data={formatCombinedAnalytics(appointmentAnalyticsByType, t)}
-                    margin={{ top: 20, right: 5, left: 0, bottom: 20 }}
+                    margin={{ top: 20, right: 5, left: 0, bottom: 40 }}
                     barCategoryGap="15%"
                   >
                     <defs>
                       <linearGradient id="atendRespGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="hsl(142, 76%, 36%)" stopOpacity={1} />
-                        <stop offset="100%" stopColor="hsl(142, 76%, 36%)" stopOpacity={0.8} />
+                        <stop offset="0%" stopColor="#1e40af" stopOpacity={1} />
+                        <stop offset="100%" stopColor="#1e40af" stopOpacity={0.85} />
                       </linearGradient>
                       <linearGradient id="atendNaoGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="hsl(0, 84%, 60%)" stopOpacity={1} />
-                        <stop offset="100%" stopColor="hsl(0, 84%, 60%)" stopOpacity={0.8} />
+                        <stop offset="0%" stopColor="#93c5fd" stopOpacity={1} />
+                        <stop offset="100%" stopColor="#93c5fd" stopOpacity={0.85} />
                       </linearGradient>
                       <linearGradient id="apresRespGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="hsl(190, 67%, 24%)" stopOpacity={1} />
-                        <stop offset="100%" stopColor="hsl(190, 67%, 24%)" stopOpacity={0.8} />
+                        <stop offset="0%" stopColor="#c2410c" stopOpacity={1} />
+                        <stop offset="100%" stopColor="#c2410c" stopOpacity={0.85} />
                       </linearGradient>
                       <linearGradient id="apresNaoGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="hsl(30, 90%, 55%)" stopOpacity={1} />
-                        <stop offset="100%" stopColor="hsl(30, 90%, 55%)" stopOpacity={0.8} />
+                        <stop offset="0%" stopColor="#fdba74" stopOpacity={1} />
+                        <stop offset="100%" stopColor="#fdba74" stopOpacity={0.85} />
                       </linearGradient>
                     </defs>
+                    <Legend
+                      verticalAlign="bottom"
+                      height={36}
+                      iconType="circle"
+                      wrapperStyle={{ paddingTop: 8, fontSize: 12 }}
+                    />
                     <CartesianGrid
                       strokeDasharray="3 3"
                       stroke="hsl(var(--border))"
@@ -490,14 +502,14 @@ export default function AnalyticsPage() {
                       dataKey="Atendimentos respondidos"
                       fill="url(#atendRespGradient)"
                       radius={[4, 4, 0, 0]}
-                      stroke="hsl(142, 76%, 36%)"
+                      stroke="#1e40af"
                       strokeWidth={1}
                       maxBarSize={16}
                     >
                       <LabelList
                         dataKey="Atendimentos respondidos"
                         position="top"
-                        style={{ fontSize: 10, fill: 'hsl(142, 76%, 36%)', fontWeight: 600 }}
+                        style={{ fontSize: 10, fill: '#1e40af', fontWeight: 600 }}
                         formatter={(v: any) => (v && v > 0 ? v : '')}
                       />
                     </Bar>
@@ -505,14 +517,14 @@ export default function AnalyticsPage() {
                       dataKey="Atendimentos não respondidos"
                       fill="url(#atendNaoGradient)"
                       radius={[4, 4, 0, 0]}
-                      stroke="hsl(0, 84%, 60%)"
+                      stroke="#60a5fa"
                       strokeWidth={1}
                       maxBarSize={16}
                     >
                       <LabelList
                         dataKey="Atendimentos não respondidos"
                         position="top"
-                        style={{ fontSize: 10, fill: 'hsl(0, 84%, 60%)', fontWeight: 600 }}
+                        style={{ fontSize: 10, fill: '#2563eb', fontWeight: 600 }}
                         formatter={(v: any) => (v && v > 0 ? v : '')}
                       />
                     </Bar>
@@ -520,14 +532,14 @@ export default function AnalyticsPage() {
                       dataKey="Apresentações respondidas"
                       fill="url(#apresRespGradient)"
                       radius={[4, 4, 0, 0]}
-                      stroke="hsl(190, 67%, 24%)"
+                      stroke="#c2410c"
                       strokeWidth={1}
                       maxBarSize={16}
                     >
                       <LabelList
                         dataKey="Apresentações respondidas"
                         position="top"
-                        style={{ fontSize: 10, fill: 'hsl(190, 67%, 24%)', fontWeight: 600 }}
+                        style={{ fontSize: 10, fill: '#c2410c', fontWeight: 600 }}
                         formatter={(v: any) => (v && v > 0 ? v : '')}
                       />
                     </Bar>
@@ -535,14 +547,14 @@ export default function AnalyticsPage() {
                       dataKey="Apresentações não respondidas"
                       fill="url(#apresNaoGradient)"
                       radius={[4, 4, 0, 0]}
-                      stroke="hsl(30, 90%, 55%)"
+                      stroke="#fb923c"
                       strokeWidth={1}
                       maxBarSize={16}
                     >
                       <LabelList
                         dataKey="Apresentações não respondidas"
                         position="top"
-                        style={{ fontSize: 10, fill: 'hsl(30, 90%, 55%)', fontWeight: 600 }}
+                        style={{ fontSize: 10, fill: '#c2410c', fontWeight: 600 }}
                         formatter={(v: any) => (v && v > 0 ? v : '')}
                       />
                     </Bar>
