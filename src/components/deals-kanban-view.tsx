@@ -17,10 +17,10 @@ import type { Deal } from "@/lib/api-client"
  * DealsKanbanView — visualização em colunas dos Negócios agrupados por fase.
  *
  * 16 status → 6 colunas de fase:
- *   Atendimento (service_*) | Visita prevista (visit_foreseen_*) |
- *   Visita realizada (visit_done_*) | Proposta | Vendido | Descartado
+ *   Atendimento (service_*) | Agendamento (visit_foreseen_*) |
+ *   Apresentação (visit_done_*) | Proposta | Vendido | Descartado
  *
- * Fases com sub-temperatura (Atendimento, Visita prevista, Visita realizada)
+ * Fases com sub-temperatura (Atendimento, Agendamento, Apresentação)
  * mostram uma bolinha no card indicando frio/morno/quente. Ao arrastar entre
  * fases, tenta preservar a temperatura atual (ex: service_warm → visit_foreseen_warm).
  *
@@ -56,14 +56,14 @@ const PHASES: PhaseColumn[] = [
   },
   {
     key: "visit_foreseen",
-    label: "Visita prevista",
+    label: "Agendamento",
     statuses: ["visit_foreseen_cold", "visit_foreseen_mild", "visit_foreseen_warm"],
     hasTemperature: true,
     headerColor: "bg-amber-100 text-amber-900 border-amber-300",
   },
   {
     key: "visit_done",
-    label: "Visita realizada",
+    label: "Apresentação",
     statuses: ["visit_done_cold", "visit_done_mild", "visit_done_warm"],
     hasTemperature: true,
     headerColor: "bg-orange-100 text-orange-900 border-orange-300",

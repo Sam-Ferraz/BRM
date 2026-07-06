@@ -235,8 +235,8 @@ Campos: `id`, `client`, `value`, `status`, `date`, `description`.
 **Status (campo único — sem temperatura separada)**:
 
 - Atendimento: `service_cold`, `service_mild`, `service_warm`
-- Visita prevista: `visit_foreseen_cold`, `visit_foreseen_mild`, `visit_foreseen_warm`
-- Visita realizada: `visit_done_cold`, `visit_done_mild`, `visit_done_warm`
+- Agendamento: `visit_foreseen_cold`, `visit_foreseen_mild`, `visit_foreseen_warm` (chaves internas ainda usam "visit_foreseen" — renomear exigiria migration; UI mostra "Agendamento")
+- Apresentação: `visit_done_cold`, `visit_done_mild`, `visit_done_warm` (chaves internas ainda usam "visit_done" — renomear exigiria migration; UI mostra "Apresentação")
 - Proposta: `proposal`
 - Vendido: `sold`
 - Descartado: `discarded_no_profile`, `discarded_no_interest`, `discarded_competitor`, `discarded_error`
