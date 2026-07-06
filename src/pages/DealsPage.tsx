@@ -20,9 +20,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { ArrowLeft, Plus, Pencil, Trash2, Search, Briefcase } from "lucide-react"
+import { ArrowLeft, Plus, Pencil, Trash2, Search, Briefcase, List, LayoutGrid } from "lucide-react"
 import { api, type Deal } from "@/lib/api-client"
 import { DealForm } from "@/components/forms/deal-form"
+import { DealsKanbanView } from "@/components/deals-kanban-view"
 import { useToast } from "@/hooks/use-toast"
 import { ReactiveDateTime } from "@/components/reactive-datetime"
 
@@ -39,6 +40,15 @@ export default function DealsPage() {
 
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingDeal, setEditingDeal] = useState<Deal | undefined>()
+  // Modo de visualização: lista (tabela tradicional) ou kanban (colunas por fase)
+  // Persistido em localStorage pra manter a escolha do usuário entre sessões
+  const [viewMode, setViewMode] = useState<"list" | "kanban">(() => {
+    const stored = typeof window !== "undefined" ? localStorage.getItem("deals:viewMode") : null
+    return stored === "kanban" ? "kanban" : "list"
+  })
+  useEffect(() => {
+    localStorage.setItem("deals:viewMode", viewMode)
+  }, [viewMode])
 
   const { toast } = useToast()
 
@@ -170,6 +180,24 @@ export default function DealsPage() {
     }
   }
 
+  // Handler pra Kanban: atualiza status de um deal (drag-and-drop ou dropdown)
+  const handleStatusChange = async (dealId: number, newStatus: Deal["status"]) => {
+    // Optimistic update — reflete na UI antes de esperar o backend
+    setDeals((prev) => prev.map((d) => (d.id === dealId ? { ...d, status: newStatus } : d)))
+    try {
+      await api.deals.update(dealId, { status: newStatus })
+      toast({ title: t("success"), description: t("dealUpdatedSuccess") })
+    } catch (error) {
+      // Rollback: volta ao estado anterior recarregando do backend
+      fetchDeals()
+      toast({
+        title: t("error"),
+        description: t("dealUpdateError"),
+        variant: "destructive",
+      })
+    }
+  }
+
   const getStatusBadge = (status: Deal['status']) => {
     switch (status) {
       case "service_cold":
@@ -276,10 +304,40 @@ export default function DealsPage() {
                   ))}
                 </SelectContent>
               </Select>
+              {/* Toggle Lista/Kanban */}
+              <div className="flex gap-1 border rounded-md p-0.5 shrink-0">
+                <Button
+                  size="sm"
+                  variant={viewMode === "list" ? "default" : "ghost"}
+                  onClick={() => setViewMode("list")}
+                  className="h-8 px-2"
+                  title="Visualização em lista"
+                >
+                  <List className="w-4 h-4" />
+                </Button>
+                <Button
+                  size="sm"
+                  variant={viewMode === "kanban" ? "default" : "ghost"}
+                  onClick={() => setViewMode("kanban")}
+                  className="h-8 px-2"
+                  title="Visualização em Kanban (colunas por fase)"
+                >
+                  <LayoutGrid className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
 
             {loading ? (
               <div className="text-center py-8">{t('loadingDeals')}</div>
+            ) : viewMode === "kanban" ? (
+              <DealsKanbanView
+                deals={deals}
+                onEdit={(deal) => {
+                  setEditingDeal(deal)
+                  setIsFormOpen(true)
+                }}
+                onStatusChange={handleStatusChange}
+              />
             ) : (
               <Table>
                 <TableHeader>
