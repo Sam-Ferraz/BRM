@@ -167,7 +167,7 @@ export function DealFunnelChart({ data }: DealFunnelChartProps) {
                   textAnchor="end"
                   dominantBaseline="middle"
                   className="fill-foreground"
-                  style={{ fontSize: 18, fontWeight: 500 }}
+                  style={{ fontSize: 22, fontWeight: 600 }}
                 >
                   {stage.label}
                 </text>
@@ -180,7 +180,7 @@ export function DealFunnelChart({ data }: DealFunnelChartProps) {
                   dominantBaseline="middle"
                   fill="white"
                   style={{
-                    fontSize: isLast ? 16 : 18,
+                    fontSize: isLast ? 20 : 24,
                     fontWeight: 700,
                     paintOrder: 'stroke',
                     stroke: 'rgba(0,0,0,0.18)',
@@ -199,7 +199,7 @@ export function DealFunnelChart({ data }: DealFunnelChartProps) {
                     textAnchor="start"
                     dominantBaseline="middle"
                     className="fill-muted-foreground"
-                    style={{ fontSize: 11 }}
+                    style={{ fontSize: 15, fontWeight: 500 }}
                   >
                     {((stage.count / totalInFunnel) * 100).toFixed(1)}%
                   </text>

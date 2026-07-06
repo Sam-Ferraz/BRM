@@ -169,11 +169,7 @@ export default function AnalyticsPage() {
                   </Button>
                 </Link>
               </div>
-              <div className="flex items-center space-x-4">
-                <span className="text-sm text-muted-foreground">
-                  {t('welcome')}, {user?.name || t('user')}
-                </span>
-              </div>
+              <div className="flex items-center space-x-4"></div>
             </div>
           </div>
         </header>
@@ -208,11 +204,7 @@ export default function AnalyticsPage() {
                 </Button>
               </Link>
             </div>
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-muted-foreground">
-                {t('welcome')}, {user?.name || t('user')}
-              </span>
-            </div>
+            <div className="flex items-center space-x-4"></div>
           </div>
         </div>
       </header>
@@ -235,7 +227,7 @@ export default function AnalyticsPage() {
               <DateRangeFilter value={funnelDateRange} onChange={setFunnelDateRange} />
             </div>
 
-            <Card className="max-w-[65%] bg-gradient-to-br from-slate-50 to-white dark:from-slate-900/50 dark:to-slate-800/50 border-slate-200 dark:border-slate-700 dark:backdrop-blur-sm dark:bg-slate-900/80">
+            <Card className="max-w-3xl mx-auto bg-gradient-to-br from-slate-50 to-white dark:from-slate-900/50 dark:to-slate-800/50 border-slate-200 dark:border-slate-700 dark:backdrop-blur-sm dark:bg-slate-900/80">
               <CardHeader className="pb-4 px-3 sm:px-6">
                 <CardTitle className="text-xl font-semibold text-foreground flex items-center gap-3">
                   <div className="w-2 h-8 bg-gradient-to-b from-amber-500 to-rose-500 dark:from-amber-400 dark:to-rose-400 rounded-full"></div>
