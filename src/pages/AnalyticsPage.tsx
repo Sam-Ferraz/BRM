@@ -381,16 +381,18 @@ export default function AnalyticsPage() {
             <CardContent className="pt-0 px-3 sm:px-6">
               <ChartContainer
                 config={{
-                  // Atendimentos = tons de AZUL (categoria "contato")
-                  //   - Respondidos: azul escuro (positivo, ação concluída)
-                  //   - Não respondidos: azul claro (menos intenso)
-                  // Apresentações = tons de LARANJA/ÂMBAR (categoria "visita presencial")
-                  //   - Respondidas: âmbar escuro (positivo)
-                  //   - Não respondidas: âmbar claro
-                  'Atendimentos respondidos':      { label: 'Atendimentos respondidos',      color: '#1e40af' },
-                  'Atendimentos não respondidos':  { label: 'Atendimentos não respondidos',  color: '#93c5fd' },
-                  'Apresentações respondidas':    { label: 'Apresentações respondidas',    color: '#c2410c' },
-                  'Apresentações não respondidas': { label: 'Apresentações não respondidas', color: '#fdba74' },
+                  // Paleta com 2 tons proximos ao #0c343d (marca):
+                  //   ATENDIMENTOS  = teal escuro    #0c343d  (respondidos: base)
+                  //                   teal claro     #5a8792  (nao respondidos)
+                  //   APRESENTACOES = ambar escuro   #3d340c  (respondidas: hue shift)
+                  //                   ambar claro    #8d834a  (nao respondidas)
+                  //
+                  // Sao complementares no circulo cromatico e proximas em
+                  // luminosidade — contraste natural sem cor gritante.
+                  'Atendimentos respondidos':      { label: 'Atendimentos respondidos',      color: '#0c343d' },
+                  'Atendimentos não respondidos':  { label: 'Atendimentos não respondidos',  color: '#5a8792' },
+                  'Apresentações respondidas':    { label: 'Apresentações respondidas',    color: '#3d340c' },
+                  'Apresentações não respondidas': { label: 'Apresentações não respondidas', color: '#8d834a' },
                 }}
                 className="h-[280px]"
               >
@@ -402,27 +404,34 @@ export default function AnalyticsPage() {
                   >
                     <defs>
                       <linearGradient id="atendRespGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#1e40af" stopOpacity={1} />
-                        <stop offset="100%" stopColor="#1e40af" stopOpacity={0.85} />
+                        <stop offset="0%" stopColor="#0c343d" stopOpacity={1} />
+                        <stop offset="100%" stopColor="#0c343d" stopOpacity={0.85} />
                       </linearGradient>
                       <linearGradient id="atendNaoGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#93c5fd" stopOpacity={1} />
-                        <stop offset="100%" stopColor="#93c5fd" stopOpacity={0.85} />
+                        <stop offset="0%" stopColor="#5a8792" stopOpacity={1} />
+                        <stop offset="100%" stopColor="#5a8792" stopOpacity={0.85} />
                       </linearGradient>
                       <linearGradient id="apresRespGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#c2410c" stopOpacity={1} />
-                        <stop offset="100%" stopColor="#c2410c" stopOpacity={0.85} />
+                        <stop offset="0%" stopColor="#3d340c" stopOpacity={1} />
+                        <stop offset="100%" stopColor="#3d340c" stopOpacity={0.85} />
                       </linearGradient>
                       <linearGradient id="apresNaoGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#fdba74" stopOpacity={1} />
-                        <stop offset="100%" stopColor="#fdba74" stopOpacity={0.85} />
+                        <stop offset="0%" stopColor="#8d834a" stopOpacity={1} />
+                        <stop offset="100%" stopColor="#8d834a" stopOpacity={0.85} />
                       </linearGradient>
                     </defs>
+                    {/* Legenda customizada: mostra so 2 categorias (Atendimentos
+                        e Apresentacoes) usando as cores dos tons ESCUROS (respondidos)
+                        como representantes. */}
                     <Legend
                       verticalAlign="bottom"
                       height={36}
                       iconType="circle"
-                      wrapperStyle={{ paddingTop: 8, fontSize: 12 }}
+                      wrapperStyle={{ paddingTop: 8, fontSize: 13 }}
+                      payload={[
+                        { value: 'Atendimentos',  type: 'circle', color: '#0c343d', id: 'atd' },
+                        { value: 'Apresentações', type: 'circle', color: '#3d340c', id: 'apr' },
+                      ]}
                     />
                     <CartesianGrid
                       strokeDasharray="3 3"
@@ -502,14 +511,14 @@ export default function AnalyticsPage() {
                       dataKey="Atendimentos respondidos"
                       fill="url(#atendRespGradient)"
                       radius={[4, 4, 0, 0]}
-                      stroke="#1e40af"
+                      stroke="#0c343d"
                       strokeWidth={1}
                       maxBarSize={16}
                     >
                       <LabelList
                         dataKey="Atendimentos respondidos"
                         position="top"
-                        style={{ fontSize: 10, fill: '#1e40af', fontWeight: 600 }}
+                        style={{ fontSize: 10, fill: '#0c343d', fontWeight: 600 }}
                         formatter={(v: any) => (v && v > 0 ? v : '')}
                       />
                     </Bar>
@@ -517,14 +526,14 @@ export default function AnalyticsPage() {
                       dataKey="Atendimentos não respondidos"
                       fill="url(#atendNaoGradient)"
                       radius={[4, 4, 0, 0]}
-                      stroke="#60a5fa"
+                      stroke="#5a8792"
                       strokeWidth={1}
                       maxBarSize={16}
                     >
                       <LabelList
                         dataKey="Atendimentos não respondidos"
                         position="top"
-                        style={{ fontSize: 10, fill: '#2563eb', fontWeight: 600 }}
+                        style={{ fontSize: 10, fill: '#0c343d', fontWeight: 600 }}
                         formatter={(v: any) => (v && v > 0 ? v : '')}
                       />
                     </Bar>
@@ -532,14 +541,14 @@ export default function AnalyticsPage() {
                       dataKey="Apresentações respondidas"
                       fill="url(#apresRespGradient)"
                       radius={[4, 4, 0, 0]}
-                      stroke="#c2410c"
+                      stroke="#3d340c"
                       strokeWidth={1}
                       maxBarSize={16}
                     >
                       <LabelList
                         dataKey="Apresentações respondidas"
                         position="top"
-                        style={{ fontSize: 10, fill: '#c2410c', fontWeight: 600 }}
+                        style={{ fontSize: 10, fill: '#3d340c', fontWeight: 600 }}
                         formatter={(v: any) => (v && v > 0 ? v : '')}
                       />
                     </Bar>
@@ -547,14 +556,14 @@ export default function AnalyticsPage() {
                       dataKey="Apresentações não respondidas"
                       fill="url(#apresNaoGradient)"
                       radius={[4, 4, 0, 0]}
-                      stroke="#fb923c"
+                      stroke="#8d834a"
                       strokeWidth={1}
                       maxBarSize={16}
                     >
                       <LabelList
                         dataKey="Apresentações não respondidas"
                         position="top"
-                        style={{ fontSize: 10, fill: '#c2410c', fontWeight: 600 }}
+                        style={{ fontSize: 10, fill: '#3d340c', fontWeight: 600 }}
                         formatter={(v: any) => (v && v > 0 ? v : '')}
                       />
                     </Bar>
