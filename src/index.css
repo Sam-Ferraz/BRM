@@ -163,6 +163,21 @@ textarea:focus-visible,
   display: none;
 }
 
+/* Safe area em iPhone (notch + home indicator). O env(safe-area-inset-bottom)
+   é a distância até o home indicator; sem isso a bottom nav fica em cima dele. */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+/* Padding extra no body pra Bottom Nav não sobrepor conteúdo. O pb-16 no
+   AppShell já cobre altura da barra; aqui adiciona a safe area quando
+   estiver em PWA standalone no iPhone. */
+@media (display-mode: standalone) {
+  body {
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+}
+
 /* Print styles */
 @media print {
   .no-print {
