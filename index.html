@@ -6,6 +6,50 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>BRM</title>
     <meta name="description" content="Sistema completo de gestão empresarial com CRM, vendas e produtos" />
+
+    <!-- ============================================================
+         KILL SWITCH INLINE — desregistra Service Workers cacheados
+         ------------------------------------------------------------
+         Um SW foi registrado num deploy anterior e ficou cacheando lixo
+         nos browsers. Este script roda ANTES de qualquer coisa: como o
+         HTML sempre chega da rede (o SW velho usa network-first pra
+         navegações), esse código sempre executa na versão nova.
+
+         Efeito: desregistra qualquer SW, limpa todos os caches e recarrega
+         a página se algo foi limpo. Depois some (deixa uma cookie/flag
+         no localStorage pra não ficar recarregando em loop).
+
+         Manter esse script por ~1 mês até garantir que todo mundo passou.
+         ============================================================ -->
+    <script>
+      (function () {
+        try {
+          if (localStorage.getItem('sw-killed') === 'yes') return
+
+          var didWork = false
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function (regs) {
+              regs.forEach(function (r) { r.unregister(); didWork = true })
+            })
+          }
+          if (window.caches) {
+            caches.keys().then(function (keys) {
+              return Promise.all(keys.map(function (k) { didWork = true; return caches.delete(k) }))
+            }).then(function () {
+              localStorage.setItem('sw-killed', 'yes')
+              if (didWork) {
+                // Recarrega uma vez só pra remover instância ativa do SW
+                setTimeout(function () { location.reload() }, 200)
+              }
+            })
+          } else {
+            localStorage.setItem('sw-killed', 'yes')
+          }
+        } catch (e) {
+          console.warn('[sw-kill] failed:', e)
+        }
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>
