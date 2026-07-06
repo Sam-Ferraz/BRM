@@ -195,17 +195,6 @@ export default function LoginPage() {
               </Link>
             </div>
           </form>
-          
-          <div className="mt-6 pt-6 border-t border-gray-200">
-            <div className="text-center">
-              <p className="text-sm text-muted-foreground mb-2">{t('dontHaveAccount')}</p>
-              <Link to="/register">
-                <Button variant="outline" className="w-full">
-                  {t('createAccount')}
-                </Button>
-              </Link>
-            </div>
-          </div>
         </CardContent>
       </Card>
     </div>
