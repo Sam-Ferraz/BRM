@@ -117,13 +117,14 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-primary flex items-center justify-center p-4">
       <div className="absolute top-4 right-4">
         <LanguageSelector />
       </div>
-      <Card className="w-full max-w-md shadow-xl">
-        <CardHeader className="text-center pb-8">
-          <CardTitle className="text-2xl font-bold text-foreground">{t('businessManagement')}</CardTitle>
+      <Card className="w-full max-w-md shadow-2xl">
+        {/* Header com título BRM centralizado e bastante espaço até o form */}
+        <CardHeader className="text-center py-12">
+          <CardTitle className="text-4xl font-bold text-primary tracking-wide">BRM</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-6">
