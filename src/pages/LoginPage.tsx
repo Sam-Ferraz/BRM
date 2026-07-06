@@ -122,9 +122,11 @@ export default function LoginPage() {
         <LanguageSelector />
       </div>
       <Card className="w-full max-w-md shadow-2xl">
-        {/* Header com título BRM centralizado e bastante espaço até o form */}
-        <CardHeader className="text-center py-12">
-          <CardTitle className="text-4xl font-bold text-primary tracking-wide">BRM</CardTitle>
+        {/* Header com BRM CENTRALIZADO verticalmente entre topo do card e Email.
+            min-h + flex garante alinhamento vertical exato — padding só não
+            resolveria porque o texto tem baseline diferente de altura. */}
+        <CardHeader className="text-center min-h-[140px] flex items-center justify-center p-0">
+          <CardTitle className="text-4xl font-bold text-primary tracking-wide leading-none">BRM</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-6">
