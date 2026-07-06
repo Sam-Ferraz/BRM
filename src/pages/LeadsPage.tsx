@@ -874,6 +874,24 @@ function cleanTestPlaceholder(v: string): string {
   return v
 }
 
+/**
+ * Transforma valores enum-like ("whatsapp_comprar_na_planta") em texto com
+ * espaços ("whatsapp comprar na planta") pra quebrar bonito na linha e ficar
+ * legível. Não mexe em emails, telefones nem texto normal.
+ * Detecta enum quando o valor não tem espaço nem @ nem . nem + e tem underscore.
+ */
+function humanizeValue(v: string): string {
+  if (!v) return v
+  // Preserva emails, telefones, URLs, texto normal
+  if (/[\s@+]/.test(v) || v.includes("://")) return v
+  // Se contém underscore e é claramente um enum (só letras/dígitos/underscore),
+  // substitui underscores por espaços pra permitir quebra natural
+  if (/_/.test(v) && /^[\w\d_-]+$/.test(v)) {
+    return v.replace(/_/g, " ")
+  }
+  return v
+}
+
 function LeadFormDataView({ formData }: LeadFormDataViewProps) {
   const { t } = useTranslation()
 
@@ -945,13 +963,16 @@ function LeadFormDataView({ formData }: LeadFormDataViewProps) {
                 : typeof value === "object"
                 ? JSON.stringify(value)
                 : String(value)
-              const displayValue = cleanTestPlaceholder(raw)
+              const displayValue = humanizeValue(cleanTestPlaceholder(raw))
               return (
                 <div key={key}>
                   <dt className="text-[10px] uppercase tracking-wide text-muted-foreground">
                     {humanize(key)}
                   </dt>
-                  <dd className="text-sm text-foreground break-words whitespace-pre-wrap">
+                  <dd
+                    className="text-sm text-foreground whitespace-pre-wrap"
+                    style={{ overflowWrap: "anywhere", wordBreak: "normal" }}
+                  >
                     {displayValue}
                   </dd>
                 </div>
