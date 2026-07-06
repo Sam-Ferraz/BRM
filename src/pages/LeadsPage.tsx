@@ -225,34 +225,56 @@ export default function LeadsPage() {
               ) : leads.length === 0 ? (
                 <div className="text-center py-16 text-muted-foreground">{t("noLeadsFound")}</div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {leads.map((lead) => (
-                    <Card key={lead.id} className="flex flex-col">
-                      <CardHeader className="pb-2">
-                        <div className="flex items-start justify-between gap-2">
-                          <CardTitle className="text-base line-clamp-2">
-                            {lead.name || lead.email || lead.phone || `Lead #${lead.id}`}
-                          </CardTitle>
-                          {lead.source_name && (
-                            <Badge variant="outline" className="text-[10px]">
-                              {lead.source_name}
-                            </Badge>
-                          )}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {leads.map((lead) => {
+                    const displayName = lead.name || lead.email || lead.phone || `Lead #${lead.id}`
+                    const initials = getInitials(displayName)
+                    const isTest = isTestLead(lead)
+                    return (
+                    <Card key={lead.id} className="flex flex-col overflow-hidden">
+                      <CardHeader className="pb-3 bg-muted/30 border-b">
+                        <div className="flex items-start gap-3">
+                          {/* Avatar com iniciais */}
+                          <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold text-sm shrink-0">
+                            {initials}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <CardTitle className="text-base leading-tight truncate">
+                                {displayName}
+                              </CardTitle>
+                              {isTest && (
+                                <Badge variant="outline" className="text-[10px] border-amber-500 text-amber-700 bg-amber-50">
+                                  Teste
+                                </Badge>
+                              )}
+                            </div>
+                            {lead.source_name && (
+                              <p className="text-xs text-muted-foreground truncate mt-0.5">
+                                {lead.source_name}
+                              </p>
+                            )}
+                          </div>
                         </div>
                       </CardHeader>
-                      <CardContent className="flex-1 flex flex-col gap-2 text-sm">
-                        {lead.email && (
-                          <div className="flex items-center gap-2 text-muted-foreground">
-                            <Mail className="w-3.5 h-3.5" /> {lead.email}
+                      <CardContent className="flex-1 flex flex-col gap-3 text-sm pt-4">
+                        {/* Contato: bloco com ícones alinhados */}
+                        <div className="space-y-1.5">
+                          {lead.email && (
+                            <div className="flex items-center gap-2 text-sm">
+                              <Mail className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                              <a href={`mailto:${lead.email}`} className="truncate hover:underline">{lead.email}</a>
+                            </div>
+                          )}
+                          {lead.phone && (
+                            <div className="flex items-center gap-2 text-sm">
+                              <Phone className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                              <a href={`tel:${lead.phone}`} className="hover:underline">{lead.phone}</a>
+                            </div>
+                          )}
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <Calendar className="w-3 h-3 shrink-0" /> {formatDateTime(lead.received_at)}
                           </div>
-                        )}
-                        {lead.phone && (
-                          <div className="flex items-center gap-2 text-muted-foreground">
-                            <Phone className="w-3.5 h-3.5" /> {lead.phone}
-                          </div>
-                        )}
-                        <div className="flex items-center gap-2 text-muted-foreground text-xs">
-                          <Calendar className="w-3 h-3" /> {formatDateTime(lead.received_at)}
                         </div>
 
                         {lead.form_data && Object.keys(lead.form_data).length > 0 && (
@@ -308,7 +330,8 @@ export default function LeadsPage() {
                         )}
                       </CardContent>
                     </Card>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </TabsContent>
@@ -813,6 +836,44 @@ function humanize(key: string): string {
     .replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
+/**
+ * Pega as 2 primeiras letras significativas do nome pra avatar.
+ * "João da Silva" → "JS"; "lenon@lenon.com.br" → "LE"; "Lead #42" → "L4"
+ */
+function getInitials(str: string): string {
+  const clean = str.trim()
+  if (!clean) return "?"
+  const parts = clean.split(/\s+/).filter(Boolean)
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+  }
+  return clean.slice(0, 2).toUpperCase()
+}
+
+/**
+ * Detecta se o lead veio de dummy data do Lead Ads Testing Tool do Meta.
+ * Testes vêm com valores tipo "<test lead: dummy data for full_name>".
+ */
+function isTestLead(lead: { name?: string | null; email?: string | null; form_data?: any }): boolean {
+  if (typeof lead.name === "string" && lead.name.startsWith("<test lead:")) return true
+  if (typeof lead.email === "string" && lead.email.includes("@meta.com")) return true
+  if (lead.form_data && typeof lead.form_data === "object") {
+    for (const v of Object.values(lead.form_data)) {
+      if (typeof v === "string" && v.startsWith("<test lead:")) return true
+    }
+  }
+  return false
+}
+
+/**
+ * Se o valor é um dummy do teste do Meta ("<test lead: dummy data for X>"),
+ * devolve "—" pra não poluir a UI. Caso contrário mantém o valor original.
+ */
+function cleanTestPlaceholder(v: string): string {
+  if (v.startsWith("<test lead:") && v.endsWith(">")) return "—"
+  return v
+}
+
 function LeadFormDataView({ formData }: LeadFormDataViewProps) {
   const { t } = useTranslation()
 
@@ -822,111 +883,88 @@ function LeadFormDataView({ formData }: LeadFormDataViewProps) {
   const hasMeta = Object.keys(meta).length > 0
 
   // Campos "conhecidos" do formulário (todos exceto _meta e keys internos)
-  const formFields = Object.entries(formData).filter(
-    ([k]) => k !== "_meta" && k !== "meta_raw" && k !== "_fetch_pending" && !k.startsWith("_")
-  )
+  const formFields = Object.entries(formData)
+    .filter(
+      ([k]) => k !== "_meta" && k !== "meta_raw" && k !== "_fetch_pending" && !k.startsWith("_")
+    )
+    // Não repete email/telefone/nome no bloco de "Respostas" — eles já estão
+    // no header do card (contato).
+    .filter(([k]) => !["email", "e-mail", "phone", "phone_number", "telefone", "celular", "full_name", "name", "nome"].includes(k))
 
   const leadgenId = meta.leadgen_id || formData.leadgen_id
-  const formatMetaDate = (t: any): string | null => {
-    if (!t) return null
-    try {
-      const d = new Date(t)
-      if (Number.isNaN(d.getTime())) return null
-      return new Intl.DateTimeFormat("pt-BR", {
-        day: "2-digit", month: "2-digit", year: "numeric",
-        hour: "2-digit", minute: "2-digit",
-      }).format(d)
-    } catch {
-      return null
-    }
-  }
 
   return (
-    <div className="mt-2 pt-2 border-t space-y-2">
-      {/* Bloco Meta (campanha/ad) — só aparece se veio via Meta Lead Ads */}
+    <div className="space-y-3">
+      {/* Bloco Origem — Meta Lead Ads (chip único de status + link) */}
       {hasMeta && (
-        <div className="text-xs space-y-1 bg-muted/40 p-2 rounded">
-          <div className="font-semibold text-muted-foreground uppercase tracking-wide text-[10px]">
-            {t("origin") || "Origem"}
-          </div>
-          <div className="flex flex-wrap gap-1">
-            {meta.campaign_id && (
-              <Badge variant="secondary" className="text-[10px] font-mono">
-                {t("campaign") || "Campanha"}: {meta.campaign_id}
+        <div className="flex items-center justify-between gap-2 py-2 border-t border-dashed">
+          <div className="flex items-center gap-2">
+            {meta.is_organic === true ? (
+              <Badge className="text-[10px] bg-emerald-600 hover:bg-emerald-700 border-0">
+                Orgânico
               </Badge>
-            )}
-            {meta.adset_id && (
-              <Badge variant="secondary" className="text-[10px] font-mono">
-                {t("adset") || "Conjunto"}: {meta.adset_id}
+            ) : meta.is_organic === false ? (
+              <Badge className="text-[10px] bg-blue-600 hover:bg-blue-700 border-0">
+                Anúncio pago
               </Badge>
-            )}
-            {meta.ad_id && (
-              <Badge variant="secondary" className="text-[10px] font-mono">
-                {t("ad") || "Anúncio"}: {meta.ad_id}
+            ) : (
+              <Badge variant="secondary" className="text-[10px]">
+                Meta Lead Ads
               </Badge>
             )}
             {meta.form_id && (
-              <Badge variant="secondary" className="text-[10px] font-mono">
-                {t("form") || "Form"}: {meta.form_id}
-              </Badge>
-            )}
-            {meta.is_organic === true && (
-              <Badge className="text-[10px] bg-emerald-600 hover:bg-emerald-700">
-                {t("organic") || "Orgânico"}
-              </Badge>
-            )}
-            {meta.is_organic === false && (
-              <Badge className="text-[10px] bg-blue-600 hover:bg-blue-700">
-                {t("paid") || "Pago"}
-              </Badge>
+              <span className="text-[10px] text-muted-foreground font-mono">
+                Form #{String(meta.form_id).slice(-6)}
+              </span>
             )}
           </div>
-          {meta.created_time && (
-            <p className="text-muted-foreground text-[10px]">
-              {t("submittedAt") || "Enviado em"}: {formatMetaDate(meta.created_time)}
-            </p>
-          )}
           {leadgenId && (
             <a
               href={`https://www.facebook.com/ads/manager/lead_center/leads/${leadgenId}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-primary hover:underline text-[10px] inline-block"
+              className="text-primary hover:underline text-[10px] flex items-center gap-0.5 whitespace-nowrap"
+              title="Abrir no Meta Ads Manager"
             >
-              {t("viewOnMeta") || "Ver no Meta Ads Manager →"}
+              Abrir no Meta ↗
             </a>
           )}
         </div>
       )}
 
-      {/* Bloco Respostas do formulário */}
+      {/* Bloco Respostas do formulário — lista vertical (label pequeno em cima, valor abaixo) */}
       {formFields.length > 0 && (
-        <div className="text-xs space-y-1">
-          <div className="font-semibold text-muted-foreground uppercase tracking-wide text-[10px]">
-            {t("formResponses") || "Respostas do formulário"}
+        <div className="space-y-2 pt-2 border-t">
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Respostas do formulário
           </div>
-          <div className="space-y-0.5">
+          <dl className="space-y-2">
             {formFields.map(([key, value]) => {
-              const displayValue = value === null || value === undefined
+              const raw = value === null || value === undefined
                 ? "—"
                 : typeof value === "object"
                 ? JSON.stringify(value)
                 : String(value)
+              const displayValue = cleanTestPlaceholder(raw)
               return (
-                <div key={key} className="grid grid-cols-[minmax(80px,auto)_1fr] gap-2 text-[11px]">
-                  <span className="text-muted-foreground">{humanize(key)}:</span>
-                  <span className="font-medium break-all">{displayValue}</span>
+                <div key={key}>
+                  <dt className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                    {humanize(key)}
+                  </dt>
+                  <dd className="text-sm text-foreground break-words whitespace-pre-wrap">
+                    {displayValue}
+                  </dd>
                 </div>
               )
             })}
-          </div>
+          </dl>
         </div>
       )}
 
       {/* Debug: dados brutos (colapsado) — útil quando algo desconhecido chega */}
       {(formData._fetch_pending || formData.meta_raw) && (
-        <details className="text-[10px]">
-          <summary className="cursor-pointer text-muted-foreground">
+        <details className="text-[10px] pt-2 border-t">
+          <summary className="cursor-pointer text-muted-foreground select-none">
             {t("rawPayload") || "Payload bruto"}
           </summary>
           <pre className="mt-1 p-2 bg-muted rounded overflow-x-auto max-h-32">
