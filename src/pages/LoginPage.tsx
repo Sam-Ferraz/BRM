@@ -123,11 +123,7 @@ export default function LoginPage() {
       </div>
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="text-center pb-8">
-          <div className="mx-auto mb-6 w-24 h-24 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-xl">BRM</span>
-          </div>
           <CardTitle className="text-2xl font-bold text-foreground">{t('businessManagement')}</CardTitle>
-          <p className="text-sm text-muted-foreground mt-2">{t('accessYourAccount')}</p>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-6">
