@@ -75,8 +75,8 @@ export default function AnalyticsPage() {
   const timezone = useTimezone()
 
   const initialAppointmentsRange = useMemo<DateRangeValue>(() => {
-    const { from, to } = computePresetRange("last7Days")
-    return { from, to, preset: "last7Days" }
+    const { from, to } = computePresetRange("last30Days")
+    return { from, to, preset: "last30Days" }
   }, [])
 
   // Funil começa em "Tempo total" — sem filtro de período, todos os negócios entram
@@ -326,7 +326,7 @@ export default function AnalyticsPage() {
           </div>
 
             {/* Main Appointments Analytics Chart */}
-            <Card className="max-w-[50%] bg-gradient-to-br from-slate-50 to-white dark:from-slate-900/50 dark:to-slate-800/50 border-slate-200 dark:border-slate-700 dark:backdrop-blur-sm dark:bg-slate-900/80">
+            <Card className="w-full bg-gradient-to-br from-slate-50 to-white dark:from-slate-900/50 dark:to-slate-800/50 border-slate-200 dark:border-slate-700 dark:backdrop-blur-sm dark:bg-slate-900/80">
               <CardHeader className="pb-4 px-3 sm:px-6">
                 <CardTitle className="text-xl font-semibold text-foreground flex items-center gap-3">
                   <div className="w-2 h-8 bg-gradient-to-b from-blue-500 to-purple-600 dark:from-blue-400 dark:to-purple-400 rounded-full"></div>
