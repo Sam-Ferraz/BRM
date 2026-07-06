@@ -27,17 +27,20 @@ const formatAppointmentAnalytics = (analytics: AppointmentAnalytics[], t: any) =
 }
 
 /**
- * Combina TUDO num único dataset com 4 séries por dia:
- *   - Atendimentos respondidos    (soma de chat+call+in_person answered)
- *   - Atendimentos não respondidos
- *   - Apresentações respondidas   (visit answered)
- *   - Apresentações não respondidas
+ * Combina TUDO num único dataset com 4 séries por dia + preenche dias vazios
+ * no range solicitado. Isso garante que o eixo X mostre TODOS os dias do
+ * período (últimos 30 dias, últimos 7 etc), mesmo aqueles sem atendimento —
+ * ajuda o usuário a enxergar a tendência e os "vazios" reais.
  *
  * "Apresentação" no contexto do BRM = visita presencial ao imóvel
  * (appointment type='visit'). Os demais tipos (chat, call, in_person)
  * são "atendimentos" pré-visita.
  */
-const formatCombinedAnalytics = (byType: AppointmentAnalyticsByType, t: any) => {
+const formatCombinedAnalytics = (
+  byType: AppointmentAnalyticsByType,
+  t: any,
+  range?: { from?: string; to?: string }
+) => {
   // Coleta todas as datas de todos os tipos e agrega
   const map = new Map<string, {
     atendResp: number; atendNao: number;
@@ -57,6 +60,18 @@ const formatCombinedAnalytics = (byType: AppointmentAnalyticsByType, t: any) => 
         cur.atendNao += notAnswered
       }
       map.set(item.date, cur)
+    }
+  }
+
+  // Se range foi informado, preenche todos os dias entre from e to (mesmo vazios)
+  if (range?.from && range?.to) {
+    const start = new Date(range.from + 'T00:00:00')
+    const end = new Date(range.to + 'T00:00:00')
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      const iso = d.toISOString().slice(0, 10)
+      if (!map.has(iso)) {
+        map.set(iso, { atendResp: 0, atendNao: 0, apresResp: 0, apresNao: 0 })
+      }
     }
   }
 
@@ -391,14 +406,17 @@ export default function AnalyticsPage() {
                   // luminosidade — contraste natural sem cor gritante.
                   'Atendimentos respondidos':      { label: 'Atendimentos respondidos',      color: '#0c343d' },
                   'Atendimentos não respondidos':  { label: 'Atendimentos não respondidos',  color: '#5a8792' },
-                  'Apresentações respondidas':    { label: 'Apresentações respondidas',    color: '#3d340c' },
-                  'Apresentações não respondidas': { label: 'Apresentações não respondidas', color: '#8d834a' },
+                  'Apresentações respondidas':    { label: 'Apresentações respondidas',    color: '#999999' },
+                  'Apresentações não respondidas': { label: 'Apresentações não respondidas', color: '#d4d4d4' },
                 }}
                 className="h-[280px]"
               >
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
-                    data={formatCombinedAnalytics(appointmentAnalyticsByType, t)}
+                    data={formatCombinedAnalytics(appointmentAnalyticsByType, t, {
+                      from: appointmentsFromIso,
+                      to: appointmentsToIso,
+                    })}
                     margin={{ top: 20, right: 5, left: 0, bottom: 40 }}
                     barCategoryGap="15%"
                   >
@@ -412,12 +430,12 @@ export default function AnalyticsPage() {
                         <stop offset="100%" stopColor="#5a8792" stopOpacity={0.85} />
                       </linearGradient>
                       <linearGradient id="apresRespGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#3d340c" stopOpacity={1} />
-                        <stop offset="100%" stopColor="#3d340c" stopOpacity={0.85} />
+                        <stop offset="0%" stopColor="#999999" stopOpacity={1} />
+                        <stop offset="100%" stopColor="#999999" stopOpacity={0.85} />
                       </linearGradient>
                       <linearGradient id="apresNaoGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#8d834a" stopOpacity={1} />
-                        <stop offset="100%" stopColor="#8d834a" stopOpacity={0.85} />
+                        <stop offset="0%" stopColor="#d4d4d4" stopOpacity={1} />
+                        <stop offset="100%" stopColor="#d4d4d4" stopOpacity={0.85} />
                       </linearGradient>
                     </defs>
                     {/* Legenda customizada via content: mostra so 2 categorias
@@ -439,7 +457,7 @@ export default function AnalyticsPage() {
                           <span className="flex items-center gap-2">
                             <span
                               className="w-3 h-3 rounded-full inline-block"
-                              style={{ backgroundColor: '#3d340c' }}
+                              style={{ backgroundColor: '#999999' }}
                             />
                             <span className="font-medium text-foreground">Apresentações</span>
                           </span>
@@ -554,14 +572,14 @@ export default function AnalyticsPage() {
                       dataKey="Apresentações respondidas"
                       fill="url(#apresRespGradient)"
                       radius={[4, 4, 0, 0]}
-                      stroke="#3d340c"
+                      stroke="#999999"
                       strokeWidth={1}
                       maxBarSize={16}
                     >
                       <LabelList
                         dataKey="Apresentações respondidas"
                         position="top"
-                        style={{ fontSize: 10, fill: '#3d340c', fontWeight: 600 }}
+                        style={{ fontSize: 10, fill: '#525252', fontWeight: 600 }}
                         formatter={(v: any) => (v && v > 0 ? v : '')}
                       />
                     </Bar>
@@ -569,14 +587,14 @@ export default function AnalyticsPage() {
                       dataKey="Apresentações não respondidas"
                       fill="url(#apresNaoGradient)"
                       radius={[4, 4, 0, 0]}
-                      stroke="#8d834a"
+                      stroke="#d4d4d4"
                       strokeWidth={1}
                       maxBarSize={16}
                     >
                       <LabelList
                         dataKey="Apresentações não respondidas"
                         position="top"
-                        style={{ fontSize: 10, fill: '#3d340c', fontWeight: 600 }}
+                        style={{ fontSize: 10, fill: '#525252', fontWeight: 600 }}
                         formatter={(v: any) => (v && v > 0 ? v : '')}
                       />
                     </Bar>
