@@ -13,7 +13,7 @@ import { DealForm } from "@/components/forms/deal-form"
 import { ClientForm } from "@/components/forms/client-form"
 import { ProductForm } from "@/components/forms/product-form"
 import { AppointmentForm } from "@/components/forms/appointment-form"
-import { api, AppointmentAnalytics } from "@/lib/api-client"
+import { api, AppointmentAnalytics, type Product } from "@/lib/api-client"
 import { formatDateForChart } from "@/lib/datetime"
 import { useTimezone } from "@/hooks/use-timezone"
 
@@ -42,6 +42,7 @@ export default function DashboardPage() {
     newLeads: 0,
   })
   const [appointmentAnalytics, setAppointmentAnalytics] = useState<AppointmentAnalytics[]>([])
+  const [recentProducts, setRecentProducts] = useState<Product[]>([])
   const [formStates, setFormStates] = useState({
     deal: false,
     client: false,
@@ -70,9 +71,11 @@ export default function DashboardPage() {
   }
 
   const refreshStats = useCallback(async () => {
-    const [statsData, analytics] = await Promise.all([
+    const [statsData, analytics, productsResp] = await Promise.all([
       api.dashboard.getStats(),
-      api.appointments.getAnalyticsLast7Days(timezone)
+      api.appointments.getAnalyticsLast7Days(timezone),
+      // Busca imóveis ordenados por criação desc pra alimentar "Novidades"
+      api.products.getAll({ sortBy: 'created_at', sortOrder: 'desc' }),
     ])
 
     setStats({
@@ -90,6 +93,14 @@ export default function DashboardPage() {
     })
 
     setAppointmentAnalytics(analytics.data)
+
+    // Filtra imóveis cadastrados nos últimos 7 dias (novidades)
+    const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
+    const recent = (productsResp.data ?? []).filter((p) => {
+      if (!p.created_at) return false
+      return new Date(p.created_at).getTime() >= sevenDaysAgo
+    })
+    setRecentProducts(recent)
   }, [timezone])
 
   useEffect(() => {
@@ -101,6 +112,7 @@ export default function DashboardPage() {
         // Keep default values on error
         setStats(defaultStats)
         setAppointmentAnalytics([])
+        setRecentProducts([])
       }
     }
     
@@ -369,6 +381,24 @@ export default function DashboardPage() {
                 )
               })}
         </div>
+
+        {/* Novidades recentes! — imóveis cadastrados nos últimos 7 dias */}
+        {recentProducts.length > 0 && (
+          <section className="mt-8">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-1.5 h-7 rounded-full" style={{ backgroundColor: '#0c343d' }} />
+              <h3 className="text-xl font-semibold text-foreground">Novidades recentes!</h3>
+              <span className="text-xs text-muted-foreground">
+                ({recentProducts.length} nos últimos 7 dias)
+              </span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {recentProducts.map((product) => (
+                <RecentProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          </section>
+        )}
       </div>
 
       {/* Floating Action Button - Mobile Only */}
@@ -452,5 +482,73 @@ export default function DashboardPage() {
         loading={loading}
       />
     </div>
+  )
+}
+
+// ===========================================================================
+// RecentProductCard — card compacto de imóvel novo, usado na seção "Novidades"
+// ===========================================================================
+
+/**
+ * Monta os "diferenciais" curtos: quartos, suítes, vagas, área privativa,
+ * bairro. Usa só o que existir. Exemplo: "3 quartos • 2 suítes • Centro"
+ */
+function buildProductHighlights(p: Product): string[] {
+  const parts: string[] = []
+  if (p.bedrooms) parts.push(`${p.bedrooms} ${p.bedrooms === 1 ? 'quarto' : 'quartos'}`)
+  if (p.suites) parts.push(`${p.suites} ${p.suites === 1 ? 'suíte' : 'suítes'}`)
+  if (p.parking_spots) parts.push(`${p.parking_spots} ${p.parking_spots === 1 ? 'vaga' : 'vagas'}`)
+  if (p.private_area) parts.push(`${p.private_area} m²`)
+  const location = p.neighborhood || p.city
+  if (location) parts.push(location)
+  return parts
+}
+
+function formatCurrencyBRLShort(v: number | null | undefined): string {
+  if (v === null || v === undefined || isNaN(v)) return '—'
+  if (v >= 1_000_000) return `R$ ${(v / 1_000_000).toFixed(1).replace('.', ',')} mi`
+  if (v >= 1_000) return `R$ ${(v / 1_000).toFixed(0)} mil`
+  return `R$ ${v.toFixed(0)}`
+}
+
+function RecentProductCard({ product }: { product: Product }) {
+  const highlights = buildProductHighlights(product)
+  // Foto de capa: thumbnail explícita > primeira imagem > fallback placeholder
+  const coverUrl =
+    product.thumbnail?.image_url ||
+    product.images?.[0]?.image_url ||
+    '/placeholder.svg'
+
+  return (
+    <Link
+      to={`/products?highlight=${product.id}`}
+      className="group block rounded-lg overflow-hidden bg-card border hover:shadow-lg transition-shadow"
+    >
+      {/* Foto de capa 16:10 */}
+      <div className="aspect-[16/10] w-full overflow-hidden bg-muted">
+        <img
+          src={coverUrl}
+          alt={product.name}
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = '/placeholder.svg'
+          }}
+        />
+      </div>
+      {/* Conteúdo */}
+      <div className="p-3 space-y-1.5">
+        <h4 className="font-semibold text-sm truncate">{product.name}</h4>
+        {product.price != null && (
+          <p className="text-sm font-bold" style={{ color: '#0c343d' }}>
+            {formatCurrencyBRLShort(product.price)}
+          </p>
+        )}
+        {highlights.length > 0 && (
+          <p className="text-xs text-muted-foreground line-clamp-2">
+            {highlights.join(' • ')}
+          </p>
+        )}
+      </div>
+    </Link>
   )
 }
