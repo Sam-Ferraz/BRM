@@ -40,8 +40,7 @@ import {
   LeadService,
   SaleService,
   CalendarEventService,
-  GoogleCalendarService,
-  UserManagementService
+  GoogleCalendarService
 } from './services/index.js'
 import { StubWhatsAppProvider } from './services/whatsapp-provider.js'
 import { BaileysWhatsAppProvider } from './services/baileys-whatsapp-provider.js'
@@ -64,7 +63,6 @@ import { createSaleRoutes } from './routes/sale-routes.js'
 import { createWhatsAppWebhookRoutes } from './routes/whatsapp-webhook-routes.js'
 import { createCalendarRoutes } from './routes/calendar-routes.js'
 import { createGoogleCalendarRoutes } from './routes/google-calendar-routes.js'
-import { createUserRoutes } from './routes/user-routes.js'
 
 dotenv.config()
 
@@ -154,7 +152,6 @@ const saleService = new SaleService(saleRepository, proposalRepository, dealRepo
 proposalService.setSaleService(saleService)
 const googleCalendarService = new GoogleCalendarService(googleCalendarRepository)
 const calendarEventService = new CalendarEventService(calendarEventRepository, googleCalendarService)
-const userManagementService = new UserManagementService(userRepository)
 
 // Provider de WhatsApp:
 //   WHATSAPP_PROVIDER=stub      → não conversa de verdade (útil para CI / dev offline)
@@ -223,7 +220,6 @@ app.use('/api/leads', createLeadRoutes(leadService, leadSourceRepository))
 app.use('/api/sales', createSaleRoutes(saleService))
 app.use('/api/calendar', createCalendarRoutes(calendarEventService))
 app.use('/api/google-calendar', createGoogleCalendarRoutes(googleCalendarService))
-app.use('/api/users', createUserRoutes(userManagementService))
 // Webhook público do WhatsApp Cloud API (Meta chama esse endpoint).
 // Sem autenticação — segurança via validação X-Hub-Signature-256 com
 // app_secret cadastrado por usuário.
