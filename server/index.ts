@@ -86,6 +86,34 @@ app.use(express.json({
   }
 }))
 
+// KILL SWITCH — quando o browser pede /sw.js, servimos um SW kamikaze
+// COM header Clear-Site-Data que força o browser a limpar caches,
+// cookies e storage relacionados ao site. Isso resolve o problema de
+// Service Workers cacheados de um deploy anterior. Precisa vir ANTES
+// do express.static pra sobrescrever o /sw.js do dist.
+//
+// O header Clear-Site-Data é honrado por todos os browsers modernos
+// (Chrome, Edge, Firefox) e é a única forma programática de forçar
+// limpeza total sem depender do browser cooperar.
+app.get('/sw.js', (_req, res) => {
+  res.setHeader('Content-Type', 'application/javascript; charset=utf-8')
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate')
+  res.setHeader('Clear-Site-Data', '"cache", "storage"')
+  res.send(
+    `self.addEventListener('install', () => self.skipWaiting());\n` +
+    `self.addEventListener('activate', async (e) => {\n` +
+    `  e.waitUntil((async () => {\n` +
+    `    const keys = await caches.keys();\n` +
+    `    await Promise.all(keys.map(k => caches.delete(k)));\n` +
+    `    await self.registration.unregister();\n` +
+    `    const clients = await self.clients.matchAll({type: 'window'});\n` +
+    `    for (const c of clients) c.navigate(c.url);\n` +
+    `  })());\n` +
+    `});\n` +
+    `self.addEventListener('fetch', (e) => e.respondWith(fetch(e.request)));\n`
+  )
+})
+
 // Serve static files from the Vite build
 // In Docker: __dirname = /app/server/dist, so ../../dist = /app/dist
 // In dev: __dirname = /project/server/dist, so ../../dist = /project/dist
