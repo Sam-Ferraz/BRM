@@ -306,7 +306,7 @@ export default function AnalyticsPage() {
               <Card className="lg:col-span-2 bg-gradient-to-br from-slate-50 to-white dark:from-slate-900/50 dark:to-slate-800/50 border-slate-200 dark:border-slate-700 dark:backdrop-blur-sm dark:bg-slate-900/80">
                 <CardHeader className="pb-4 px-3 sm:px-6">
                   <CardTitle className="text-xl font-semibold text-foreground flex items-center gap-3">
-                    <div className="w-2 h-8 bg-gradient-to-b from-amber-500 to-rose-500 dark:from-amber-400 dark:to-rose-400 rounded-full"></div>
+                    <div className="w-2 h-8 rounded-full" style={{ backgroundColor: '#0c343d' }}></div>
                     {t('dealFunnel')}
                   </CardTitle>
                 </CardHeader>
@@ -389,8 +389,8 @@ export default function AnalyticsPage() {
             <Card className="w-full bg-gradient-to-br from-slate-50 to-white dark:from-slate-900/50 dark:to-slate-800/50 border-slate-200 dark:border-slate-700 dark:backdrop-blur-sm dark:bg-slate-900/80">
               <CardHeader className="pb-4 px-3 sm:px-6">
                 <CardTitle className="text-xl font-semibold text-foreground flex items-center gap-3">
-                  <div className="w-2 h-8 bg-gradient-to-b from-blue-500 to-purple-600 dark:from-blue-400 dark:to-purple-400 rounded-full"></div>
-                  Atendimento e Apresentações
+                  <div className="w-2 h-8 rounded-full" style={{ backgroundColor: '#0c343d' }}></div>
+                  Atendimento &amp; Apresentações
                 </CardTitle>
               </CardHeader>
             <CardContent className="pt-0 px-3 sm:px-6">
