@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Política de Privacidade — BRM</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 780px; margin: 0 auto; padding: 40px 20px; color: #222; line-height: 1.6; }
+    h1 { color: #1e40af; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px; }
+    h2 { color: #1e3a8a; margin-top: 32px; }
+    a { color: #2563eb; }
+    .updated { color: #6b7280; font-size: 14px; margin-bottom: 24px; }
+  </style>
+</head>
+<body>
+  <h1>Política de Privacidade — BRM</h1>
+  <p class="updated">Última atualização: 6 de julho de 2026</p>
+
+  <p><strong>BRM (Business Relationship Management)</strong> é uma plataforma de gestão de relacionamento imobiliário. Esta política descreve como coletamos, usamos, armazenamos e protegemos as informações pessoais dos usuários e leads gerenciados pela plataforma.</p>
+
+  <h2>1. Dados coletados</h2>
+  <p>Coletamos e processamos os seguintes tipos de dados:</p>
+  <ul>
+    <li><strong>Dados dos usuários da plataforma</strong> (corretores/gestores): nome, e-mail, senha (hash), preferências de idioma e fuso horário.</li>
+    <li><strong>Dados dos clientes/leads cadastrados</strong>: nome, e-mail, telefone, endereço, respostas de formulários de captação de leads (Meta Ads, formulários próprios, importações).</li>
+    <li><strong>Dados de campanhas de captação</strong>: identificadores de campanha, anúncios e formulários recebidos via integração oficial com o Meta (Facebook/Instagram) Lead Ads.</li>
+    <li><strong>Dados de agenda</strong>: compromissos manuais e eventos de calendários Google conectados pelo próprio usuário via OAuth 2.0.</li>
+  </ul>
+
+  <h2>2. Como usamos os dados</h2>
+  <p>Os dados são utilizados exclusivamente para operar a plataforma BRM:</p>
+  <ul>
+    <li>Exibir leads capturados pelas campanhas dos clientes contratantes na interface do BRM.</li>
+    <li>Permitir agendamento e acompanhamento de atendimentos, follow-ups e propostas.</li>
+    <li>Exibir a agenda unificada (compromissos manuais + follow-ups + eventos do Google Calendar quando conectado).</li>
+    <li>Gerar relatórios internos de performance de vendas e conversão para os usuários da plataforma.</li>
+  </ul>
+  <p><strong>Não vendemos, alugamos ou compartilhamos</strong> dados pessoais com terceiros para fins de marketing.</p>
+
+  <h2>3. Integrações com terceiros</h2>
+  <p>O BRM se integra com serviços de terceiros para operar suas funcionalidades:</p>
+  <ul>
+    <li><strong>Meta (Facebook/Instagram) Lead Ads</strong>: recebe leads gerados pelas campanhas dos clientes por meio da API oficial da Meta, com validação HMAC SHA-256 e escopos limitados a <code>leads_retrieval</code>, <code>pages_show_list</code>, <code>pages_read_engagement</code> e <code>pages_manage_metadata</code>.</li>
+    <li><strong>Google Calendar</strong>: leitura unidirecional (read-only) de eventos autorizados pelo próprio usuário via OAuth 2.0, escopo <code>calendar.readonly</code>.</li>
+    <li><strong>WhatsApp Business (Meta Cloud API)</strong>: envio e recebimento de mensagens de atendimento, quando o usuário conecta a própria conta.</li>
+    <li><strong>Amazon Web Services (S3)</strong>: armazenamento de fotos de imóveis cadastrados pelos usuários.</li>
+  </ul>
+
+  <h2>4. Armazenamento e segurança</h2>
+  <p>Os dados são armazenados em servidores dedicados na Alemanha (Hetzner), com PostgreSQL 16, backup diário e criptografia em trânsito (TLS 1.3). Senhas são armazenadas somente como hash <code>bcrypt</code>. Tokens de acesso a serviços terceiros (Google, Meta, WhatsApp) são armazenados criptografados e vinculados exclusivamente ao usuário que autorizou a conexão.</p>
+
+  <h2>5. Retenção e exclusão</h2>
+  <p>Os dados dos leads são mantidos enquanto o cliente contratante da plataforma tiver conta ativa. Após encerramento do contrato, os dados podem ser exportados pelo cliente e são excluídos definitivamente em até 90 dias.</p>
+  <p>Qualquer titular de dados (usuário do BRM ou lead cadastrado) pode solicitar a exclusão dos seus dados pessoais enviando e-mail para o contato abaixo. A exclusão será processada em até 15 dias úteis, conforme LGPD (Lei 13.709/2018).</p>
+
+  <h2>6. Direitos dos titulares</h2>
+  <p>Nos termos da LGPD, você tem direito a:</p>
+  <ul>
+    <li>Confirmar a existência de tratamento dos seus dados</li>
+    <li>Acessar seus dados</li>
+    <li>Corrigir dados incompletos, inexatos ou desatualizados</li>
+    <li>Solicitar anonimização, bloqueio ou eliminação</li>
+    <li>Portabilidade dos dados</li>
+    <li>Revogar consentimento a qualquer momento</li>
+  </ul>
+
+  <h2>7. Cookies e sessão</h2>
+  <p>O BRM utiliza apenas <code>localStorage</code> para armazenar o token JWT de autenticação do usuário logado. Não utilizamos cookies de rastreamento nem ferramentas de analytics de terceiros.</p>
+
+  <h2>8. Alterações nesta política</h2>
+  <p>Podemos atualizar esta Política de Privacidade a qualquer momento. Mudanças materiais serão comunicadas pelos canais de suporte da plataforma.</p>
+
+  <h2>9. Contato</h2>
+  <p>Para dúvidas, solicitações ou exercer qualquer dos direitos previstos nesta política, entre em contato:</p>
+  <p>
+    E-mail: <a href="mailto:sferraz.professional@gmail.com">sferraz.professional@gmail.com</a><br>
+    Responsável: Samuel Ferraz — BRM<br>
+    Domínios oficiais: <a href="https://brm.tec.br">brm.tec.br</a> (produção), <a href="https://test.brm.tec.br">test.brm.tec.br</a> (staging)
+  </p>
+</body>
+</html>
