@@ -327,23 +327,37 @@ export default function DashboardPage() {
             de "rampa invertida": 4 → 3 → 2 → 1 cards por linha. Clientes e
             Vitrine recebem md:col-start-1 para forçar nova linha à esquerda. */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
-              {([
-                { path: '/agenda',      label: t('agenda'),      icon: CalendarDays,   bg: 'bg-sky-100',     iconColor: 'text-sky-600',      value: '' },
-                { path: '/appointments',label: t('services'),    icon: HeadphonesIcon, bg: 'bg-purple-100',  iconColor: 'text-purple-600',   value: stats.totalAppointments },
-                { path: '/deals',       label: t('deals'),       icon: Briefcase,      bg: 'bg-blue-100',    iconColor: 'text-blue-600',     value: stats.totalDeals, valueTitle: 'Negócios ativos (todos exceto os descartados)' },
-                { path: '/proposals',   label: t('proposals'),   icon: FileSignature,  bg: 'bg-rose-100',    iconColor: 'text-rose-600',     value: stats.totalProposals },
-                { path: '/sales',       label: t('sales'),       icon: Key,            bg: 'bg-emerald-100', iconColor: 'text-emerald-600',  value: stats.totalSales },
-                { path: '/chat',        label: t('chat'),        icon: MessageCircle,  bg: 'bg-green-100',   iconColor: 'text-green-600',    value: stats.pendingChatAndCalls,  valueTitle: t('pendingChatAndCallsTooltip') },
-                { path: '/products',    label: t('products'),    icon: Package,        bg: 'bg-orange-100',  iconColor: 'text-orange-600',   value: stats.totalProducts },
-                { path: '/analytics',   label: t('analytics'),   icon: BarChart3,      bg: 'bg-amber-100',   iconColor: 'text-amber-600',    value: 3 },
-                { path: '/leads',       label: t('leads'),       icon: Inbox,          bg: 'bg-yellow-100',  iconColor: 'text-yellow-600',   value: stats.newLeads,             valueTitle: t('newLeadsTooltip') },
-                { path: '/clients',     label: t('clients'),     icon: Users,          bg: 'bg-green-100',   iconColor: 'text-green-600',    value: stats.totalClients,         position: 'md:col-start-1' },
-                { path: '/follow-ups',  label: t('followUps'),   icon: ClipboardCheck, bg: 'bg-teal-100',    iconColor: 'text-teal-600',     value: stats.totalFollowUps },
-                { path: '/sales-agenda',label: t('salesAgenda'), icon: Store,          bg: 'bg-indigo-100',  iconColor: 'text-indigo-600',   value: stats.totalShowcaseProducts, position: 'md:col-start-1' },
-                { path: '/users',       label: 'Usuários',       icon: UserCog,        bg: 'bg-slate-100',   iconColor: 'text-slate-700',    value: '',                         adminOnly: true },
-              ] as const).filter((c) => !('adminOnly' in c && c.adminOnly) || user?.role === 'admin').map((c) => {
+              {(() => {
+                type DashboardCard = {
+                  path: string
+                  label: string
+                  icon: any
+                  bg: string
+                  iconColor: string
+                  value: string | number
+                  valueTitle?: string
+                  position?: string
+                  adminOnly?: boolean
+                }
+                const allCards: DashboardCard[] = [
+                  { path: '/agenda',      label: t('agenda'),      icon: CalendarDays,   bg: 'bg-sky-100',     iconColor: 'text-sky-600',      value: '' },
+                  { path: '/appointments',label: t('services'),    icon: HeadphonesIcon, bg: 'bg-purple-100',  iconColor: 'text-purple-600',   value: stats.totalAppointments },
+                  { path: '/deals',       label: t('deals'),       icon: Briefcase,      bg: 'bg-blue-100',    iconColor: 'text-blue-600',     value: stats.totalDeals, valueTitle: 'Negócios ativos (todos exceto os descartados)' },
+                  { path: '/proposals',   label: t('proposals'),   icon: FileSignature,  bg: 'bg-rose-100',    iconColor: 'text-rose-600',     value: stats.totalProposals },
+                  { path: '/sales',       label: t('sales'),       icon: Key,            bg: 'bg-emerald-100', iconColor: 'text-emerald-600',  value: stats.totalSales },
+                  { path: '/chat',        label: t('chat'),        icon: MessageCircle,  bg: 'bg-green-100',   iconColor: 'text-green-600',    value: stats.pendingChatAndCalls,  valueTitle: t('pendingChatAndCallsTooltip') },
+                  { path: '/products',    label: t('products'),    icon: Package,        bg: 'bg-orange-100',  iconColor: 'text-orange-600',   value: stats.totalProducts },
+                  { path: '/analytics',   label: t('analytics'),   icon: BarChart3,      bg: 'bg-amber-100',   iconColor: 'text-amber-600',    value: 3 },
+                  { path: '/leads',       label: t('leads'),       icon: Inbox,          bg: 'bg-yellow-100',  iconColor: 'text-yellow-600',   value: stats.newLeads,             valueTitle: t('newLeadsTooltip') },
+                  { path: '/clients',     label: t('clients'),     icon: Users,          bg: 'bg-green-100',   iconColor: 'text-green-600',    value: stats.totalClients,         position: 'md:col-start-1' },
+                  { path: '/follow-ups',  label: t('followUps'),   icon: ClipboardCheck, bg: 'bg-teal-100',    iconColor: 'text-teal-600',     value: stats.totalFollowUps },
+                  { path: '/sales-agenda',label: t('salesAgenda'), icon: Store,          bg: 'bg-indigo-100',  iconColor: 'text-indigo-600',   value: stats.totalShowcaseProducts, position: 'md:col-start-1' },
+                  { path: '/users',       label: 'Usuários',       icon: UserCog,        bg: 'bg-slate-100',   iconColor: 'text-slate-700',    value: '',                         adminOnly: true },
+                ]
+                const cards = allCards.filter((c) => !c.adminOnly || user?.role === 'admin')
+                return cards.map((c) => {
                 const Icon = c.icon
-                const positionClass = 'position' in c && c.position ? c.position : ''
+                const positionClass = c.position ?? ''
                 return (
                   <Link key={c.path} to={c.path} className={positionClass}>
                     <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
@@ -357,7 +371,7 @@ export default function DashboardPage() {
                               <p className="text-sm font-medium text-muted-foreground">{c.label}</p>
                               <p
                                 className="text-2xl font-bold text-foreground"
-                                {...(('valueTitle' in c && c.valueTitle) ? { title: c.valueTitle } : {})}
+                                {...(c.valueTitle ? { title: c.valueTitle } : {})}
                               >
                                 {c.value}
                               </p>
@@ -368,7 +382,8 @@ export default function DashboardPage() {
                     </Card>
                   </Link>
                 )
-              })}
+              })
+              })()}
         </div>
       </div>
 
