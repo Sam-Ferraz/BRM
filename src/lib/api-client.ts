@@ -81,37 +81,6 @@ export const apiClient = new ApiClient()
 // API endpoints with type safety
 
 // ---------------------------------------------------------------------------
-// Módulo Usuários + Permissões
-// ---------------------------------------------------------------------------
-
-export type UserRole = 'admin' | 'manager' | 'broker' | 'sdr' | 'administrative'
-
-export interface UserManaged {
-  id: number
-  name: string
-  email: string
-  role: UserRole
-  active: boolean
-  last_login_at?: string | null
-  created_at?: string
-  updated_at?: string
-}
-
-export interface PermissionsMatrix {
-  modules: {
-    module: string
-    label: string
-    permissions: {
-      id: number
-      key: string
-      label: string
-      description?: string | null
-      allowed: Record<UserRole, boolean>
-    }[]
-  }[]
-}
-
-// ---------------------------------------------------------------------------
 // Módulo Contrato (entre Proposta e Venda)
 // ---------------------------------------------------------------------------
 
@@ -1162,52 +1131,6 @@ export const api = {
 
     managerReject: async (id: number, notes: string): Promise<{ data: Contract }> => {
       return apiClient.post<{ data: Contract }>(`/contracts/${id}/manager-reject`, { notes })
-    },
-  },
-
-  // Gestão de usuários (admin only)
-  users: {
-    list: async (): Promise<{ data: UserManaged[] }> => {
-      return apiClient.get<{ data: UserManaged[] }>('/users')
-    },
-    getById: async (id: number): Promise<{ data: UserManaged }> => {
-      return apiClient.get<{ data: UserManaged }>(`/users/${id}`)
-    },
-    create: async (input: {
-      name: string
-      email: string
-      password: string
-      role: UserRole
-    }): Promise<{ data: UserManaged }> => {
-      return apiClient.post<{ data: UserManaged }>('/users', input)
-    },
-    update: async (
-      id: number,
-      input: Partial<{ name: string; email: string; role: UserRole; active: boolean }>
-    ): Promise<{ data: UserManaged }> => {
-      return apiClient.put<{ data: UserManaged }>(`/users/${id}`, input)
-    },
-    resetPassword: async (id: number, newPassword: string): Promise<{ success: boolean }> => {
-      return apiClient.post<{ success: boolean }>(`/users/${id}/reset-password`, {
-        new_password: newPassword,
-      })
-    },
-  },
-
-  // Matriz de permissões (admin only pra edição; /mine pra qualquer usuário)
-  permissions: {
-    getMatrix: async (): Promise<{ data: PermissionsMatrix }> => {
-      return apiClient.get<{ data: PermissionsMatrix }>('/permissions/matrix')
-    },
-    saveMatrix: async (
-      updates: { role: UserRole; permission_id: number; allowed: boolean }[]
-    ): Promise<{ success: boolean; count: number }> => {
-      return apiClient.put<{ success: boolean; count: number }>('/permissions/matrix', {
-        updates,
-      })
-    },
-    getMine: async (): Promise<{ data: string[] }> => {
-      return apiClient.get<{ data: string[] }>('/permissions/mine')
     },
   },
 

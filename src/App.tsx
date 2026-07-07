@@ -20,8 +20,6 @@ import ChatPage from './pages/ChatPage'
 import LeadsPage from './pages/LeadsPage'
 import AgendaPage from './pages/AgendaPage'
 import ConfigPage from './pages/ConfigPage'
-import UsersPage from './pages/UsersPage'
-import PermissionsPage from './pages/PermissionsPage'
 import './lib/i18n'
 import './index.css'
 
@@ -106,16 +104,6 @@ function App() {
               <Route path="/settings" element={
                 <ProtectedRoute>
                   <ConfigPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/settings/users" element={
-                <ProtectedRoute>
-                  <UsersPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/settings/permissions" element={
-                <ProtectedRoute>
-                  <PermissionsPage />
                 </ProtectedRoute>
               } />
               <Route path="*" element={<Navigate to="/" replace />} />
