@@ -26,8 +26,7 @@ describe('AuthService', () => {
       id: 1,
       name: 'Test User',
       email: 'test@example.com',
-      role: 'broker',
-      active: true,
+      role: 'user',
       password_hash: 'hashed_password'
     }
 
@@ -45,8 +44,7 @@ describe('AuthService', () => {
         id: mockUser.id,
         name: mockUser.name,
         email: mockUser.email,
-        role: mockUser.role,
-        active: true,
+        role: mockUser.role
       })
       expect(result.token).toBeDefined()
       expect(mockUserRepository.findByEmail).toHaveBeenCalledWith('test@example.com')
@@ -100,8 +98,7 @@ describe('AuthService', () => {
       id: 2,
       name: 'New User',
       email: 'new@example.com',
-      role: 'broker',
-      active: true,
+      role: 'user'
     }
 
     it('should register new user successfully', async () => {
@@ -119,18 +116,12 @@ describe('AuthService', () => {
         id: newUser.id,
         name: newUser.name,
         email: newUser.email,
-        role: newUser.role,
-        active: true,
+        role: newUser.role
       })
       expect(result.token).toBeDefined()
       expect(mockUserRepository.findByEmail).toHaveBeenCalledWith('new@example.com')
       expect(mockedBcrypt.hash).toHaveBeenCalledWith('password', 10)
-      expect(mockUserRepository.create).toHaveBeenCalledWith({
-        name: 'New User',
-        email: 'new@example.com',
-        passwordHash: 'hashed_password',
-        role: 'broker',
-      })
+      expect(mockUserRepository.create).toHaveBeenCalledWith('New User', 'new@example.com', 'hashed_password', 'user')
     })
 
     it('should reject registration for existing user', async () => {
