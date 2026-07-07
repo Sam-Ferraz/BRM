@@ -148,7 +148,7 @@ export interface Deal {
   deal_type?: 'purchase' | 'purchase_exchange' | 'exchange'
   gsv: string
   property_name?: string
-  status: 'service_cold' | 'service_mild' | 'service_warm' | 'visit_foreseen_cold' | 'visit_foreseen_mild' | 'visit_foreseen_warm' | 'visit_done_cold' | 'visit_done_mild' | 'visit_done_warm' | 'proposal' | 'sold' | 'discarded_no_profile' | 'discarded_no_interest' | 'discarded_competitor' | 'discarded_error'
+  status: 'service_cold' | 'service_mild' | 'service_warm' | 'visit_foreseen_cold' | 'visit_foreseen_mild' | 'visit_foreseen_warm' | 'visit_done_cold' | 'visit_done_mild' | 'visit_done_warm' | 'proposal' | 'contract' | 'sold' | 'discarded_no_profile' | 'discarded_no_interest' | 'discarded_competitor' | 'discarded_error'
 }
 
 export interface Client {

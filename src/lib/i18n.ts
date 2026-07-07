@@ -345,6 +345,7 @@ const resources = {
       dealStatusVisitDoneMild: 'Apresentação - Morno',
       dealStatusVisitDoneWarm: 'Apresentação - Quente',
       dealStatusProposal: 'Proposta',
+      dealStatusContract: 'Contrato',
       dealStatusSold: 'Venda ganha',
       dealStatusDiscardedNoProfile: 'Descartado - Sem perfil',
       dealStatusDiscardedNoInterest: 'Descartado - Sem interesse',

@@ -20,7 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { ArrowLeft, Pencil, Search, Key, FileText, Trash2 } from "lucide-react"
+import { ArrowLeft, Pencil, Search, Key, FileText, Trash2, FileSignature } from "lucide-react"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -250,7 +250,16 @@ export default function SalesPage() {
                         <TableCell>{sale.sale_date ? formatDate(sale.sale_date) : "-"}</TableCell>
                         <TableCell>
                           {sale.contract_url ? (
-                            <FileText className="w-4 h-4 text-green-600" />
+                            <a
+                              href={sale.contract_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-primary hover:underline text-xs flex items-center gap-1"
+                              title={sale.contract_filename || 'Abrir contrato'}
+                            >
+                              <FileText className="w-4 h-4 text-green-600" />
+                              PDF
+                            </a>
                           ) : (
                             <span className="text-muted-foreground text-sm">-</span>
                           )}
@@ -262,6 +271,16 @@ export default function SalesPage() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              asChild
+                              title="Ver todos os documentos do contrato"
+                            >
+                              <Link to={`/contracts?deal=${sale.deal_id}`}>
+                                <FileSignature className="w-4 h-4 text-cyan-700" />
+                              </Link>
+                            </Button>
                             <Button
                               variant="ghost"
                               size="icon"

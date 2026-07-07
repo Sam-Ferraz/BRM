@@ -77,6 +77,14 @@ const PHASES: PhaseColumn[] = [
     headerColor: "bg-purple-100 text-purple-900 border-purple-300",
   },
   {
+    key: "contract",
+    label: "Contrato",
+    statuses: ["contract"],
+    hasTemperature: false,
+    singleStatus: "contract",
+    headerColor: "bg-cyan-100 text-cyan-900 border-cyan-300",
+  },
+  {
     key: "sold",
     label: "Vendido",
     statuses: ["sold"],

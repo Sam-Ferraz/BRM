@@ -220,6 +220,8 @@ export default function DealsPage() {
         return <Badge variant="outline" className="bg-orange-200 text-orange-900">{t('dealStatusVisitDoneWarm')}</Badge>
       case "proposal":
         return <Badge variant="default">{t('dealStatusProposal')}</Badge>
+      case "contract":
+        return <Badge variant="default" className="bg-cyan-600 hover:bg-cyan-700">{t('dealStatusContract')}</Badge>
       case "sold":
         return <Badge variant="default" className="bg-green-500">{t('dealStatusSold')}</Badge>
       case "discarded_no_profile":
@@ -247,6 +249,7 @@ export default function DealsPage() {
     { value: "visit_done_mild", label: t('dealStatusVisitDoneMild') },
     { value: "visit_done_warm", label: t('dealStatusVisitDoneWarm') },
     { value: "proposal", label: t('dealStatusProposal') },
+    { value: "contract", label: t('dealStatusContract') },
     { value: "sold", label: t('dealStatusSold') },
     { value: "discarded_no_profile", label: t('dealStatusDiscardedNoProfile') },
     { value: "discarded_no_interest", label: t('dealStatusDiscardedNoInterest') },

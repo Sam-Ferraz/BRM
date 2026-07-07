@@ -254,10 +254,31 @@ export class ContractService {
     })
     if (!updated) throw new Error('Failed to update contract status')
 
-    // Dispara criação da Sale — best-effort
+    // Dispara criação da Sale + copia URL do contrato + aprova de vez
+    // (o gestor já aprovou no fluxo do Contract, não precisa dupla aprovação
+    // em /sales). Best-effort — Sale ainda vai existir mesmo se algo falhar.
     if (this.saleService) {
       try {
-        await this.saleService.createFromAcceptedProposal(contract.proposal_id)
+        const sale = await this.saleService.createFromAcceptedProposal(contract.proposal_id)
+
+        // Copia o primeiro anexo tipo 'contract' pra sale.contract_url pra
+        // a UI de /sales conseguir exibir o link direto do contrato
+        const docs = await this.repo.listDocuments(input.contractId)
+        const contractFile = docs.find((d) => d.doc_type === 'contract')
+        const saleDate = new Date().toISOString().slice(0, 10)
+
+        await this.saleService.updateDetails(sale.id, input.reviewerId, {
+          sale_date: saleDate,
+          contract_url: contractFile?.file_url ?? null,
+          contract_filename: contractFile?.filename ?? null,
+        })
+
+        // Aprova a Sale já — gestor delegou tudo pelo módulo Contract
+        try {
+          await this.saleService.approve(sale.id, input.reviewerId, input.notes ?? null)
+        } catch (approveErr) {
+          console.error('[ContractService] Sale criada mas approve falhou:', approveErr)
+        }
       } catch (err) {
         console.error('[ContractService] Falha ao criar Sale após approval:', err)
       }
