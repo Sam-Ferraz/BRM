@@ -14,6 +14,7 @@ import ProductsPage from './pages/ProductsPage'
 import SalesAgendaPage from './pages/SalesAgendaPage'
 import FollowUpsPage from './pages/FollowUpsPage'
 import ProposalsPage from './pages/ProposalsPage'
+import ContractsPage from './pages/ContractsPage'
 import SalesPage from './pages/SalesPage'
 import ChatPage from './pages/ChatPage'
 import LeadsPage from './pages/LeadsPage'
@@ -73,6 +74,11 @@ function App() {
               <Route path="/proposals" element={
                 <ProtectedRoute>
                   <ProposalsPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/contracts" element={
+                <ProtectedRoute>
+                  <ContractsPage />
                 </ProtectedRoute>
               } />
               <Route path="/sales" element={

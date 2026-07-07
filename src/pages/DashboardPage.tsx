@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Users, Briefcase, Package, HeadphonesIcon, Settings, LogOut, FileText, Plus, BarChart3, ClipboardCheck, FileSignature, Store, MessageCircle, Inbox, Key, CalendarDays } from "lucide-react"
+import { Users, Briefcase, Package, HeadphonesIcon, Settings, LogOut, FileText, Plus, BarChart3, ClipboardCheck, FileSignature, Store, MessageCircle, Inbox, Key, CalendarDays, FileCheck2 } from "lucide-react"
 import { ChartContainer } from "@/components/ui/chart-simple"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from "recharts"
 import { useAuth } from "@/hooks/use-auth"
@@ -38,6 +38,7 @@ export default function DashboardPage() {
     totalFollowUps: 0,
     totalProposals: 0,
     totalSales: 0,
+    totalContracts: 0,
     pendingChatAndCalls: 0,
     newLeads: 0,
   })
@@ -66,6 +67,7 @@ export default function DashboardPage() {
     totalFollowUps: 0,
     totalProposals: 0,
     totalSales: 0,
+    totalContracts: 0,
     pendingChatAndCalls: 0,
     newLeads: 0,
   }
@@ -88,6 +90,7 @@ export default function DashboardPage() {
       totalFollowUps: statsData.totalFollowUps,
       totalProposals: statsData.totalProposals,
       totalSales: statsData.totalSales,
+      totalContracts: statsData.totalContracts,
       pendingChatAndCalls: statsData.pendingChatAndCalls,
       newLeads: statsData.newLeads,
     })
@@ -344,6 +347,7 @@ export default function DashboardPage() {
                 { path: '/appointments',label: t('services'),    icon: HeadphonesIcon, bg: 'bg-purple-100',  iconColor: 'text-purple-600',   value: stats.totalAppointments },
                 { path: '/deals',       label: t('deals'),       icon: Briefcase,      bg: 'bg-blue-100',    iconColor: 'text-blue-600',     value: stats.totalDeals, valueTitle: 'Negócios ativos (todos exceto os descartados)' },
                 { path: '/proposals',   label: t('proposals'),   icon: FileSignature,  bg: 'bg-rose-100',    iconColor: 'text-rose-600',     value: stats.totalProposals },
+                { path: '/contracts',   label: 'Contratos',      icon: FileCheck2,     bg: 'bg-cyan-100',    iconColor: 'text-cyan-700',     value: stats.totalContracts, valueTitle: 'Contratos em andamento (docs pendentes, aguardando jurídico ou gestor)' },
                 { path: '/sales',       label: t('sales'),       icon: Key,            bg: 'bg-emerald-100', iconColor: 'text-emerald-600',  value: stats.totalSales },
                 { path: '/chat',        label: t('chat'),        icon: MessageCircle,  bg: 'bg-green-100',   iconColor: 'text-green-600',    value: stats.pendingChatAndCalls,  valueTitle: t('pendingChatAndCallsTooltip') },
                 { path: '/products',    label: t('products'),    icon: Package,        bg: 'bg-orange-100',  iconColor: 'text-orange-600',   value: stats.totalProducts },

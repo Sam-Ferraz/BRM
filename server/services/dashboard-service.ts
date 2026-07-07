@@ -1,4 +1,4 @@
-import { DealRepository, ClientRepository, ProductRepository, AppointmentRepository, SalesAgendaRepository, FollowUpRepository, ProposalRepository, ConversationRepository, LeadRepository, SaleRepository } from '../repositories/index.js'
+import { DealRepository, ClientRepository, ProductRepository, AppointmentRepository, SalesAgendaRepository, FollowUpRepository, ProposalRepository, ConversationRepository, LeadRepository, SaleRepository, ContractRepository } from '../repositories/index.js'
 import { DashboardStats } from '../types/index.js'
 
 export class DashboardService {
@@ -12,6 +12,7 @@ export class DashboardService {
   private conversationRepository: ConversationRepository
   private leadRepository: LeadRepository
   private saleRepository: SaleRepository
+  private contractRepository: ContractRepository
 
   constructor(
     dealRepository: DealRepository,
@@ -23,7 +24,8 @@ export class DashboardService {
     proposalRepository: ProposalRepository,
     conversationRepository: ConversationRepository,
     leadRepository: LeadRepository,
-    saleRepository: SaleRepository
+    saleRepository: SaleRepository,
+    contractRepository: ContractRepository
   ) {
     this.dealRepository = dealRepository
     this.clientRepository = clientRepository
@@ -35,6 +37,7 @@ export class DashboardService {
     this.conversationRepository = conversationRepository
     this.leadRepository = leadRepository
     this.saleRepository = saleRepository
+    this.contractRepository = contractRepository
   }
 
   async getDashboardStats(userId: number): Promise<DashboardStats> {
@@ -51,6 +54,7 @@ export class DashboardService {
       leadCounts,
       totalShowcaseProducts,
       totalSales,
+      contractCounts,
     ] = await Promise.all([
       // Card "Negócios" reflete tudo que está em jogo: deals ativos (todos
       // exceto descartados) + leads em aberto (status='novo' aguardando
@@ -74,7 +78,13 @@ export class DashboardService {
       this.productRepository.getShowcaseCount(),
       // Total de vendas no sistema (todos os status — pending, approved, rejected)
       this.saleRepository.getCount(),
+      // Contratos ativos = todos exceto 'approved' (aprovado é terminal, virou Sale)
+      this.contractRepository.getCountByStatus(userId),
     ])
+
+    const totalActiveContracts = Object.entries(contractCounts)
+      .filter(([status]) => status !== 'approved')
+      .reduce((sum, [, n]) => sum + n, 0)
 
     return {
       // Card "Negócios" = deals ativos (todos exceto descartados).
@@ -89,6 +99,7 @@ export class DashboardService {
       totalFollowUps,
       totalProposals,
       totalSales,
+      totalContracts: totalActiveContracts,
       pendingChatAndCalls: unreadMessages + unansweredCalls,
       newLeads: leadCounts.novo
     }

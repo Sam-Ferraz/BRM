@@ -79,6 +79,64 @@ class ApiClient {
 export const apiClient = new ApiClient()
 
 // API endpoints with type safety
+
+// ---------------------------------------------------------------------------
+// Módulo Contrato (entre Proposta e Venda)
+// ---------------------------------------------------------------------------
+
+export type ContractStatus =
+  | 'pending_docs'
+  | 'awaiting_legal'
+  | 'legal_rejected'
+  | 'awaiting_manager'
+  | 'manager_rejected'
+  | 'approved'
+
+export type ContractDocumentType = 'client_doc' | 'contract'
+
+export interface Contract {
+  id: number
+  deal_id: number
+  proposal_id: number
+  user_id: number
+  status: ContractStatus
+  final_value?: string | number | null
+  signed_at?: string | null
+  legal_notes?: string | null
+  manager_notes?: string | null
+  legal_reviewed_by?: number | null
+  legal_reviewed_at?: string | null
+  manager_reviewed_by?: number | null
+  manager_reviewed_at?: string | null
+  created_at?: string
+  updated_at?: string
+}
+
+export interface ContractDocument {
+  id: number
+  contract_id: number
+  uploader_id: number
+  doc_type: ContractDocumentType
+  filename: string
+  file_url: string
+  file_size?: number | null
+  mime_type?: string | null
+  display_order: number
+  notes?: string | null
+  created_at?: string
+}
+
+export interface ContractWithDetails extends Contract {
+  deal_client?: string
+  deal_property_name?: string | null
+  broker_name?: string
+  legal_reviewer_name?: string | null
+  manager_reviewer_name?: string | null
+  proposal_value?: string | number
+  documents_count?: number
+  contract_files_count?: number
+}
+
 export interface Deal {
   id: number
   client: string
@@ -470,6 +528,8 @@ export interface DashboardStats {
   totalProposals: number
   // Total de vendas (todos os status)
   totalSales: number
+  // Contratos em andamento (todos exceto approved, que virou Sale)
+  totalContracts: number
   // Conversas não respondidas + ligações não atendidas
   pendingChatAndCalls: number
   // Leads aguardando triagem (status='novo')
@@ -981,6 +1041,96 @@ export const api = {
     },
     deleteEvent: async (id: number): Promise<{ success: boolean }> => {
       return apiClient.delete<{ success: boolean }>(`/calendar/events/${id}`)
+    },
+  },
+
+  // Módulo Contrato — etapa entre Proposta e Venda
+  contracts: {
+    list: async (filters?: {
+      status?: ContractStatus | 'all'
+      search?: string
+      viewAll?: boolean
+    }): Promise<ApiResponse<ContractWithDetails>> => {
+      const params = new URLSearchParams()
+      if (filters?.status) params.append('status', filters.status)
+      if (filters?.search) params.append('search', filters.search)
+      if (filters?.viewAll) params.append('viewAll', '1')
+      const q = params.toString()
+      return apiClient.get<ApiResponse<ContractWithDetails>>(`/contracts${q ? `?${q}` : ''}`)
+    },
+
+    getById: async (id: number): Promise<{ data: ContractWithDetails }> => {
+      return apiClient.get<{ data: ContractWithDetails }>(`/contracts/${id}`)
+    },
+
+    getCounts: async (viewAll?: boolean): Promise<{ data: Record<ContractStatus, number> }> => {
+      return apiClient.get<{ data: Record<ContractStatus, number> }>(
+        `/contracts/counts${viewAll ? '?viewAll=1' : ''}`
+      )
+    },
+
+    listDocuments: async (id: number): Promise<{ data: ContractDocument[] }> => {
+      return apiClient.get<{ data: ContractDocument[] }>(`/contracts/${id}/documents`)
+    },
+
+    /**
+     * Upload de documento — usa FormData porque o multer do backend espera
+     * multipart/form-data com campo "file". doc_type default é 'client_doc'.
+     */
+    uploadDocument: async (
+      contractId: number,
+      file: File,
+      docType: ContractDocumentType = 'client_doc',
+      notes?: string
+    ): Promise<{ data: ContractDocument }> => {
+      const form = new FormData()
+      form.append('file', file)
+      form.append('doc_type', docType)
+      if (notes) form.append('notes', notes)
+      const token = localStorage.getItem('auth-token')
+      const res = await fetch(`/api/contracts/${contractId}/documents`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: form,
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.error || `HTTP ${res.status}`)
+      }
+      return res.json()
+    },
+
+    deleteDocument: async (contractId: number, documentId: number): Promise<{ success: boolean }> => {
+      return apiClient.delete<{ success: boolean }>(
+        `/contracts/${contractId}/documents/${documentId}`
+      )
+    },
+
+    submitToLegal: async (id: number): Promise<{ data: Contract }> => {
+      return apiClient.post<{ data: Contract }>(`/contracts/${id}/submit-legal`, {})
+    },
+
+    resubmitToLegal: async (id: number): Promise<{ data: Contract }> => {
+      return apiClient.post<{ data: Contract }>(`/contracts/${id}/resubmit-legal`, {})
+    },
+
+    legalApprove: async (id: number, notes?: string): Promise<{ data: Contract }> => {
+      return apiClient.post<{ data: Contract }>(`/contracts/${id}/legal-approve`, { notes })
+    },
+
+    legalReject: async (id: number, notes: string): Promise<{ data: Contract }> => {
+      return apiClient.post<{ data: Contract }>(`/contracts/${id}/legal-reject`, { notes })
+    },
+
+    managerApprove: async (
+      id: number,
+      input?: { notes?: string; final_value?: string | number }
+    ): Promise<{ data: Contract }> => {
+      return apiClient.post<{ data: Contract }>(`/contracts/${id}/manager-approve`, input || {})
+    },
+
+    managerReject: async (id: number, notes: string): Promise<{ data: Contract }> => {
+      return apiClient.post<{ data: Contract }>(`/contracts/${id}/manager-reject`, { notes })
     },
   },
 

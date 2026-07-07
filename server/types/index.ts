@@ -472,6 +472,8 @@ export interface DashboardStats {
   totalProposals: number
   // Total de vendas (todos os status)
   totalSales: number
+  // Contratos em andamento (todos exceto approved, que ja virou Sale)
+  totalContracts: number
   // Pendências de comunicação: conversas não respondidas + ligações não atendidas
   pendingChatAndCalls: number
   // Leads aguardando triagem (status='novo')
