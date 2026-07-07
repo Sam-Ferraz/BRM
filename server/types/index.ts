@@ -19,7 +19,7 @@ export interface Deal {
   deal_type?: 'purchase' | 'purchase_exchange' | 'exchange' | null
   gsv: string
   property_name?: string | null
-  status: 'service_cold' | 'service_mild' | 'service_warm' | 'visit_foreseen_cold' | 'visit_foreseen_mild' | 'visit_foreseen_warm' | 'visit_done_cold' | 'visit_done_mild' | 'visit_done_warm' | 'proposal' | 'sold' | 'discarded_no_profile' | 'discarded_no_interest' | 'discarded_competitor' | 'discarded_error'
+  status: 'service_cold' | 'service_mild' | 'service_warm' | 'visit_foreseen_cold' | 'visit_foreseen_mild' | 'visit_foreseen_warm' | 'visit_done_cold' | 'visit_done_mild' | 'visit_done_warm' | 'proposal' | 'contract' | 'sold' | 'discarded_no_profile' | 'discarded_no_interest' | 'discarded_competitor' | 'discarded_error'
   user_id: number
   created_at?: Date
   updated_at?: Date
@@ -253,6 +253,64 @@ export interface ProposalWithDetails extends Proposal {
   deal_client?: string
   deal_property_name?: string | null
   deal_property_price?: string | number | null  // preço do imóvel via JOIN com products
+}
+
+// ---------------------------------------------------------------------------
+// Módulo Contrato (etapa entre Proposta e Venda)
+// ---------------------------------------------------------------------------
+
+export type ContractStatus =
+  | 'pending_docs'       // corretor precisa anexar documentos
+  | 'awaiting_legal'     // jurídico precisa revisar
+  | 'legal_rejected'     // jurídico rejeitou, volta pro corretor
+  | 'awaiting_manager'   // gestor precisa aprovar tudo
+  | 'manager_rejected'   // gestor pediu ajustes
+  | 'approved'           // aprovado, Sale criada
+
+export type ContractDocumentType = 'client_doc' | 'contract'
+
+export interface Contract {
+  id: number
+  deal_id: number
+  proposal_id: number
+  user_id: number                              // corretor responsável
+  status: ContractStatus
+  final_value?: string | number | null
+  signed_at?: string | null
+  legal_notes?: string | null
+  manager_notes?: string | null
+  legal_reviewed_by?: number | null
+  legal_reviewed_at?: string | null
+  manager_reviewed_by?: number | null
+  manager_reviewed_at?: string | null
+  created_at?: string
+  updated_at?: string
+}
+
+export interface ContractDocument {
+  id: number
+  contract_id: number
+  uploader_id: number
+  doc_type: ContractDocumentType
+  filename: string
+  file_url: string
+  file_size?: number | null
+  mime_type?: string | null
+  display_order: number
+  notes?: string | null
+  created_at?: string
+}
+
+export interface ContractWithDetails extends Contract {
+  // Vindos de JOINs pra economizar N+1 na listagem
+  deal_client?: string
+  deal_property_name?: string | null
+  broker_name?: string          // corretor (user_id)
+  legal_reviewer_name?: string | null
+  manager_reviewer_name?: string | null
+  proposal_value?: string | number
+  documents_count?: number      // total (client_doc + contract)
+  contract_files_count?: number // só 'contract' — se >= 1 tem contrato anexado
 }
 
 // ---------------------------------------------------------------------------

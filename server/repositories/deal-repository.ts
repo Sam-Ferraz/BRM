@@ -84,6 +84,23 @@ export class DealRepository extends BaseRepository {
     }
   }
 
+  /**
+   * Update parcial de status apenas — usado pelo ContractService pra mover
+   * o deal pra 'contract' ou 'sold' sem precisar do payload completo.
+   */
+  async updateStatus(id: number, status: string): Promise<Deal | null> {
+    const client = await this.getClient()
+    try {
+      const result = await client.query(
+        `UPDATE deals SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *`,
+        [status, id]
+      )
+      return result.rows[0] || null
+    } finally {
+      this.releaseClient(client)
+    }
+  }
+
   async update(id: number, deal: Omit<Deal, 'id' | 'created_at' | 'updated_at'>): Promise<Deal | null> {
     const client = await this.getClient()
     try {

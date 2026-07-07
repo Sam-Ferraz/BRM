@@ -21,7 +21,8 @@ import {
   LeadRepository,
   SaleRepository,
   CalendarEventRepository,
-  GoogleCalendarRepository
+  GoogleCalendarRepository,
+  ContractRepository
 } from './repositories/index.js'
 
 // Import services
@@ -40,7 +41,8 @@ import {
   LeadService,
   SaleService,
   CalendarEventService,
-  GoogleCalendarService
+  GoogleCalendarService,
+  ContractService
 } from './services/index.js'
 import { StubWhatsAppProvider } from './services/whatsapp-provider.js'
 import { BaileysWhatsAppProvider } from './services/baileys-whatsapp-provider.js'
@@ -63,6 +65,7 @@ import { createSaleRoutes } from './routes/sale-routes.js'
 import { createWhatsAppWebhookRoutes } from './routes/whatsapp-webhook-routes.js'
 import { createCalendarRoutes } from './routes/calendar-routes.js'
 import { createGoogleCalendarRoutes } from './routes/google-calendar-routes.js'
+import { createContractRoutes } from './routes/contract-routes.js'
 
 dotenv.config()
 
@@ -151,6 +154,7 @@ const leadRepository = new LeadRepository()
 const saleRepository = new SaleRepository()
 const calendarEventRepository = new CalendarEventRepository()
 const googleCalendarRepository = new GoogleCalendarRepository()
+const contractRepository = new ContractRepository()
 
 // Initialize services with dependency injection
 const authService = new AuthService(userRepository)
@@ -173,11 +177,17 @@ const appointmentService = new AppointmentService(appointmentRepository)
 const salesAgendaService = new SalesAgendaService(salesAgendaRepository)
 const followUpService = new FollowUpService(followUpRepository)
 const proposalService = new ProposalService(proposalRepository, dealRepository)
-// SaleService depende de proposalRepo/dealRepo/productRepo. ProposalService
-// recebe SaleService via setter pra evitar dependência circular na construção
-// e disparar auto-criação de Sale quando uma proposta vira 'accepted'.
+// SaleService, ContractService e ProposalService têm dependência entre si.
+// Resolvido via setters (setSaleService/setContractService) pra evitar
+// ciclo na construção. Nova ordem do fluxo:
+//   Proposta aceita → ContractService.createFromAcceptedProposal
+//   Contrato aprovado pelo gestor → ContractService.managerApprove chama
+//     SaleService.createFromAcceptedProposal (mesma API que ProposalService
+//     usava antes).
 const saleService = new SaleService(saleRepository, proposalRepository, dealRepository, productRepository)
-proposalService.setSaleService(saleService)
+const contractService = new ContractService(contractRepository, dealRepository, proposalRepository, saleService)
+proposalService.setSaleService(saleService)          // legado — não é mais chamado no fluxo automático
+proposalService.setContractService(contractService)  // agora proposta aceita cria contrato
 const googleCalendarService = new GoogleCalendarService(googleCalendarRepository)
 const calendarEventService = new CalendarEventService(calendarEventRepository, googleCalendarService)
 
@@ -248,6 +258,7 @@ app.use('/api/leads', createLeadRoutes(leadService, leadSourceRepository))
 app.use('/api/sales', createSaleRoutes(saleService))
 app.use('/api/calendar', createCalendarRoutes(calendarEventService))
 app.use('/api/google-calendar', createGoogleCalendarRoutes(googleCalendarService))
+app.use('/api/contracts', createContractRoutes(contractService))
 // Webhook público do WhatsApp Cloud API (Meta chama esse endpoint).
 // Sem autenticação — segurança via validação X-Hub-Signature-256 com
 // app_secret cadastrado por usuário.
