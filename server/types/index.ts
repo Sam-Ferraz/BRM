@@ -1,11 +1,57 @@
+/**
+ * 5 tipos de acesso — ver migration V2026_07_07_02.
+ * Admin sempre pode tudo (bypass da matriz de permissões).
+ */
+export type UserRole = 'admin' | 'manager' | 'broker' | 'sdr' | 'administrative'
+
 export interface User {
   id: number
   name: string
   email: string
-  role: string
+  role: UserRole
+  active: boolean
+  last_login_at?: string | null
   password_hash?: string
-  created_at?: Date
-  updated_at?: Date
+  created_at?: string | Date
+  updated_at?: string | Date
+}
+
+export interface Permission {
+  id: number
+  key: string
+  module: string
+  label: string
+  description?: string | null
+  display_order: number
+  created_at?: string
+}
+
+export interface RolePermission {
+  id: number
+  role: UserRole
+  permission_id: number
+  allowed: boolean
+  updated_at?: string
+  updated_by?: number | null
+}
+
+/**
+ * Estrutura em árvore usada pelo endpoint /api/permissions/matrix:
+ * agrupa permissões por módulo pra facilitar renderizar a tela de edição.
+ */
+export interface PermissionsMatrix {
+  modules: {
+    module: string
+    label: string
+    permissions: {
+      id: number
+      key: string
+      label: string
+      description?: string | null
+      // Estado atual por role (exceto admin — sempre true implicitamente)
+      allowed: Record<UserRole, boolean>
+    }[]
+  }[]
 }
 
 export interface Deal {
