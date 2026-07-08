@@ -22,7 +22,9 @@ import {
   SaleRepository,
   CalendarEventRepository,
   GoogleCalendarRepository,
-  ContractRepository
+  ContractRepository,
+  ManagedUserRepository,
+  PermissionRepository
 } from './repositories/index.js'
 
 // Import services
@@ -42,7 +44,9 @@ import {
   SaleService,
   CalendarEventService,
   GoogleCalendarService,
-  ContractService
+  ContractService,
+  UserManagementService,
+  PermissionService
 } from './services/index.js'
 import { StubWhatsAppProvider } from './services/whatsapp-provider.js'
 import { BaileysWhatsAppProvider } from './services/baileys-whatsapp-provider.js'
@@ -66,6 +70,7 @@ import { createWhatsAppWebhookRoutes } from './routes/whatsapp-webhook-routes.js
 import { createCalendarRoutes } from './routes/calendar-routes.js'
 import { createGoogleCalendarRoutes } from './routes/google-calendar-routes.js'
 import { createContractRoutes } from './routes/contract-routes.js'
+import { createUserManagementRoutes } from './routes/user-management-routes.js'
 
 dotenv.config()
 
@@ -155,6 +160,8 @@ const saleRepository = new SaleRepository()
 const calendarEventRepository = new CalendarEventRepository()
 const googleCalendarRepository = new GoogleCalendarRepository()
 const contractRepository = new ContractRepository()
+const managedUserRepository = new ManagedUserRepository()
+const permissionRepository = new PermissionRepository()
 
 // Initialize services with dependency injection
 const authService = new AuthService(userRepository)
@@ -187,6 +194,8 @@ const proposalService = new ProposalService(proposalRepository, dealRepository)
 //     usava antes).
 const saleService = new SaleService(saleRepository, proposalRepository, dealRepository, productRepository)
 const contractService = new ContractService(contractRepository, dealRepository, proposalRepository, saleService)
+const userManagementService = new UserManagementService(managedUserRepository)
+const permissionService = new PermissionService(permissionRepository)
 proposalService.setSaleService(saleService)          // legado — não é mais chamado no fluxo automático
 proposalService.setContractService(contractService)  // agora proposta aceita cria contrato
 const googleCalendarService = new GoogleCalendarService(googleCalendarRepository)
@@ -260,6 +269,7 @@ app.use('/api/sales', createSaleRoutes(saleService))
 app.use('/api/calendar', createCalendarRoutes(calendarEventService))
 app.use('/api/google-calendar', createGoogleCalendarRoutes(googleCalendarService))
 app.use('/api/contracts', createContractRoutes(contractService))
+app.use('/api/user-mgmt', createUserManagementRoutes(userManagementService, permissionService))
 // Webhook público do WhatsApp Cloud API (Meta chama esse endpoint).
 // Sem autenticação — segurança via validação X-Hub-Signature-256 com
 // app_secret cadastrado por usuário.

@@ -8,6 +8,47 @@ export interface User {
   updated_at?: Date
 }
 
+// ---------------------------------------------------------------------------
+// Módulo Usuários + Permissões (isolado — não altera User/AuthResult acima)
+// ---------------------------------------------------------------------------
+
+export type ManagedUserRole = 'admin' | 'manager' | 'broker' | 'sdr' | 'administrative'
+
+export interface ManagedUser {
+  id: number
+  name: string
+  email: string
+  role: ManagedUserRole
+  active: boolean
+  last_login_at?: string | null
+  created_at?: string
+  updated_at?: string
+}
+
+export interface Permission {
+  id: number
+  key: string
+  module: string
+  label: string
+  description?: string | null
+  display_order: number
+  created_at?: string
+}
+
+export interface PermissionsMatrix {
+  modules: {
+    module: string
+    label: string
+    permissions: {
+      id: number
+      key: string
+      label: string
+      description?: string | null
+      allowed: Record<ManagedUserRole, boolean>
+    }[]
+  }[]
+}
+
 export interface Deal {
   id: number
   client: string
