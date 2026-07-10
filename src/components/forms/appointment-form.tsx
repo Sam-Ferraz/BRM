@@ -354,26 +354,29 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
               </p>
             )}
           </div>
-          {/* Cliente é derivado do Negócio — readonly, mesmo padrão do Telefone. */}
-          <div className="space-y-2">
-            <Label htmlFor="client">{t('client')}</Label>
-            <Input
-              id="client"
-              value={formData.client || "—"}
-              readOnly
-              className="bg-muted"
-            />
-          </div>
-          {formData.client && (
-            <div className="space-y-2">
-              <Label htmlFor="client_phone">{t('phone')}</Label>
-              <Input
-                id="client_phone"
-                value={selectedClientPhone || t('noPhoneAvailable')}
-                readOnly
-                className="bg-muted"
-              />
-            </div>
+          {/* Cliente + Telefone só aparecem quando ha Negocio vinculado. Ambos
+              readonly (bg-muted) — valores derivados do Deal, sem edição manual. */}
+          {formData.deal_id != null && (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="client">{t('client')}</Label>
+                <Input
+                  id="client"
+                  value={formData.client || "—"}
+                  readOnly
+                  className="bg-muted"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="client_phone">{t('phone')}</Label>
+                <Input
+                  id="client_phone"
+                  value={selectedClientPhone || t('noPhoneAvailable')}
+                  readOnly
+                  className="bg-muted"
+                />
+              </div>
+            </>
           )}
           <div className="space-y-2">
             <Label htmlFor="type">{t('type')}</Label>
