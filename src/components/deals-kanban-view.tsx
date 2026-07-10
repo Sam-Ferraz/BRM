@@ -10,7 +10,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
-import { Pencil, ChevronDown, User, Package, DollarSign } from "lucide-react"
+import { Pencil, ChevronDown, User, Package } from "lucide-react"
 import { api, type Deal } from "@/lib/api-client"
 
 /**
@@ -158,10 +158,12 @@ function formatCurrency(value: string | number | null | undefined): string {
   if (value === null || value === undefined || value === "") return "—"
   const n = typeof value === "string" ? parseFloat(value) : value
   if (isNaN(n)) return "—"
+  // Sempre 2 casas decimais (R$ 750.000,00)
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
     currency: "BRL",
-    maximumFractionDigits: 0,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(n)
 }
 
@@ -467,9 +469,8 @@ function DealCard({ deal, isDragging, onDragStart, onDragEnd, onEdit, onMoveTo, 
           </div>
         )}
         {deal.gsv && parseFloat(String(deal.gsv)) > 0 && (
-          <div className="flex items-center gap-1.5 font-medium text-foreground">
-            <DollarSign className="w-3 h-3 shrink-0" />
-            <span>{formatCurrency(deal.gsv)}</span>
+          <div className="font-medium text-foreground">
+            {formatCurrency(deal.gsv)}
           </div>
         )}
         <div className="flex items-center justify-between gap-2">
