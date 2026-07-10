@@ -216,6 +216,7 @@ export interface Appointment {
   description?: string
   answered: boolean
   property_name?: string | null
+  audio_url?: string | null
 }
 
 export interface ProductImage {
@@ -827,6 +828,27 @@ export const api = {
       
       const query = params.toString()
       return apiClient.get<ApiResponse<Appointment>>(`/appointments${query ? `?${query}` : ''}`)
+    },
+
+    /**
+     * Upload de áudio gravado pelo corretor. Devolve a URL relativa que
+     * pode ser passada como `audio_url` ao criar/editar um Atendimento.
+     * Não usa apiClient.post porque precisa enviar FormData.
+     */
+    uploadAudio: async (audioBlob: Blob, filename?: string): Promise<{ data: { url: string; filename: string; size: number; mime_type: string } }> => {
+      const form = new FormData()
+      form.append('audio', audioBlob, filename || 'audio.webm')
+      const token = localStorage.getItem('auth-token')
+      const res = await fetch('/api/appointments/upload-audio', {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: form,
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.error || `HTTP ${res.status}`)
+      }
+      return res.json()
     },
 
     getAnalyticsLast7Days: async (timezone?: string): Promise<{ data: AppointmentAnalytics[] }> => {

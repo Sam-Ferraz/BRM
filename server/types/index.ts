@@ -164,6 +164,9 @@ export interface Appointment {
   origin?: AppointmentOrigin
   // Quando origin='whatsapp', referencia a conversa que disparou a auto-criação.
   conversation_id?: number | null
+  // URL do arquivo de áudio gravado pelo corretor (opcional).
+  // A transcrição do áudio vai pro campo description.
+  audio_url?: string | null
   created_at?: Date
   updated_at?: Date
 }

@@ -1,10 +1,78 @@
 import { Request, Response, Router } from 'express'
+import multer from 'multer'
+import path from 'path'
+import fs from 'fs'
 import { AppointmentService } from '../services/index.js'
 import { authenticateToken, AuthenticatedRequest } from '../middleware/auth.js'
 
 export function createAppointmentRoutes(appointmentService: AppointmentService): Router {
   const router = Router()
   const DEFAULT_TIMEZONE = 'America/Sao_Paulo'
+
+  // Storage para áudios de atendimento.
+  // Corretor grava, front-end faz upload (multipart), backend salva em disco
+  // (dev/local) e devolve a URL relativa. A transcrição vai pro campo
+  // description via Web Speech API do browser.
+  const audioUploadsBase = path.resolve(
+    process.env.LOCAL_STORAGE_PATH || './uploads',
+    'appointments'
+  )
+  if (!fs.existsSync(audioUploadsBase)) fs.mkdirSync(audioUploadsBase, { recursive: true })
+
+  const audioStorage = multer.diskStorage({
+    destination: (_req, _file, cb) => {
+      // Agrupa por dia pra facilitar limpeza/backup
+      const today = new Date().toISOString().slice(0, 10)
+      const dir = path.join(audioUploadsBase, today)
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
+      cb(null, dir)
+    },
+    filename: (_req, file, cb) => {
+      const timestamp = Date.now()
+      const ext = path.extname(file.originalname) || '.webm'
+      cb(null, `audio-${timestamp}${ext}`)
+    },
+  })
+  const audioUpload = multer({
+    storage: audioStorage,
+    limits: { fileSize: 50 * 1024 * 1024 }, // 50 MB — áudios longos
+    fileFilter: (_req, file, cb) => {
+      const ok =
+        file.mimetype.startsWith('audio/') ||
+        file.mimetype === 'application/octet-stream'
+      if (!ok) return cb(new Error('Apenas arquivos de áudio são permitidos'))
+      cb(null, true)
+    },
+  })
+
+  // POST /api/appointments/upload-audio → devolve { url }
+  // Endpoint separado para que o front-end possa fazer o upload em background
+  // enquanto o corretor continua gravando/transcrevendo. Depois manda a URL
+  // no create do appointment.
+  router.post(
+    '/upload-audio',
+    authenticateToken,
+    audioUpload.single('audio'),
+    async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+      try {
+        const file = (req as any).file as Express.Multer.File | undefined
+        if (!file) {
+          res.status(400).json({ error: 'file (campo audio) é obrigatório' })
+          return
+        }
+        const relPath = path.relative(
+          path.resolve(process.env.LOCAL_STORAGE_PATH || './uploads'),
+          file.path
+        )
+        const url = `/uploads/${relPath.replace(/\\/g, '/')}`
+        res.status(201).json({ data: { url, filename: file.originalname, size: file.size, mime_type: file.mimetype } })
+      } catch (err) {
+        console.error('Error uploading appointment audio:', err)
+        const msg = err instanceof Error ? err.message : 'Erro no upload'
+        res.status(400).json({ error: msg })
+      }
+    }
+  )
 
   const isValidTimezone = (value: unknown): value is string => {
     if (typeof value !== 'string') return false
@@ -37,7 +105,7 @@ export function createAppointmentRoutes(appointmentService: AppointmentService):
   router.post('/', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const userId = req.user!.userId
-      const { client, type, scheduled_datetime, description, answered, property_name } = req.body
+      const { client, type, scheduled_datetime, description, answered, property_name, audio_url } = req.body
       const normalizedPropertyName = type === 'visit' ? property_name : null
       const appointment = await appointmentService.createAppointment({
         client,
@@ -46,7 +114,8 @@ export function createAppointmentRoutes(appointmentService: AppointmentService):
         description,
         answered,
         property_name: normalizedPropertyName,
-        user_id: userId
+        user_id: userId,
+        audio_url: audio_url ?? null
       })
       res.json(appointment)
     } catch (error) {
@@ -59,7 +128,7 @@ export function createAppointmentRoutes(appointmentService: AppointmentService):
     try {
       const userId = req.user!.userId
       const id = parseInt(req.params.id)
-      const { client, type, scheduled_datetime, description, answered, property_name } = req.body
+      const { client, type, scheduled_datetime, description, answered, property_name, audio_url } = req.body
       const normalizedPropertyName = type === 'visit' ? property_name : null
       const appointment = await appointmentService.updateAppointment(id, {
         client,
@@ -68,7 +137,8 @@ export function createAppointmentRoutes(appointmentService: AppointmentService):
         description,
         answered,
         property_name: normalizedPropertyName,
-        user_id: userId
+        user_id: userId,
+        audio_url: audio_url ?? null
       })
       res.json(appointment)
     } catch (error) {
