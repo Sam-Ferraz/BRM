@@ -26,6 +26,7 @@ import { DealForm } from "@/components/forms/deal-form"
 import { DealsKanbanView } from "@/components/deals-kanban-view"
 import { useToast } from "@/hooks/use-toast"
 import { ReactiveDateTime } from "@/components/reactive-datetime"
+import { DealCodeBadge } from "@/components/deal-code-badge"
 
 export default function DealsPage() {
   const { t } = useTranslation()
@@ -345,8 +346,9 @@ export default function DealsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead 
-                      className="cursor-pointer" 
+                    <TableHead className="w-[120px]">Código</TableHead>
+                    <TableHead
+                      className="cursor-pointer"
                       onClick={() => handleSort("client")}
                     >
                       {t('client')} {sortBy === "client" && (sortOrder === "asc" ? "↑" : "↓")}
@@ -384,6 +386,9 @@ export default function DealsPage() {
                         setIsFormOpen(true)
                       }}
                     >
+                      <TableCell>
+                        <DealCodeBadge id={deal.id} />
+                      </TableCell>
                       <TableCell className="font-medium">{deal.client}</TableCell>
                       <TableCell>{formatCurrency(deal.gsv)}</TableCell>
                       <TableCell>{getStatusBadge(deal.status)}</TableCell>
@@ -435,7 +440,7 @@ export default function DealsPage() {
                   ))}
                   {deals.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                         {t('noDealsFound')}
                       </TableCell>
                     </TableRow>

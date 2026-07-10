@@ -16,6 +16,7 @@ import { useMobileDetection } from "@/lib/mobile-utils"
 import { getCurrentDateTimeForForm, convertFromAppToLocal, convertFromLocalToApp } from "@/lib/datetime"
 import { ClientSearch } from "@/components/client-search"
 import { ProductSearch } from "@/components/product-search"
+import { DealCodeSearch } from "@/components/deal-code-search"
 import { AnsweredStatusToggle } from "@/components/ui/answered-status-toggle"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useTimezone } from "@/hooks/use-timezone"
@@ -45,6 +46,7 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
     type: "chat" as "chat" | "call" | "in_person" | "visit",
     answered: undefined as boolean | undefined,
     property_name: "",
+    deal_id: null as number | null,
   })
   const [selectedClientPhone, setSelectedClientPhone] = useState<string | null>(null)
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
@@ -76,6 +78,7 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
         type: (appointment.type || "chat") as "chat" | "call" | "in_person" | "visit",
         answered: appointment.answered,
         property_name: appointment.property_name || "",
+        deal_id: appointment.deal_id ?? null,
       })
       setSelectedClientPhone(null)
       setIncludeFollowUp(false)
@@ -87,6 +90,7 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
         type: "chat" as "chat" | "call" | "in_person" | "visit",
         answered: undefined,
         property_name: "",
+        deal_id: null,
       })
       setSelectedClientPhone(null)
       setIncludeFollowUp(false)
@@ -185,7 +189,8 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
     const dataToSubmit = {
       ...formData,
       property_name: formData.type === 'visit' ? formData.property_name : null,
-      scheduled_datetime: convertFromLocalToApp(formData.scheduled_datetime, currentTimezone)
+      scheduled_datetime: convertFromLocalToApp(formData.scheduled_datetime, currentTimezone),
+      deal_id: formData.deal_id ?? null,
     }
 
     // Pass follow-up data if enabled
@@ -259,6 +264,16 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
               />
             </div>
           )}
+          <div className="space-y-2">
+            <Label htmlFor="deal_code">Negócio vinculado (opcional)</Label>
+            <DealCodeSearch
+              value={formData.deal_id}
+              onChange={(dealId) => setFormData((prev) => ({ ...prev, deal_id: dealId }))}
+            />
+            <p className="text-xs text-muted-foreground">
+              Cole o código (ex: N-0042) ou busque pelo nome do cliente.
+            </p>
+          </div>
           <div className="space-y-2">
             <Label htmlFor="type">{t('type')}</Label>
             <Select

@@ -56,8 +56,8 @@ export class AppointmentRepository extends BaseRepository {
       await client.query('SET TIMEZONE = \'UTC\'')
       const result = await client.query(
         `INSERT INTO appointments
-          (client, type, scheduled_datetime, description, answered, property_name, user_id, origin, conversation_id, audio_url)
-         VALUES ($1, $2, $3::timestamp, $4, $5, $6, $7, $8, $9, $10)
+          (client, type, scheduled_datetime, description, answered, property_name, user_id, origin, conversation_id, audio_url, deal_id)
+         VALUES ($1, $2, $3::timestamp, $4, $5, $6, $7, $8, $9, $10, $11)
          RETURNING *`,
         [
           appointment.client,
@@ -70,6 +70,7 @@ export class AppointmentRepository extends BaseRepository {
           appointment.origin ?? 'manual',
           appointment.conversation_id ?? null,
           appointment.audio_url ?? null,
+          appointment.deal_id ?? null,
         ]
       )
       return result.rows[0]
@@ -125,7 +126,7 @@ export class AppointmentRepository extends BaseRepository {
       // Ensure UTC timezone
       await client.query('SET TIMEZONE = \'UTC\'')
       const result = await client.query(
-        'UPDATE appointments SET client = $1, type = $2, scheduled_datetime = $3::timestamp, description = $4, answered = $5, property_name = $6, audio_url = $7, updated_at = CURRENT_TIMESTAMP WHERE id = $8 RETURNING *',
+        'UPDATE appointments SET client = $1, type = $2, scheduled_datetime = $3::timestamp, description = $4, answered = $5, property_name = $6, audio_url = $7, deal_id = $8, updated_at = CURRENT_TIMESTAMP WHERE id = $9 RETURNING *',
         [
           appointment.client,
           appointment.type,
@@ -134,6 +135,7 @@ export class AppointmentRepository extends BaseRepository {
           appointment.answered,
           appointment.property_name ?? null,
           appointment.audio_url ?? null,
+          appointment.deal_id ?? null,
           id
         ]
       )

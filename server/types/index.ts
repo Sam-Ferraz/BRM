@@ -167,6 +167,9 @@ export interface Appointment {
   // URL do arquivo de áudio gravado pelo corretor (opcional).
   // A transcrição do áudio vai pro campo description.
   audio_url?: string | null
+  // Vínculo opcional com um Negócio (Deal). O código humano N-XXXX no front
+  // é derivado do id do deal via lib/deal-code. Aqui persistimos só o id.
+  deal_id?: number | null
   created_at?: Date
   updated_at?: Date
 }

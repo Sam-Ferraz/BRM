@@ -105,7 +105,7 @@ export function createAppointmentRoutes(appointmentService: AppointmentService):
   router.post('/', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const userId = req.user!.userId
-      const { client, type, scheduled_datetime, description, answered, property_name, audio_url } = req.body
+      const { client, type, scheduled_datetime, description, answered, property_name, audio_url, deal_id } = req.body
       const normalizedPropertyName = type === 'visit' ? property_name : null
       const appointment = await appointmentService.createAppointment({
         client,
@@ -115,7 +115,8 @@ export function createAppointmentRoutes(appointmentService: AppointmentService):
         answered,
         property_name: normalizedPropertyName,
         user_id: userId,
-        audio_url: audio_url ?? null
+        audio_url: audio_url ?? null,
+        deal_id: deal_id ?? null
       })
       res.json(appointment)
     } catch (error) {
@@ -128,7 +129,7 @@ export function createAppointmentRoutes(appointmentService: AppointmentService):
     try {
       const userId = req.user!.userId
       const id = parseInt(req.params.id)
-      const { client, type, scheduled_datetime, description, answered, property_name, audio_url } = req.body
+      const { client, type, scheduled_datetime, description, answered, property_name, audio_url, deal_id } = req.body
       const normalizedPropertyName = type === 'visit' ? property_name : null
       const appointment = await appointmentService.updateAppointment(id, {
         client,
@@ -138,7 +139,8 @@ export function createAppointmentRoutes(appointmentService: AppointmentService):
         answered,
         property_name: normalizedPropertyName,
         user_id: userId,
-        audio_url: audio_url ?? null
+        audio_url: audio_url ?? null,
+        deal_id: deal_id ?? null
       })
       res.json(appointment)
     } catch (error) {

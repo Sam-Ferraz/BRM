@@ -18,8 +18,10 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { AudioRecorder } from "./audio-recorder"
+import { DealCodeSearch } from "./deal-code-search"
 import { api, type Appointment } from "@/lib/api-client"
 import { useToast } from "@/hooks/use-toast"
+import { extractDealCodeFromText, formatDealCode } from "@/lib/deal-code"
 
 /**
  * QuickAppointmentRecorder — Fluxo rápido pro corretor no celular:
@@ -61,6 +63,7 @@ export function QuickAppointmentRecorder({
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null)
   const [answered, setAnswered] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [dealId, setDealId] = useState<number | null>(null)
 
   const handleRecordingFinish = ({
     audioBlob,
@@ -74,6 +77,23 @@ export function QuickAppointmentRecorder({
       // Se já havia texto, concatena; senão substitui
       setDescription((prev) => (prev ? `${prev.trim()}\n\n${transcript}` : transcript))
     }
+
+    // Auto-detecção: se o corretor falou o código do negócio ("N zero zero
+    // quarenta e dois" vira ~"N-0042" no transcript), pré-preenchemos o campo.
+    // Só sugerimos se ainda não havia deal_id manual escolhido, pra não
+    // sobrescrever intenção explícita.
+    if (transcript && dealId == null) {
+      const detected = extractDealCodeFromText(transcript)
+      if (detected != null) {
+        setDealId(detected)
+        toast({
+          title: `Negócio ${formatDealCode(detected)} detectado`,
+          description: "Vinculei automaticamente pelo código falado no áudio. Confira antes de salvar.",
+        })
+        return
+      }
+    }
+
     if (!description && transcript) {
       toast({ title: "Áudio pronto", description: "Transcrição salva no campo abaixo — revise antes de salvar." })
     }
@@ -85,6 +105,7 @@ export function QuickAppointmentRecorder({
     setDescription("")
     setAudioBlob(null)
     setAnswered(true)
+    setDealId(null)
   }
 
   const handleSave = async (e: React.FormEvent) => {
@@ -125,6 +146,7 @@ export function QuickAppointmentRecorder({
         description: description.trim(),
         answered,
         audio_url: audioUrl,
+        deal_id: dealId,
       })
 
       toast({ title: "Atendimento registrado" })
@@ -160,6 +182,15 @@ export function QuickAppointmentRecorder({
             {/* Gravador em destaque */}
             <div className="rounded-lg border bg-card p-4">
               <AudioRecorder onFinish={handleRecordingFinish} disabled={saving} />
+            </div>
+
+            {/* Negócio vinculado — pode ser detectado automaticamente do áudio */}
+            <div className="space-y-1.5">
+              <Label htmlFor="quick-deal">Negócio vinculado (opcional)</Label>
+              <DealCodeSearch value={dealId} onChange={setDealId} disabled={saving} />
+              <p className="text-xs text-muted-foreground">
+                Fale o código no áudio (ex: "negócio N traço zero zero quarenta e dois") ou cole aqui.
+              </p>
             </div>
 
             {/* Descrição — pré-preenchida com a transcrição */}

@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { CurrencyInput } from "@/components/ui/currency-input"
 import { ClientSearch } from "@/components/client-search"
 import { ProductSearch } from "@/components/product-search"
+import { DealCodeBadge } from "@/components/deal-code-badge"
 import type { Deal, Client } from "@/lib/api-client"
 import { api } from "@/lib/api-client"
 import { useMobileDetection } from "@/lib/mobile-utils"
@@ -213,7 +214,10 @@ export function DealForm({ deal, open, onOpenChange, onSubmit, loading }: DealFo
         })}
       >
         <DialogHeader>
-          <DialogTitle>{deal ? t('editDeal') : t('newDeal')}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <span>{deal ? t('editDeal') : t('newDeal')}</span>
+            {deal && <DealCodeBadge id={deal.id} />}
+          </DialogTitle>
         </DialogHeader>
         <div className="flex-1 overflow-y-auto p-1">
         <form onSubmit={handleSubmit} className="space-y-4 pb-4">

@@ -217,6 +217,7 @@ export interface Appointment {
   answered: boolean
   property_name?: string | null
   audio_url?: string | null
+  deal_id?: number | null
 }
 
 export interface ProductImage {
