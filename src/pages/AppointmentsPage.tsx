@@ -17,7 +17,6 @@ import {
 import { ArrowLeft, Plus, Pencil, Trash2, Search, Clock, User, HeadphonesIcon, Mic } from "lucide-react"
 import { api, type Appointment } from "@/lib/api-client"
 import { AppointmentForm } from "@/components/forms/appointment-form"
-import { QuickAppointmentRecorder } from "@/components/quick-appointment-recorder"
 import { useToast } from "@/hooks/use-toast"
 import { ReactiveDateTime } from "@/components/reactive-datetime"
 
@@ -34,7 +33,6 @@ export default function AppointmentsPage() {
   
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingAppointment, setEditingAppointment] = useState<Appointment | undefined>()
-  const [isQuickRecorderOpen, setIsQuickRecorderOpen] = useState(false)
 
   const { toast } = useToast()
 
@@ -392,18 +390,14 @@ export default function AppointmentsPage() {
         loading={formLoading}
       />
 
-      {/* Modal do fluxo rápido por áudio */}
-      <QuickAppointmentRecorder
-        open={isQuickRecorderOpen}
-        onOpenChange={setIsQuickRecorderOpen}
-        onCreated={() => loadAppointments()}
-      />
-
-      {/* FAB — botão flutuante de gravação. Fica fixo no canto inferior direito,
-          fora do fluxo da tabela, sempre acessível pro corretor no mobile. */}
+      {/* FAB de microfone: agora abre o mesmo AppointmentForm (que já tem o
+          gravador embutido no topo). Assim o fluxo é único — sem modal duplicado. */}
       <button
         type="button"
-        onClick={() => setIsQuickRecorderOpen(true)}
+        onClick={() => {
+          setEditingAppointment(undefined)
+          setIsFormOpen(true)
+        }}
         aria-label="Gravar atendimento por áudio"
         className="fixed bottom-6 right-6 z-40 h-14 w-14 rounded-full bg-red-600 text-white shadow-lg hover:bg-red-700 focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-2 flex items-center justify-center transition-colors sm:h-16 sm:w-16"
       >

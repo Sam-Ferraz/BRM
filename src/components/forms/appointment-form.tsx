@@ -20,6 +20,9 @@ import { DealCodeSearch } from "@/components/deal-code-search"
 import { AnsweredStatusToggle } from "@/components/ui/answered-status-toggle"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useTimezone } from "@/hooks/use-timezone"
+import { useToast } from "@/hooks/use-toast"
+import { AudioRecorder } from "@/components/audio-recorder"
+import { extractDealCodeFromText, formatDealCode } from "@/lib/deal-code"
 import { format } from "date-fns"
 
 interface AppointmentFormProps {
@@ -47,9 +50,12 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
     answered: undefined as boolean | undefined,
     property_name: "",
     deal_id: null as number | null,
+    audio_url: null as string | null,
   })
   const [selectedClientPhone, setSelectedClientPhone] = useState<string | null>(null)
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
+  const [uploadingAudio, setUploadingAudio] = useState(false)
+  const { toast } = useToast()
 
   // Follow-up fields (optional)
   const [includeFollowUp, setIncludeFollowUp] = useState(false)
@@ -79,6 +85,7 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
         answered: appointment.answered,
         property_name: appointment.property_name || "",
         deal_id: appointment.deal_id ?? null,
+        audio_url: appointment.audio_url ?? null,
       })
       setSelectedClientPhone(null)
       setIncludeFollowUp(false)
@@ -91,6 +98,7 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
         answered: undefined,
         property_name: "",
         deal_id: null,
+        audio_url: null,
       })
       setSelectedClientPhone(null)
       setIncludeFollowUp(false)
@@ -149,6 +157,57 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
     }
   }, [formData.client, selectedClientPhone])
 
+  // Rotina de gravação: quando o corretor termina de gravar, sobe o áudio
+  // pro backend em paralelo e usa a transcrição pra preencher a descrição.
+  // Se o corretor mencionou o código do negócio no áudio (ex: "atendimento
+  // do N zero zero um"), auto-vinculamos o deal_id.
+  const handleRecordingFinish = async ({
+    audioBlob,
+    transcript,
+  }: {
+    audioBlob: Blob
+    transcript: string
+  }) => {
+    // 1. Preenche a descrição com o transcript (concatena se já havia texto)
+    if (transcript) {
+      setFormData((prev) => ({
+        ...prev,
+        description: prev.description
+          ? `${prev.description.trim()}\n\n${transcript}`
+          : transcript,
+      }))
+    }
+
+    // 2. Auto-detecção do código do Negócio no transcript (só se ainda não
+    //    tem vínculo manual, pra não sobrescrever intenção explícita)
+    if (transcript && formData.deal_id == null) {
+      const detected = extractDealCodeFromText(transcript)
+      if (detected != null) {
+        setFormData((prev) => ({ ...prev, deal_id: detected }))
+        toast({
+          title: `Negócio ${formatDealCode(detected)} detectado`,
+          description: "Vinculei automaticamente pelo código falado no áudio.",
+        })
+      }
+    }
+
+    // 3. Sobe o áudio pro backend
+    setUploadingAudio(true)
+    try {
+      const res = await api.appointments.uploadAudio(audioBlob)
+      setFormData((prev) => ({ ...prev, audio_url: res.data.url }))
+    } catch (err) {
+      console.warn("[AppointmentForm] falha no upload do áudio:", err)
+      toast({
+        title: "Áudio não foi salvo",
+        description: "A transcrição continua válida — o atendimento vai ser criado sem o arquivo de áudio.",
+        variant: "destructive",
+      })
+    } finally {
+      setUploadingAudio(false)
+    }
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -191,6 +250,7 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
       property_name: formData.type === 'visit' ? formData.property_name : null,
       scheduled_datetime: convertFromLocalToApp(formData.scheduled_datetime, currentTimezone),
       deal_id: formData.deal_id ?? null,
+      audio_url: formData.audio_url ?? null,
     }
 
     // Pass follow-up data if enabled
@@ -210,6 +270,27 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
         </DialogHeader>
         <div className="flex-1 overflow-y-auto p-1">
         <form onSubmit={handleSubmit} className="space-y-4 pb-4">
+          {/* Rotina de gravação — só na criação. Na edição o áudio já existe
+              (mostrado como player se houver) e não faz sentido gravar de novo. */}
+          {!appointment && (
+            <div className="rounded-lg border bg-muted/30 p-3">
+              <AudioRecorder onFinish={handleRecordingFinish} disabled={loading} />
+              {uploadingAudio && (
+                <p className="mt-2 text-xs text-muted-foreground">Enviando áudio...</p>
+              )}
+              {formData.audio_url && !uploadingAudio && (
+                <p className="mt-2 text-xs text-green-700">Áudio anexado ao atendimento.</p>
+              )}
+            </div>
+          )}
+          {appointment?.audio_url && (
+            <div className="rounded-lg border bg-muted/30 p-3">
+              <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-1">
+                Áudio do atendimento
+              </p>
+              <audio controls src={appointment.audio_url} className="w-full" />
+            </div>
+          )}
           <div className="space-y-2">
             <Label htmlFor="scheduled_datetime">
               {t('dateTime')} <span className="text-red-500">*</span>
