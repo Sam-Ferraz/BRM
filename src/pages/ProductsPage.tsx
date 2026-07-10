@@ -17,6 +17,7 @@ import { ArrowLeft, Plus, Pencil, Trash2, Search, Image, Package, Eye, EyeOff } 
 import { api, type Product } from "@/lib/api-client"
 import { ProductForm } from "@/components/forms/product-form"
 import { useToast } from "@/hooks/use-toast"
+import { PropertyCodeBadge } from "@/components/property-code-badge"
 
 export default function ProductsPage() {
   const { t } = useTranslation()
@@ -242,9 +243,10 @@ export default function ProductsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-[90px]">Código</TableHead>
                     <TableHead>{t('image')}</TableHead>
-                    <TableHead 
-                      className="cursor-pointer" 
+                    <TableHead
+                      className="cursor-pointer"
                       onClick={() => handleSort("name")}
                     >
                       {t('name')} {sortBy === "name" && (sortOrder === "asc" ? "↑" : "↓")}
@@ -272,7 +274,7 @@ export default function ProductsPage() {
                 </TableHeader>
                 <TableBody>
                   {products.map((product) => (
-                    <TableRow 
+                    <TableRow
                       key={product.id}
                       className="cursor-pointer hover:bg-muted/50"
                       onClick={() => {
@@ -280,6 +282,9 @@ export default function ProductsPage() {
                         setIsFormOpen(true)
                       }}
                     >
+                      <TableCell>
+                        <PropertyCodeBadge id={product.id} />
+                      </TableCell>
                       <TableCell className="w-16">
                         <div 
                           className="w-12 h-12 rounded-lg border cursor-pointer hover:opacity-80 transition-opacity overflow-hidden bg-muted flex items-center justify-center"
@@ -380,7 +385,7 @@ export default function ProductsPage() {
                   ))}
                   {products.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                         {t('noProductsFound')}
                       </TableCell>
                     </TableRow>

@@ -271,7 +271,7 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
               onChange={(dealId) => setFormData((prev) => ({ ...prev, deal_id: dealId }))}
             />
             <p className="text-xs text-muted-foreground">
-              Cole o código (ex: N-0042) ou busque pelo nome do cliente.
+              Cole o código (ex: N+0001) ou busque pelo nome do cliente.
             </p>
           </div>
           <div className="space-y-2">

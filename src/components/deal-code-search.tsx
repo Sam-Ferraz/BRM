@@ -37,7 +37,7 @@ export function DealCodeSearch({
   value,
   onChange,
   disabled,
-  placeholder = "Ex: N-0042 ou nome do cliente",
+  placeholder = "Ex: N+0001 ou nome do cliente",
   className,
 }: DealCodeSearchProps) {
   const [query, setQuery] = useState("")

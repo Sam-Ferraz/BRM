@@ -189,7 +189,7 @@ export function QuickAppointmentRecorder({
               <Label htmlFor="quick-deal">Negócio vinculado (opcional)</Label>
               <DealCodeSearch value={dealId} onChange={setDealId} disabled={saving} />
               <p className="text-xs text-muted-foreground">
-                Fale o código no áudio (ex: "negócio N traço zero zero quarenta e dois") ou cole aqui.
+                Fale o código no áudio (ex: "negócio N mais zero zero zero um") ou cole aqui.
               </p>
             </div>
 

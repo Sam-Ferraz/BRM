@@ -16,6 +16,7 @@ import { Upload, Star, Trash2, Eye } from "lucide-react"
 import { api, type Product, type ProductImage, type ProductStatus } from "@/lib/api-client"
 import { useMobileDetection } from "@/lib/mobile-utils"
 import { useToast } from "@/hooks/use-toast"
+import { PropertyCodeBadge } from "@/components/property-code-badge"
 
 interface ProductFormProps {
   product?: Product
@@ -283,7 +284,10 @@ export function ProductForm({ product, initialName, open, onOpenChange, onSubmit
           {...(isMobile && { onOpenAutoFocus: (e) => e.preventDefault() })}
         >
           <DialogHeader>
-            <DialogTitle>{product ? t('editProduct') : t('newProduct')}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <span>{product ? t('editProduct') : t('newProduct')}</span>
+              {product && <PropertyCodeBadge id={product.id} />}
+            </DialogTitle>
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto p-1">
