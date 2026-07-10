@@ -150,7 +150,7 @@ export default function UsersPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <UsersIcon className="w-5 h-5" />
-              Gestão de Usuários
+              Usuários
             </CardTitle>
           </CardHeader>
           <CardContent>
