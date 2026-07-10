@@ -306,4 +306,64 @@ export class DealRepository extends BaseRepository {
       this.releaseClient(client)
     }
   }
+
+  /**
+   * Retorna os IDs dos Negócios que estão em "atraso de cadência".
+   *
+   * Regra (definida pelo produto):
+   *   - Só se aplica a leads (client_origin='online_lead')
+   *   - Só nos primeiros 8 dias desde origin_date (aceite na carteira)
+   *   - Só se ainda não há nenhum atendimento RESPONDIDO (bilateral) — ou seja,
+   *     o cliente ainda não retornou; ele continua "frio"
+   *   - E se a quantidade de tentativas (atendimentos NÃO respondidos) for
+   *     MENOR que a quantidade de dias em carteira. Ex: 4 dias na carteira,
+   *     só 2 tentativas → precisa de cadência (deveria haver ≥4).
+   *
+   * Retorna array de deal_ids junto de attempts e days_in_wallet — útil pra
+   * tooltip futura. Query única, agregação no banco, sem N+1.
+   */
+  async getDealsNeedingCadence(userId?: number): Promise<Array<{
+    deal_id: number
+    attempts: number
+    days_in_wallet: number
+  }>> {
+    const client = await this.getClient()
+    try {
+      const conditions: string[] = [
+        "d.client_origin = 'online_lead'",
+        "d.origin_date IS NOT NULL",
+        "(CURRENT_DATE - d.origin_date) BETWEEN 0 AND 8",
+      ]
+      const values: any[] = []
+      let p = 1
+      if (userId) {
+        conditions.push(`d.user_id = $${p}`)
+        values.push(userId)
+        p++
+      }
+
+      const query = `
+        SELECT
+          d.id AS deal_id,
+          (CURRENT_DATE - d.origin_date)::int AS days_in_wallet,
+          COALESCE(SUM(CASE WHEN a.answered = false THEN 1 ELSE 0 END), 0)::int AS attempts,
+          COALESCE(SUM(CASE WHEN a.answered = true  THEN 1 ELSE 0 END), 0)::int AS answered_count
+        FROM deals d
+        LEFT JOIN appointments a ON a.deal_id = d.id
+        WHERE ${conditions.join(' AND ')}
+        GROUP BY d.id, d.origin_date
+        HAVING COALESCE(SUM(CASE WHEN a.answered = true  THEN 1 ELSE 0 END), 0) = 0
+           AND COALESCE(SUM(CASE WHEN a.answered = false THEN 1 ELSE 0 END), 0)
+               < (CURRENT_DATE - d.origin_date)::int
+      `
+      const result = await client.query(query, values)
+      return result.rows.map(row => ({
+        deal_id: row.deal_id,
+        attempts: row.attempts,
+        days_in_wallet: row.days_in_wallet,
+      }))
+    } finally {
+      this.releaseClient(client)
+    }
+  }
 }

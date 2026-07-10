@@ -660,6 +660,17 @@ export const api = {
       const query = search.toString()
       return apiClient.get<{ data: DealFunnelStage[] }>(`/deals/analytics/funnel${query ? `?${query}` : ''}`)
     },
+
+    /**
+     * Cadência: quais Negócios do usuário estão "em atraso" de tentativas
+     * (tentativas < dias em carteira, dentro dos 8 primeiros dias, Lead, sem
+     * atendimento respondido). Usado pelo badge no Kanban.
+     */
+    getCadence: async (): Promise<{
+      data: Array<{ deal_id: number; attempts: number; days_in_wallet: number }>
+    }> => {
+      return apiClient.get('/deals/analytics/cadence')
+    },
   },
 
   // Clients

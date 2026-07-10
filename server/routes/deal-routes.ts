@@ -71,6 +71,19 @@ export function createDealRoutes(dealService: DealService): Router {
     }
   })
 
+  // Cadência: deals que precisam de tag vermelha no Kanban.
+  // Filtrado por user_id do requester — cada corretor vê seus próprios.
+  router.get('/analytics/cadence', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const userId = req.user!.userId
+      const result = await dealService.getDealsNeedingCadence(userId)
+      res.json(result)
+    } catch (error) {
+      console.error('Error in deals cadence route:', error)
+      res.status(500).json({ error: 'Internal server error' })
+    }
+  })
+
   router.post('/', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const userId = req.user!.userId

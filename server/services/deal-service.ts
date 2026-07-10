@@ -88,4 +88,23 @@ export class DealService {
       throw new Error('Internal server error')
     }
   }
+
+  /**
+   * Retorna os Negócios que estão em atraso de cadência — usados pra render
+   * do badge "Cadência" no Kanban de Negócios.
+   *
+   * userId opcional: filtra pra ver só os deals do usuário logado (o corretor
+   * vê seus próprios cards; gerência vê tudo).
+   */
+  async getDealsNeedingCadence(userId?: number): Promise<{
+    data: Array<{ deal_id: number; attempts: number; days_in_wallet: number }>
+  }> {
+    try {
+      const rows = await this.dealRepository.getDealsNeedingCadence(userId)
+      return { data: rows }
+    } catch (error) {
+      console.error('Error fetching deals needing cadence:', error)
+      throw new Error('Internal server error')
+    }
+  }
 }

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import { Pencil, ChevronDown, User, Package, DollarSign } from "lucide-react"
-import type { Deal } from "@/lib/api-client"
+import { api, type Deal } from "@/lib/api-client"
 
 /**
  * DealsKanbanView — visualização em colunas dos Negócios agrupados por fase.
@@ -189,6 +189,24 @@ export function DealsKanbanView({ deals, onEdit, onStatusChange }: DealsKanbanVi
   // Se o usuário dropou num descartado, precisamos perguntar o motivo
   const [pendingDiscard, setPendingDiscard] = useState<{ dealId: number } | null>(null)
 
+  // Set de dealIds em atraso de cadência — consumido pelo <DealCard> pra decidir
+  // se renderiza o badge vermelho. Fetchado uma vez por montagem do Kanban.
+  // Recarrega quando o array de deals muda (ex: usuário criou/moveu/deletou).
+  const [cadenceSet, setCadenceSet] = useState<Set<number>>(() => new Set())
+  useEffect(() => {
+    let cancelled = false
+    api.deals.getCadence()
+      .then((res) => {
+        if (!cancelled) setCadenceSet(new Set(res.data.map((r) => r.deal_id)))
+      })
+      .catch((err) => {
+        console.warn("[Kanban] falha ao buscar cadência:", err)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [deals.length])
+
   const dealsByPhase = useMemo(() => {
     const map: Record<string, Deal[]> = Object.fromEntries(PHASES.map((p) => [p.key, []]))
     for (const deal of deals) {
@@ -361,6 +379,7 @@ export function DealsKanbanView({ deals, onEdit, onStatusChange }: DealsKanbanVi
                       onDragEnd={() => setDraggingId(null)}
                       onEdit={() => onEdit(deal)}
                       onMoveTo={(targetPhase) => handleManualStatusChange(deal, targetPhase)}
+                      needsCadence={cadenceSet.has(deal.id)}
                     />
                   ))
                 )}
@@ -384,9 +403,10 @@ interface DealCardProps {
   onDragEnd: () => void
   onEdit: () => void
   onMoveTo: (phase: PhaseColumn) => void
+  needsCadence?: boolean
 }
 
-function DealCard({ deal, isDragging, onDragStart, onDragEnd, onEdit, onMoveTo }: DealCardProps) {
+function DealCard({ deal, isDragging, onDragStart, onDragEnd, onEdit, onMoveTo, needsCadence }: DealCardProps) {
   const temp = getTemperature(deal.status)
   const tempInfo = tempIndicator(temp)
   // Origem: lead vs manual (heurística — se tem lead_id no futuro, usar aquilo)
@@ -462,6 +482,17 @@ function DealCard({ deal, isDragging, onDragStart, onDragEnd, onEdit, onMoveTo }
             </Badge>
           )}
         </div>
+        {needsCadence && (
+          <div className="pt-1">
+            <Badge
+              variant="outline"
+              className="text-[9px] h-4 px-1 border-red-500 bg-red-50 text-red-700 font-semibold"
+              title="Tentativas de atendimento estão abaixo da cadência esperada (menos tentativas do que dias em carteira)."
+            >
+              Cadência
+            </Badge>
+          </div>
+        )}
       </div>
     </Card>
   )
