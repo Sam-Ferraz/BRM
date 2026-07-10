@@ -10,11 +10,10 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import type { Appointment, Client } from "@/lib/api-client"
+import type { Appointment } from "@/lib/api-client"
 import { api } from "@/lib/api-client"
 import { useMobileDetection } from "@/lib/mobile-utils"
 import { getCurrentDateTimeForForm, convertFromAppToLocal, convertFromLocalToApp } from "@/lib/datetime"
-import { ClientSearch } from "@/components/client-search"
 import { ProductSearch } from "@/components/product-search"
 import { DealCodeSearch } from "@/components/deal-code-search"
 import { AnsweredStatusToggle } from "@/components/ui/answered-status-toggle"
@@ -318,20 +317,23 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
               {...(!isMobile && { tabIndex: 2 })}
             />
           </div>
-          {/* Negócio vinculado — OBRIGATÓRIO. Selecionar o Negócio
-              auto-preenche o Cliente (e o Imóvel quando aplicável), evitando
-              re-digitação. */}
+          {/* Negócio — OBRIGATÓRIO. Selecionar o Negócio auto-preenche o
+              Cliente e o Telefone (derivados, readonly), e o Imóvel quando o
+              atendimento é visita. */}
           <div className="space-y-2">
             <Label htmlFor="deal_code">
-              Negócio vinculado <span className="text-red-500">*</span>
+              Negócio <span className="text-red-500">*</span>
             </Label>
             <DealCodeSearch
               value={formData.deal_id}
               onChange={(dealId) => setFormData((prev) => ({ ...prev, deal_id: dealId }))}
               onDealSelect={(deal) => {
-                if (!deal) return
-                // Popula Cliente com o cliente do Negócio — se o corretor não
-                // tinha digitado nada ainda ou se o valor era diferente.
+                if (!deal) {
+                  // Deal desvinculado → limpa derivados
+                  setFormData((prev) => ({ ...prev, client: "", property_name: "" }))
+                  setSelectedClientPhone(null)
+                  return
+                }
                 setFormData((prev) => ({
                   ...prev,
                   client: deal.client,
@@ -340,7 +342,7 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
                     ? deal.property_name
                     : prev.property_name,
                 }))
-                setSelectedClientPhone(null)
+                setSelectedClientPhone(deal.client_phone ?? "")
               }}
               invalid={!!errors.deal_id}
             />
@@ -348,29 +350,19 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
               <p className="text-sm text-red-500">{errors.deal_id}</p>
             ) : (
               <p className="text-xs text-muted-foreground">
-                Cole o código (ex: N0001) ou busque pelo nome do cliente — o Cliente vai ser preenchido automaticamente.
+                Cole o código (ex: N0001) ou busque pelo nome do cliente — o Cliente e o Telefone vêm do Negócio.
               </p>
             )}
           </div>
+          {/* Cliente é derivado do Negócio — readonly, mesmo padrão do Telefone. */}
           <div className="space-y-2">
-            <Label htmlFor="client">
-              {t('client')} <span className="text-red-500">*</span>
-            </Label>
-            <ClientSearch
-              value={formData.client}
-              onSelect={(clientName) => {
-                setFormData({ ...formData, client: clientName })
-                setSelectedClientPhone(null)
-              }}
-              onClientSelect={(client: Client) => {
-                setSelectedClientPhone(client.phone ?? '')
-              }}
-              placeholder={t('selectClient')}
-              className={`w-full ${errors.client ? 'ring-2 ring-red-500' : ''}`}
+            <Label htmlFor="client">{t('client')}</Label>
+            <Input
+              id="client"
+              value={formData.client || "—"}
+              readOnly
+              className="bg-muted"
             />
-            {errors.client && (
-              <p className="text-sm text-red-500">{errors.client}</p>
-            )}
           </div>
           {formData.client && (
             <div className="space-y-2">

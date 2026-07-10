@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils"
 export interface DealOption {
   id: number
   client: string
+  client_phone?: string
   property_name?: string
   status: string
 }
@@ -76,6 +77,7 @@ export function DealCodeSearch({
           const option: DealOption = {
             id: found.id,
             client: found.client,
+            client_phone: found.client_phone,
             property_name: found.property_name,
             status: found.status,
           }
@@ -115,6 +117,7 @@ export function DealCodeSearch({
         filtered.slice(0, 8).map((d) => ({
           id: d.id,
           client: d.client,
+          client_phone: d.client_phone,
           property_name: d.property_name,
           status: d.status,
         })),
