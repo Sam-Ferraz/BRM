@@ -161,7 +161,7 @@ export default function ConfigPage() {
                       <UsersIcon className="w-5 h-5 text-primary" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium">Gerenciar Usuários</p>
+                      <p className="text-sm font-medium">Usuários</p>
                       <p className="text-xs text-muted-foreground">
                         Criar, editar e desativar usuários da equipe
                       </p>
