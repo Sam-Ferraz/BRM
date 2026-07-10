@@ -111,6 +111,22 @@ export interface PermissionsMatrix {
   }[]
 }
 
+export interface UserPermissionsView {
+  modules: {
+    module: string
+    label: string
+    permissions: {
+      id: number
+      key: string
+      label: string
+      description?: string | null
+      role_default: boolean
+      override: boolean | null
+      effective: boolean
+    }[]
+  }[]
+}
+
 // ---------------------------------------------------------------------------
 // Módulo Contrato (entre Proposta e Venda)
 // ---------------------------------------------------------------------------
@@ -1198,6 +1214,18 @@ export const api = {
       return apiClient.put<{ success: boolean; count: number }>('/user-mgmt/permissions/matrix', {
         updates,
       })
+    },
+    getUserPermissions: async (userId: number): Promise<{ data: UserPermissionsView }> => {
+      return apiClient.get<{ data: UserPermissionsView }>(`/user-mgmt/users/${userId}/permissions`)
+    },
+    saveUserPermissions: async (
+      userId: number,
+      updates: { permission_id: number; allowed: boolean | null }[]
+    ): Promise<{ success: boolean; count: number }> => {
+      return apiClient.put<{ success: boolean; count: number }>(
+        `/user-mgmt/users/${userId}/permissions`,
+        { updates }
+      )
     },
   },
 

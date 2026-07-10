@@ -1,5 +1,5 @@
 import { BaseRepository } from './base-repository.js'
-import { Permission, PermissionsMatrix, ManagedUserRole } from '../types/index.js'
+import { Permission, PermissionsMatrix, ManagedUserRole, UserPermissionsView } from '../types/index.js'
 
 const MATRIX_ROLES: ManagedUserRole[] = ['manager', 'broker', 'sdr', 'administrative']
 
@@ -87,6 +87,144 @@ export class PermissionRepository extends BaseRepository {
           }
         }),
       })),
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Overrides por usuário
+  // -------------------------------------------------------------------------
+
+  /**
+   * Retorna todas permissões pro usuário com estado atual:
+   *   role_default: o que o role dele permite
+   *   override:     valor do override se existir, ou null
+   *   effective:    override ?? role_default
+   */
+  async getUserPermissions(userId: number, userRole: ManagedUserRole): Promise<UserPermissionsView> {
+    const permissions = await this.listAll()
+    const client = await this.getClient()
+
+    let rolePermRows: { permission_id: number; allowed: boolean }[]
+    let overrideRows: { permission_id: number; allowed: boolean }[]
+
+    try {
+      // Padrão do role
+      if (userRole === 'admin') {
+        // Admin sempre true — não consulta role_permissions
+        rolePermRows = permissions.map((p) => ({ permission_id: p.id, allowed: true }))
+      } else {
+        const r = await client.query<{ permission_id: number; allowed: boolean }>(
+          `SELECT permission_id, allowed FROM role_permissions WHERE role = $1`,
+          [userRole]
+        )
+        rolePermRows = r.rows
+      }
+
+      // Overrides do usuário
+      const o = await client.query<{ permission_id: number; allowed: boolean }>(
+        `SELECT permission_id, allowed FROM user_permission_overrides WHERE user_id = $1`,
+        [userId]
+      )
+      overrideRows = o.rows
+    } finally {
+      this.releaseClient(client)
+    }
+
+    const roleMap = new Map<number, boolean>()
+    for (const r of rolePermRows) roleMap.set(r.permission_id, r.allowed)
+
+    const overrideMap = new Map<number, boolean>()
+    for (const o of overrideRows) overrideMap.set(o.permission_id, o.allowed)
+
+    // Agrupa por módulo
+    const byModule = new Map<string, typeof permissions>()
+    for (const p of permissions) {
+      const bucket = byModule.get(p.module) ?? []
+      bucket.push(p)
+      byModule.set(p.module, bucket)
+    }
+
+    const MODULE_LABELS: Record<string, string> = {
+      users: 'Usuários',
+      integrations: 'Integrações',
+      leads: 'Leads',
+      deals: 'Negócios',
+      clients: 'Clientes',
+      products: 'Imóveis',
+      appointments: 'Atendimentos',
+      followups: 'Follow-ups',
+      proposals: 'Propostas',
+      contracts: 'Contratos',
+      sales: 'Vendas',
+      chat: 'Chat',
+      agenda: 'Agenda',
+      analytics: 'Analytics',
+    }
+
+    const orderedModules = Object.keys(MODULE_LABELS).filter((m) => byModule.has(m))
+    for (const m of byModule.keys()) {
+      if (!orderedModules.includes(m)) orderedModules.push(m)
+    }
+
+    return {
+      modules: orderedModules.map((module) => ({
+        module,
+        label: MODULE_LABELS[module] ?? module,
+        permissions: (byModule.get(module) ?? []).map((p) => {
+          const roleDefault = roleMap.get(p.id) ?? false
+          const override = overrideMap.has(p.id) ? (overrideMap.get(p.id) as boolean) : null
+          const effective = override !== null ? override : roleDefault
+          return {
+            id: p.id,
+            key: p.key,
+            label: p.label,
+            description: p.description,
+            role_default: roleDefault,
+            override,
+            effective,
+          }
+        }),
+      })),
+    }
+  }
+
+  /**
+   * Salva overrides pra um usuário. Um item pode ter allowed=null pra
+   * REMOVER o override (voltar ao padrão do role).
+   */
+  async setUserOverrides(
+    userId: number,
+    updates: { permission_id: number; allowed: boolean | null }[],
+    updatedBy?: number
+  ): Promise<void> {
+    if (updates.length === 0) return
+    const client = await this.getClient()
+    try {
+      await client.query('BEGIN')
+      for (const u of updates) {
+        if (u.allowed === null) {
+          await client.query(
+            `DELETE FROM user_permission_overrides WHERE user_id = $1 AND permission_id = $2`,
+            [userId, u.permission_id]
+          )
+        } else {
+          await client.query(
+            `INSERT INTO user_permission_overrides (user_id, permission_id, allowed, updated_by, updated_at)
+             VALUES ($1, $2, $3, $4, NOW())
+             ON CONFLICT (user_id, permission_id)
+             DO UPDATE SET allowed = EXCLUDED.allowed,
+                           updated_by = EXCLUDED.updated_by,
+                           updated_at = NOW()`,
+            [userId, u.permission_id, u.allowed, updatedBy ?? null]
+          )
+        }
+      }
+      await client.query('COMMIT')
+    } catch (err) {
+      await client.query('ROLLBACK')
+      throw err
+    } finally {
+      this.releaseClient(client)
     }
   }
 

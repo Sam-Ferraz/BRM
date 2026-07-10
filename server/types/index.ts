@@ -49,6 +49,30 @@ export interface PermissionsMatrix {
   }[]
 }
 
+/**
+ * Visão de permissões pra um usuário específico. Mostra pra cada rotina:
+ *   • role_default: o que o role dele permite (matriz de permissões)
+ *   • override:     true (concedida explicitamente),
+ *                   false (negada explicitamente),
+ *                   null (sem override — segue o role)
+ *   • effective:    valor final aplicado (override ?? role_default)
+ */
+export interface UserPermissionsView {
+  modules: {
+    module: string
+    label: string
+    permissions: {
+      id: number
+      key: string
+      label: string
+      description?: string | null
+      role_default: boolean
+      override: boolean | null
+      effective: boolean
+    }[]
+  }[]
+}
+
 export interface Deal {
   id: number
   client: string

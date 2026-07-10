@@ -4,6 +4,8 @@ import { PermissionService } from '../services/permission-service.js'
 import { ManagedUserRole } from '../types/index.js'
 import { authenticateToken, AuthenticatedRequest } from '../middleware/auth.js'
 
+const VALID_ROLES: ManagedUserRole[] = ['admin', 'manager', 'broker', 'sdr', 'administrative']
+
 /**
  * Rotas do módulo Usuários. Todas admin-only.
  * Prefixadas com /api/user-mgmt pra não conflitar com nada existente.
@@ -114,6 +116,53 @@ export function createUserManagementRoutes(
       res.status(500).json({ error: 'Internal server error' })
     }
   })
+
+  // ---------- Permissões por usuário (overrides) ----------
+
+  router.get(
+    '/users/:id/permissions',
+    authenticateToken,
+    async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+      if (!requireAdmin(req, res)) return
+      try {
+        const userId = parseInt(req.params.id)
+        // Busca o usuário pra pegar o role atual
+        const user = await userService.getById(userId)
+        if (!VALID_ROLES.includes(user.role)) {
+          res.status(400).json({ error: 'invalid user role' })
+          return
+        }
+        const view = await permService.getUserPermissions(userId, user.role)
+        res.json({ data: view })
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'error'
+        res.status(errStatus(msg)).json({ error: msg })
+      }
+    }
+  )
+
+  router.put(
+    '/users/:id/permissions',
+    authenticateToken,
+    async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+      if (!requireAdmin(req, res)) return
+      try {
+        const userId = parseInt(req.params.id)
+        const raw = Array.isArray(req.body?.updates) ? req.body.updates : []
+        const updates: { permission_id: number; allowed: boolean | null }[] = []
+        for (const item of raw) {
+          if (typeof item?.permission_id !== 'number') continue
+          if (item.allowed !== true && item.allowed !== false && item.allowed !== null) continue
+          updates.push({ permission_id: item.permission_id, allowed: item.allowed })
+        }
+        await permService.saveUserOverrides(userId, updates, req.user!.userId)
+        res.json({ success: true, count: updates.length })
+      } catch (err) {
+        console.error('save user overrides error:', err)
+        res.status(500).json({ error: 'Internal server error' })
+      }
+    }
+  )
 
   return router
 }
