@@ -217,6 +217,10 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
     // Validate required fields
     const newErrors: { [key: string]: string } = {}
 
+    if (formData.deal_id == null) {
+      newErrors.deal_id = 'Selecione o negócio vinculado'
+    }
+
     if (!formData.client.trim()) {
       newErrors.client = t('clientRequired') || 'Client is required'
     }
@@ -314,6 +318,40 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
               {...(!isMobile && { tabIndex: 2 })}
             />
           </div>
+          {/* Negócio vinculado — OBRIGATÓRIO. Selecionar o Negócio
+              auto-preenche o Cliente (e o Imóvel quando aplicável), evitando
+              re-digitação. */}
+          <div className="space-y-2">
+            <Label htmlFor="deal_code">
+              Negócio vinculado <span className="text-red-500">*</span>
+            </Label>
+            <DealCodeSearch
+              value={formData.deal_id}
+              onChange={(dealId) => setFormData((prev) => ({ ...prev, deal_id: dealId }))}
+              onDealSelect={(deal) => {
+                if (!deal) return
+                // Popula Cliente com o cliente do Negócio — se o corretor não
+                // tinha digitado nada ainda ou se o valor era diferente.
+                setFormData((prev) => ({
+                  ...prev,
+                  client: deal.client,
+                  // Se o Negócio tem imóvel amarrado e o atendimento é visita, aproveita.
+                  property_name: prev.type === "visit" && deal.property_name
+                    ? deal.property_name
+                    : prev.property_name,
+                }))
+                setSelectedClientPhone(null)
+              }}
+              invalid={!!errors.deal_id}
+            />
+            {errors.deal_id ? (
+              <p className="text-sm text-red-500">{errors.deal_id}</p>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Cole o código (ex: N0001) ou busque pelo nome do cliente — o Cliente vai ser preenchido automaticamente.
+              </p>
+            )}
+          </div>
           <div className="space-y-2">
             <Label htmlFor="client">
               {t('client')} <span className="text-red-500">*</span>
@@ -345,16 +383,6 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
               />
             </div>
           )}
-          <div className="space-y-2">
-            <Label htmlFor="deal_code">Negócio vinculado (opcional)</Label>
-            <DealCodeSearch
-              value={formData.deal_id}
-              onChange={(dealId) => setFormData((prev) => ({ ...prev, deal_id: dealId }))}
-            />
-            <p className="text-xs text-muted-foreground">
-              Cole o código (ex: N0001) ou busque pelo nome do cliente.
-            </p>
-          </div>
           <div className="space-y-2">
             <Label htmlFor="type">{t('type')}</Label>
             <Select

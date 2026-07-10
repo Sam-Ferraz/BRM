@@ -18,27 +18,36 @@ import { cn } from "@/lib/utils"
  * Usado no AppointmentForm manual e no QuickAppointmentRecorder por áudio.
  */
 
-interface DealCodeSearchProps {
-  value: number | null
-  onChange: (dealId: number | null) => void
-  disabled?: boolean
-  placeholder?: string
-  className?: string
-}
-
-interface DealOption {
+export interface DealOption {
   id: number
   client: string
   property_name?: string
   status: string
 }
 
+interface DealCodeSearchProps {
+  value: number | null
+  onChange: (dealId: number | null) => void
+  /**
+   * Callback disparado quando o deal é resolvido — seja por seleção manual,
+   * seja porque o pai passou um `value` externo (ex: auto-detecção no áudio).
+   * O parent usa isso pra popular campos derivados (cliente, imóvel).
+   */
+  onDealSelect?: (deal: DealOption | null) => void
+  disabled?: boolean
+  placeholder?: string
+  className?: string
+  invalid?: boolean
+}
+
 export function DealCodeSearch({
   value,
   onChange,
+  onDealSelect,
   disabled,
   placeholder = "Ex: N0001 ou nome do cliente",
   className,
+  invalid,
 }: DealCodeSearchProps) {
   const [query, setQuery] = useState("")
   const [options, setOptions] = useState<DealOption[]>([])
@@ -64,12 +73,16 @@ export function DealCodeSearch({
         if (cancelled) return
         const found = res.data.find((d) => d.id === value)
         if (found) {
-          setSelectedDeal({
+          const option: DealOption = {
             id: found.id,
             client: found.client,
             property_name: found.property_name,
             status: found.status,
-          })
+          }
+          setSelectedDeal(option)
+          // Notifica o pai — assim o AppointmentForm pode preencher Cliente
+          // depois de uma auto-detecção do áudio.
+          onDealSelect?.(option)
         }
       } catch (err) {
         console.warn("[DealCodeSearch] falha ao buscar deal:", err)
@@ -79,7 +92,7 @@ export function DealCodeSearch({
     return () => {
       cancelled = true
     }
-  }, [value, selectedDeal?.id])
+  }, [value, selectedDeal?.id, onDealSelect])
 
   const searchDeals = useCallback(async (rawQuery: string) => {
     setLoading(true)
@@ -131,6 +144,7 @@ export function DealCodeSearch({
   const handleSelect = (opt: DealOption) => {
     setSelectedDeal(opt)
     onChange(opt.id)
+    onDealSelect?.(opt)
     setQuery("")
     setOptions([])
     setShowOptions(false)
@@ -139,6 +153,7 @@ export function DealCodeSearch({
   const handleClear = () => {
     setSelectedDeal(null)
     onChange(null)
+    onDealSelect?.(null)
     setQuery("")
   }
 
@@ -173,6 +188,7 @@ export function DealCodeSearch({
         onBlur={() => window.setTimeout(() => setShowOptions(false), 150)}
         disabled={disabled}
         placeholder={placeholder}
+        className={cn(invalid && "ring-2 ring-red-500")}
       />
       {showOptions && (
         <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-lg max-h-60 overflow-y-auto">
