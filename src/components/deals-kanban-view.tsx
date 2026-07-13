@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -209,6 +209,43 @@ export function DealsKanbanView({ deals, onEdit, onStatusChange }: DealsKanbanVi
     }
   }, [deals.length])
 
+  // Drag-to-scroll horizontal: usuário clica numa área vazia (não em card do
+  // deal, que tem seu próprio HTML5 drag) e arrasta pra rolar as colunas.
+  // Refs em vez de state — evitamos re-renders no mousemove.
+  const scrollRef = useRef<HTMLDivElement | null>(null)
+  const dragState = useRef<{ startX: number; startScrollLeft: number } | null>(null)
+
+  const handleScrollMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    // Se o click começou dentro de um elemento draggable (card do deal),
+    // deixa o HTML5 drag do card assumir. Não sequestra o gesto.
+    const target = e.target as HTMLElement
+    if (target.closest('[draggable="true"]')) return
+    // Só botão esquerdo
+    if (e.button !== 0) return
+    const el = scrollRef.current
+    if (!el) return
+    dragState.current = { startX: e.pageX, startScrollLeft: el.scrollLeft }
+    el.style.cursor = "grabbing"
+    el.style.userSelect = "none"
+  }, [])
+
+  const handleScrollMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const st = dragState.current
+    const el = scrollRef.current
+    if (!st || !el) return
+    e.preventDefault()
+    const dx = e.pageX - st.startX
+    el.scrollLeft = st.startScrollLeft - dx
+  }, [])
+
+  const stopScrollDrag = useCallback(() => {
+    const el = scrollRef.current
+    if (!el) return
+    dragState.current = null
+    el.style.cursor = ""
+    el.style.userSelect = ""
+  }, [])
+
   const dealsByPhase = useMemo(() => {
     const map: Record<string, Deal[]> = Object.fromEntries(PHASES.map((p) => [p.key, []]))
     for (const deal of deals) {
@@ -328,7 +365,14 @@ export function DealsKanbanView({ deals, onEdit, onStatusChange }: DealsKanbanVi
         </div>
       )}
 
-      <div className="flex gap-3 overflow-x-auto pb-2">
+      <div
+        ref={scrollRef}
+        className="flex gap-3 overflow-x-auto pb-2 cursor-grab"
+        onMouseDown={handleScrollMouseDown}
+        onMouseMove={handleScrollMouseMove}
+        onMouseUp={stopScrollDrag}
+        onMouseLeave={stopScrollDrag}
+      >
         {PHASES.map((phase) => {
           const dealsInPhase = dealsByPhase[phase.key] || []
           const totalValue = dealsInPhase.reduce((sum, d) => {

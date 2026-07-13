@@ -27,6 +27,7 @@ import { DealsKanbanView } from "@/components/deals-kanban-view"
 import { useToast } from "@/hooks/use-toast"
 import { ReactiveDateTime } from "@/components/reactive-datetime"
 import { DealCodeBadge } from "@/components/deal-code-badge"
+import { CadenceIndicator, deriveCadenceState } from "@/components/cadence-indicator"
 
 export default function DealsPage() {
   const { t } = useTranslation()
@@ -41,6 +42,9 @@ export default function DealsPage() {
 
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingDeal, setEditingDeal] = useState<Deal | undefined>()
+  // Set de deal_ids com cadência ATRASADA (tag vermelha). Fetchado uma vez;
+  // deals que não estão nesse set e são leads = OK (verde); os demais = N/A (cinza).
+  const [cadenceOverdueSet, setCadenceOverdueSet] = useState<Set<number>>(() => new Set())
   // Modo de visualização: lista (tabela tradicional) ou kanban (colunas por fase)
   // Persistido em localStorage pra manter a escolha do usuário entre sessões
   const [viewMode, setViewMode] = useState<"list" | "kanban">(() => {
@@ -107,6 +111,21 @@ export default function DealsPage() {
   useEffect(() => {
     fetchDeals()
   }, [fetchDeals])
+
+  // Fetch de cadência: uma chamada só, cache local. Roda no mount e sempre que
+  // um deal é criado/atualizado (via fetchDeals mudar de referência não basta,
+  // então re-fetchamos junto — cheap query).
+  useEffect(() => {
+    let cancelled = false
+    api.deals.getCadence()
+      .then((res) => {
+        if (!cancelled) setCadenceOverdueSet(new Set(res.data.map((r) => r.deal_id)))
+      })
+      .catch((err) => console.warn("[DealsPage] falha ao buscar cadência:", err))
+    return () => {
+      cancelled = true
+    }
+  }, [deals.length])
 
   const handleCreate = async (data: Omit<Deal, "id">) => {
     try {
@@ -359,14 +378,15 @@ export default function DealsPage() {
                     >
                       {t('gsv')} {sortBy === "gsv" && (sortOrder === "asc" ? "↑" : "↓")}
                     </TableHead>
-                    <TableHead 
-                      className="cursor-pointer" 
+                    <TableHead
+                      className="cursor-pointer"
                       onClick={() => handleSort("status")}
                     >
                       {t('status')} {sortBy === "status" && (sortOrder === "asc" ? "↑" : "↓")}
                     </TableHead>
-                    <TableHead 
-                      className="cursor-pointer" 
+                    <TableHead className="w-[100px]">Cadência</TableHead>
+                    <TableHead
+                      className="cursor-pointer"
                       onClick={() => handleSort("origin_date")}
                     >
                       {t('originDate')} {sortBy === "origin_date" && (sortOrder === "asc" ? "↑" : "↓")}
@@ -393,7 +413,12 @@ export default function DealsPage() {
                       <TableCell>{formatCurrency(deal.gsv)}</TableCell>
                       <TableCell>{getStatusBadge(deal.status)}</TableCell>
                       <TableCell>
-                        <ReactiveDateTime 
+                        <CadenceIndicator
+                          state={deriveCadenceState(deal.client_origin, deal.id, cadenceOverdueSet)}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <ReactiveDateTime
                           value={deal.origin_date}
                           type="date"
                         />
@@ -440,7 +465,7 @@ export default function DealsPage() {
                   ))}
                   {deals.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                         {t('noDealsFound')}
                       </TableCell>
                     </TableRow>
