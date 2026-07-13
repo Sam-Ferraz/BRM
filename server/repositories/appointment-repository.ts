@@ -8,7 +8,7 @@ export class AppointmentRepository extends BaseRepository {
       // Ensure UTC timezone
       await client.query('SET TIMEZONE = \'UTC\'')
 
-      const { search, type, sortBy, sortOrder } = filters
+      const { search, type, sortBy, sortOrder, dealId } = filters
       let query = 'SELECT * FROM appointments WHERE 1=1'
       const params: any[] = []
       let paramCount = 1
@@ -29,6 +29,12 @@ export class AppointmentRepository extends BaseRepository {
       if (type && type !== 'All') {
         query += ` AND type = $${paramCount}`
         params.push(type)
+        paramCount++
+      }
+
+      if (dealId != null) {
+        query += ` AND deal_id = $${paramCount}`
+        params.push(dealId)
         paramCount++
       }
 

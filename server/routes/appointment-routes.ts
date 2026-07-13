@@ -87,11 +87,13 @@ export function createAppointmentRoutes(appointmentService: AppointmentService):
   router.get('/', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const userId = req.user!.userId
+      const parsedDealId = req.query.dealId ? parseInt(req.query.dealId as string, 10) : NaN
       const filters = {
         search: req.query.search as string,
         type: req.query.type as string,
         sortBy: req.query.sortBy as string,
-        sortOrder: req.query.sortOrder as 'asc' | 'desc'
+        sortOrder: req.query.sortOrder as 'asc' | 'desc',
+        dealId: Number.isFinite(parsedDealId) && parsedDealId > 0 ? parsedDealId : undefined,
       }
 
       const result = await appointmentService.getAllAppointments(filters, userId)

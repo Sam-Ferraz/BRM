@@ -14,7 +14,11 @@ import { CurrencyInput } from "@/components/ui/currency-input"
 import { ClientSearch } from "@/components/client-search"
 import { ProductSearch } from "@/components/product-search"
 import { DealCodeBadge } from "@/components/deal-code-badge"
-import type { Deal, Client } from "@/lib/api-client"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { DealAppointmentsTimeline } from "@/components/deal-appointments-timeline"
+import { AppointmentForm } from "@/components/forms/appointment-form"
+import { useToast } from "@/hooks/use-toast"
+import type { Deal, Client, Appointment } from "@/lib/api-client"
 import { api } from "@/lib/api-client"
 import { useMobileDetection } from "@/lib/mobile-utils"
 import { getCurrentDateForForm } from "@/lib/datetime"
@@ -32,6 +36,12 @@ export function DealForm({ deal, open, onOpenChange, onSubmit, loading }: DealFo
   const { t } = useTranslation()
   const isMobile = useMobileDetection()
   const currentTimezone = useTimezone()
+  const { toast } = useToast()
+  // Sub-modal pra "Novo atendimento" a partir da Timeline
+  const [newAppointmentOpen, setNewAppointmentOpen] = useState(false)
+  const [creatingAppointment, setCreatingAppointment] = useState(false)
+  // Incrementa pra forçar re-fetch da Timeline após criar novo atendimento
+  const [timelineReloadKey, setTimelineReloadKey] = useState(0)
   const currentDate = useMemo(() => getCurrentDateForForm(currentTimezone), [currentTimezone])
   type ClientOriginValue = Exclude<Deal['client_origin'], null | undefined>
   type PurposeValue = Exclude<Deal['purpose'], null | undefined>
@@ -205,22 +215,31 @@ export function DealForm({ deal, open, onOpenChange, onSubmit, loading }: DealFo
     { value: 'discarded_error', label: t('dealStatusDiscardedError') },
   ]
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="sm:max-w-[620px] max-h-[90vh] flex flex-col"
-        {...(isMobile && {
-          onOpenAutoFocus: (e) => e.preventDefault()
-        })}
-      >
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <span>{deal ? t('editDeal') : t('newDeal')}</span>
-            {deal && <DealCodeBadge id={deal.id} />}
-          </DialogTitle>
-        </DialogHeader>
-        <div className="flex-1 overflow-y-auto p-1">
-        <form onSubmit={handleSubmit} className="space-y-4 pb-4">
+  // Handler pra criar atendimento a partir da Timeline. Chama a API, dá toast
+  // e força re-fetch da lista da Timeline. O AppointmentForm cuida do upload
+  // do áudio e da validação.
+  const handleCreateAppointmentFromTimeline = async (data: Omit<Appointment, "id"> | Partial<Appointment>) => {
+    setCreatingAppointment(true)
+    try {
+      await api.appointments.create(data as Omit<Appointment, "id">)
+      toast({ title: "Atendimento registrado" })
+      setNewAppointmentOpen(false)
+      setTimelineReloadKey((k) => k + 1)
+    } catch (err) {
+      toast({
+        title: "Erro",
+        description: err instanceof Error ? err.message : "Falha ao criar atendimento",
+        variant: "destructive",
+      })
+    } finally {
+      setCreatingAppointment(false)
+    }
+  }
+
+  // Conteúdo do form em si — extraído em variável pra reutilizar dentro e fora
+  // das Tabs (edição vs criação de Deal).
+  const formContent = (
+    <form onSubmit={handleSubmit} className="space-y-4 pb-4">
           <div className="space-y-2">
             <Label htmlFor="origin_date">
               {t('originDate')} <span className="text-red-500">*</span>
@@ -380,17 +399,72 @@ export function DealForm({ deal, open, onOpenChange, onSubmit, loading }: DealFo
             </Select>
           </div>
 
-          <DialogFooter className="pt-2">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              {t('cancel')}
-            </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? t('saving') : t('save')}
-            </Button>
-          </DialogFooter>
-        </form>
-        </div>
+      <DialogFooter className="pt-2">
+        <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          {t('cancel')}
+        </Button>
+        <Button type="submit" disabled={loading}>
+          {loading ? t('saving') : t('save')}
+        </Button>
+      </DialogFooter>
+    </form>
+  )
+
+  return (
+    <>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        className={deal ? "sm:max-w-[820px] max-h-[90vh] flex flex-col" : "sm:max-w-[620px] max-h-[90vh] flex flex-col"}
+        {...(isMobile && {
+          onOpenAutoFocus: (e) => e.preventDefault()
+        })}
+      >
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <span>{deal ? t('editDeal') : t('newDeal')}</span>
+            {deal && <DealCodeBadge id={deal.id} />}
+          </DialogTitle>
+        </DialogHeader>
+        {deal ? (
+          // Modo edição: Tabs (Informações + Histórico de atendimento)
+          <Tabs defaultValue="info" className="flex-1 flex flex-col min-h-0">
+            <TabsList className="w-full">
+              <TabsTrigger value="info" className="flex-1">Informações</TabsTrigger>
+              <TabsTrigger value="history" className="flex-1">Histórico de atendimento</TabsTrigger>
+            </TabsList>
+            <TabsContent value="info" className="flex-1 min-h-0 mt-2 data-[state=inactive]:hidden">
+              <div className="flex-1 overflow-y-auto p-1 h-full">
+                {formContent}
+              </div>
+            </TabsContent>
+            <TabsContent value="history" className="flex-1 min-h-0 mt-2 data-[state=inactive]:hidden overflow-hidden">
+              <DealAppointmentsTimeline
+                dealId={deal.id}
+                clientName={deal.client}
+                onAddAppointment={() => setNewAppointmentOpen(true)}
+                reloadKey={timelineReloadKey}
+              />
+            </TabsContent>
+          </Tabs>
+        ) : (
+          // Modo criação: sem tabs — só o form
+          <div className="flex-1 overflow-y-auto p-1">
+            {formContent}
+          </div>
+        )}
       </DialogContent>
     </Dialog>
+
+    {/* Sub-modal de novo atendimento — abre com deal_id pré-preenchido */}
+    {deal && (
+      <AppointmentForm
+        open={newAppointmentOpen}
+        onOpenChange={setNewAppointmentOpen}
+        onSubmit={handleCreateAppointmentFromTimeline}
+        loading={creatingAppointment}
+        defaultDealId={deal.id}
+      />
+    )}
+    </>
   )
 }

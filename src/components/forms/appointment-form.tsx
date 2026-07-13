@@ -30,9 +30,14 @@ interface AppointmentFormProps {
   onOpenChange: (open: boolean) => void
   onSubmit: (data: Omit<Appointment, "id"> | Partial<Appointment>, followUpData?: { next_action: string; next_action_date: string }) => void
   loading?: boolean
+  /**
+   * Quando aberto a partir da Timeline de um Negócio, pré-preenche o campo
+   * Negócio (que dispara o auto-preenchimento de Cliente e Telefone).
+   */
+  defaultDealId?: number
 }
 
-export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loading }: AppointmentFormProps) {
+export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loading, defaultDealId }: AppointmentFormProps) {
   const { t } = useTranslation()
   const isMobile = useMobileDetection()
   const currentTimezone = useTimezone()
@@ -96,7 +101,7 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
         type: "chat" as "chat" | "call" | "in_person" | "visit",
         answered: undefined,
         property_name: "",
-        deal_id: null,
+        deal_id: defaultDealId ?? null,
         audio_url: null,
       })
       setSelectedClientPhone(null)

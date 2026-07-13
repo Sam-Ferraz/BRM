@@ -831,13 +831,15 @@ export const api = {
       type?: string
       sortBy?: string
       sortOrder?: "asc" | "desc"
+      dealId?: number
     }): Promise<ApiResponse<Appointment>> => {
       const params = new URLSearchParams()
       if (filters?.search) params.append('search', filters.search)
       if (filters?.type) params.append('type', filters.type)
       if (filters?.sortBy) params.append('sortBy', filters.sortBy)
       if (filters?.sortOrder) params.append('sortOrder', filters.sortOrder)
-      
+      if (filters?.dealId) params.append('dealId', String(filters.dealId))
+
       const query = params.toString()
       return apiClient.get<ApiResponse<Appointment>>(`/appointments${query ? `?${query}` : ''}`)
     },

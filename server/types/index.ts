@@ -588,4 +588,7 @@ export interface QueryFilters {
   // Usado nos módulos Propostas e Vendas.
   createdFrom?: string
   createdTo?: string
+  // Filtro por Negócio vinculado — usado pela Timeline no modal do Deal
+  // pra listar só os atendimentos daquele Negócio.
+  dealId?: number
 }
