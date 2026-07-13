@@ -81,6 +81,33 @@ export const apiClient = new ApiClient()
 // API endpoints with type safety
 
 // ---------------------------------------------------------------------------
+// Esteira de Leads (roulette / round-robin com timeout + gerente)
+export interface LeadPipelineMember {
+  user_id: number
+  name?: string
+  email?: string
+  position: number
+}
+export interface LeadPipeline {
+  id: number
+  name: string
+  hour_start: number
+  hour_end: number
+  timeout_seconds: number
+  manager_user_id: number
+  manager_name?: string
+  is_active: boolean
+  members: LeadPipelineMember[]
+  created_at?: string
+  updated_at?: string
+}
+export type LeadPipelinePayload = Omit<
+  LeadPipeline,
+  'id' | 'created_at' | 'updated_at' | 'members' | 'manager_name'
+> & {
+  member_user_ids: number[]
+}
+
 // Módulo Usuários + Permissões (isolado — endpoints /api/user-mgmt/*)
 // ---------------------------------------------------------------------------
 
@@ -1262,6 +1289,25 @@ export const api = {
         `/user-mgmt/users/${userId}/permissions`,
         { updates }
       )
+    },
+  },
+
+  // Esteira de Leads — CRUD (admin/gerente).
+  leadPipelines: {
+    list: async (): Promise<{ data: LeadPipeline[] }> => {
+      return apiClient.get('/lead-pipelines')
+    },
+    get: async (id: number): Promise<{ data: LeadPipeline }> => {
+      return apiClient.get(`/lead-pipelines/${id}`)
+    },
+    create: async (input: LeadPipelinePayload): Promise<{ data: LeadPipeline }> => {
+      return apiClient.post('/lead-pipelines', input)
+    },
+    update: async (id: number, input: LeadPipelinePayload): Promise<{ data: LeadPipeline }> => {
+      return apiClient.put(`/lead-pipelines/${id}`, input)
+    },
+    delete: async (id: number): Promise<{ data: { success: boolean } }> => {
+      return apiClient.delete(`/lead-pipelines/${id}`)
     },
   },
 

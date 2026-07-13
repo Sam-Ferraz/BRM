@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next"
 import { Link, useSearchParams } from "react-router-dom"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Settings, CheckCircle2, XCircle, Users as UsersIcon, Shield, ChevronRight } from "lucide-react"
+import { ArrowLeft, Settings, CheckCircle2, XCircle, Users as UsersIcon, Shield, ChevronRight, Route as RouteIcon } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { LanguageSelector } from "@/components/language-selector"
@@ -181,6 +181,23 @@ export default function ConfigPage() {
                       <p className="text-sm font-medium">Permissões</p>
                       <p className="text-xs text-muted-foreground">
                         Matriz de rotinas por tipo de usuário
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                </Link>
+                <Link
+                  to="/settings/lead-pipelines"
+                  className="flex items-center justify-between rounded-md p-3 hover:bg-accent transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                      <RouteIcon className="w-5 h-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">Esteiras de Leads</p>
+                      <p className="text-xs text-muted-foreground">
+                        Horários, corretores e escalação por timeout
                       </p>
                     </div>
                   </div>

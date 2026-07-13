@@ -21,6 +21,7 @@ import LeadsPage from './pages/LeadsPage'
 import AgendaPage from './pages/AgendaPage'
 import ConfigPage from './pages/ConfigPage'
 import UsersPage from './pages/UsersPage'
+import LeadPipelinesPage from './pages/LeadPipelinesPage'
 import PermissionsPage from './pages/PermissionsPage'
 import './lib/i18n'
 import './index.css'
@@ -116,6 +117,11 @@ function App() {
               <Route path="/settings/permissions" element={
                 <ProtectedRoute>
                   <PermissionsPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/settings/lead-pipelines" element={
+                <ProtectedRoute>
+                  <LeadPipelinesPage />
                 </ProtectedRoute>
               } />
               <Route path="*" element={<Navigate to="/" replace />} />

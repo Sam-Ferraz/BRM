@@ -9,6 +9,38 @@ export interface User {
 }
 
 // ---------------------------------------------------------------------------
+// Esteira de Leads (roulette / round-robin com timeout + escalação p/ gerente)
+// ---------------------------------------------------------------------------
+
+export interface LeadPipelineMember {
+  user_id: number
+  name?: string
+  email?: string
+  position: number
+}
+
+export interface LeadPipeline {
+  id: number
+  name: string
+  hour_start: number
+  hour_end: number
+  timeout_seconds: number
+  manager_user_id: number
+  manager_name?: string
+  is_active: boolean
+  members: LeadPipelineMember[]
+  created_at?: string
+  updated_at?: string
+}
+
+export type LeadPipelinePayload = Omit<
+  LeadPipeline,
+  'id' | 'created_at' | 'updated_at' | 'members' | 'manager_name'
+> & {
+  member_user_ids: number[]
+}
+
+// ---------------------------------------------------------------------------
 // Módulo Usuários + Permissões (isolado — não altera User/AuthResult acima)
 // ---------------------------------------------------------------------------
 

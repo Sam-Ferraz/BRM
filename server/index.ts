@@ -65,6 +65,9 @@ import { createProposalRoutes } from './routes/proposal-routes.js'
 import { createWhatsAppRoutes } from './routes/whatsapp-routes.js'
 import { createChatRoutes } from './routes/chat-routes.js'
 import { createLeadRoutes } from './routes/lead-routes.js'
+import { createLeadPipelineRoutes } from './routes/lead-pipeline-routes.js'
+import { LeadPipelineRepository } from './repositories/lead-pipeline-repository.js'
+import { LeadPipelineService } from './services/lead-pipeline-service.js'
 import { createSaleRoutes } from './routes/sale-routes.js'
 import { createWhatsAppWebhookRoutes } from './routes/whatsapp-webhook-routes.js'
 import { createCalendarRoutes } from './routes/calendar-routes.js'
@@ -270,6 +273,13 @@ app.use('/api/calendar', createCalendarRoutes(calendarEventService))
 app.use('/api/google-calendar', createGoogleCalendarRoutes(googleCalendarService))
 app.use('/api/contracts', createContractRoutes(contractService))
 app.use('/api/user-mgmt', createUserManagementRoutes(userManagementService, permissionService))
+{
+  // Esteira de leads — CRUD das esteiras (a integração com escalação em
+  // tempo real vem em iteração posterior).
+  const leadPipelineRepository = new LeadPipelineRepository()
+  const leadPipelineService = new LeadPipelineService(leadPipelineRepository)
+  app.use('/api/lead-pipelines', createLeadPipelineRoutes(leadPipelineService))
+}
 // Webhook público do WhatsApp Cloud API (Meta chama esse endpoint).
 // Sem autenticação — segurança via validação X-Hub-Signature-256 com
 // app_secret cadastrado por usuário.
