@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { ArrowLeft, Plus, Pencil, Trash2, Search, Briefcase, List, LayoutGrid } from "lucide-react"
+import { ArrowLeft, Plus, Pencil, Trash2, Search, Briefcase, List, LayoutGrid, ArrowUpDown } from "lucide-react"
 import { api, type Deal } from "@/lib/api-client"
 import { DealForm } from "@/components/forms/deal-form"
 import { DealsKanbanView } from "@/components/deals-kanban-view"
@@ -45,6 +45,22 @@ export default function DealsPage() {
   // Set de deal_ids com cadência ATRASADA (tag vermelha). Fetchado uma vez;
   // deals que não estão nesse set e são leads = OK (verde); os demais = N/A (cinza).
   const [cadenceOverdueSet, setCadenceOverdueSet] = useState<Set<number>>(() => new Set())
+  // Filtros extras (aplicados client-side sobre o array retornado do backend)
+  const [cadenceFilter, setCadenceFilter] = useState<"all" | "overdue" | "ok" | "na">("all")
+
+  // Aplica o filtro de cadência sobre os deals já filtrados pelo backend.
+  // Regra da tag: overdue = deal_id in cadenceOverdueSet (lead + atrasado);
+  //               ok      = client_origin='online_lead' AND NOT overdue;
+  //               na      = client_origin !== 'online_lead' (sem análise).
+  const filteredDeals = deals.filter((d) => {
+    if (cadenceFilter === "all") return true
+    const isOverdue = cadenceOverdueSet.has(d.id)
+    const isLead = d.client_origin === "online_lead"
+    if (cadenceFilter === "overdue") return isLead && isOverdue
+    if (cadenceFilter === "ok") return isLead && !isOverdue
+    if (cadenceFilter === "na") return !isLead
+    return true
+  })
   // Modo de visualização: lista (tabela tradicional) ou kanban (colunas por fase)
   // Persistido em localStorage pra manter a escolha do usuário entre sessões
   const [viewMode, setViewMode] = useState<"list" | "kanban">(() => {
@@ -327,6 +343,56 @@ export default function DealsPage() {
                   ))}
                 </SelectContent>
               </Select>
+
+              {/* Filtro por Cadência (client-side, usa o Set fetchado) */}
+              <Select value={cadenceFilter} onValueChange={(v) => setCadenceFilter(v as typeof cadenceFilter)}>
+                <SelectTrigger className="w-[170px]">
+                  <SelectValue placeholder="Cadência" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Cadência: Todas</SelectItem>
+                  <SelectItem value="overdue">
+                    <span className="inline-flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-red-500" /> Atrasada
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="ok">
+                    <span className="inline-flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-green-500" /> Em dia
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="na">
+                    <span className="inline-flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-slate-300" /> Sem análise
+                    </span>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Ordenar por — controla sortBy/sortOrder do fetch */}
+              <Select
+                value={sortBy ? `${sortBy}:${sortOrder}` : "updated_at:desc"}
+                onValueChange={(v) => {
+                  const [col, ord] = v.split(":")
+                  setSortBy(col)
+                  setSortOrder(ord as "asc" | "desc")
+                }}
+              >
+                <SelectTrigger className="w-[220px]">
+                  <ArrowUpDown className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="updated_at:desc">Atualizado recentemente</SelectItem>
+                  <SelectItem value="updated_at:asc">Atualizado mais antigo</SelectItem>
+                  <SelectItem value="origin_date:desc">Data de Origem (mais nova)</SelectItem>
+                  <SelectItem value="origin_date:asc">Data de Origem (mais antiga)</SelectItem>
+                  <SelectItem value="gsv:desc">VGV (maior)</SelectItem>
+                  <SelectItem value="gsv:asc">VGV (menor)</SelectItem>
+                  <SelectItem value="client:asc">Cliente (A → Z)</SelectItem>
+                  <SelectItem value="client:desc">Cliente (Z → A)</SelectItem>
+                </SelectContent>
+              </Select>
               {/* Toggle Lista/Kanban */}
               <div className="flex gap-1 border rounded-md p-0.5 shrink-0">
                 <Button
@@ -354,7 +420,7 @@ export default function DealsPage() {
               <div className="text-center py-8">{t('loadingDeals')}</div>
             ) : viewMode === "kanban" ? (
               <DealsKanbanView
-                deals={deals}
+                deals={filteredDeals}
                 onEdit={(deal) => {
                   setEditingDeal(deal)
                   setIsFormOpen(true)
@@ -397,7 +463,7 @@ export default function DealsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {deals.map((deal) => (
+                  {filteredDeals.map((deal) => (
                     <TableRow 
                       key={deal.id}
                       className="cursor-pointer hover:bg-muted/50"
@@ -463,7 +529,7 @@ export default function DealsPage() {
                       </TableCell>
                     </TableRow>
                   ))}
-                  {deals.length === 0 && (
+                  {filteredDeals.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                         {t('noDealsFound')}

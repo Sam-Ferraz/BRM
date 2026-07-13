@@ -31,13 +31,15 @@ export class DealRepository extends BaseRepository {
       }
 
       if (sortBy) {
-        const validColumns = ['client', 'gsv', 'status', 'origin_date']
+        const validColumns = ['client', 'gsv', 'status', 'origin_date', 'updated_at', 'created_at']
         if (validColumns.includes(sortBy)) {
           const order = sortOrder === 'desc' ? 'DESC' : 'ASC'
-          query += ` ORDER BY ${sortBy} ${order}`
+          query += ` ORDER BY ${sortBy} ${order} NULLS LAST`
         }
       } else {
-        query += ' ORDER BY origin_date DESC NULLS LAST'
+        // Default: mais recentemente editado no topo (updated_at DESC).
+        // Fallback pra origin_date quando updated_at é NULL (deals antigos).
+        query += ' ORDER BY COALESCE(updated_at, origin_date::timestamp) DESC NULLS LAST'
       }
 
       const result = await client.query(query, params)
