@@ -142,6 +142,20 @@ export function createDealRoutes(dealService: DealService): Router {
         status,
       } = req.body
 
+      // Update parcial: quando o front manda só { status } (drag-and-drop do
+      // Kanban), evitamos sobrescrever todo o registro com undefined nos outros
+      // campos. Delegamos pro updateDealStatus, que faz um UPDATE só do status.
+      const onlyStatus =
+        status !== undefined &&
+        client === undefined &&
+        origin_date === undefined &&
+        gsv === undefined
+      if (onlyStatus) {
+        const deal = await dealService.updateDealStatus(id, status)
+        res.json(deal)
+        return
+      }
+
       const payload = {
         client,
         origin_date,

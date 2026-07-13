@@ -40,6 +40,22 @@ export class DealService {
       throw new Error('Internal server error')
     }
   }
+  /**
+   * Update parcial de status apenas — usado pelo drag-and-drop do Kanban,
+   * onde o front só quer mudar status sem enviar o payload completo.
+   */
+  async updateDealStatus(id: number, status: Deal['status']): Promise<Deal> {
+    try {
+      const updated = await this.dealRepository.updateStatus(id, status)
+      if (!updated) throw new Error('Deal not found')
+      return updated
+    } catch (error) {
+      console.error('Error updating deal status:', error)
+      if (error instanceof Error && error.message === 'Deal not found') throw error
+      throw new Error('Internal server error')
+    }
+  }
+
   async deleteDeal(id: number): Promise<{ success: boolean }> {
     try {
       const deleted = await this.dealRepository.delete(id)
