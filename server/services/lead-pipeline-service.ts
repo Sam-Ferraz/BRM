@@ -4,6 +4,18 @@ import { LeadPipelineRepository } from '../repositories/lead-pipeline-repository
 /**
  * Valida payload e delega o CRUD ao repositório. O fluxo de escalação
  * (distribuir lead pro próximo, timeout, gerente) vem em outra iteração.
+ *
+ * REGRA DE ESCOPO (importante pra iteração 2):
+ *   A esteira SÓ se aplica a leads recebidos POR INTEGRAÇÃO — quem chega
+ *   via webhook do Meta (source_id preenchido) ou qualquer outra fonte
+ *   externa configurada em lead_sources.
+ *
+ *   Cadastros MANUAIS de leads/clientes/deals feitos direto no BRM (por
+ *   corretores, gerentes ou administrativos) NÃO passam por esteira —
+ *   ficam automaticamente vinculados ao user_id do usuário logado.
+ *
+ *   Concretamente, na iteração 2 o gate deve ser algo como:
+ *     if (lead.source_id === null) { skipPipelineEscalation(); return }
  */
 export class LeadPipelineService {
   constructor(private repo: LeadPipelineRepository) {}

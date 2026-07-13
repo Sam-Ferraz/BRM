@@ -218,6 +218,12 @@ export default function LeadPipelinesPage() {
               primeiro da fila; se ele não aceitar dentro do tempo limite, o lead pula pro próximo. Se ninguém aceitar,
               vai pro gerente supervisor.
             </p>
+            <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+              <strong>Escopo:</strong> a esteira se aplica <strong>somente a leads recebidos por integração</strong>
+              {" "}(ex: webhook do Meta / captação online). <strong>Cadastros manuais</strong> feitos direto no BRM
+              {" "}(por corretores ou gerentes) <strong>não passam por esteira</strong> — ficam automaticamente
+              vinculados a quem cadastrou.
+            </div>
           </CardHeader>
           <CardContent className="space-y-3">
             {loading ? (
