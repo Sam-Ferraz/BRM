@@ -238,8 +238,13 @@ export function DealForm({ deal, open, onOpenChange, onSubmit, loading }: DealFo
 
   // Conteúdo do form em si — extraído em variável pra reutilizar dentro e fora
   // das Tabs (edição vs criação de Deal).
+  //
+  // Layout: form é flex column full-height; a área do meio rola sozinha, o
+  // DialogFooter fica fixo no rodapé. Segue a convenção OBRIGATÓRIA do
+  // CLAUDE.md pra Dialog/Form scrollable.
   const formContent = (
-    <form onSubmit={handleSubmit} className="space-y-4 pb-4">
+    <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0">
+      <div className="flex-1 overflow-y-auto p-1 space-y-4">
           <div className="space-y-2">
             <Label htmlFor="origin_date">
               {t('originDate')} <span className="text-red-500">*</span>
@@ -399,7 +404,8 @@ export function DealForm({ deal, open, onOpenChange, onSubmit, loading }: DealFo
             </Select>
           </div>
 
-      <DialogFooter className="pt-2">
+      </div>
+      <DialogFooter className="pt-2 shrink-0">
         <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
           {t('cancel')}
         </Button>
@@ -432,12 +438,16 @@ export function DealForm({ deal, open, onOpenChange, onSubmit, loading }: DealFo
               <TabsTrigger value="info" className="flex-1">Informações</TabsTrigger>
               <TabsTrigger value="history" className="flex-1">Histórico de atendimento</TabsTrigger>
             </TabsList>
-            <TabsContent value="info" className="flex-1 min-h-0 mt-2 data-[state=inactive]:hidden">
-              <div className="flex-1 overflow-y-auto p-1 h-full">
-                {formContent}
-              </div>
+            <TabsContent
+              value="info"
+              className="flex-1 min-h-0 mt-2 data-[state=inactive]:hidden flex flex-col"
+            >
+              {formContent}
             </TabsContent>
-            <TabsContent value="history" className="flex-1 min-h-0 mt-2 data-[state=inactive]:hidden overflow-hidden">
+            <TabsContent
+              value="history"
+              className="flex-1 min-h-0 mt-2 data-[state=inactive]:hidden overflow-hidden flex flex-col"
+            >
               <DealAppointmentsTimeline
                 dealId={deal.id}
                 clientName={deal.client}
@@ -447,8 +457,8 @@ export function DealForm({ deal, open, onOpenChange, onSubmit, loading }: DealFo
             </TabsContent>
           </Tabs>
         ) : (
-          // Modo criação: sem tabs — só o form
-          <div className="flex-1 overflow-y-auto p-1">
+          // Modo criação: sem tabs — só o form (o próprio form já cuida do scroll interno)
+          <div className="flex-1 min-h-0 flex flex-col">
             {formContent}
           </div>
         )}
