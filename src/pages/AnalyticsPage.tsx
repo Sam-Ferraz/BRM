@@ -251,7 +251,7 @@ export default function AnalyticsPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <h2 className="text-xl font-semibold flex items-center gap-2 text-foreground mb-8">
             <BarChart3 className="w-5 h-5" />
-            {t('analytics')}
+            Business Intelligence
           </h2>
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
@@ -287,7 +287,7 @@ export default function AnalyticsPage() {
         <div className="space-y-8">
           <h2 className="text-xl font-semibold flex items-center gap-2 text-foreground">
             <BarChart3 className="w-5 h-5" />
-            {t('analytics')}
+            Business Intelligence
           </h2>
 
           {refetching && (

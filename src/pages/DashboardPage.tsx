@@ -351,7 +351,7 @@ export default function DashboardPage() {
                 { path: '/sales',       label: t('sales'),       icon: Key,            bg: 'bg-emerald-100', iconColor: 'text-emerald-600',  value: stats.totalSales },
                 { path: '/chat',        label: t('chat'),        icon: MessageCircle,  bg: 'bg-green-100',   iconColor: 'text-green-600',    value: stats.pendingChatAndCalls,  valueTitle: t('pendingChatAndCallsTooltip') },
                 { path: '/products',    label: t('products'),    icon: Package,        bg: 'bg-orange-100',  iconColor: 'text-orange-600',   value: stats.totalProducts },
-                { path: '/analytics',   label: t('analytics'),   icon: BarChart3,      bg: 'bg-amber-100',   iconColor: 'text-amber-600',    value: 3 },
+                { path: '/analytics',   label: 'BI',             icon: BarChart3,      bg: 'bg-amber-100',   iconColor: 'text-amber-600',    value: 3 },
                 { path: '/leads',       label: t('leads'),       icon: Inbox,          bg: 'bg-yellow-100',  iconColor: 'text-yellow-600',   value: stats.newLeads,             valueTitle: t('newLeadsTooltip') },
                 { path: '/clients',     label: t('clients'),     icon: Users,          bg: 'bg-green-100',   iconColor: 'text-green-600',    value: stats.totalClients,         position: 'md:col-start-1' },
                 { path: '/follow-ups',  label: t('followUps'),   icon: ClipboardCheck, bg: 'bg-teal-100',    iconColor: 'text-teal-600',     value: stats.totalFollowUps },

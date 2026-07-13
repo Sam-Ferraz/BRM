@@ -463,7 +463,8 @@ function DealCard({ deal, isDragging, onDragStart, onDragEnd, onEdit, onMoveTo, 
       draggable
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
-      className={`p-2.5 cursor-grab active:cursor-grabbing transition-all ${
+      onClick={onEdit}
+      className={`p-2.5 cursor-pointer active:cursor-grabbing transition-all ${
         isDragging ? "opacity-40" : "hover:shadow-md"
       }`}
     >
