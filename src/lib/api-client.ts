@@ -698,6 +698,22 @@ export const api = {
     }> => {
       return apiClient.get('/deals/analytics/cadence')
     },
+
+    /**
+     * Performance dos Negócios agregados por origem do cliente. Usado pelo
+     * radar chart no BI (Business Intelligence).
+     */
+    getPerformanceByOrigin: async (): Promise<{
+      data: Array<{
+        origin: string
+        service_count: number
+        visit_count: number
+        proposal_count: number
+        sale_count: number
+      }>
+    }> => {
+      return apiClient.get('/deals/analytics/by-origin')
+    },
   },
 
   // Clients

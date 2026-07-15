@@ -106,6 +106,27 @@ export class DealService {
   }
 
   /**
+   * Agregação por origem do cliente pra o gráfico radar no BI.
+   */
+  async getPerformanceByOrigin(): Promise<{
+    data: Array<{
+      origin: string
+      service_count: number
+      visit_count: number
+      proposal_count: number
+      sale_count: number
+    }>
+  }> {
+    try {
+      const rows = await this.dealRepository.getPerformanceByOrigin()
+      return { data: rows }
+    } catch (error) {
+      console.error('Error fetching performance by origin:', error)
+      throw new Error('Internal server error')
+    }
+  }
+
+  /**
    * Retorna os Negócios que estão em atraso de cadência — usados pra render
    * do badge "Cadência" no Kanban de Negócios.
    *

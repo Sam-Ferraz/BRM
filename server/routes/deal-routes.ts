@@ -71,6 +71,17 @@ export function createDealRoutes(dealService: DealService): Router {
     }
   })
 
+  // Performance por origem do cliente — usado pelo radar do BI.
+  router.get('/analytics/by-origin', authenticateToken, async (_req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const result = await dealService.getPerformanceByOrigin()
+      res.json(result)
+    } catch (error) {
+      console.error('Error in deals by-origin analytics route:', error)
+      res.status(500).json({ error: 'Internal server error' })
+    }
+  })
+
   // Cadência: deals que precisam de tag vermelha no Kanban.
   // Filtrado por user_id do requester — cada corretor vê seus próprios.
   router.get('/analytics/cadence', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {

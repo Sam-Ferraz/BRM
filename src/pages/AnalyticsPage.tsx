@@ -11,6 +11,7 @@ import { api, AppointmentAnalytics, AppointmentAnalyticsByType, DealFunnelStage,
 import { formatDateForChart } from "@/lib/datetime"
 import { useTimezone } from "@/hooks/use-timezone"
 import { DealFunnelChart } from "@/components/charts/deal-funnel-chart"
+import { PerformanceByOriginRadar } from "@/components/analytics/performance-by-origin-radar"
 import {
   DateRangeFilter,
   DateRangeValue,
@@ -321,6 +322,10 @@ export default function AnalyticsPage() {
                 <LastPresentationsCard presentations={lastPresentations} />
               </div>
             </div>
+
+            {/* Radar: Performance x Tipo de Origem — comparação de estágios do funil
+                por origem do cliente (Lead Online, Indicação, Plantão etc). */}
+            <PerformanceByOriginRadar />
           </section>
 
           {/* === APPOINTMENTS SECTION === */}

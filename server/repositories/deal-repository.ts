@@ -310,6 +310,48 @@ export class DealRepository extends BaseRepository {
   }
 
   /**
+   * Performance dos Negócios agregados por origem do cliente (client_origin).
+   *
+   * Para cada origem devolve contagens em 4 estágios do funil:
+   *   - service_count  → status IN (service_cold, service_mild, service_warm)
+   *   - visit_count    → visit_done_* (Apresentação — visita já realizada)
+   *   - proposal_count → proposal
+   *   - sale_count     → sold
+   *
+   * O front usa isso pra montar um radar (eixos = origens, séries = estágios
+   * selecionados). Sem filtro de período por enquanto — vai ler tudo, o front
+   * só precisa dessa foto agregada. Optamos por incluir ALL rows (sem
+   * user_id filter) pra dar visão de time; se um dia quisermos por usuário,
+   * adicionamos param.
+   */
+  async getPerformanceByOrigin(): Promise<Array<{
+    origin: string
+    service_count: number
+    visit_count: number
+    proposal_count: number
+    sale_count: number
+  }>> {
+    const client = await this.getClient()
+    try {
+      const query = `
+        SELECT
+          COALESCE(client_origin::text, 'unknown') AS origin,
+          COUNT(*) FILTER (WHERE status IN ('service_cold','service_mild','service_warm'))::int AS service_count,
+          COUNT(*) FILTER (WHERE status IN ('visit_done_cold','visit_done_mild','visit_done_warm'))::int AS visit_count,
+          COUNT(*) FILTER (WHERE status = 'proposal')::int AS proposal_count,
+          COUNT(*) FILTER (WHERE status = 'sold')::int AS sale_count
+        FROM deals
+        GROUP BY 1
+        ORDER BY 1
+      `
+      const result = await client.query(query)
+      return result.rows
+    } finally {
+      this.releaseClient(client)
+    }
+  }
+
+  /**
    * Retorna os IDs dos Negócios que estão em "atraso de cadência".
    *
    * Regra (definida pelo produto):
