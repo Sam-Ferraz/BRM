@@ -2,7 +2,7 @@ import { BaseRepository } from './base-repository.js'
 import { SalesAgenda, QueryFilters } from '../types/index.js'
 
 export class SalesAgendaRepository extends BaseRepository {
-  async findAll(filters: QueryFilters = {}, userId?: number): Promise<SalesAgenda[]> {
+  async findAll(accountId: number, filters: QueryFilters = {}, userId?: number): Promise<SalesAgenda[]> {
     const client = await this.getClient()
     try {
       const { search, status, sortBy, sortOrder } = filters
@@ -30,11 +30,12 @@ export class SalesAgendaRepository extends BaseRepository {
         FROM sales_agenda sa
         LEFT JOIN products p ON sa.product_id = p.id
         LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_thumbnail = TRUE
-        WHERE 1=1
+        WHERE sa.account_id = $1
       `
-      const params: any[] = []
-      let paramCount = 1
+      const params: any[] = [accountId]
+      let paramCount = 2
 
+      // Filtro secundário por corretor (não por tenant)
       if (userId) {
         query += ` AND sa.user_id = $${paramCount}`
         params.push(userId)
@@ -74,15 +75,15 @@ export class SalesAgendaRepository extends BaseRepository {
     }
   }
 
-  async create(salesAgenda: Omit<SalesAgenda, 'id' | 'created_at' | 'updated_at' | 'date'>): Promise<SalesAgenda> {
+  async create(accountId: number, salesAgenda: Omit<SalesAgenda, 'id' | 'account_id' | 'created_at' | 'updated_at' | 'date'>): Promise<SalesAgenda> {
     const client = await this.getClient()
     try {
       // Set current date automatically
       const currentDate = new Date().toISOString().split('T')[0] // YYYY-MM-DD format
 
       const result = await client.query(
-        'INSERT INTO sales_agenda (title, product_name, product_id, date, status, user_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-        [salesAgenda.title, salesAgenda.product_name, salesAgenda.product_id || null, currentDate, salesAgenda.status, salesAgenda.user_id]
+        'INSERT INTO sales_agenda (account_id, title, product_name, product_id, date, status, user_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
+        [accountId, salesAgenda.title, salesAgenda.product_name, salesAgenda.product_id || null, currentDate, salesAgenda.status, salesAgenda.user_id]
       )
       return result.rows[0]
     } finally {
@@ -90,13 +91,13 @@ export class SalesAgendaRepository extends BaseRepository {
     }
   }
 
-  async update(id: number, salesAgenda: Omit<SalesAgenda, 'id' | 'created_at' | 'updated_at' | 'date'>): Promise<SalesAgenda | null> {
+  async update(accountId: number, id: number, salesAgenda: Omit<SalesAgenda, 'id' | 'account_id' | 'created_at' | 'updated_at' | 'date'>): Promise<SalesAgenda | null> {
     const client = await this.getClient()
     try {
       // Don't update the date - it remains as originally created
       const result = await client.query(
-        'UPDATE sales_agenda SET title = $1, product_name = $2, product_id = $3, status = $4, updated_at = CURRENT_TIMESTAMP WHERE id = $5 RETURNING *',
-        [salesAgenda.title, salesAgenda.product_name, salesAgenda.product_id || null, salesAgenda.status, id]
+        'UPDATE sales_agenda SET title = $1, product_name = $2, product_id = $3, status = $4, updated_at = CURRENT_TIMESTAMP WHERE id = $5 AND account_id = $6 RETURNING *',
+        [salesAgenda.title, salesAgenda.product_name, salesAgenda.product_id || null, salesAgenda.status, id, accountId]
       )
       return result.rows.length > 0 ? result.rows[0] : null
     } finally {
@@ -104,24 +105,24 @@ export class SalesAgendaRepository extends BaseRepository {
     }
   }
 
-  async delete(id: number): Promise<boolean> {
+  async delete(accountId: number, id: number): Promise<boolean> {
     const client = await this.getClient()
     try {
-      const result = await client.query('DELETE FROM sales_agenda WHERE id = $1 RETURNING *', [id])
+      const result = await client.query('DELETE FROM sales_agenda WHERE id = $1 AND account_id = $2 RETURNING *', [id, accountId])
       return result.rows.length > 0
     } finally {
       this.releaseClient(client)
     }
   }
 
-  async getCount(userId?: number): Promise<number> {
+  async getCount(accountId: number, userId?: number): Promise<number> {
     const client = await this.getClient()
     try {
-      let query = 'SELECT COUNT(*) as count FROM sales_agenda'
-      const params: any[] = []
+      let query = 'SELECT COUNT(*) as count FROM sales_agenda WHERE account_id = $1'
+      const params: any[] = [accountId]
 
       if (userId) {
-        query += ' WHERE user_id = $1'
+        query += ' AND user_id = $2'
         params.push(userId)
       }
 

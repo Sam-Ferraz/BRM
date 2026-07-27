@@ -1,27 +1,27 @@
 import { Request, Response, Router } from 'express'
 import { GoogleCalendarService } from '../services/google-calendar-service.js'
-import { authenticateToken, AuthenticatedRequest } from '../middleware/auth.js'
+import { authenticateToken, requireAccount, AuthenticatedRequest } from '../middleware/auth.js'
 
 /**
  * /api/google-calendar/* — integração unidirecional Google → BRM.
  *
  * Endpoints:
- *   GET    /status         → devolve { connected, email, last_sync_at }
- *   GET    /auth-url       → devolve URL do OAuth pro frontend redirecionar
+ *   GET    /status         → devolve { connected, email, last_sync_at } (auth)
+ *   GET    /auth-url       → devolve URL do OAuth pro frontend redirecionar (auth)
  *   GET    /callback       → PÚBLICO (Google redireciona aqui com ?code&state)
- *   DELETE /disconnect     → revoga a conexão local (não revoga no Google)
+ *   DELETE /disconnect     → revoga a conexão local (não revoga no Google) (auth)
  *
  * O callback não usa authenticateToken porque o Google redireciona o browser
- * do usuário — não há token JWT no header. A autenticidade vem do `state`
- * (JWT assinado com JWT_SECRET) que contém o userId.
+ * do usuário — não há token JWT no header. A autenticidade + tenancy vem do
+ * `state` (JWT assinado com JWT_SECRET) que contém userId + accountId.
  */
 export function createGoogleCalendarRoutes(service: GoogleCalendarService): Router {
   const router = Router()
 
   // ----------- Status da conexão -----------
-  router.get('/status', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.get('/status', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      const status = await service.getStatus(req.user!.userId)
+      const status = await service.getStatus(req.user!.accountId, req.user!.userId)
       res.json({ data: status })
     } catch (error) {
       console.error('Error getting Google Calendar status:', error)
@@ -30,9 +30,9 @@ export function createGoogleCalendarRoutes(service: GoogleCalendarService): Rout
   })
 
   // ----------- URL de autorização -----------
-  router.get('/auth-url', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.get('/auth-url', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      const url = service.buildAuthUrl(req.user!.userId)
+      const url = service.buildAuthUrl(req.user!.accountId, req.user!.userId)
       res.json({ data: { url } })
     } catch (error) {
       console.error('Error building Google auth URL:', error)
@@ -58,14 +58,14 @@ export function createGoogleCalendarRoutes(service: GoogleCalendarService): Rout
       return
     }
 
-    const userId = service.parseState(state)
-    if (!userId) {
+    const parsed = service.parseState(state)
+    if (!parsed) {
       res.status(400).send('State inválido ou expirado. Refaça a conexão.')
       return
     }
 
     try {
-      await service.handleOAuthCallback(code, userId)
+      await service.handleOAuthCallback(code, parsed.accountId, parsed.userId)
       // Redireciona pro frontend confirmando sucesso — settings é onde fica o botão
       res.redirect(`/settings?googleConnect=success`)
     } catch (error) {
@@ -76,9 +76,9 @@ export function createGoogleCalendarRoutes(service: GoogleCalendarService): Rout
   })
 
   // ----------- Desconectar -----------
-  router.delete('/disconnect', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.delete('/disconnect', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      const ok = await service.disconnect(req.user!.userId)
+      const ok = await service.disconnect(req.user!.accountId, req.user!.userId)
       res.json({ success: ok })
     } catch (error) {
       console.error('Error disconnecting Google Calendar:', error)

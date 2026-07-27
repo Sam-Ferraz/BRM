@@ -2,7 +2,7 @@ import { BaseRepository } from './base-repository.js'
 import { FollowUp, FollowUpWithDetails, QueryFilters } from '../types/index.js'
 
 export class FollowUpRepository extends BaseRepository {
-  async findAll(filters: QueryFilters = {}, userId?: number): Promise<FollowUpWithDetails[]> {
+  async findAll(accountId: number, filters: QueryFilters = {}, userId?: number): Promise<FollowUpWithDetails[]> {
     const client = await this.getClient()
     try {
       await client.query('SET TIMEZONE = \'UTC\'')
@@ -26,10 +26,10 @@ export class FollowUpRepository extends BaseRepository {
           END as followup_status
         FROM follow_ups f
         LEFT JOIN appointments a ON f.appointment_id = a.id
-        WHERE 1=1
+        WHERE f.account_id = $1
       `
-      const params: any[] = []
-      let paramCount = 1
+      const params: any[] = [accountId]
+      let paramCount = 2
 
       // Filter by user_id if provided
       if (userId) {
@@ -83,12 +83,12 @@ export class FollowUpRepository extends BaseRepository {
     }
   }
 
-  async findByAppointmentId(appointmentId: number): Promise<FollowUp[]> {
+  async findByAppointmentId(accountId: number, appointmentId: number): Promise<FollowUp[]> {
     const client = await this.getClient()
     try {
       const result = await client.query(
-        'SELECT * FROM follow_ups WHERE appointment_id = $1 ORDER BY next_action_date DESC',
-        [appointmentId]
+        'SELECT * FROM follow_ups WHERE appointment_id = $1 AND account_id = $2 ORDER BY next_action_date DESC',
+        [appointmentId, accountId]
       )
       return result.rows
     } finally {
@@ -96,7 +96,7 @@ export class FollowUpRepository extends BaseRepository {
     }
   }
 
-  async findById(id: number): Promise<FollowUpWithDetails | null> {
+  async findById(accountId: number, id: number): Promise<FollowUpWithDetails | null> {
     const client = await this.getClient()
     try {
       await client.query('SET TIMEZONE = \'UTC\'')
@@ -119,10 +119,10 @@ export class FollowUpRepository extends BaseRepository {
           END as followup_status
         FROM follow_ups f
         LEFT JOIN appointments a ON f.appointment_id = a.id
-        WHERE f.id = $1
+        WHERE f.id = $1 AND f.account_id = $2
       `
 
-      const result = await client.query(query, [id])
+      const result = await client.query(query, [id, accountId])
       if (result.rows.length === 0) return null
 
       const row = result.rows[0]
@@ -154,12 +154,13 @@ export class FollowUpRepository extends BaseRepository {
     }
   }
 
-  async create(followUp: Omit<FollowUp, 'id' | 'created_at' | 'updated_at' | 'completed_at'>): Promise<FollowUp> {
+  async create(accountId: number, followUp: Omit<FollowUp, 'id' | 'created_at' | 'updated_at' | 'completed_at'>): Promise<FollowUp> {
     const client = await this.getClient()
     try {
       const result = await client.query(
-        'INSERT INTO follow_ups (appointment_id, client_name, next_action, next_action_date, completed, user_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+        'INSERT INTO follow_ups (account_id, appointment_id, client_name, next_action, next_action_date, completed, user_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
         [
+          accountId,
           followUp.appointment_id ?? null,
           followUp.client_name,
           followUp.next_action,
@@ -174,7 +175,7 @@ export class FollowUpRepository extends BaseRepository {
     }
   }
 
-  async update(id: number, followUp: Partial<Omit<FollowUp, 'id' | 'created_at' | 'updated_at'>>): Promise<FollowUp | null> {
+  async update(accountId: number, id: number, followUp: Partial<Omit<FollowUp, 'id' | 'created_at' | 'updated_at'>>): Promise<FollowUp | null> {
     const client = await this.getClient()
     try {
       const fields: string[] = []
@@ -210,13 +211,14 @@ export class FollowUpRepository extends BaseRepository {
       }
 
       if (fields.length === 0) {
-        return this.findById(id) as Promise<FollowUp | null>
+        return this.findById(accountId, id) as Promise<FollowUp | null>
       }
 
       fields.push('updated_at = CURRENT_TIMESTAMP')
       values.push(id)
+      values.push(accountId)
 
-      const query = `UPDATE follow_ups SET ${fields.join(', ')} WHERE id = $${paramCount} RETURNING *`
+      const query = `UPDATE follow_ups SET ${fields.join(', ')} WHERE id = $${paramCount} AND account_id = $${paramCount + 1} RETURNING *`
       const result = await client.query(query, values)
       return result.rows.length > 0 ? result.rows[0] : null
     } finally {
@@ -224,24 +226,27 @@ export class FollowUpRepository extends BaseRepository {
     }
   }
 
-  async delete(id: number): Promise<boolean> {
+  async delete(accountId: number, id: number): Promise<boolean> {
     const client = await this.getClient()
     try {
-      const result = await client.query('DELETE FROM follow_ups WHERE id = $1 RETURNING *', [id])
+      const result = await client.query(
+        'DELETE FROM follow_ups WHERE id = $1 AND account_id = $2 RETURNING *',
+        [id, accountId]
+      )
       return result.rows.length > 0
     } finally {
       this.releaseClient(client)
     }
   }
 
-  async getCount(userId?: number): Promise<number> {
+  async getCount(accountId: number, userId?: number): Promise<number> {
     const client = await this.getClient()
     try {
-      let query = 'SELECT COUNT(*) as count FROM follow_ups WHERE completed = false'
-      const params: any[] = []
+      let query = 'SELECT COUNT(*) as count FROM follow_ups WHERE completed = false AND account_id = $1'
+      const params: any[] = [accountId]
 
       if (userId) {
-        query += ' AND user_id = $1'
+        query += ' AND user_id = $2'
         params.push(userId)
       }
 
@@ -252,7 +257,7 @@ export class FollowUpRepository extends BaseRepository {
     }
   }
 
-  async getCountByStatus(userId?: number): Promise<{ open: number; pending: number; overdue: number }> {
+  async getCountByStatus(accountId: number, userId?: number): Promise<{ open: number; pending: number; overdue: number }> {
     const client = await this.getClient()
     try {
       let query = `
@@ -264,11 +269,12 @@ export class FollowUpRepository extends BaseRepository {
           COUNT(*) FILTER (WHERE next_action_date < CURRENT_DATE - INTERVAL '2 days'
             AND completed = false) as overdue
         FROM follow_ups
+        WHERE account_id = $1
       `
-      const params: any[] = []
+      const params: any[] = [accountId]
 
       if (userId) {
-        query += ' WHERE user_id = $1'
+        query += ' AND user_id = $2'
         params.push(userId)
       }
 

@@ -81,6 +81,40 @@ export const apiClient = new ApiClient()
 // API endpoints with type safety
 
 // ---------------------------------------------------------------------------
+// Multi-tenancy — Account (empresa/cliente do BRM)
+export interface AccountCustomConfigLike {
+  theme?: {
+    primary_color?: string
+    secondary_color?: string
+    sidebar_color?: string
+  }
+  branding?: {
+    logo_url?: string
+    company_name?: string
+    browser_title?: string
+  }
+  features?: {
+    contracts_enabled?: boolean
+    google_calendar_enabled?: boolean
+    whatsapp_enabled?: boolean
+    leads_module_enabled?: boolean
+  }
+  defaults?: {
+    timezone?: string
+    currency?: string
+    language?: string
+  }
+}
+export interface Account {
+  id: number
+  name: string
+  plan: 'trial' | 'basic' | 'pro' | 'enterprise'
+  custom_config: AccountCustomConfigLike
+  is_active: boolean
+  created_at?: string
+  updated_at?: string
+}
+
 // Esteira de Leads (roulette / round-robin com timeout + gerente)
 export interface LeadPipelineMember {
   user_id: number
@@ -1305,6 +1339,35 @@ export const api = {
         `/user-mgmt/users/${userId}/permissions`,
         { updates }
       )
+    },
+  },
+
+  // Accounts / Multi-tenancy — a account do user logado + super-admin CRUD.
+  accounts: {
+    getMe: async (): Promise<{ data: Account }> => {
+      return apiClient.get('/accounts/me')
+    },
+    updateMyConfig: async (custom_config: AccountCustomConfigLike): Promise<{ data: Account }> => {
+      return apiClient.patch('/accounts/me/config', { custom_config })
+    },
+    // Super-admin (só o admin da account #1 BRM Demo consegue)
+    list: async (): Promise<{ data: Account[] }> => {
+      return apiClient.get('/accounts')
+    },
+    provision: async (input: {
+      account_name: string
+      plan?: 'trial' | 'basic' | 'pro' | 'enterprise'
+      admin_name: string
+      admin_email: string
+      admin_password: string
+    }): Promise<{ data: { account: Account; admin_user: { id: number; email: string } } }> => {
+      return apiClient.post('/accounts', input)
+    },
+    update: async (
+      id: number,
+      input: Partial<{ name: string; plan: 'trial' | 'basic' | 'pro' | 'enterprise'; is_active: boolean }>
+    ): Promise<{ data: Account }> => {
+      return apiClient.patch(`/accounts/${id}`, input)
     },
   },
 

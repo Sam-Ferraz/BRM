@@ -40,7 +40,10 @@ export class DashboardService {
     this.contractRepository = contractRepository
   }
 
-  async getDashboardStats(userId: number): Promise<DashboardStats> {
+  // Multi-tenancy: recebe accountId + userId. accountId isola por empresa;
+  // userId continua sendo usado nos contadores "meus" (deals do corretor,
+  // atendimentos do corretor, etc).
+  async getDashboardStats(accountId: number, userId: number): Promise<DashboardStats> {
     const [
       activeDealsCount,
       totalClients,
@@ -56,30 +59,19 @@ export class DashboardService {
       totalSales,
       contractCounts,
     ] = await Promise.all([
-      // Card "Negócios" reflete tudo que está em jogo: deals ativos (todos
-      // exceto descartados) + leads em aberto (status='novo' aguardando
-      // triagem). Independe da origem — engloba manuais e vindos de integração.
-      this.dealRepository.getActiveCount(userId),
-      this.clientRepository.getCount(),
-      this.productRepository.getCount(),
-      // Inclui atendimentos manuais E os auto-criados pelo ChatService a partir
-      // de interações bilaterais do WhatsApp (origin='whatsapp', dedupe 24h).
-      this.appointmentRepository.getCount(userId),
-      this.salesAgendaRepository.getCount(userId),
-      this.followUpRepository.getCount(userId),
-      // Propostas em andamento: apenas 'pending' (Em análise) e
-      // 'counter_proposal' (Contraproposta). 'accepted' migra pra Vendas,
-      // 'rejected' e 'expired' são terminais e não contam aqui.
-      this.proposalRepository.getActiveCount(userId),
-      // Pendências de comunicação — filtradas pelo usuário logado
-      this.conversationRepository.sumUnreadMessages(userId),
-      this.appointmentRepository.getCountUnansweredCalls(userId),
-      this.leadRepository.getCountByStatus(),
-      this.productRepository.getShowcaseCount(),
-      // Total de vendas no sistema (todos os status — pending, approved, rejected)
-      this.saleRepository.getCount(),
-      // Contratos ativos = todos exceto 'approved' (aprovado é terminal, virou Sale)
-      this.contractRepository.getCountByStatus(userId),
+      this.dealRepository.getActiveCount(accountId, userId),
+      this.clientRepository.getCount(accountId),
+      this.productRepository.getCount(accountId),
+      this.appointmentRepository.getCount(accountId, userId),
+      this.salesAgendaRepository.getCount(accountId, userId),
+      this.followUpRepository.getCount(accountId, userId),
+      this.proposalRepository.getActiveCount(accountId, userId),
+      this.conversationRepository.sumUnreadMessages(accountId, userId),
+      this.appointmentRepository.getCountUnansweredCalls(accountId, userId),
+      this.leadRepository.getCountByStatus(accountId),
+      this.productRepository.getShowcaseCount(accountId),
+      this.saleRepository.getCount(accountId),
+      this.contractRepository.getCountByStatus(accountId, userId),
     ])
 
     const totalActiveContracts = Object.entries(contractCounts)
@@ -87,9 +79,6 @@ export class DashboardService {
       .reduce((sum, [, n]) => sum + n, 0)
 
     return {
-      // Card "Negócios" = deals ativos (todos exceto descartados).
-      // NÃO soma leads em triagem — esses aparecem em card separado
-      // ("Leads") ate serem aceitos e virarem deals.
       totalDeals: activeDealsCount,
       totalClients,
       totalProducts,

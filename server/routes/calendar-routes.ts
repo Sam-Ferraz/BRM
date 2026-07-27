@@ -1,11 +1,11 @@
 import { Response, Router } from 'express'
 import { CalendarEventService } from '../services/calendar-event-service.js'
-import { authenticateToken, AuthenticatedRequest } from '../middleware/auth.js'
+import { authenticateToken, requireAccount, AuthenticatedRequest } from '../middleware/auth.js'
 
 /**
  * /api/calendar/* — CRUD de compromissos manuais + endpoint agregado da agenda.
  *
- * Endpoints:
+ * Endpoints (todos exigem accountId no token):
  *   GET    /events                → lista eventos manuais do usuário
  *   POST   /events                → cria evento
  *   GET    /events/:id            → detalhe
@@ -20,21 +20,22 @@ export function createCalendarRoutes(service: CalendarEventService): Router {
   const router = Router()
 
   // ------------- Agenda unificada (o principal) -------------
-  router.get('/agenda', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.get('/agenda', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const userId = req.user!.userId
       const role = req.user!.role
       const from = req.query.from as string | undefined
       const to = req.query.to as string | undefined
       const viewAll = req.query.viewAll === '1'
 
-      // Regra de acesso: só admin pode viewAll
+      // Regra de acesso: só admin pode viewAll (dentro da própria account)
       const filters = {
         userId: role === 'admin' && viewAll ? undefined : userId,
         from,
         to,
       }
-      const result = await service.getAgenda(filters)
+      const result = await service.getAgenda(accountId, filters)
       res.json(result)
     } catch (error) {
       console.error('Error in get agenda:', error)
@@ -43,8 +44,9 @@ export function createCalendarRoutes(service: CalendarEventService): Router {
   })
 
   // ------------- CRUD de calendar_events -------------
-  router.get('/events', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.get('/events', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const userId = req.user!.userId
       const role = req.user!.role
       const from = req.query.from as string | undefined
@@ -57,7 +59,7 @@ export function createCalendarRoutes(service: CalendarEventService): Router {
         to,
         status,
       }
-      const result = await service.list(filters)
+      const result = await service.list(accountId, filters)
       res.json(result)
     } catch (error) {
       console.error('Error listing calendar events:', error)
@@ -65,9 +67,10 @@ export function createCalendarRoutes(service: CalendarEventService): Router {
     }
   })
 
-  router.get('/events/:id', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.get('/events/:id', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      const event = await service.getById(parseInt(req.params.id))
+      const accountId = req.user!.accountId
+      const event = await service.getById(accountId, parseInt(req.params.id))
       res.json({ data: event })
     } catch (error) {
       if (error instanceof Error && error.message === 'CalendarEvent not found') {
@@ -79,10 +82,11 @@ export function createCalendarRoutes(service: CalendarEventService): Router {
     }
   })
 
-  router.post('/events', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.post('/events', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const userId = req.user!.userId
-      const event = await service.create({ ...req.body, user_id: userId })
+      const event = await service.create(accountId, { ...req.body, user_id: userId })
       res.json({ data: event })
     } catch (error) {
       if (error instanceof Error && (error.message === 'title is required' || error.message === 'start_at is required')) {
@@ -94,9 +98,10 @@ export function createCalendarRoutes(service: CalendarEventService): Router {
     }
   })
 
-  router.put('/events/:id', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.put('/events/:id', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      const event = await service.update(parseInt(req.params.id), req.body)
+      const accountId = req.user!.accountId
+      const event = await service.update(accountId, parseInt(req.params.id), req.body)
       res.json({ data: event })
     } catch (error) {
       if (error instanceof Error && error.message === 'CalendarEvent not found') {
@@ -108,9 +113,10 @@ export function createCalendarRoutes(service: CalendarEventService): Router {
     }
   })
 
-  router.delete('/events/:id', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.delete('/events/:id', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      const result = await service.delete(parseInt(req.params.id))
+      const accountId = req.user!.accountId
+      const result = await service.delete(accountId, parseInt(req.params.id))
       res.json(result)
     } catch (error) {
       if (error instanceof Error && error.message === 'CalendarEvent not found') {

@@ -70,6 +70,9 @@ import { createLeadRoutes } from './routes/lead-routes.js'
 import { createLeadPipelineRoutes } from './routes/lead-pipeline-routes.js'
 import { LeadPipelineRepository } from './repositories/lead-pipeline-repository.js'
 import { LeadPipelineService } from './services/lead-pipeline-service.js'
+import { AccountRepository } from './repositories/account-repository.js'
+import { AccountService } from './services/account-service.js'
+import { createAccountRoutes } from './routes/account-routes.js'
 import { createSaleRoutes } from './routes/sale-routes.js'
 import { createWhatsAppWebhookRoutes } from './routes/whatsapp-webhook-routes.js'
 import { createCalendarRoutes } from './routes/calendar-routes.js'
@@ -274,7 +277,7 @@ app.use('/api/auth', authLimiter, createAuthRoutes(authService))
 app.use('/api/dashboard', createDashboardRoutes(dashboardService, appointmentService))
 app.use('/api/deals', createDealRoutes(dealService))
 app.use('/api/clients', createClientRoutes(clientService))
-app.use('/api/products', createProductRoutes(productService))
+app.use('/api/products', createProductRoutes(productService, productRepository))
 app.use('/api/appointments', createAppointmentRoutes(appointmentService))
 app.use('/api/sales-agenda', createSalesAgendaRoutes(salesAgendaService))
 app.use('/api/follow-ups', createFollowUpRoutes(followUpService))
@@ -293,6 +296,12 @@ app.use('/api/user-mgmt', createUserManagementRoutes(userManagementService, perm
   const leadPipelineRepository = new LeadPipelineRepository()
   const leadPipelineService = new LeadPipelineService(leadPipelineRepository)
   app.use('/api/lead-pipelines', createLeadPipelineRoutes(leadPipelineService))
+}
+{
+  // Multi-tenancy: accounts. GET /me (qualquer user) + super-admin (BRM Demo).
+  const accountRepository = new AccountRepository()
+  const accountService = new AccountService(accountRepository, userRepository)
+  app.use('/api/accounts', createAccountRoutes(accountService))
 }
 // Webhook público do WhatsApp Cloud API (Meta chama esse endpoint).
 // Sem autenticação — segurança via validação X-Hub-Signature-256 com

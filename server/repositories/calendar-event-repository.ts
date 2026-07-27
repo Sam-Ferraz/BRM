@@ -6,15 +6,19 @@ import { CalendarEvent, CalendarEventWithDetails, CalendarEventStatus, AgendaIte
  *
  * A agenda EXIBIDA no frontend é uma união de calendar_events + follow-ups
  * em aberto. O método `getAgenda()` faz essa união via UNION ALL e devolve
- * uma lista já ordenada por start_at.
+ * uma lista já ordenada por start_at. Filtragem obrigatória por accountId
+ * em todas as queries (multi-tenancy).
  */
 export class CalendarEventRepository extends BaseRepository {
-  async findAll(filters: {
-    userId?: number      // corretor: sempre passa próprio userId | gestor com "ver time": undefined
-    from?: string        // ISO date (inclusivo)
-    to?: string          // ISO date (inclusivo)
-    status?: CalendarEventStatus | 'all'
-  } = {}): Promise<CalendarEventWithDetails[]> {
+  async findAll(
+    accountId: number,
+    filters: {
+      userId?: number      // corretor: sempre passa próprio userId | gestor com "ver time": undefined
+      from?: string        // ISO date (inclusivo)
+      to?: string          // ISO date (inclusivo)
+      status?: CalendarEventStatus | 'all'
+    } = {}
+  ): Promise<CalendarEventWithDetails[]> {
     const client = await this.getClient()
     try {
       let query = `
@@ -29,10 +33,10 @@ export class CalendarEventRepository extends BaseRepository {
         LEFT JOIN clients c  ON e.client_id = c.id
         LEFT JOIN deals d    ON e.deal_id = d.id
         LEFT JOIN products p ON e.product_id = p.id
-        WHERE 1=1
+        WHERE e.account_id = $1
       `
-      const params: any[] = []
-      let n = 1
+      const params: any[] = [accountId]
+      let n = 2
       if (filters.userId !== undefined) {
         query += ` AND e.user_id = $${n}`
         params.push(filters.userId)
@@ -62,7 +66,7 @@ export class CalendarEventRepository extends BaseRepository {
     }
   }
 
-  async findById(id: number): Promise<CalendarEventWithDetails | null> {
+  async findById(accountId: number, id: number): Promise<CalendarEventWithDetails | null> {
     const client = await this.getClient()
     try {
       const result = await client.query(
@@ -73,8 +77,8 @@ export class CalendarEventRepository extends BaseRepository {
            LEFT JOIN clients c  ON e.client_id = c.id
            LEFT JOIN deals d    ON e.deal_id = d.id
            LEFT JOIN products p ON e.product_id = p.id
-          WHERE e.id = $1`,
-        [id]
+          WHERE e.id = $1 AND e.account_id = $2`,
+        [id, accountId]
       )
       return result.rows[0] ?? null
     } finally {
@@ -82,16 +86,20 @@ export class CalendarEventRepository extends BaseRepository {
     }
   }
 
-  async create(input: Omit<CalendarEvent, 'id' | 'created_at' | 'updated_at'>): Promise<CalendarEvent> {
+  async create(
+    accountId: number,
+    input: Omit<CalendarEvent, 'id' | 'account_id' | 'created_at' | 'updated_at'>
+  ): Promise<CalendarEvent> {
     const client = await this.getClient()
     try {
       const result = await client.query(
         `INSERT INTO calendar_events
-           (user_id, title, description, location, start_at, end_at, all_day, color,
+           (account_id, user_id, title, description, location, start_at, end_at, all_day, color,
             client_id, deal_id, product_id, status)
-         VALUES ($1, $2, $3, $4, $5::timestamp, $6::timestamp, $7, $8, $9, $10, $11, $12)
+         VALUES ($1, $2, $3, $4, $5, $6::timestamp, $7::timestamp, $8, $9, $10, $11, $12, $13)
          RETURNING *`,
         [
+          accountId,
           input.user_id,
           input.title,
           input.description ?? null,
@@ -112,7 +120,11 @@ export class CalendarEventRepository extends BaseRepository {
     }
   }
 
-  async update(id: number, input: Partial<Omit<CalendarEvent, 'id' | 'user_id' | 'created_at' | 'updated_at'>>): Promise<CalendarEvent | null> {
+  async update(
+    accountId: number,
+    id: number,
+    input: Partial<Omit<CalendarEvent, 'id' | 'account_id' | 'user_id' | 'created_at' | 'updated_at'>>
+  ): Promise<CalendarEvent | null> {
     const client = await this.getClient()
     try {
       const fields: string[] = []
@@ -136,9 +148,12 @@ export class CalendarEventRepository extends BaseRepository {
       if (input.product_id !== undefined) addField('product_id', input.product_id ?? null)
       if (input.status !== undefined) addField('status', input.status)
 
-      if (fields.length === 0) return this.findById(id) as any
+      if (fields.length === 0) return this.findById(accountId, id) as any
       values.push(id)
-      const query = `UPDATE calendar_events SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = $${n} RETURNING *`
+      const idPlaceholder = n
+      n++
+      values.push(accountId)
+      const query = `UPDATE calendar_events SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = $${idPlaceholder} AND account_id = $${n} RETURNING *`
       const result = await client.query(query, values)
       return result.rows.length > 0 ? result.rows[0] : null
     } finally {
@@ -146,10 +161,13 @@ export class CalendarEventRepository extends BaseRepository {
     }
   }
 
-  async delete(id: number): Promise<boolean> {
+  async delete(accountId: number, id: number): Promise<boolean> {
     const client = await this.getClient()
     try {
-      const result = await client.query('DELETE FROM calendar_events WHERE id = $1 RETURNING id', [id])
+      const result = await client.query(
+        'DELETE FROM calendar_events WHERE id = $1 AND account_id = $2 RETURNING id',
+        [id, accountId]
+      )
       return result.rows.length > 0
     } finally {
       this.releaseClient(client)
@@ -158,38 +176,50 @@ export class CalendarEventRepository extends BaseRepository {
 
   /**
    * Agenda agregada: união de calendar_events + follow-ups em aberto.
-   * Filtra por range de datas e opcionalmente por user_id.
+   * Filtra por range de datas e opcionalmente por user_id, sempre restrito
+   * à account informada.
    *
    * Todos os itens são normalizados na forma AgendaItem — o frontend não
    * precisa saber a diferença entre event e followup (o campo `kind`
    * indica se quiser filtrar).
    */
-  async getAgenda(filters: { userId?: number; from?: string; to?: string }): Promise<AgendaItem[]> {
+  async getAgenda(
+    accountId: number,
+    filters: { userId?: number; from?: string; to?: string }
+  ): Promise<AgendaItem[]> {
     const client = await this.getClient()
     try {
-      const params: any[] = []
-      let n = 1
-      const conds: string[] = []
-      const dateConds: string[] = []
-
+      // Params compartilhados entre as duas subqueries (UNION ALL). Ordem:
+      //   $1 = accountId
+      //   $2 = userId (se filters.userId)
+      //   next = from (se filters.from)
+      //   next = to (se filters.to)
+      const params: any[] = [accountId]
+      let n = 2
+      let userIdParam: number | null = null
       if (filters.userId !== undefined) {
-        conds.push(`user_id = $${n}`)
+        userIdParam = n
         params.push(filters.userId)
         n++
       }
+      let fromParam: number | null = null
       if (filters.from) {
-        dateConds.push(`start_at >= $${n}::timestamp`)
+        fromParam = n
         params.push(filters.from)
         n++
       }
+      let toParam: number | null = null
       if (filters.to) {
-        dateConds.push(`start_at < ($${n}::timestamp + INTERVAL '1 day')`)
+        toParam = n
         params.push(filters.to)
         n++
       }
 
       // 1) calendar_events → normaliza pra AgendaItem shape
-      const eventsWhere = ['e.status != \'cancelled\'', ...conds.map((c) => c.replace(/user_id/g, 'e.user_id')), ...dateConds.map((c) => c.replace(/start_at/g, 'e.start_at'))]
+      const eventConds: string[] = [`e.account_id = $1`, `e.status != 'cancelled'`]
+      if (userIdParam) eventConds.push(`e.user_id = $${userIdParam}`)
+      if (fromParam) eventConds.push(`e.start_at >= $${fromParam}::timestamp`)
+      if (toParam) eventConds.push(`e.start_at < ($${toParam}::timestamp + INTERVAL '1 day')`)
       const eventsQuery = `
         SELECT
           'event'::text        AS kind,
@@ -212,18 +242,15 @@ export class CalendarEventRepository extends BaseRepository {
         LEFT JOIN clients c  ON e.client_id = c.id
         LEFT JOIN deals d    ON e.deal_id = d.id
         LEFT JOIN products p ON e.product_id = p.id
-        WHERE ${eventsWhere.join(' AND ')}
+        WHERE ${eventConds.join(' AND ')}
       `
 
       // 2) follow_ups em aberto (não completados) — normaliza pro shape
-      // Reaproveita os MESMOS params (mesma ordem) — o Postgres suporta
-      // usar $1 múltiplas vezes na mesma query.
-      const followupsWhere = ['f.completed = false']
-      if (filters.userId !== undefined) followupsWhere.push(`f.user_id = $1`)
-      // Detecta a posição correta do from/to nos params
-      // (Simplificação: reindexa manualmente pra ficar consistente com o eventsQuery)
-      const followupsQuery = filters.from || filters.to
-        ? `
+      const followupConds: string[] = [`f.account_id = $1`, `f.completed = false`]
+      if (userIdParam) followupConds.push(`f.user_id = $${userIdParam}`)
+      if (fromParam) followupConds.push(`f.next_action_date >= $${fromParam}::date`)
+      if (toParam) followupConds.push(`f.next_action_date < ($${toParam}::date + INTERVAL '1 day')`)
+      const followupsQuery = `
         SELECT
           'followup'::text     AS kind,
           f.id                 AS id,
@@ -244,32 +271,7 @@ export class CalendarEventRepository extends BaseRepository {
         LEFT JOIN users u        ON f.user_id = u.id
         LEFT JOIN appointments a ON f.appointment_id = a.id
         LEFT JOIN deals d        ON a.user_id = d.user_id  -- vínculo indireto; não é exato
-        WHERE ${followupsWhere.join(' AND ')}
-          ${filters.from ? `AND f.next_action_date >= $${filters.userId !== undefined ? 2 : 1}::date` : ''}
-          ${filters.to ? `AND f.next_action_date < ($${(filters.userId !== undefined ? 1 : 0) + (filters.from ? 2 : 1)}::date + INTERVAL '1 day')` : ''}
-      `
-        : `
-        SELECT
-          'followup'::text     AS kind,
-          f.id                 AS id,
-          f.user_id            AS user_id,
-          u.name               AS user_name,
-          COALESCE(f.next_action, 'Follow-up') AS title,
-          NULL::text           AS description,
-          f.next_action_date::text  AS start_at,
-          NULL::text           AS end_at,
-          true                 AS all_day,
-          '#0891b2'::text      AS color,
-          'scheduled'::text    AS status,
-          f.client_name        AS client_name,
-          d.client             AS deal_client,
-          NULL::text           AS product_name,
-          f.next_action        AS followup_next_action
-        FROM follow_ups f
-        LEFT JOIN users u        ON f.user_id = u.id
-        LEFT JOIN appointments a ON f.appointment_id = a.id
-        LEFT JOIN deals d        ON a.user_id = d.user_id
-        WHERE ${followupsWhere.join(' AND ')}
+        WHERE ${followupConds.join(' AND ')}
       `
 
       const query = `

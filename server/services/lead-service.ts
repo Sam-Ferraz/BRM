@@ -22,6 +22,12 @@ import { MetaTokenService } from './meta-token-service.js'
  *   2. Triagem na UI mostra leads novos
  *   3. Corretor aceita → acceptLead() cria Cliente + Negócio e marca lead como aceito
  *   4. Corretor descarta → discardLead()
+ *
+ * Multi-tenancy:
+ *   - Rotas autenticadas passam accountId vindo de req.user!.accountId.
+ *   - O webhook público NÃO tem usuário logado, então ingestPayload deriva o
+ *     accountId de source.account_id (o webhook_token identifica a source, e
+ *     a source pertence a uma conta).
  */
 export class LeadService {
   private leadRepository: LeadRepository
@@ -45,19 +51,19 @@ export class LeadService {
   // Listagem
   // -------------------------------------------------------------------------
 
-  async list(status?: LeadStatus): Promise<ApiResponse<LeadWithDetails[]>> {
-    const leads = await this.leadRepository.findAll({ status })
+  async list(accountId: number, status?: LeadStatus): Promise<ApiResponse<LeadWithDetails[]>> {
+    const leads = await this.leadRepository.findAll(accountId, { status })
     return { data: leads, total: leads.length }
   }
 
-  async getById(id: number): Promise<LeadWithDetails> {
-    const lead = await this.leadRepository.findById(id)
+  async getById(accountId: number, id: number): Promise<LeadWithDetails> {
+    const lead = await this.leadRepository.findById(accountId, id)
     if (!lead) throw new Error('Lead not found')
     return lead
   }
 
-  async getCountByStatus() {
-    return this.leadRepository.getCountByStatus()
+  async getCountByStatus(accountId: number) {
+    return this.leadRepository.getCountByStatus(accountId)
   }
 
   // -------------------------------------------------------------------------
@@ -68,11 +74,21 @@ export class LeadService {
    * Processa um payload bruto recebido no webhook autenticado pelo token.
    * Usa o provider correto baseado no tipo da fonte. Pode resultar em 0..N
    * leads inseridos (a Meta pode mandar batch).
+   *
+   * O accountId é derivado de source.account_id — o webhook público não tem
+   * usuário autenticado, então a source (identificada pelo webhook_token da
+   * URL) é a fonte de verdade sobre a qual conta recebe esses leads.
    */
   async ingestPayload(source: LeadSource, payload: any): Promise<Lead[]> {
     if (source.status !== 'active') {
       // Fonte pausada — registra mas não persiste
       console.warn(`[Leads] Payload recebido em fonte pausada (id=${source.id})`)
+      return []
+    }
+
+    const accountId = source.account_id
+    if (!accountId) {
+      console.error(`[Leads] Source id=${source.id} sem account_id — payload descartado`)
       return []
     }
 
@@ -83,7 +99,7 @@ export class LeadService {
 
     const created: Lead[] = []
     for (const lead of normalized) {
-      const inserted = await this.leadRepository.insertOrIgnore({
+      const inserted = await this.leadRepository.insertOrIgnore(accountId, {
         source_id: source.id,
         external_id: lead.external_id ?? null,
         name: lead.name ?? null,
@@ -95,7 +111,7 @@ export class LeadService {
     }
 
     if (created.length > 0) {
-      await this.leadSourceRepository.touchLastLead(source.id).catch(() => undefined)
+      await this.leadSourceRepository.touchLastLead(accountId, source.id).catch(() => undefined)
     }
     return created
   }
@@ -104,13 +120,13 @@ export class LeadService {
    * Permite criar um lead manualmente pela UI (admin / corretor cadastrando
    * pessoa que veio por outro canal). Vai direto para o status 'novo'.
    */
-  async createManual(input: {
+  async createManual(accountId: number, input: {
     name?: string | null
     email?: string | null
     phone?: string | null
     notes?: string | null
   }): Promise<Lead> {
-    return this.leadRepository.insertOrIgnore({
+    return this.leadRepository.insertOrIgnore(accountId, {
       source_id: null,
       name: input.name,
       email: input.email,
@@ -132,23 +148,24 @@ export class LeadService {
    * (corretor depois preenche).
    */
   async acceptLead(
+    accountId: number,
     leadId: number,
     userId: number
   ): Promise<{ lead: Lead; client_id: number; deal_id: number }> {
-    const lead = await this.leadRepository.findById(leadId)
+    const lead = await this.leadRepository.findById(accountId, leadId)
     if (!lead) throw new Error('Lead not found')
     if (lead.status === 'aceito') throw new Error('lead_already_accepted')
     if (lead.status === 'descartado') throw new Error('lead_already_discarded')
 
     // 1. Cliente — reaproveita por e-mail / telefone se possível
-    const client = await this.findOrCreateClient({
+    const client = await this.findOrCreateClient(accountId, {
       name: lead.name?.trim() || lead.email?.trim() || lead.phone?.trim() || 'Lead sem nome',
       email: lead.email?.trim() || '',
       phone: lead.phone?.trim() || '',
     })
 
     // 2. Negócio — sempre novo, em fase inicial de atendimento
-    const deal = await this.dealRepository.create({
+    const deal = await this.dealRepository.create(accountId, {
       client: client.name,
       origin_date: new Date().toISOString().slice(0, 10),
       description: this.buildDealDescription(lead),
@@ -163,7 +180,7 @@ export class LeadService {
     } as any)
 
     // 3. Atualiza lead com vínculos
-    const updated = await this.leadRepository.markAccepted(leadId, {
+    const updated = await this.leadRepository.markAccepted(accountId, leadId, {
       clientId: client.id,
       dealId: deal.id,
       acceptedByUserId: userId,
@@ -173,11 +190,11 @@ export class LeadService {
     return { lead: updated, client_id: client.id, deal_id: deal.id }
   }
 
-  async discardLead(leadId: number, notes?: string | null): Promise<Lead> {
-    const lead = await this.leadRepository.findById(leadId)
+  async discardLead(accountId: number, leadId: number, notes?: string | null): Promise<Lead> {
+    const lead = await this.leadRepository.findById(accountId, leadId)
     if (!lead) throw new Error('Lead not found')
     if (lead.status === 'descartado') return lead
-    const updated = await this.leadRepository.markDiscarded(leadId, notes ?? null)
+    const updated = await this.leadRepository.markDiscarded(accountId, leadId, notes ?? null)
     if (!updated) throw new Error('Lead not found')
     return updated
   }
@@ -186,18 +203,18 @@ export class LeadService {
   // Lead sources (CRUD admin)
   // -------------------------------------------------------------------------
 
-  async listSources(): Promise<LeadSource[]> {
-    return this.leadSourceRepository.findAll()
+  async listSources(accountId: number): Promise<LeadSource[]> {
+    return this.leadSourceRepository.findAll(accountId)
   }
 
-  async createSource(input: {
+  async createSource(accountId: number, input: {
     name: string
     type: 'meta' | 'webhook_generic' | 'manual'
     config?: Record<string, any> | null
   }): Promise<LeadSource> {
     if (!input.name?.trim()) throw new Error('name is required')
     const finalConfig = await this.maybeUpgradeMetaToken(input.type, input.config ?? null)
-    return this.leadSourceRepository.create({
+    return this.leadSourceRepository.create(accountId, {
       name: input.name.trim(),
       type: input.type,
       config: finalConfig,
@@ -205,18 +222,19 @@ export class LeadService {
   }
 
   async updateSource(
+    accountId: number,
     id: number,
     input: Partial<{ name: string; config: Record<string, any> | null; status: 'active' | 'paused' }>
   ): Promise<LeadSource> {
     // Faz upgrade do token Meta antes de gravar (só quando config foi enviada)
     if (input.config !== undefined) {
-      const existing = await this.leadSourceRepository.findById(id)
+      const existing = await this.leadSourceRepository.findById(accountId, id)
       const type = existing?.type
       if (type === 'meta') {
         input = { ...input, config: await this.maybeUpgradeMetaToken(type, input.config ?? null) }
       }
     }
-    const updated = await this.leadSourceRepository.update(id, input)
+    const updated = await this.leadSourceRepository.update(accountId, id, input)
     if (!updated) throw new Error('LeadSource not found')
     return updated
   }
@@ -278,8 +296,8 @@ export class LeadService {
     }
   }
 
-  async deleteSource(id: number): Promise<{ success: boolean }> {
-    const ok = await this.leadSourceRepository.delete(id)
+  async deleteSource(accountId: number, id: number): Promise<{ success: boolean }> {
+    const ok = await this.leadSourceRepository.delete(accountId, id)
     if (!ok) throw new Error('LeadSource not found')
     return { success: true }
   }
@@ -288,16 +306,16 @@ export class LeadService {
   // Internos
   // -------------------------------------------------------------------------
 
-  private async findOrCreateClient(input: {
+  private async findOrCreateClient(accountId: number, input: {
     name: string
     email: string
     phone: string
   }) {
     // Match por e-mail é mais confiável; phone usado como fallback.
-    const existing = await this.findExistingClient(input.email, input.phone)
+    const existing = await this.findExistingClient(accountId, input.email, input.phone)
     if (existing) return existing
 
-    return this.clientRepository.create({
+    return this.clientRepository.create(accountId, {
       name: input.name,
       email: input.email,
       phone: input.phone,
@@ -306,11 +324,11 @@ export class LeadService {
     } as any)
   }
 
-  private async findExistingClient(email: string, phone: string) {
+  private async findExistingClient(accountId: number, email: string, phone: string) {
     const trimmedEmail = email.trim()
     const trimmedPhone = phone.trim()
     if (!trimmedEmail && !trimmedPhone) return null
-    const all = await this.clientRepository.findAll({ search: trimmedEmail || trimmedPhone })
+    const all = await this.clientRepository.findAll(accountId, { search: trimmedEmail || trimmedPhone })
     return (
       all.find((c) => {
         if (trimmedEmail && c.email?.toLowerCase() === trimmedEmail.toLowerCase()) return true

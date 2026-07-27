@@ -3,7 +3,7 @@ import multer from 'multer'
 import path from 'path'
 import fs from 'fs'
 import { AppointmentService } from '../services/index.js'
-import { authenticateToken, AuthenticatedRequest } from '../middleware/auth.js'
+import { authenticateToken, requireAccount, AuthenticatedRequest } from '../middleware/auth.js'
 
 export function createAppointmentRoutes(appointmentService: AppointmentService): Router {
   const router = Router()
@@ -48,10 +48,14 @@ export function createAppointmentRoutes(appointmentService: AppointmentService):
   // POST /api/appointments/upload-audio → devolve { url }
   // Endpoint separado para que o front-end possa fazer o upload em background
   // enquanto o corretor continua gravando/transcrevendo. Depois manda a URL
-  // no create do appointment.
+  // no create do appointment. Só grava o arquivo em disco — o accountId do
+  // dono já é verificado pelo authenticateToken+requireAccount pra impedir
+  // que usuários sem tenant estourem storage. O vínculo real com account_id
+  // acontece quando o appointment é criado via POST / com essa URL.
   router.post(
     '/upload-audio',
     authenticateToken,
+    requireAccount,
     audioUpload.single('audio'),
     async (req: AuthenticatedRequest, res: Response): Promise<void> => {
       try {
@@ -84,8 +88,9 @@ export function createAppointmentRoutes(appointmentService: AppointmentService):
     }
   }
 
-  router.get('/', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.get('/', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const userId = req.user!.userId
       const parsedDealId = req.query.dealId ? parseInt(req.query.dealId as string, 10) : NaN
       const filters = {
@@ -96,7 +101,7 @@ export function createAppointmentRoutes(appointmentService: AppointmentService):
         dealId: Number.isFinite(parsedDealId) && parsedDealId > 0 ? parsedDealId : undefined,
       }
 
-      const result = await appointmentService.getAllAppointments(filters, userId)
+      const result = await appointmentService.getAllAppointments(accountId, filters, userId)
       res.json(result)
     } catch (error) {
       console.error('Error in get appointments route:', error)
@@ -104,12 +109,13 @@ export function createAppointmentRoutes(appointmentService: AppointmentService):
     }
   })
 
-  router.post('/', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.post('/', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const userId = req.user!.userId
       const { client, type, scheduled_datetime, description, answered, property_name, audio_url, deal_id } = req.body
       const normalizedPropertyName = type === 'visit' ? property_name : null
-      const appointment = await appointmentService.createAppointment({
+      const appointment = await appointmentService.createAppointment(accountId, {
         client,
         type,
         scheduled_datetime,
@@ -127,13 +133,14 @@ export function createAppointmentRoutes(appointmentService: AppointmentService):
     }
   })
 
-  router.put('/:id', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.put('/:id', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const userId = req.user!.userId
       const id = parseInt(req.params.id)
       const { client, type, scheduled_datetime, description, answered, property_name, audio_url, deal_id } = req.body
       const normalizedPropertyName = type === 'visit' ? property_name : null
-      const appointment = await appointmentService.updateAppointment(id, {
+      const appointment = await appointmentService.updateAppointment(accountId, id, {
         client,
         type,
         scheduled_datetime,
@@ -155,10 +162,11 @@ export function createAppointmentRoutes(appointmentService: AppointmentService):
     }
   })
 
-  router.delete('/:id', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.delete('/:id', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const id = parseInt(req.params.id)
-      const result = await appointmentService.deleteAppointment(id)
+      const result = await appointmentService.deleteAppointment(accountId, id)
       res.json(result)
     } catch (error) {
       console.error('Error in delete appointment route:', error)
@@ -171,10 +179,11 @@ export function createAppointmentRoutes(appointmentService: AppointmentService):
   })
 
   // Analytics routes
-  router.get('/analytics/last-7-days', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.get('/analytics/last-7-days', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const timezone = isValidTimezone(req.query.timezone) ? req.query.timezone : DEFAULT_TIMEZONE
-      const result = await appointmentService.getLast7DaysAnalytics(timezone)
+      const result = await appointmentService.getLast7DaysAnalytics(accountId, timezone)
       res.json(result)
     } catch (error) {
       console.error('Error in appointments analytics route:', error)
@@ -182,10 +191,11 @@ export function createAppointmentRoutes(appointmentService: AppointmentService):
     }
   })
 
-  router.get('/analytics/by-type/last-7-days', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.get('/analytics/by-type/last-7-days', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const timezone = isValidTimezone(req.query.timezone) ? req.query.timezone : DEFAULT_TIMEZONE
-      const result = await appointmentService.getLast7DaysAnalyticsByType(timezone)
+      const result = await appointmentService.getLast7DaysAnalyticsByType(accountId, timezone)
       res.json(result)
     } catch (error) {
       console.error('Error in appointments analytics by type route:', error)
@@ -199,15 +209,16 @@ export function createAppointmentRoutes(appointmentService: AppointmentService):
   const parseAppointmentDateField = (v: unknown): 'scheduled_datetime' | 'created_at' =>
     v === 'created_at' ? 'created_at' : 'scheduled_datetime'
 
-  router.get('/analytics/by-date-range', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.get('/analytics/by-date-range', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       if (!isValidDate(req.query.from) || !isValidDate(req.query.to)) {
         res.status(400).json({ error: 'Invalid or missing "from" / "to" (expected YYYY-MM-DD)' })
         return
       }
+      const accountId = req.user!.accountId
       const timezone = isValidTimezone(req.query.timezone) ? req.query.timezone : DEFAULT_TIMEZONE
       const dateField = parseAppointmentDateField(req.query.dateField)
-      const result = await appointmentService.getAnalyticsByDateRange({
+      const result = await appointmentService.getAnalyticsByDateRange(accountId, {
         from: req.query.from,
         to: req.query.to,
         timezone,
@@ -220,15 +231,16 @@ export function createAppointmentRoutes(appointmentService: AppointmentService):
     }
   })
 
-  router.get('/analytics/by-type/by-date-range', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.get('/analytics/by-type/by-date-range', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       if (!isValidDate(req.query.from) || !isValidDate(req.query.to)) {
         res.status(400).json({ error: 'Invalid or missing "from" / "to" (expected YYYY-MM-DD)' })
         return
       }
+      const accountId = req.user!.accountId
       const timezone = isValidTimezone(req.query.timezone) ? req.query.timezone : DEFAULT_TIMEZONE
       const dateField = parseAppointmentDateField(req.query.dateField)
-      const result = await appointmentService.getAnalyticsByTypeByDateRange({
+      const result = await appointmentService.getAnalyticsByTypeByDateRange(accountId, {
         from: req.query.from,
         to: req.query.to,
         timezone,

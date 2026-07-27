@@ -3,11 +3,12 @@ import { BaseRepository } from './base-repository.js'
 import { LeadSource, LeadSourceStatus, LeadSourceType } from '../types/index.js'
 
 export class LeadSourceRepository extends BaseRepository {
-  async findAll(): Promise<LeadSource[]> {
+  async findAll(accountId: number): Promise<LeadSource[]> {
     const client = await this.getClient()
     try {
       const result = await client.query(
-        'SELECT * FROM lead_sources ORDER BY created_at DESC'
+        'SELECT * FROM lead_sources WHERE account_id = $1 ORDER BY created_at DESC',
+        [accountId]
       )
       return result.rows
     } finally {
@@ -15,16 +16,26 @@ export class LeadSourceRepository extends BaseRepository {
     }
   }
 
-  async findById(id: number): Promise<LeadSource | null> {
+  async findById(accountId: number, id: number): Promise<LeadSource | null> {
     const client = await this.getClient()
     try {
-      const result = await client.query('SELECT * FROM lead_sources WHERE id = $1', [id])
+      const result = await client.query(
+        'SELECT * FROM lead_sources WHERE id = $1 AND account_id = $2',
+        [id, accountId]
+      )
       return result.rows.length > 0 ? result.rows[0] : null
     } finally {
       this.releaseClient(client)
     }
   }
 
+  /**
+   * Busca fonte pelo webhook_token. NÃO recebe accountId porque é usado pelo
+   * webhook público (Meta, Zapier, etc.) que chega SEM autenticação — é a
+   * própria chamada que descobre o account_id a partir de source.account_id.
+   * O token é o segredo aleatório de 24 bytes gerado no create() — funciona
+   * como identificador único global.
+   */
   async findByWebhookToken(token: string): Promise<LeadSource | null> {
     const client = await this.getClient()
     try {
@@ -38,7 +49,7 @@ export class LeadSourceRepository extends BaseRepository {
     }
   }
 
-  async create(input: {
+  async create(accountId: number, input: {
     name: string
     type: LeadSourceType
     config?: Record<string, any> | null
@@ -49,9 +60,10 @@ export class LeadSourceRepository extends BaseRepository {
       // Token aleatório longo o suficiente para ser usado como segredo no webhook
       const webhookToken = randomBytes(24).toString('hex')
       const result = await client.query(
-        `INSERT INTO lead_sources (name, type, config, webhook_token, status)
-         VALUES ($1, $2, $3::jsonb, $4, $5) RETURNING *`,
+        `INSERT INTO lead_sources (account_id, name, type, config, webhook_token, status)
+         VALUES ($1, $2, $3, $4::jsonb, $5, $6) RETURNING *`,
         [
+          accountId,
           input.name,
           input.type,
           input.config ? JSON.stringify(input.config) : null,
@@ -66,6 +78,7 @@ export class LeadSourceRepository extends BaseRepository {
   }
 
   async update(
+    accountId: number,
     id: number,
     input: Partial<{ name: string; config: Record<string, any> | null; status: LeadSourceStatus }>
   ): Promise<LeadSource | null> {
@@ -87,11 +100,14 @@ export class LeadSourceRepository extends BaseRepository {
         values.push(input.status)
       }
       if (fields.length === 0) {
-        return this.findById(id)
+        return this.findById(accountId, id)
       }
       fields.push('updated_at = CURRENT_TIMESTAMP')
       values.push(id)
-      const query = `UPDATE lead_sources SET ${fields.join(', ')} WHERE id = $${p} RETURNING *`
+      const idParam = p
+      p++
+      values.push(accountId)
+      const query = `UPDATE lead_sources SET ${fields.join(', ')} WHERE id = $${idParam} AND account_id = $${p} RETURNING *`
       const result = await client.query(query, values)
       return result.rows.length > 0 ? result.rows[0] : null
     } finally {
@@ -99,22 +115,38 @@ export class LeadSourceRepository extends BaseRepository {
     }
   }
 
-  async touchLastLead(id: number): Promise<void> {
+  /**
+   * Atualiza last_lead_at após ingerir um lead. accountId é opcional porque
+   * essa chamada acontece dentro do fluxo de webhook público — o LeadService
+   * já resolveu qual é a source (e portanto a account) via findByWebhookToken.
+   * Quando presente, filtramos por account_id como salvaguarda extra.
+   */
+  async touchLastLead(accountId: number | undefined, id: number): Promise<void> {
     const client = await this.getClient()
     try {
-      await client.query(
-        'UPDATE lead_sources SET last_lead_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = $1',
-        [id]
-      )
+      if (accountId !== undefined) {
+        await client.query(
+          'UPDATE lead_sources SET last_lead_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND account_id = $2',
+          [id, accountId]
+        )
+      } else {
+        await client.query(
+          'UPDATE lead_sources SET last_lead_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = $1',
+          [id]
+        )
+      }
     } finally {
       this.releaseClient(client)
     }
   }
 
-  async delete(id: number): Promise<boolean> {
+  async delete(accountId: number, id: number): Promise<boolean> {
     const client = await this.getClient()
     try {
-      const result = await client.query('DELETE FROM lead_sources WHERE id = $1 RETURNING id', [id])
+      const result = await client.query(
+        'DELETE FROM lead_sources WHERE id = $1 AND account_id = $2 RETURNING id',
+        [id, accountId]
+      )
       return result.rows.length > 0
     } finally {
       this.releaseClient(client)

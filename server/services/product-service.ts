@@ -8,9 +8,9 @@ export class ProductService {
     this.productRepository = productRepository
   }
 
-  async getAllProducts(filters: QueryFilters): Promise<ApiResponse<Product[]>> {
+  async getAllProducts(accountId: number, filters: QueryFilters): Promise<ApiResponse<Product[]>> {
     try {
-      const products = await this.productRepository.findAll(filters)
+      const products = await this.productRepository.findAll(accountId, filters)
       return {
         data: products,
         total: products.length
@@ -21,18 +21,25 @@ export class ProductService {
     }
   }
 
-  async createProduct(productData: Omit<Product, 'id' | 'created_at' | 'updated_at' | 'has_thumbnail'>): Promise<Product> {
+  async createProduct(
+    accountId: number,
+    productData: Omit<Product, 'id' | 'created_at' | 'updated_at' | 'has_thumbnail'>
+  ): Promise<Product> {
     try {
-      return await this.productRepository.create(productData)
+      return await this.productRepository.create(accountId, productData)
     } catch (error) {
       console.error('Error creating product:', error)
       throw new Error('Internal server error')
     }
   }
 
-  async updateProduct(id: number, productData: Omit<Product, 'id' | 'created_at' | 'updated_at' | 'has_thumbnail'>): Promise<Product> {
+  async updateProduct(
+    accountId: number,
+    id: number,
+    productData: Omit<Product, 'id' | 'created_at' | 'updated_at' | 'has_thumbnail'>
+  ): Promise<Product> {
     try {
-      const updatedProduct = await this.productRepository.update(id, productData)
+      const updatedProduct = await this.productRepository.update(accountId, id, productData)
       if (!updatedProduct) {
         throw new Error('Product not found')
       }
@@ -46,25 +53,25 @@ export class ProductService {
     }
   }
 
-  async setAvailability(id: number, available: boolean): Promise<Product> {
-    const updated = await this.productRepository.setAvailability(id, available)
+  async setAvailability(accountId: number, id: number, available: boolean): Promise<Product> {
+    const updated = await this.productRepository.setAvailability(accountId, id, available)
     if (!updated) throw new Error('Product not found')
     return updated
   }
 
-  async deleteProduct(id: number): Promise<{ success: boolean, imagePaths: string[] }> {
+  async deleteProduct(accountId: number, id: number): Promise<{ success: boolean, imagePaths: string[] }> {
     try {
-      // Check if product exists
-      const product = await this.productRepository.findById(id)
+      // Check if product exists (dentro da account)
+      const product = await this.productRepository.findById(accountId, id)
       if (!product) {
         throw new Error('Product not found')
       }
 
       // Get all product images before deletion
       const imagePaths = await this.productRepository.getProductImagePaths(id)
-      
+
       // Delete from database (CASCADE will handle product_images)
-      const deleted = await this.productRepository.delete(id)
+      const deleted = await this.productRepository.delete(accountId, id)
       if (!deleted) {
         throw new Error('Product not found')
       }
@@ -79,10 +86,10 @@ export class ProductService {
     }
   }
 
-  async getProductImages(productId: number): Promise<{ images: ProductImage[] }> {
+  async getProductImages(accountId: number, productId: number): Promise<{ images: ProductImage[] }> {
     try {
-      // Check if product exists
-      const product = await this.productRepository.findById(productId)
+      // Valida que o produto pertence à account antes de expor as imagens.
+      const product = await this.productRepository.findById(accountId, productId)
       if (!product) {
         throw new Error('Product not found')
       }
@@ -99,13 +106,14 @@ export class ProductService {
   }
 
   async addProductImage(
+    accountId: number,
     productId: number,
     imageUrl: string,
     altText: string
   ): Promise<{ success: boolean, image: ProductImage, message: string }> {
     try {
-      // Check if product exists
-      const product = await this.productRepository.findById(productId)
+      // Valida que o produto pertence à account antes de inserir imagens.
+      const product = await this.productRepository.findById(accountId, productId)
       if (!product) {
         throw new Error('Product not found')
       }
@@ -141,6 +149,7 @@ export class ProductService {
   }
 
   async addMultipleProductImages(
+    accountId: number,
     productId: number,
     imageData: Array<{ url: string, altText: string }>
   ): Promise<{
@@ -152,8 +161,8 @@ export class ProductService {
     message: string
   }> {
     try {
-      // Check if product exists
-      const product = await this.productRepository.findById(productId)
+      // Valida que o produto pertence à account antes de inserir imagens.
+      const product = await this.productRepository.findById(accountId, productId)
       if (!product) {
         throw new Error('Product not found')
       }
@@ -209,8 +218,13 @@ export class ProductService {
     }
   }
 
-  async getProductImage(productId: number, imageId: number): Promise<ProductImage> {
+  async getProductImage(accountId: number, productId: number, imageId: number): Promise<ProductImage> {
     try {
+      // Valida que o produto pertence à account antes de expor a imagem.
+      const product = await this.productRepository.findById(accountId, productId)
+      if (!product) {
+        throw new Error('Image not found')
+      }
       const image = await this.productRepository.findImageById(imageId, productId)
       if (!image) {
         throw new Error('Image not found')
@@ -226,11 +240,17 @@ export class ProductService {
   }
 
   async updateProductImage(
+    accountId: number,
     productId: number,
     imageId: number,
     updates: Partial<Pick<ProductImage, 'is_thumbnail' | 'display_order' | 'alt_text'>>
   ): Promise<{ success: boolean, image: ProductImage, message: string }> {
     try {
+      // Valida que o produto pertence à account antes de mutar as imagens.
+      const product = await this.productRepository.findById(accountId, productId)
+      if (!product) {
+        throw new Error('Image not found')
+      }
       const updatedImage = await this.productRepository.updateProductImage(imageId, productId, updates)
       if (!updatedImage) {
         throw new Error('Image not found')
@@ -250,8 +270,17 @@ export class ProductService {
     }
   }
 
-  async deleteProductImage(productId: number, imageId: number): Promise<{ success: boolean, image: ProductImage, message: string }> {
+  async deleteProductImage(
+    accountId: number,
+    productId: number,
+    imageId: number
+  ): Promise<{ success: boolean, image: ProductImage, message: string }> {
     try {
+      // Valida que o produto pertence à account antes de deletar imagens.
+      const product = await this.productRepository.findById(accountId, productId)
+      if (!product) {
+        throw new Error('Image not found')
+      }
       const deletedImage = await this.productRepository.deleteProductImage(imageId, productId)
       if (!deletedImage) {
         throw new Error('Image not found')
@@ -271,8 +300,13 @@ export class ProductService {
     }
   }
 
-  async getProductThumbnail(productId: number): Promise<ProductImage> {
+  async getProductThumbnail(accountId: number, productId: number): Promise<ProductImage> {
     try {
+      // Valida que o produto pertence à account antes de expor o thumbnail.
+      const product = await this.productRepository.findById(accountId, productId)
+      if (!product) {
+        throw new Error('No thumbnail found')
+      }
       const thumbnail = await this.productRepository.getThumbnailImage(productId)
       if (!thumbnail) {
         throw new Error('No thumbnail found')

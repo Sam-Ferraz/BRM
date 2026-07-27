@@ -8,9 +8,9 @@ export class FollowUpService {
     this.followUpRepository = followUpRepository
   }
 
-  async getAllFollowUps(filters: QueryFilters, userId: number): Promise<ApiResponse<FollowUpWithDetails[]>> {
+  async getAllFollowUps(accountId: number, filters: QueryFilters, userId: number): Promise<ApiResponse<FollowUpWithDetails[]>> {
     try {
-      const followUps = await this.followUpRepository.findAll(filters, userId)
+      const followUps = await this.followUpRepository.findAll(accountId, filters, userId)
       return {
         data: followUps,
         total: followUps.length
@@ -21,9 +21,9 @@ export class FollowUpService {
     }
   }
 
-  async getFollowUpById(id: number): Promise<FollowUpWithDetails> {
+  async getFollowUpById(accountId: number, id: number): Promise<FollowUpWithDetails> {
     try {
-      const followUp = await this.followUpRepository.findById(id)
+      const followUp = await this.followUpRepository.findById(accountId, id)
       if (!followUp) {
         throw new Error('Follow-up not found')
       }
@@ -37,9 +37,9 @@ export class FollowUpService {
     }
   }
 
-  async getFollowUpsByAppointmentId(appointmentId: number): Promise<ApiResponse<FollowUp[]>> {
+  async getFollowUpsByAppointmentId(accountId: number, appointmentId: number): Promise<ApiResponse<FollowUp[]>> {
     try {
-      const followUps = await this.followUpRepository.findByAppointmentId(appointmentId)
+      const followUps = await this.followUpRepository.findByAppointmentId(accountId, appointmentId)
       return {
         data: followUps,
         total: followUps.length
@@ -50,18 +50,18 @@ export class FollowUpService {
     }
   }
 
-  async createFollowUp(followUpData: Omit<FollowUp, 'id' | 'created_at' | 'updated_at' | 'completed_at'>): Promise<FollowUp> {
+  async createFollowUp(accountId: number, followUpData: Omit<FollowUp, 'id' | 'created_at' | 'updated_at' | 'completed_at'>): Promise<FollowUp> {
     try {
-      return await this.followUpRepository.create(followUpData)
+      return await this.followUpRepository.create(accountId, followUpData)
     } catch (error) {
       console.error('Error creating follow-up:', error)
       throw new Error('Internal server error')
     }
   }
 
-  async updateFollowUp(id: number, followUpData: Partial<Omit<FollowUp, 'id' | 'created_at' | 'updated_at'>>): Promise<FollowUp> {
+  async updateFollowUp(accountId: number, id: number, followUpData: Partial<Omit<FollowUp, 'id' | 'created_at' | 'updated_at'>>): Promise<FollowUp> {
     try {
-      const updatedFollowUp = await this.followUpRepository.update(id, followUpData)
+      const updatedFollowUp = await this.followUpRepository.update(accountId, id, followUpData)
       if (!updatedFollowUp) {
         throw new Error('Follow-up not found')
       }
@@ -75,9 +75,9 @@ export class FollowUpService {
     }
   }
 
-  async markAsCompleted(id: number): Promise<FollowUp> {
+  async markAsCompleted(accountId: number, id: number): Promise<FollowUp> {
     try {
-      const updatedFollowUp = await this.followUpRepository.update(id, { completed: true })
+      const updatedFollowUp = await this.followUpRepository.update(accountId, id, { completed: true })
       if (!updatedFollowUp) {
         throw new Error('Follow-up not found')
       }
@@ -91,9 +91,9 @@ export class FollowUpService {
     }
   }
 
-  async deleteFollowUp(id: number): Promise<{ success: boolean }> {
+  async deleteFollowUp(accountId: number, id: number): Promise<{ success: boolean }> {
     try {
-      const deleted = await this.followUpRepository.delete(id)
+      const deleted = await this.followUpRepository.delete(accountId, id)
       if (!deleted) {
         throw new Error('Follow-up not found')
       }
@@ -107,9 +107,9 @@ export class FollowUpService {
     }
   }
 
-  async getStatusCounts(userId: number): Promise<{ data: { open: number; pending: number; overdue: number } }> {
+  async getStatusCounts(accountId: number, userId: number): Promise<{ data: { open: number; pending: number; overdue: number } }> {
     try {
-      const counts = await this.followUpRepository.getCountByStatus(userId)
+      const counts = await this.followUpRepository.getCountByStatus(accountId, userId)
       return { data: counts }
     } catch (error) {
       console.error('Error fetching follow-up status counts:', error)

@@ -15,12 +15,17 @@ import { WhatsAppProvider } from './whatsapp-provider.js'
  * ChatService — orquestra conversas e mensagens.
  *
  * Regras importantes:
- *  • Admin (role === 'admin') vê TODAS as conversas. Corretor vê só as suas
- *    (owner_user_id == userId).
+ *  • Admin (role === 'admin') vê TODAS as conversas da account. Corretor vê
+ *    só as suas (owner_user_id == userId).
  *  • Enviar mensagem (outbound) cria registro local e chama o provider de
  *    WhatsApp para envio real. Com StubProvider, nenhuma rede acontece.
  *  • Receber mensagem (inbound) cria/encontra a conversa e cria o registro.
- *    Usado tanto pelo webhook futuro quanto pelo endpoint de simulação.
+ *    Usado tanto pelo webhook do provedor real quanto pelo endpoint de
+ *    simulação.
+ *  • Multi-tenancy: todos os métodos exigem accountId. Em fluxos onde o
+ *    caller não conhece accountId (provider Baileys/CloudApi via incoming
+ *    handler), receiveMessage aceita accountId opcional e deriva a partir
+ *    da sessão do owner_user_id (rule 9).
  */
 export class ChatService {
   private conversationRepository: ConversationRepository
@@ -43,23 +48,24 @@ export class ChatService {
     this.whatsappProvider = whatsappProvider
   }
 
-  async listConversations(viewer: { userId: number; role: string }): Promise<ApiResponse<ConversationWithDetails[]>> {
+  async listConversations(accountId: number, viewer: { userId: number; role: string }): Promise<ApiResponse<ConversationWithDetails[]>> {
     const ownerFilter = viewer.role === 'admin' ? undefined : viewer.userId
-    const conversations = await this.conversationRepository.findAll(ownerFilter)
+    const conversations = await this.conversationRepository.findAll(accountId, ownerFilter)
     return { data: conversations, total: conversations.length }
   }
 
   async getConversation(
+    accountId: number,
     id: number,
     viewer: { userId: number; role: string }
   ): Promise<{ conversation: ConversationWithDetails; messages: Message[] }> {
-    const existing = await this.conversationRepository.findById(id)
+    const existing = await this.conversationRepository.findById(accountId, id)
     if (!existing) throw new Error('Conversation not found')
     this.assertCanView(existing.owner_user_id, viewer)
-    await this.conversationRepository.markAsRead(id)
+    await this.conversationRepository.markAsRead(accountId, id)
     // Re-busca para devolver o estado já com unread_count zerado.
-    const refreshed = (await this.conversationRepository.findById(id))!
-    const messages = await this.messageRepository.findByConversation(id)
+    const refreshed = (await this.conversationRepository.findById(accountId, id))!
+    const messages = await this.messageRepository.findByConversation(accountId, id)
     return { conversation: refreshed, messages }
   }
 
@@ -68,6 +74,7 @@ export class ChatService {
    * mensagem. Usado quando o vendedor inicia conversa do zero.
    */
   async startConversation(
+    accountId: number,
     viewer: { userId: number; role: string },
     contactPhone: string,
     contactName: string | null,
@@ -77,28 +84,31 @@ export class ChatService {
     if (!initialMessage || !initialMessage.trim()) throw new Error('message is required')
 
     const ownerUserId = viewer.userId
-    await this.assertOwnerHasSession(ownerUserId)
+    await this.assertOwnerHasSession(accountId, ownerUserId)
 
     const conversation = await this.conversationRepository.findOrCreate(
+      accountId,
       ownerUserId,
       contactPhone,
       contactName
     )
-    const message = await this.sendMessageInternal(conversation.id, ownerUserId, contactPhone, initialMessage)
-    const enriched = await this.conversationRepository.findById(conversation.id)
+    const message = await this.sendMessageInternal(accountId, conversation.id, ownerUserId, contactPhone, initialMessage)
+    const enriched = await this.conversationRepository.findById(accountId, conversation.id)
     return { conversation: enriched!, message }
   }
 
   async sendMessage(
+    accountId: number,
     conversationId: number,
     viewer: { userId: number; role: string },
     content: string
   ): Promise<Message> {
     if (!content || !content.trim()) throw new Error('message is required')
-    const conversation = await this.conversationRepository.findById(conversationId)
+    const conversation = await this.conversationRepository.findById(accountId, conversationId)
     if (!conversation) throw new Error('Conversation not found')
     this.assertCanView(conversation.owner_user_id, viewer)
     return this.sendMessageInternal(
+      accountId,
       conversation.id,
       conversation.owner_user_id,
       conversation.contact_phone,
@@ -107,10 +117,17 @@ export class ChatService {
   }
 
   /**
-   * Simula recebimento de mensagem entrante. Em produção este caminho será
-   * chamado pelo webhook do provedor real.
+   * Simula/roteia recebimento de mensagem entrante. Em produção este caminho
+   * é chamado pelo webhook do provedor real e pelo callback incoming dos
+   * providers (Baileys/CloudApi).
+   *
+   * accountId é opcional (rule 9) porque os providers não conhecem essa
+   * informação em memória — quando omitido, deriva via lookup da sessão
+   * do ownerUserId (session.account_id). Callers autenticados (rota
+   * /inbound) e o webhook DEVEM passar accountId explicitamente.
    */
   async receiveMessage(input: {
+    accountId?: number
     ownerUserId: number
     fromPhone: string
     fromName?: string | null
@@ -118,21 +135,30 @@ export class ChatService {
     providerMessageId?: string | null
   }): Promise<Message> {
     if (!input.content) throw new Error('content is required')
+
+    let accountId = input.accountId
+    if (accountId === undefined) {
+      const session = await this.sessionRepository.findByUserInternal(input.ownerUserId)
+      if (!session) throw new Error('whatsapp_session_not_found')
+      accountId = session.account_id
+    }
+
     const conversation = await this.conversationRepository.findOrCreate(
+      accountId,
       input.ownerUserId,
       input.fromPhone,
       input.fromName ?? null
     )
-    const message = await this.messageRepository.create({
+    const message = await this.messageRepository.create(accountId, {
       conversation_id: conversation.id,
       direction: 'inbound',
       content: input.content,
       status: 'received',
       provider_message_id: input.providerMessageId ?? null,
     })
-    await this.conversationRepository.touchLastMessage(conversation.id, 'inbound')
+    await this.conversationRepository.touchLastMessage(accountId, conversation.id, 'inbound')
     // Pode ter completado interação bilateral (já houve outbound antes nas 24h).
-    await this.tryRegisterServiceFromConversation(conversation)
+    await this.tryRegisterServiceFromConversation(accountId, conversation)
     return message
   }
 
@@ -141,12 +167,13 @@ export class ChatService {
   // -------------------------------------------------------------------------
 
   private async sendMessageInternal(
+    accountId: number,
     conversationId: number,
     ownerUserId: number,
     contactPhone: string,
     content: string
   ): Promise<Message> {
-    const session = await this.sessionRepository.findByUser(ownerUserId)
+    const session = await this.sessionRepository.findByUser(accountId, ownerUserId)
     const fromPhone = session?.phone_number || 'unknown'
 
     let providerMessageId: string | null = null
@@ -164,17 +191,17 @@ export class ChatService {
       status = 'failed'
     }
 
-    const message = await this.messageRepository.create({
+    const message = await this.messageRepository.create(accountId, {
       conversation_id: conversationId,
       direction: 'outbound',
       content,
       status,
       provider_message_id: providerMessageId,
     })
-    await this.conversationRepository.touchLastMessage(conversationId, 'outbound')
+    await this.conversationRepository.touchLastMessage(accountId, conversationId, 'outbound')
     // Pode ter completado interação bilateral (já houve inbound antes nas 24h).
-    const conv = await this.conversationRepository.findById(conversationId)
-    if (conv) await this.tryRegisterServiceFromConversation(conv)
+    const conv = await this.conversationRepository.findById(accountId, conversationId)
+    if (conv) await this.tryRegisterServiceFromConversation(accountId, conv)
     return message
   }
 
@@ -189,22 +216,23 @@ export class ChatService {
    * só) — não devem quebrar o fluxo de mensagem.
    */
   private async tryRegisterServiceFromConversation(
+    accountId: number,
     conversation: { id: number; owner_user_id: number; contact_name?: string | null; contact_phone: string }
   ): Promise<void> {
     if (!this.appointmentRepository) return
     try {
-      const bilateral = await this.messageRepository.hasBothDirectionsInWindow(conversation.id, 24)
+      const bilateral = await this.messageRepository.hasBothDirectionsInWindow(accountId, conversation.id, 24)
       if (!bilateral) return
 
-      const existing = await this.appointmentRepository.findRecentChatByConversation(conversation.id, 24)
+      const existing = await this.appointmentRepository.findRecentChatByConversation(accountId, conversation.id, 24)
       if (existing) {
         // Já existe um atendimento na janela — só garante que está marcado como respondido.
-        if (!existing.answered) await this.appointmentRepository.markAnswered(existing.id)
+        if (!existing.answered) await this.appointmentRepository.markAnswered(accountId, existing.id)
         return
       }
 
       const clientLabel = conversation.contact_name?.trim() || conversation.contact_phone
-      await this.appointmentRepository.create({
+      await this.appointmentRepository.create(accountId, {
         client: clientLabel,
         type: 'chat',
         scheduled_datetime: new Date().toISOString(),
@@ -226,8 +254,8 @@ export class ChatService {
     throw new Error('forbidden')
   }
 
-  private async assertOwnerHasSession(userId: number): Promise<void> {
-    const session = await this.sessionRepository.findByUser(userId)
+  private async assertOwnerHasSession(accountId: number, userId: number): Promise<void> {
+    const session = await this.sessionRepository.findByUser(accountId, userId)
     if (!session || session.status !== 'connected') {
       throw new Error('whatsapp_not_connected')
     }

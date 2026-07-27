@@ -2,23 +2,23 @@ import { BaseRepository } from './base-repository.js'
 import { Product, ProductImage, QueryFilters } from '../types/index.js'
 
 export class ProductRepository extends BaseRepository {
-  async findAll(filters: QueryFilters = {}): Promise<Product[]> {
+  async findAll(accountId: number, filters: QueryFilters = {}): Promise<Product[]> {
     const client = await this.getClient()
     try {
       const { search, type, category, sortBy, sortOrder } = filters
       let query = `
-        SELECT 
+        SELECT
           p.*,
-          CASE 
-            WHEN pi.id IS NOT NULL THEN true 
-            ELSE false 
+          CASE
+            WHEN pi.id IS NOT NULL THEN true
+            ELSE false
           END as has_thumbnail
         FROM products p
         LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_thumbnail = TRUE
-        WHERE 1=1
+        WHERE p.account_id = $1
       `
-      const params: any[] = []
-      let paramCount = 1
+      const params: any[] = [accountId]
+      let paramCount = 2
 
       if (search) {
         query += ` AND (p.name ILIKE $${paramCount} OR p.type ILIKE $${paramCount} OR p.category ILIKE $${paramCount} OR p.neighborhood ILIKE $${paramCount} OR p.city ILIKE $${paramCount})`
@@ -55,17 +55,23 @@ export class ProductRepository extends BaseRepository {
     }
   }
 
-  async findById(id: number): Promise<Product | null> {
+  async findById(accountId: number, id: number): Promise<Product | null> {
     const client = await this.getClient()
     try {
-      const result = await client.query('SELECT * FROM products WHERE id = $1', [id])
+      const result = await client.query(
+        'SELECT * FROM products WHERE id = $1 AND account_id = $2',
+        [id, accountId]
+      )
       return result.rows.length > 0 ? result.rows[0] : null
     } finally {
       this.releaseClient(client)
     }
   }
 
-  async create(product: Omit<Product, 'id' | 'created_at' | 'updated_at' | 'has_thumbnail'>): Promise<Product> {
+  async create(
+    accountId: number,
+    product: Omit<Product, 'id' | 'created_at' | 'updated_at' | 'has_thumbnail'>
+  ): Promise<Product> {
     const client = await this.getClient()
     try {
       // Deriva status do available_for_sale se não veio explicitamente, pra
@@ -75,6 +81,7 @@ export class ProductRepository extends BaseRepository {
 
       const result = await client.query(
         `INSERT INTO products (
+          account_id,
           name, price, type, category, description,
           capture_date, capturer, payment_condition,
           exchange_car, exchange_property, exclusivity,
@@ -82,8 +89,9 @@ export class ProductRepository extends BaseRepository {
           total_area, private_area, condo_fee,
           address, neighborhood, city, state, country,
           available_for_sale, status, user_id
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26) RETURNING *`,
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27) RETURNING *`,
         [
+          accountId,
           product.name, product.price, product.type, product.category, product.description,
           product.capture_date || null, product.capturer || null, product.payment_condition || null,
           product.exchange_car || false, product.exchange_property || false, product.exclusivity || false,
@@ -99,7 +107,11 @@ export class ProductRepository extends BaseRepository {
     }
   }
 
-  async update(id: number, product: Omit<Product, 'id' | 'created_at' | 'updated_at' | 'has_thumbnail'>): Promise<Product | null> {
+  async update(
+    accountId: number,
+    id: number,
+    product: Omit<Product, 'id' | 'created_at' | 'updated_at' | 'has_thumbnail'>
+  ): Promise<Product | null> {
     const client = await this.getClient()
     try {
       // Mantém status e available_for_sale sincronizados (até deprecate completo).
@@ -116,7 +128,7 @@ export class ProductRepository extends BaseRepository {
           address = $19, neighborhood = $20, city = $21, state = $22, country = $23,
           available_for_sale = $24, status = $25, user_id = $26,
           updated_at = CURRENT_TIMESTAMP
-        WHERE id = $27 RETURNING *`,
+        WHERE id = $27 AND account_id = $28 RETURNING *`,
         [
           product.name, product.price, product.type, product.category, product.description,
           product.capture_date || null, product.capturer || null, product.payment_condition || null,
@@ -124,7 +136,7 @@ export class ProductRepository extends BaseRepository {
           product.bedrooms || null, product.suites || null, product.parking_spots || null, product.bathrooms || null,
           product.total_area || null, product.private_area || null, product.condo_fee || null,
           product.address || null, product.neighborhood || null, product.city || null, product.state || null, product.country || 'Brasil',
-          availableValue, statusValue, product.user_id || null, id
+          availableValue, statusValue, product.user_id || null, id, accountId
         ]
       )
       return result.rows.length > 0 ? result.rows[0] : null
@@ -133,10 +145,13 @@ export class ProductRepository extends BaseRepository {
     }
   }
 
-  async delete(id: number): Promise<boolean> {
+  async delete(accountId: number, id: number): Promise<boolean> {
     const client = await this.getClient()
     try {
-      const result = await client.query('DELETE FROM products WHERE id = $1 RETURNING *', [id])
+      const result = await client.query(
+        'DELETE FROM products WHERE id = $1 AND account_id = $2 RETURNING *',
+        [id, accountId]
+      )
       return result.rows.length > 0
     } finally {
       this.releaseClient(client)
@@ -147,11 +162,12 @@ export class ProductRepository extends BaseRepository {
    * Conta imóveis visíveis na Vitrine (available_for_sale = true).
    * Usado no card "Vitrine" do dashboard.
    */
-  async getShowcaseCount(): Promise<number> {
+  async getShowcaseCount(accountId: number): Promise<number> {
     const client = await this.getClient()
     try {
       const result = await client.query(
-        "SELECT COUNT(*) as count FROM products WHERE available_for_sale = TRUE"
+        'SELECT COUNT(*) as count FROM products WHERE available_for_sale = TRUE AND account_id = $1',
+        [accountId]
       )
       return parseInt(result.rows[0].count)
     } finally {
@@ -163,7 +179,7 @@ export class ProductRepository extends BaseRepository {
    * Toggle dedicado da flag available_for_sale. Usado para esconder/mostrar
    * o imóvel na Vitrine sem precisar fazer um UPDATE com todos os campos.
    */
-  async setAvailability(id: number, available: boolean): Promise<Product | null> {
+  async setAvailability(accountId: number, id: number, available: boolean): Promise<Product | null> {
     const client = await this.getClient()
     try {
       // Mantém available_for_sale e status sincronizados — durante a transição
@@ -172,8 +188,8 @@ export class ProductRepository extends BaseRepository {
       const result = await client.query(
         `UPDATE products
            SET available_for_sale = $1, status = $2, updated_at = CURRENT_TIMESTAMP
-         WHERE id = $3 RETURNING *`,
-        [available, newStatus, id]
+         WHERE id = $3 AND account_id = $4 RETURNING *`,
+        [available, newStatus, id, accountId]
       )
       return result.rows.length > 0 ? result.rows[0] : null
     } finally {
@@ -187,15 +203,15 @@ export class ProductRepository extends BaseRepository {
    * Usado pelo SaleService quando uma venda é aprovada (vira 'sold') e
    * pela tela de Imóveis quando o usuário muda o status manualmente.
    */
-  async setStatus(id: number, status: 'available' | 'inactive' | 'sold'): Promise<Product | null> {
+  async setStatus(accountId: number, id: number, status: 'available' | 'inactive' | 'sold'): Promise<Product | null> {
     const client = await this.getClient()
     try {
       const available = status === 'available'
       const result = await client.query(
         `UPDATE products
            SET status = $1, available_for_sale = $2, updated_at = CURRENT_TIMESTAMP
-         WHERE id = $3 RETURNING *`,
-        [status, available, id]
+         WHERE id = $3 AND account_id = $4 RETURNING *`,
+        [status, available, id, accountId]
       )
       return result.rows.length > 0 ? result.rows[0] : null
     } finally {
@@ -208,12 +224,12 @@ export class ProductRepository extends BaseRepository {
    * pra encontrar o imóvel da venda a partir do deal.property_name e marcá-lo
    * como vendido na aprovação.
    */
-  async findByExactName(name: string): Promise<Product | null> {
+  async findByExactName(accountId: number, name: string): Promise<Product | null> {
     const client = await this.getClient()
     try {
       const result = await client.query(
-        'SELECT * FROM products WHERE LOWER(name) = LOWER($1) LIMIT 1',
-        [name]
+        'SELECT * FROM products WHERE LOWER(name) = LOWER($1) AND account_id = $2 LIMIT 1',
+        [name, accountId]
       )
       return result.rows.length > 0 ? result.rows[0] : null
     } finally {
@@ -221,15 +237,26 @@ export class ProductRepository extends BaseRepository {
     }
   }
 
-  async getCount(): Promise<number> {
+  async getCount(accountId: number): Promise<number> {
     const client = await this.getClient()
     try {
-      const result = await client.query('SELECT COUNT(*) as count FROM products')
+      const result = await client.query(
+        'SELECT COUNT(*) as count FROM products WHERE account_id = $1',
+        [accountId]
+      )
       return parseInt(result.rows[0].count)
     } finally {
       this.releaseClient(client)
     }
   }
+
+  // ---------------------------------------------------------------------------
+  // product_images: a tabela não tem account_id direto — a filtragem por tenant
+  // acontece na camada de serviço, verificando ProductRepository.findById(accountId,
+  // productId) antes de tocar as imagens. Por isso os métodos abaixo mantêm a
+  // assinatura antiga (apenas productId) — quem chama é responsável por já ter
+  // validado que o produto pertence à account.
+  // ---------------------------------------------------------------------------
 
   async getProductImages(productId: number): Promise<ProductImage[]> {
     const client = await this.getClient()
@@ -318,8 +345,8 @@ export class ProductRepository extends BaseRepository {
       values.push(imageId, productId)
 
       const updateQuery = `
-        UPDATE product_images 
-        SET ${updateFields.join(', ')} 
+        UPDATE product_images
+        SET ${updateFields.join(', ')}
         WHERE id = $${valueIndex++} AND product_id = $${valueIndex++}
         RETURNING *
       `
@@ -354,13 +381,13 @@ export class ProductRepository extends BaseRepository {
       // If this was the thumbnail, set the first remaining image as thumbnail
       if (image.is_thumbnail) {
         await client.query(`
-          UPDATE product_images 
-          SET is_thumbnail = TRUE 
-          WHERE product_id = $1 
+          UPDATE product_images
+          SET is_thumbnail = TRUE
+          WHERE product_id = $1
           AND id = (
-            SELECT id FROM product_images 
-            WHERE product_id = $1 
-            ORDER BY display_order ASC, created_at ASC 
+            SELECT id FROM product_images
+            WHERE product_id = $1
+            ORDER BY display_order ASC, created_at ASC
             LIMIT 1
           )
         `, [productId])

@@ -10,13 +10,15 @@ import { Sale, SaleWithDetails, SaleStatus } from '../types/index.js'
  *   • create é chamado pelo SaleService apenas quando uma proposta vira
  *     'accepted' (auto-criação). Não há endpoint público que crie venda
  *     do zero — sempre nasce de uma proposta.
+ *   • Multi-tenancy: todo método recebe accountId como primeiro parâmetro
+ *     e filtra por sales.account_id pra garantir isolamento entre contas.
  */
 export class SaleRepository extends BaseRepository {
   /**
    * Lista todas as vendas com detalhes do deal/produto/seller/proposta.
    * Filtros suportados: status, search (cliente / imóvel / corretor).
    */
-  async findAll(filters: {
+  async findAll(accountId: number, filters: {
     status?: SaleStatus | 'all'
     search?: string
     createdFrom?: string  // YYYY-MM-DD (inclusivo)
@@ -47,10 +49,10 @@ export class SaleRepository extends BaseRepository {
         LEFT JOIN users approver ON s.approved_by_user_id = approver.id
         LEFT JOIN users modifier ON s.last_modified_by_user_id = modifier.id
         LEFT JOIN proposals p    ON s.proposal_id = p.id
-        WHERE 1=1
+        WHERE s.account_id = $1
       `
-      const params: any[] = []
-      let paramCount = 1
+      const params: any[] = [accountId]
+      let paramCount = 2
 
       if (filters.status && filters.status !== 'all') {
         query += ` AND s.status = $${paramCount}`
@@ -89,7 +91,7 @@ export class SaleRepository extends BaseRepository {
     }
   }
 
-  async findById(id: number): Promise<SaleWithDetails | null> {
+  async findById(accountId: number, id: number): Promise<SaleWithDetails | null> {
     const client = await this.getClient()
     try {
       const result = await client.query(
@@ -115,8 +117,8 @@ export class SaleRepository extends BaseRepository {
         LEFT JOIN users approver ON s.approved_by_user_id = approver.id
         LEFT JOIN users modifier ON s.last_modified_by_user_id = modifier.id
         LEFT JOIN proposals p    ON s.proposal_id = p.id
-        WHERE s.id = $1`,
-        [id]
+        WHERE s.id = $1 AND s.account_id = $2`,
+        [id, accountId]
       )
       return result.rows.length > 0 ? result.rows[0] : null
     } finally {
@@ -124,12 +126,12 @@ export class SaleRepository extends BaseRepository {
     }
   }
 
-  async findByProposal(proposalId: number): Promise<Sale | null> {
+  async findByProposal(accountId: number, proposalId: number): Promise<Sale | null> {
     const client = await this.getClient()
     try {
       const result = await client.query(
-        'SELECT * FROM sales WHERE proposal_id = $1 LIMIT 1',
-        [proposalId]
+        'SELECT * FROM sales WHERE proposal_id = $1 AND account_id = $2 LIMIT 1',
+        [proposalId, accountId]
       )
       return result.rows.length > 0 ? result.rows[0] : null
     } finally {
@@ -141,7 +143,7 @@ export class SaleRepository extends BaseRepository {
    * Cria venda inicial (nasce de proposta aceita).
    * Status sempre começa em 'pending_approval'.
    */
-  async create(input: {
+  async create(accountId: number, input: {
     proposal_id: number
     deal_id: number
     seller_user_id: number
@@ -149,9 +151,9 @@ export class SaleRepository extends BaseRepository {
     const client = await this.getClient()
     try {
       const result = await client.query(
-        `INSERT INTO sales (proposal_id, deal_id, seller_user_id, status)
-         VALUES ($1, $2, $3, 'pending_approval') RETURNING *`,
-        [input.proposal_id, input.deal_id, input.seller_user_id]
+        `INSERT INTO sales (account_id, proposal_id, deal_id, seller_user_id, status)
+         VALUES ($1, $2, $3, $4, 'pending_approval') RETURNING *`,
+        [accountId, input.proposal_id, input.deal_id, input.seller_user_id]
       )
       return result.rows[0]
     } finally {
@@ -165,7 +167,7 @@ export class SaleRepository extends BaseRepository {
    * corrigir dado. Sempre grava last_modified_by_user_id + last_modified_at
    * pra rastreabilidade.
    */
-  async updateDetails(id: number, modifiedByUserId: number, input: {
+  async updateDetails(accountId: number, id: number, modifiedByUserId: number, input: {
     sale_date?: string | null
     contract_url?: string | null
     contract_filename?: string | null
@@ -191,7 +193,7 @@ export class SaleRepository extends BaseRepository {
         values.push(input.contract_filename)
         paramCount++
       }
-      if (fields.length === 0) return this.findById(id) as any
+      if (fields.length === 0) return this.findById(accountId, id) as any
 
       // Tracking de alteração — sempre atualizado quando algo muda.
       fields.push(`last_modified_by_user_id = $${paramCount}`)
@@ -200,8 +202,11 @@ export class SaleRepository extends BaseRepository {
       fields.push('last_modified_at = CURRENT_TIMESTAMP')
       fields.push('updated_at = CURRENT_TIMESTAMP')
       values.push(id)
+      const idParam = paramCount
+      paramCount++
+      values.push(accountId)
 
-      const query = `UPDATE sales SET ${fields.join(', ')} WHERE id = $${paramCount} RETURNING *`
+      const query = `UPDATE sales SET ${fields.join(', ')} WHERE id = $${idParam} AND account_id = $${paramCount} RETURNING *`
       const result = await client.query(query, values)
       return result.rows.length > 0 ? result.rows[0] : null
     } finally {
@@ -213,7 +218,7 @@ export class SaleRepository extends BaseRepository {
    * Aprova a venda: muda status='approved', registra approver e timestamp.
    * Idempotente — chamar duas vezes seguidas só atualiza approved_at.
    */
-  async approve(id: number, approverUserId: number, notes?: string | null): Promise<Sale | null> {
+  async approve(accountId: number, id: number, approverUserId: number, notes?: string | null): Promise<Sale | null> {
     const client = await this.getClient()
     try {
       const result = await client.query(
@@ -223,8 +228,8 @@ export class SaleRepository extends BaseRepository {
                 approved_at = CURRENT_TIMESTAMP,
                 approval_notes = $2,
                 updated_at = CURRENT_TIMESTAMP
-          WHERE id = $3 RETURNING *`,
-        [approverUserId, notes ?? null, id]
+          WHERE id = $3 AND account_id = $4 RETURNING *`,
+        [approverUserId, notes ?? null, id, accountId]
       )
       return result.rows.length > 0 ? result.rows[0] : null
     } finally {
@@ -232,7 +237,7 @@ export class SaleRepository extends BaseRepository {
     }
   }
 
-  async reject(id: number, approverUserId: number, notes?: string | null): Promise<Sale | null> {
+  async reject(accountId: number, id: number, approverUserId: number, notes?: string | null): Promise<Sale | null> {
     const client = await this.getClient()
     try {
       const result = await client.query(
@@ -242,8 +247,8 @@ export class SaleRepository extends BaseRepository {
                 approved_at = CURRENT_TIMESTAMP,
                 approval_notes = $2,
                 updated_at = CURRENT_TIMESTAMP
-          WHERE id = $3 RETURNING *`,
-        [approverUserId, notes ?? null, id]
+          WHERE id = $3 AND account_id = $4 RETURNING *`,
+        [approverUserId, notes ?? null, id, accountId]
       )
       return result.rows.length > 0 ? result.rows[0] : null
     } finally {
@@ -251,31 +256,38 @@ export class SaleRepository extends BaseRepository {
     }
   }
 
-  async delete(id: number): Promise<boolean> {
+  async delete(accountId: number, id: number): Promise<boolean> {
     const client = await this.getClient()
     try {
-      const result = await client.query('DELETE FROM sales WHERE id = $1 RETURNING id', [id])
+      const result = await client.query(
+        'DELETE FROM sales WHERE id = $1 AND account_id = $2 RETURNING id',
+        [id, accountId]
+      )
       return result.rows.length > 0
     } finally {
       this.releaseClient(client)
     }
   }
 
-  async getCount(): Promise<number> {
+  async getCount(accountId: number): Promise<number> {
     const client = await this.getClient()
     try {
-      const result = await client.query('SELECT COUNT(*) AS count FROM sales')
+      const result = await client.query(
+        'SELECT COUNT(*) AS count FROM sales WHERE account_id = $1',
+        [accountId]
+      )
       return parseInt(result.rows[0].count)
     } finally {
       this.releaseClient(client)
     }
   }
 
-  async getPendingApprovalCount(): Promise<number> {
+  async getPendingApprovalCount(accountId: number): Promise<number> {
     const client = await this.getClient()
     try {
       const result = await client.query(
-        "SELECT COUNT(*) AS count FROM sales WHERE status = 'pending_approval'"
+        "SELECT COUNT(*) AS count FROM sales WHERE status = 'pending_approval' AND account_id = $1",
+        [accountId]
       )
       return parseInt(result.rows[0].count)
     } finally {

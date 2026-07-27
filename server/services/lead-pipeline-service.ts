@@ -16,30 +16,54 @@ import { LeadPipelineRepository } from '../repositories/lead-pipeline-repository
  *
  *   Concretamente, na iteração 2 o gate deve ser algo como:
  *     if (lead.source_id === null) { skipPipelineEscalation(); return }
+ *
+ * Multi-tenancy:
+ *   - Cada esteira pertence a uma account (lead_pipelines.account_id).
+ *   - Gerente e todos os corretores membros DEVEM ser da mesma account.
+ *     Se algum user_id enviado for de outra conta, o create/update rejeita.
  */
 export class LeadPipelineService {
   constructor(private repo: LeadPipelineRepository) {}
 
-  async list(): Promise<LeadPipeline[]> {
-    return this.repo.findAll()
+  async list(accountId: number): Promise<LeadPipeline[]> {
+    return this.repo.findAll(accountId)
   }
 
-  async get(id: number): Promise<LeadPipeline | null> {
-    return this.repo.findById(id)
+  async get(accountId: number, id: number): Promise<LeadPipeline | null> {
+    return this.repo.findById(accountId, id)
   }
 
-  async create(payload: LeadPipelinePayload): Promise<LeadPipeline> {
+  async create(accountId: number, payload: LeadPipelinePayload): Promise<LeadPipeline> {
     this.validate(payload)
-    return this.repo.create(payload)
+    await this.assertUsersInAccount(accountId, payload)
+    return this.repo.create(accountId, payload)
   }
 
-  async update(id: number, payload: LeadPipelinePayload): Promise<LeadPipeline | null> {
+  async update(accountId: number, id: number, payload: LeadPipelinePayload): Promise<LeadPipeline | null> {
     this.validate(payload)
-    return this.repo.update(id, payload)
+    await this.assertUsersInAccount(accountId, payload)
+    return this.repo.update(accountId, id, payload)
   }
 
-  async delete(id: number): Promise<boolean> {
-    return this.repo.delete(id)
+  async delete(accountId: number, id: number): Promise<boolean> {
+    return this.repo.delete(accountId, id)
+  }
+
+  /**
+   * Garante que o gerente + todos os corretores membros pertencem à mesma
+   * account em que a esteira vive. Sem essa checagem, um admin de uma conta
+   * conseguiria "sequestrar" corretores de outra conta pra dentro da esteira
+   * — quebrando o isolamento multi-tenant.
+   */
+  private async assertUsersInAccount(accountId: number, payload: LeadPipelinePayload) {
+    const ids = Array.from(new Set([payload.manager_user_id, ...payload.member_user_ids]))
+    const found = await this.repo.findUsersInAccount(accountId, ids)
+    if (found.length !== ids.length) {
+      const missing = ids.filter((id) => !found.includes(id))
+      throw new Error(
+        `Usuários não pertencem a esta conta: ${missing.join(', ')} — só é possível adicionar corretores/gerentes da mesma empresa.`
+      )
+    }
   }
 
   private validate(payload: LeadPipelinePayload) {

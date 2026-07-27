@@ -1,12 +1,13 @@
 import { Request, Response, Router } from 'express'
 import { SalesAgendaService } from '../services/index.js'
-import { authenticateToken, AuthenticatedRequest } from '../middleware/auth.js'
+import { authenticateToken, requireAccount, AuthenticatedRequest } from '../middleware/auth.js'
 
 export function createSalesAgendaRoutes(salesAgendaService: SalesAgendaService): Router {
   const router = Router()
 
-  router.get('/', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.get('/', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const userId = req.user!.userId
       const filters = {
         search: req.query.search as string,
@@ -15,7 +16,7 @@ export function createSalesAgendaRoutes(salesAgendaService: SalesAgendaService):
         sortOrder: req.query.sortOrder as 'asc' | 'desc'
       }
 
-      const result = await salesAgendaService.getAllSalesAgenda(filters, userId)
+      const result = await salesAgendaService.getAllSalesAgenda(accountId, filters, userId)
       res.json(result)
     } catch (error) {
       console.error('Error in get sales agenda route:', error)
@@ -23,11 +24,12 @@ export function createSalesAgendaRoutes(salesAgendaService: SalesAgendaService):
     }
   })
 
-  router.post('/', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.post('/', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const userId = req.user!.userId
       const { title, product_name, product_id, status } = req.body
-      const salesAgenda = await salesAgendaService.createSalesAgenda({
+      const salesAgenda = await salesAgendaService.createSalesAgenda(accountId, {
         title,
         product_name,
         product_id,
@@ -45,12 +47,13 @@ export function createSalesAgendaRoutes(salesAgendaService: SalesAgendaService):
     }
   })
 
-  router.put('/:id', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.put('/:id', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const userId = req.user!.userId
       const id = parseInt(req.params.id)
       const { title, product_name, product_id, status } = req.body
-      const salesAgenda = await salesAgendaService.updateSalesAgenda(id, {
+      const salesAgenda = await salesAgendaService.updateSalesAgenda(accountId, id, {
         title,
         product_name,
         product_id,
@@ -72,10 +75,11 @@ export function createSalesAgendaRoutes(salesAgendaService: SalesAgendaService):
     }
   })
 
-  router.delete('/:id', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.delete('/:id', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const id = parseInt(req.params.id)
-      const result = await salesAgendaService.deleteSalesAgenda(id)
+      const result = await salesAgendaService.deleteSalesAgenda(accountId, id)
       res.json(result)
     } catch (error) {
       console.error('Error in delete sales agenda route:', error)

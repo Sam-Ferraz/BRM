@@ -1,19 +1,20 @@
 import { Request, Response, Router } from 'express'
 import { ClientService } from '../services/index.js'
-import { authenticateToken, AuthenticatedRequest } from '../middleware/auth.js'
+import { authenticateToken, requireAccount, AuthenticatedRequest } from '../middleware/auth.js'
 
 export function createClientRoutes(clientService: ClientService): Router {
   const router = Router()
 
-  router.get('/', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.get('/', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const filters = {
         search: req.query.search as string,
         sortBy: req.query.sortBy as string,
         sortOrder: req.query.sortOrder as 'asc' | 'desc'
       }
-      
-      const result = await clientService.getAllClients(filters)
+
+      const result = await clientService.getAllClients(accountId, filters)
       res.json(result)
     } catch (error) {
       console.error('Error in get clients route:', error)
@@ -21,10 +22,11 @@ export function createClientRoutes(clientService: ClientService): Router {
     }
   })
 
-  router.post('/', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.post('/', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const { name, email, phone, city, address, origin } = req.body
-      const client = await clientService.createClient({ name, email, phone, city, address, origin })
+      const client = await clientService.createClient(accountId, { name, email, phone, city, address, origin })
       res.json(client)
     } catch (error) {
       console.error('Error in create client route:', error)
@@ -32,11 +34,12 @@ export function createClientRoutes(clientService: ClientService): Router {
     }
   })
 
-  router.put('/:id', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.put('/:id', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const id = parseInt(req.params.id)
       const { name, email, phone, city, address, origin } = req.body
-      const client = await clientService.updateClient(id, { name, email, phone, city, address, origin })
+      const client = await clientService.updateClient(accountId, id, { name, email, phone, city, address, origin })
       res.json(client)
     } catch (error) {
       console.error('Error in update client route:', error)
@@ -48,10 +51,11 @@ export function createClientRoutes(clientService: ClientService): Router {
     }
   })
 
-  router.delete('/:id', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.delete('/:id', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const id = parseInt(req.params.id)
-      const result = await clientService.deleteClient(id)
+      const result = await clientService.deleteClient(accountId, id)
       res.json(result)
     } catch (error) {
       console.error('Error in delete client route:', error)

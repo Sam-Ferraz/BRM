@@ -1,0 +1,106 @@
+import { Router, Response } from 'express'
+import { AccountService } from '../services/account-service.js'
+import { authenticateToken, requireAccount, AuthenticatedRequest } from '../middleware/auth.js'
+
+/**
+ * Rotas de account:
+ *  - GET /me      → retorna a account do usuário logado (usado pelo frontend
+ *                   pra hidratar tema/branding/features na boot)
+ *  - PATCH /me/config → admin da account atualiza custom_config dela
+ *
+ * Rotas de super-admin (isolado — só admin com role='admin' + account_id=1):
+ *  - GET /       → lista todas as accounts (visão global)
+ *  - POST /      → cria uma nova account + user admin (onboarding manual)
+ *  - PATCH /:id  → atualiza nome/plano/status de qualquer account
+ */
+export function createAccountRoutes(service: AccountService): Router {
+  const router = Router()
+
+  // --------------------------------------------------------------------------
+  // Endpoints self-service (qualquer user autenticado)
+  // --------------------------------------------------------------------------
+
+  router.get('/me', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const account = await service.getById(req.user!.accountId)
+      if (!account) {
+        res.status(404).json({ error: 'Account não encontrada' })
+        return
+      }
+      res.json({ data: account })
+    } catch (err) {
+      console.error('Error fetching current account:', err)
+      res.status(500).json({ error: 'Internal server error' })
+    }
+  })
+
+  router.patch('/me/config', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      if (req.user!.role !== 'admin') {
+        res.status(403).json({ error: 'Apenas admin pode editar configuração da conta' })
+        return
+      }
+      const config = req.body?.custom_config
+      if (!config || typeof config !== 'object') {
+        res.status(400).json({ error: 'custom_config é obrigatório e deve ser objeto' })
+        return
+      }
+      const account = await service.updateCustomConfig(req.user!.accountId, config)
+      res.json({ data: account })
+    } catch (err) {
+      console.error('Error updating account config:', err)
+      res.status(500).json({ error: 'Internal server error' })
+    }
+  })
+
+  // --------------------------------------------------------------------------
+  // Endpoints super-admin (só user da account #1 "BRM Demo" com role admin)
+  // Isso permite VOCÊ (Sam) gerenciar accounts de clientes.
+  // --------------------------------------------------------------------------
+
+  function requireSuperAdmin(req: AuthenticatedRequest, res: Response, next: () => void): void {
+    if (req.user?.accountId !== 1 || req.user?.role !== 'admin') {
+      res.status(403).json({ error: 'Super-admin required' })
+      return
+    }
+    next()
+  }
+
+  router.get('/', authenticateToken, requireAccount, (req: AuthenticatedRequest, res: Response) => requireSuperAdmin(req, res, async () => {
+    try {
+      const accounts = await service.listAll()
+      res.json({ data: accounts })
+    } catch (err) {
+      console.error('Error listing accounts:', err)
+      res.status(500).json({ error: 'Internal server error' })
+    }
+  }))
+
+  router.post('/', authenticateToken, requireAccount, (req: AuthenticatedRequest, res: Response) => requireSuperAdmin(req, res, async () => {
+    try {
+      const result = await service.provisionNewAccount(req.body)
+      res.status(201).json({ data: result })
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Erro ao criar account'
+      console.error('Error provisioning account:', err)
+      res.status(400).json({ error: msg })
+    }
+  }))
+
+  router.patch('/:id', authenticateToken, requireAccount, (req: AuthenticatedRequest, res: Response) => requireSuperAdmin(req, res, async () => {
+    try {
+      const id = parseInt(req.params.id, 10)
+      const account = await service.update(id, req.body)
+      if (!account) {
+        res.status(404).json({ error: 'Account não encontrada' })
+        return
+      }
+      res.json({ data: account })
+    } catch (err) {
+      console.error('Error updating account:', err)
+      res.status(500).json({ error: 'Internal server error' })
+    }
+  }))
+
+  return router
+}

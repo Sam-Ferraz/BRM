@@ -17,9 +17,9 @@ export class AuthService {
     this.userRepository = userRepository
   }
 
-  generateToken(userId: number, email: string, role: string): string {
+  generateToken(userId: number, email: string, role: string, accountId: number): string {
     return jwt.sign(
-      { userId, email, role },
+      { userId, email, role, accountId },
       JWT_SECRET,
       { expiresIn: JWT_EXPIRES_IN } as jwt.SignOptions
     )
@@ -36,19 +36,21 @@ export class AuthService {
   async loginUser(email: string, password: string): Promise<AuthResult> {
     try {
       const user = await this.userRepository.findByEmail(email)
-      
+
       if (!user) {
         return { success: false, error: 'Credenciais inválidas' }
       }
-      
+
       const isPasswordValid = await bcrypt.compare(password, user.password_hash!)
-      
+
       if (!isPasswordValid) {
         return { success: false, error: 'Credenciais inválidas' }
       }
-      
-      const token = this.generateToken(user.id, user.email, user.role)
-      
+
+      // Multi-tenancy: accountId vai no JWT — todo request autenticado
+      // sabe imediatamente a qual account o user pertence sem consultar DB
+      const token = this.generateToken(user.id, user.email, user.role, user.account_id)
+
       return {
         success: true,
         token,
@@ -56,7 +58,8 @@ export class AuthService {
           id: user.id,
           name: user.name,
           email: user.email,
-          role: user.role
+          role: user.role,
+          account_id: user.account_id
         }
       }
     } catch (error) {
@@ -65,22 +68,28 @@ export class AuthService {
     }
   }
 
-  async registerUser(name: string, email: string, password: string, role: string = 'user'): Promise<AuthResult> {
+  async registerUser(
+    name: string,
+    email: string,
+    password: string,
+    role: string = 'user',
+    accountId: number
+  ): Promise<AuthResult> {
     try {
       // Check if user already exists
       const existingUser = await this.userRepository.findByEmail(email)
-      
+
       if (existingUser) {
         return { success: false, error: 'Usuário já existe' }
       }
-      
+
       // Hash password
       const passwordHash = await bcrypt.hash(password, 10)
-      
-      // Create new user
-      const user = await this.userRepository.create(name, email, passwordHash, role)
-      const token = this.generateToken(user.id, user.email, user.role)
-      
+
+      // Create new user na account informada
+      const user = await this.userRepository.create(name, email, passwordHash, role, accountId)
+      const token = this.generateToken(user.id, user.email, user.role, user.account_id)
+
       return {
         success: true,
         token,
@@ -88,7 +97,8 @@ export class AuthService {
           id: user.id,
           name: user.name,
           email: user.email,
-          role: user.role
+          role: user.role,
+          account_id: user.account_id
         }
       }
     } catch (error) {
@@ -97,8 +107,13 @@ export class AuthService {
     }
   }
 
-  async listUsers(): Promise<{ id: number; name: string; email: string }[]> {
-    const users = await this.userRepository.findAll()
+  /**
+   * Lista users da account informada. Se accountId omitido, retorna vazio
+   * (evita vazamento entre accounts em endpoint que esqueceu de passar).
+   */
+  async listUsers(accountId?: number): Promise<{ id: number; name: string; email: string }[]> {
+    if (accountId == null) return []
+    const users = await this.userRepository.findAll(accountId)
     return users.map(u => ({ id: u.id, name: u.name, email: u.email }))
   }
 }

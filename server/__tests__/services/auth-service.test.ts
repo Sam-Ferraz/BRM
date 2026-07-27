@@ -27,6 +27,7 @@ describe('AuthService', () => {
       name: 'Test User',
       email: 'test@example.com',
       role: 'user',
+      account_id: 1,
       password_hash: 'hashed_password'
     }
 
@@ -98,7 +99,8 @@ describe('AuthService', () => {
       id: 2,
       name: 'New User',
       email: 'new@example.com',
-      role: 'user'
+      role: 'user',
+      account_id: 1
     }
 
     it('should register new user successfully', async () => {
@@ -108,7 +110,7 @@ describe('AuthService', () => {
       mockedBcrypt.hash.mockResolvedValue('hashed_password' as never)
 
       // Act
-      const result = await authService.registerUser('New User', 'new@example.com', 'password')
+      const result = await authService.registerUser('New User', 'new@example.com', 'password', 'user', 1)
 
       // Assert
       expect(result.success).toBe(true)
@@ -116,12 +118,13 @@ describe('AuthService', () => {
         id: newUser.id,
         name: newUser.name,
         email: newUser.email,
-        role: newUser.role
+        role: newUser.role,
+        account_id: 1
       })
       expect(result.token).toBeDefined()
       expect(mockUserRepository.findByEmail).toHaveBeenCalledWith('new@example.com')
       expect(mockedBcrypt.hash).toHaveBeenCalledWith('password', 10)
-      expect(mockUserRepository.create).toHaveBeenCalledWith('New User', 'new@example.com', 'hashed_password', 'user')
+      expect(mockUserRepository.create).toHaveBeenCalledWith('New User', 'new@example.com', 'hashed_password', 'user', 1)
     })
 
     it('should reject registration for existing user', async () => {
@@ -129,7 +132,7 @@ describe('AuthService', () => {
       mockUserRepository.findByEmail.mockResolvedValue(newUser)
 
       // Act
-      const result = await authService.registerUser('New User', 'new@example.com', 'password')
+      const result = await authService.registerUser('New User', 'new@example.com', 'password', 'user', 1)
 
       // Assert
       expect(result.success).toBe(false)
@@ -143,7 +146,7 @@ describe('AuthService', () => {
       mockUserRepository.findByEmail.mockRejectedValue(new Error('Database error'))
 
       // Act
-      const result = await authService.registerUser('New User', 'new@example.com', 'password')
+      const result = await authService.registerUser('New User', 'new@example.com', 'password', 'user', 1)
 
       // Assert
       expect(result.success).toBe(false)
@@ -154,7 +157,7 @@ describe('AuthService', () => {
   describe('verifyToken', () => {
     it('should verify valid token', () => {
       // This would require mocking jwt.verify, but for simplicity we'll test the integration
-      const token = authService.generateToken(1, 'test@example.com', 'user')
+      const token = authService.generateToken(1, 'test@example.com', 'user', 1)
       const decoded = authService.verifyToken(token)
 
       expect(decoded).toBeTruthy()

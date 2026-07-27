@@ -3,9 +3,49 @@ export interface User {
   name: string
   email: string
   role: string
+  account_id: number
   password_hash?: string
   created_at?: Date
   updated_at?: Date
+}
+
+// Multi-tenancy: cada empresa/cliente é uma account. Toda tabela de dados
+// tem account_id — filtragem obrigatória em toda query pra garantir
+// isolamento. Custom_config guarda tema/branding/feature flags do cliente.
+export type AccountPlan = 'trial' | 'basic' | 'pro' | 'enterprise'
+
+export interface AccountCustomConfig {
+  theme?: {
+    primary_color?: string
+    secondary_color?: string
+    sidebar_color?: string
+  }
+  branding?: {
+    logo_url?: string
+    company_name?: string
+    browser_title?: string
+  }
+  features?: {
+    contracts_enabled?: boolean
+    google_calendar_enabled?: boolean
+    whatsapp_enabled?: boolean
+    leads_module_enabled?: boolean
+  }
+  defaults?: {
+    timezone?: string
+    currency?: string
+    language?: string
+  }
+}
+
+export interface Account {
+  id: number
+  name: string
+  plan: AccountPlan
+  custom_config: AccountCustomConfig
+  is_active: boolean
+  created_at?: string
+  updated_at?: string
 }
 
 // ---------------------------------------------------------------------------
@@ -208,6 +248,7 @@ export interface Appointment {
 
 export interface SalesAgenda {
   id: number
+  account_id: number
   title: string
   product_name: string
   product_id: number | null
@@ -261,6 +302,7 @@ export type CalendarEventStatus = 'scheduled' | 'completed' | 'cancelled'
 
 export interface CalendarEvent {
   id: number
+  account_id: number
   user_id: number
   title: string
   description?: string | null
@@ -317,6 +359,7 @@ export interface AgendaItem {
 
 export interface GoogleCalendarConnection {
   id: number
+  account_id: number
   user_id: number
   connected_email: string
   access_token: string
@@ -465,6 +508,7 @@ export type WhatsAppSessionStatus = 'connected' | 'disconnected' | 'pending_setu
 
 export interface WhatsAppSession {
   id: number
+  account_id: number
   user_id: number
   phone_number: string
   display_name?: string | null
@@ -484,6 +528,7 @@ export interface WhatsAppSession {
 
 export interface Conversation {
   id: number
+  account_id: number
   owner_user_id: number
   contact_phone: string
   contact_name?: string | null
@@ -507,6 +552,7 @@ export type MessageStatus = 'sent' | 'delivered' | 'read' | 'failed' | 'received
 
 export interface Message {
   id: number
+  account_id: number
   conversation_id: number
   direction: MessageDirection
   content: string
@@ -527,6 +573,7 @@ export type LeadStatus = 'novo' | 'aceito' | 'descartado'
 
 export interface LeadSource {
   id: number
+  account_id: number
   name: string
   type: LeadSourceType
   config?: Record<string, any> | null
@@ -539,6 +586,7 @@ export interface LeadSource {
 
 export interface Lead {
   id: number
+  account_id: number
   source_id?: number | null
   external_id?: string | null
   name?: string | null

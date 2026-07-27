@@ -1,12 +1,13 @@
 import { Request, Response, Router } from 'express'
 import { FollowUpService } from '../services/index.js'
-import { authenticateToken, AuthenticatedRequest } from '../middleware/auth.js'
+import { authenticateToken, requireAccount, AuthenticatedRequest } from '../middleware/auth.js'
 
 export function createFollowUpRoutes(followUpService: FollowUpService): Router {
   const router = Router()
 
-  router.get('/', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.get('/', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const userId = req.user!.userId
       const filters = {
         search: req.query.search as string,
@@ -14,7 +15,7 @@ export function createFollowUpRoutes(followUpService: FollowUpService): Router {
         sortOrder: req.query.sortOrder as 'asc' | 'desc'
       }
 
-      const result = await followUpService.getAllFollowUps(filters, userId)
+      const result = await followUpService.getAllFollowUps(accountId, filters, userId)
       res.json(result)
     } catch (error) {
       console.error('Error in get follow-ups route:', error)
@@ -22,10 +23,11 @@ export function createFollowUpRoutes(followUpService: FollowUpService): Router {
     }
   })
 
-  router.get('/stats', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.get('/stats', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const userId = req.user!.userId
-      const result = await followUpService.getStatusCounts(userId)
+      const result = await followUpService.getStatusCounts(accountId, userId)
       res.json(result)
     } catch (error) {
       console.error('Error in get follow-up stats route:', error)
@@ -33,10 +35,11 @@ export function createFollowUpRoutes(followUpService: FollowUpService): Router {
     }
   })
 
-  router.get('/:id', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.get('/:id', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const id = parseInt(req.params.id)
-      const followUp = await followUpService.getFollowUpById(id)
+      const followUp = await followUpService.getFollowUpById(accountId, id)
       res.json(followUp)
     } catch (error) {
       console.error('Error in get follow-up route:', error)
@@ -48,10 +51,11 @@ export function createFollowUpRoutes(followUpService: FollowUpService): Router {
     }
   })
 
-  router.get('/appointment/:appointmentId', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.get('/appointment/:appointmentId', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const appointmentId = parseInt(req.params.appointmentId)
-      const result = await followUpService.getFollowUpsByAppointmentId(appointmentId)
+      const result = await followUpService.getFollowUpsByAppointmentId(accountId, appointmentId)
       res.json(result)
     } catch (error) {
       console.error('Error in get follow-ups by appointment route:', error)
@@ -59,15 +63,16 @@ export function createFollowUpRoutes(followUpService: FollowUpService): Router {
     }
   })
 
-  router.post('/', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.post('/', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const userId = req.user!.userId
       const { appointment_id, client_name, next_action, next_action_date, completed } = req.body
       if (typeof client_name !== 'string' || client_name.trim() === '') {
         res.status(400).json({ error: 'client_name is required' })
         return
       }
-      const followUp = await followUpService.createFollowUp({
+      const followUp = await followUpService.createFollowUp(accountId, {
         appointment_id: appointment_id ?? null,
         client_name: client_name.trim(),
         next_action,
@@ -82,11 +87,12 @@ export function createFollowUpRoutes(followUpService: FollowUpService): Router {
     }
   })
 
-  router.put('/:id', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.put('/:id', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const id = parseInt(req.params.id)
       const { client_name, next_action, next_action_date, completed } = req.body
-      const followUp = await followUpService.updateFollowUp(id, {
+      const followUp = await followUpService.updateFollowUp(accountId, id, {
         client_name,
         next_action,
         next_action_date,
@@ -103,10 +109,11 @@ export function createFollowUpRoutes(followUpService: FollowUpService): Router {
     }
   })
 
-  router.patch('/:id/complete', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.patch('/:id/complete', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const id = parseInt(req.params.id)
-      const followUp = await followUpService.markAsCompleted(id)
+      const followUp = await followUpService.markAsCompleted(accountId, id)
       res.json(followUp)
     } catch (error) {
       console.error('Error in mark follow-up as completed route:', error)
@@ -118,10 +125,11 @@ export function createFollowUpRoutes(followUpService: FollowUpService): Router {
     }
   })
 
-  router.delete('/:id', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.delete('/:id', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const id = parseInt(req.params.id)
-      const result = await followUpService.deleteFollowUp(id)
+      const result = await followUpService.deleteFollowUp(accountId, id)
       res.json(result)
     } catch (error) {
       console.error('Error in delete follow-up route:', error)

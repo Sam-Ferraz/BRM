@@ -4,7 +4,7 @@ import path from 'path'
 import fs from 'fs'
 import { ContractService } from '../services/contract-service.js'
 import { ContractStatus, ContractDocumentType } from '../types/index.js'
-import { authenticateToken, AuthenticatedRequest } from '../middleware/auth.js'
+import { authenticateToken, requireAccount, AuthenticatedRequest } from '../middleware/auth.js'
 
 /**
  * /api/contracts — módulo Contrato.
@@ -49,8 +49,9 @@ export function createContractRoutes(service: ContractService): Router {
 
   // ---------- Listagens ----------
 
-  router.get('/', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.get('/', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const status = req.query.status as ContractStatus | 'all' | undefined
       const search = req.query.search as string | undefined
       const viewAll = req.query.viewAll === '1'
@@ -58,7 +59,7 @@ export function createContractRoutes(service: ContractService): Router {
       const canSeeAll = (role === 'admin' || role === 'manager') && viewAll
       const userId = canSeeAll ? undefined : req.user!.userId
 
-      const result = await service.list({ status, search, userId })
+      const result = await service.list(accountId, { status, search, userId })
       res.json(result)
     } catch (error) {
       console.error('Error listing contracts:', error)
@@ -66,12 +67,13 @@ export function createContractRoutes(service: ContractService): Router {
     }
   })
 
-  router.get('/counts', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.get('/counts', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const role = req.user!.role
       const viewAll = req.query.viewAll === '1'
       const canSeeAll = (role === 'admin' || role === 'manager') && viewAll
-      const counts = await service.getCounts(canSeeAll ? undefined : req.user!.userId)
+      const counts = await service.getCounts(accountId, canSeeAll ? undefined : req.user!.userId)
       res.json({ data: counts })
     } catch (error) {
       console.error('Error getting contract counts:', error)
@@ -79,9 +81,10 @@ export function createContractRoutes(service: ContractService): Router {
     }
   })
 
-  router.get('/:id', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.get('/:id', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      const contract = await service.getById(parseInt(req.params.id))
+      const accountId = req.user!.accountId
+      const contract = await service.getById(accountId, parseInt(req.params.id))
       res.json({ data: contract })
     } catch (error) {
       if (error instanceof Error && error.message === 'Contract not found') {
@@ -93,9 +96,10 @@ export function createContractRoutes(service: ContractService): Router {
     }
   })
 
-  router.get('/:id/documents', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.get('/:id/documents', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      const docs = await service.listDocuments(parseInt(req.params.id))
+      const accountId = req.user!.accountId
+      const docs = await service.listDocuments(accountId, parseInt(req.params.id))
       res.json({ data: docs })
     } catch (error) {
       console.error('Error listing contract documents:', error)
@@ -108,9 +112,11 @@ export function createContractRoutes(service: ContractService): Router {
   router.post(
     '/:id/documents',
     authenticateToken,
+    requireAccount,
     upload.single('file'),
     async (req: AuthenticatedRequest, res: Response): Promise<void> => {
       try {
+        const accountId = req.user!.accountId
         const contractId = parseInt(req.params.id)
         const docType = (req.body.doc_type as ContractDocumentType) || 'client_doc'
         const file = (req as any).file as Express.Multer.File | undefined
@@ -126,7 +132,7 @@ export function createContractRoutes(service: ContractService): Router {
         )
         const fileUrl = `/uploads/${relPath.replace(/\\/g, '/')}`
 
-        const doc = await service.addDocument({
+        const doc = await service.addDocument(accountId, {
           contract_id: contractId,
           uploader_id: req.user!.userId,
           doc_type: docType,
@@ -144,9 +150,10 @@ export function createContractRoutes(service: ContractService): Router {
     }
   )
 
-  router.delete('/:contractId/documents/:documentId', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.delete('/:contractId/documents/:documentId', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      const ok = await service.removeDocument(parseInt(req.params.documentId))
+      const accountId = req.user!.accountId
+      const ok = await service.removeDocument(accountId, parseInt(req.params.documentId))
       res.json({ success: ok })
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Erro'
@@ -156,9 +163,10 @@ export function createContractRoutes(service: ContractService): Router {
 
   // ---------- Transições de status ----------
 
-  router.post('/:id/submit-legal', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.post('/:id/submit-legal', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      const updated = await service.submitToLegal(parseInt(req.params.id))
+      const accountId = req.user!.accountId
+      const updated = await service.submitToLegal(accountId, parseInt(req.params.id))
       res.json({ data: updated })
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Erro'
@@ -166,9 +174,10 @@ export function createContractRoutes(service: ContractService): Router {
     }
   })
 
-  router.post('/:id/resubmit-legal', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.post('/:id/resubmit-legal', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      const updated = await service.resubmitToLegal(parseInt(req.params.id))
+      const accountId = req.user!.accountId
+      const updated = await service.resubmitToLegal(accountId, parseInt(req.params.id))
       res.json({ data: updated })
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Erro'
@@ -176,12 +185,13 @@ export function createContractRoutes(service: ContractService): Router {
     }
   })
 
-  router.post('/:id/legal-approve', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.post('/:id/legal-approve', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     if (req.user!.role !== 'admin' && req.user!.role !== 'manager') {
       res.status(403).json({ error: 'forbidden' }); return
     }
     try {
-      const updated = await service.legalApprove({
+      const accountId = req.user!.accountId
+      const updated = await service.legalApprove(accountId, {
         contractId: parseInt(req.params.id),
         reviewerId: req.user!.userId,
         notes: req.body?.notes,
@@ -193,12 +203,13 @@ export function createContractRoutes(service: ContractService): Router {
     }
   })
 
-  router.post('/:id/legal-reject', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.post('/:id/legal-reject', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     if (req.user!.role !== 'admin' && req.user!.role !== 'manager') {
       res.status(403).json({ error: 'forbidden' }); return
     }
     try {
-      const updated = await service.legalReject({
+      const accountId = req.user!.accountId
+      const updated = await service.legalReject(accountId, {
         contractId: parseInt(req.params.id),
         reviewerId: req.user!.userId,
         notes: req.body?.notes,
@@ -210,12 +221,13 @@ export function createContractRoutes(service: ContractService): Router {
     }
   })
 
-  router.post('/:id/manager-approve', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.post('/:id/manager-approve', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     if (req.user!.role !== 'admin' && req.user!.role !== 'manager') {
       res.status(403).json({ error: 'forbidden' }); return
     }
     try {
-      const updated = await service.managerApprove({
+      const accountId = req.user!.accountId
+      const updated = await service.managerApprove(accountId, {
         contractId: parseInt(req.params.id),
         reviewerId: req.user!.userId,
         notes: req.body?.notes,
@@ -228,12 +240,13 @@ export function createContractRoutes(service: ContractService): Router {
     }
   })
 
-  router.post('/:id/manager-reject', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.post('/:id/manager-reject', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     if (req.user!.role !== 'admin' && req.user!.role !== 'manager') {
       res.status(403).json({ error: 'forbidden' }); return
     }
     try {
-      const updated = await service.managerReject({
+      const accountId = req.user!.accountId
+      const updated = await service.managerReject(accountId, {
         contractId: parseInt(req.params.id),
         reviewerId: req.user!.userId,
         notes: req.body?.notes,

@@ -2,13 +2,13 @@ import { BaseRepository } from './base-repository.js'
 import { Deal, DealFunnelStage, QueryFilters } from '../types/index.js'
 
 export class DealRepository extends BaseRepository {
-  async findAll(filters: QueryFilters = {}, userId?: number): Promise<Deal[]> {
+  async findAll(accountId: number, filters: QueryFilters = {}, userId?: number): Promise<Deal[]> {
     const client = await this.getClient()
     try {
       const { search, status, sortBy, sortOrder } = filters
-      let query = 'SELECT * FROM deals WHERE 1=1'
-      const params: any[] = []
-      let paramCount = 1
+      let query = 'SELECT * FROM deals WHERE account_id = $1'
+      const params: any[] = [accountId]
+      let paramCount = 2
 
       // Filter by user_id if provided
       if (userId) {
@@ -49,11 +49,12 @@ export class DealRepository extends BaseRepository {
     }
   }
 
-  async create(deal: Omit<Deal, 'id' | 'created_at' | 'updated_at'>): Promise<Deal> {
+  async create(accountId: number, deal: Omit<Deal, 'id' | 'created_at' | 'updated_at'>): Promise<Deal> {
     const client = await this.getClient()
     try {
       const result = await client.query(
         `INSERT INTO deals (
+          account_id,
           client,
           origin_date,
           description,
@@ -65,8 +66,9 @@ export class DealRepository extends BaseRepository {
           property_name,
           status,
           user_id
-        ) VALUES ($1, $2::date, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
+        ) VALUES ($1, $2, $3::date, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
         [
+          accountId,
           deal.client,
           deal.origin_date || null,
           deal.description || null,
@@ -90,12 +92,12 @@ export class DealRepository extends BaseRepository {
    * Update parcial de status apenas — usado pelo ContractService pra mover
    * o deal pra 'contract' ou 'sold' sem precisar do payload completo.
    */
-  async updateStatus(id: number, status: string): Promise<Deal | null> {
+  async updateStatus(accountId: number, id: number, status: string): Promise<Deal | null> {
     const client = await this.getClient()
     try {
       const result = await client.query(
-        `UPDATE deals SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *`,
-        [status, id]
+        `UPDATE deals SET status = $1, updated_at = NOW() WHERE id = $2 AND account_id = $3 RETURNING *`,
+        [status, id, accountId]
       )
       return result.rows[0] || null
     } finally {
@@ -103,7 +105,7 @@ export class DealRepository extends BaseRepository {
     }
   }
 
-  async update(id: number, deal: Omit<Deal, 'id' | 'created_at' | 'updated_at'>): Promise<Deal | null> {
+  async update(accountId: number, id: number, deal: Omit<Deal, 'id' | 'created_at' | 'updated_at'>): Promise<Deal | null> {
     const client = await this.getClient()
     try {
       const result = await client.query(
@@ -119,7 +121,7 @@ export class DealRepository extends BaseRepository {
           property_name = $9,
           status = $10,
           updated_at = CURRENT_TIMESTAMP
-        WHERE id = $11 RETURNING *`,
+        WHERE id = $11 AND account_id = $12 RETURNING *`,
         [
           deal.client,
           deal.origin_date || null,
@@ -132,6 +134,7 @@ export class DealRepository extends BaseRepository {
           deal.property_name || null,
           deal.status,
           id,
+          accountId,
         ]
       )
       return result.rows.length > 0 ? result.rows[0] : null
@@ -140,10 +143,13 @@ export class DealRepository extends BaseRepository {
     }
   }
 
-  async delete(id: number): Promise<boolean> {
+  async delete(accountId: number, id: number): Promise<boolean> {
     const client = await this.getClient()
     try {
-      const result = await client.query('DELETE FROM deals WHERE id = $1 RETURNING *', [id])
+      const result = await client.query(
+        'DELETE FROM deals WHERE id = $1 AND account_id = $2 RETURNING *',
+        [id, accountId]
+      )
       return result.rows.length > 0
     } finally {
       this.releaseClient(client)
@@ -154,12 +160,12 @@ export class DealRepository extends BaseRepository {
    * Focused setter used when an accepted proposal needs to push its value
    * into the deal's VGV (gsv). Returns true if a row was updated.
    */
-  async updateGsv(id: number, gsv: string | number): Promise<boolean> {
+  async updateGsv(accountId: number, id: number, gsv: string | number): Promise<boolean> {
     const client = await this.getClient()
     try {
       const result = await client.query(
-        'UPDATE deals SET gsv = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING id',
-        [gsv, id]
+        'UPDATE deals SET gsv = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND account_id = $3 RETURNING id',
+        [gsv, id, accountId]
       )
       return result.rows.length > 0
     } finally {
@@ -171,12 +177,12 @@ export class DealRepository extends BaseRepository {
    * Focused setter used when a proposal carries a different property than the
    * deal currently has — the latest write from the proposal form wins.
    */
-  async updatePropertyName(id: number, propertyName: string | null): Promise<boolean> {
+  async updatePropertyName(accountId: number, id: number, propertyName: string | null): Promise<boolean> {
     const client = await this.getClient()
     try {
       const result = await client.query(
-        'UPDATE deals SET property_name = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING id',
-        [propertyName ?? null, id]
+        'UPDATE deals SET property_name = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND account_id = $3 RETURNING id',
+        [propertyName ?? null, id, accountId]
       )
       return result.rows.length > 0
     } finally {
@@ -184,14 +190,14 @@ export class DealRepository extends BaseRepository {
     }
   }
 
-  async getCount(userId?: number): Promise<number> {
+  async getCount(accountId: number, userId?: number): Promise<number> {
     const client = await this.getClient()
     try {
-      let query = 'SELECT COUNT(*) as count FROM deals'
-      const params: any[] = []
+      let query = 'SELECT COUNT(*) as count FROM deals WHERE account_id = $1'
+      const params: any[] = [accountId]
 
       if (userId) {
-        query += ' WHERE user_id = $1'
+        query += ' AND user_id = $2'
         params.push(userId)
       }
 
@@ -207,14 +213,14 @@ export class DealRepository extends BaseRepository {
    * Vendidos entram (o negócio existe, tá finalizado com sucesso), só descartes
    * saem por serem terminal-negativo.
    */
-  async getActiveCount(userId?: number): Promise<number> {
+  async getActiveCount(accountId: number, userId?: number): Promise<number> {
     const client = await this.getClient()
     try {
-      let query = `SELECT COUNT(*) as count FROM deals WHERE status NOT LIKE 'discarded_%'`
-      const params: any[] = []
+      let query = `SELECT COUNT(*) as count FROM deals WHERE account_id = $1 AND status NOT LIKE 'discarded_%'`
+      const params: any[] = [accountId]
 
       if (userId) {
-        query += ' AND user_id = $1'
+        query += ' AND user_id = $2'
         params.push(userId)
       }
 
@@ -225,26 +231,28 @@ export class DealRepository extends BaseRepository {
     }
   }
 
-  async findWithoutOpenFollowUps(userId?: number): Promise<Deal[]> {
+  async findWithoutOpenFollowUps(accountId: number, userId?: number): Promise<Deal[]> {
     const client = await this.getClient()
     try {
       // Find deals that are active (not sold/discarded) and have no appointments with open follow-ups for the same client
       const query = `
         SELECT DISTINCT d.*
         FROM deals d
-        WHERE d.status NOT IN ('sold', 'discarded')
-          ${userId ? 'AND d.user_id = $1' : ''}
+        WHERE d.account_id = $1
+          AND d.status NOT IN ('sold', 'discarded')
+          ${userId ? 'AND d.user_id = $2' : ''}
           AND NOT EXISTS (
             SELECT 1
             FROM appointments a
             INNER JOIN follow_ups f ON a.id = f.appointment_id
             WHERE a.client = d.client
+              AND a.account_id = $1
               AND f.completed = false
-              ${userId ? 'AND a.user_id = $1' : ''}
+              ${userId ? 'AND a.user_id = $2' : ''}
           )
         ORDER BY d.origin_date DESC NULLS LAST
       `
-      const params = userId ? [userId] : []
+      const params: any[] = userId ? [accountId, userId] : [accountId]
       const result = await client.query(query, params)
       return result.rows
     } finally {
@@ -253,7 +261,7 @@ export class DealRepository extends BaseRepository {
   }
 
   /**
-   * Counts deals grouped by status across ALL users (company-wide).
+   * Counts deals grouped by status across ALL users of the account (company-wide).
    * Returns one row per status that exists in the table — including
    * the discarded_* statuses. Frontend decides which go in the funnel
    * and which go in the "discarded" section.
@@ -263,7 +271,7 @@ export class DealRepository extends BaseRepository {
    * is a DATE column and is compared directly; `created_at` is a TIMESTAMP
    * and is interpreted in the requested timezone before comparison.
    */
-  async getFunnelByStatus(params?: {
+  async getFunnelByStatus(accountId: number, params?: {
     from?: string
     to?: string
     timezone?: string
@@ -273,9 +281,9 @@ export class DealRepository extends BaseRepository {
     try {
       await client.query("SET TIMEZONE = 'UTC'")
 
-      const conditions: string[] = ['status IS NOT NULL']
-      const values: any[] = []
-      let p = 1
+      const conditions: string[] = ['status IS NOT NULL', 'account_id = $1']
+      const values: any[] = [accountId]
+      let p = 2
 
       if (params?.from && params?.to) {
         const dateField = params.dateField === 'created_at' ? 'created_at' : 'origin_date'
@@ -319,12 +327,10 @@ export class DealRepository extends BaseRepository {
    *   - sale_count     → sold
    *
    * O front usa isso pra montar um radar (eixos = origens, séries = estágios
-   * selecionados). Sem filtro de período por enquanto — vai ler tudo, o front
-   * só precisa dessa foto agregada. Optamos por incluir ALL rows (sem
-   * user_id filter) pra dar visão de time; se um dia quisermos por usuário,
-   * adicionamos param.
+   * selecionados). Sem filtro de período por enquanto — vai ler tudo do
+   * account atual, o front só precisa dessa foto agregada.
    */
-  async getPerformanceByOrigin(): Promise<Array<{
+  async getPerformanceByOrigin(accountId: number): Promise<Array<{
     origin: string
     service_count: number
     visit_count: number
@@ -341,10 +347,11 @@ export class DealRepository extends BaseRepository {
           COUNT(*) FILTER (WHERE status = 'proposal')::int AS proposal_count,
           COUNT(*) FILTER (WHERE status = 'sold')::int AS sale_count
         FROM deals
+        WHERE account_id = $1
         GROUP BY 1
         ORDER BY 1
       `
-      const result = await client.query(query)
+      const result = await client.query(query, [accountId])
       return result.rows
     } finally {
       this.releaseClient(client)
@@ -366,7 +373,7 @@ export class DealRepository extends BaseRepository {
    * Retorna array de deal_ids junto de attempts e days_in_wallet — útil pra
    * tooltip futura. Query única, agregação no banco, sem N+1.
    */
-  async getDealsNeedingCadence(userId?: number): Promise<Array<{
+  async getDealsNeedingCadence(accountId: number, userId?: number): Promise<Array<{
     deal_id: number
     attempts: number
     days_in_wallet: number
@@ -374,12 +381,13 @@ export class DealRepository extends BaseRepository {
     const client = await this.getClient()
     try {
       const conditions: string[] = [
+        'd.account_id = $1',
         "d.client_origin = 'online_lead'",
         "d.origin_date IS NOT NULL",
         "(CURRENT_DATE - d.origin_date) BETWEEN 0 AND 8",
       ]
-      const values: any[] = []
-      let p = 1
+      const values: any[] = [accountId]
+      let p = 2
       if (userId) {
         conditions.push(`d.user_id = $${p}`)
         values.push(userId)

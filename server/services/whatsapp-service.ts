@@ -16,11 +16,12 @@ export class WhatsAppService {
     this.sessionRepository = sessionRepository
   }
 
-  async getSession(userId: number): Promise<WhatsAppSession | null> {
-    return this.sessionRepository.findByUser(userId)
+  async getSession(accountId: number, userId: number): Promise<WhatsAppSession | null> {
+    return this.sessionRepository.findByUser(accountId, userId)
   }
 
   async connect(
+    accountId: number,
     userId: number,
     phoneNumber: string,
     displayName?: string | null
@@ -29,11 +30,11 @@ export class WhatsAppService {
     if (!cleanedPhone) {
       throw new Error('phone_number is required')
     }
-    return this.sessionRepository.upsert(userId, cleanedPhone, displayName ?? null)
+    return this.sessionRepository.upsert(accountId, userId, cleanedPhone, displayName ?? null)
   }
 
-  async disconnect(userId: number): Promise<{ success: boolean }> {
-    const ok = await this.sessionRepository.updateStatus(userId, 'disconnected')
+  async disconnect(accountId: number, userId: number): Promise<{ success: boolean }> {
+    const ok = await this.sessionRepository.updateStatus(accountId, userId, 'disconnected')
     return { success: ok }
   }
 

@@ -10,7 +10,7 @@ const VALID_STATUSES = new Set([
 ])
 
 export class ProposalRepository extends BaseRepository {
-  async findAll(filters: QueryFilters = {}, userId?: number): Promise<ProposalWithDetails[]> {
+  async findAll(accountId: number, filters: QueryFilters = {}, userId?: number): Promise<ProposalWithDetails[]> {
     const client = await this.getClient()
     try {
       const { search, status, sortBy, sortOrder, createdFrom, createdTo } = filters as any
@@ -21,10 +21,10 @@ export class ProposalRepository extends BaseRepository {
           d.property_name AS deal_property_name
         FROM proposals p
         LEFT JOIN deals d ON p.deal_id = d.id
-        WHERE 1=1
+        WHERE p.account_id = $1
       `
-      const params: any[] = []
-      let paramCount = 1
+      const params: any[] = [accountId]
+      let paramCount = 2
 
       if (userId) {
         query += ` AND p.user_id = $${paramCount}`
@@ -78,7 +78,7 @@ export class ProposalRepository extends BaseRepository {
     }
   }
 
-  async findById(id: number): Promise<ProposalWithDetails | null> {
+  async findById(accountId: number, id: number): Promise<ProposalWithDetails | null> {
     const client = await this.getClient()
     try {
       const result = await client.query(
@@ -88,8 +88,8 @@ export class ProposalRepository extends BaseRepository {
           d.property_name AS deal_property_name
         FROM proposals p
         LEFT JOIN deals d ON p.deal_id = d.id
-        WHERE p.id = $1`,
-        [id]
+        WHERE p.id = $1 AND p.account_id = $2`,
+        [id, accountId]
       )
       return result.rows.length > 0 ? result.rows[0] : null
     } finally {
@@ -98,16 +98,18 @@ export class ProposalRepository extends BaseRepository {
   }
 
   async create(
+    accountId: number,
     proposal: Omit<Proposal, 'id' | 'created_at' | 'updated_at'>
   ): Promise<Proposal> {
     const client = await this.getClient()
     try {
       const result = await client.query(
         `INSERT INTO proposals (
-          deal_id, proposal_value, payment_condition, proposal_date,
+          account_id, deal_id, proposal_value, payment_condition, proposal_date,
           validity_date, status, notes, vgv, vgc, intermediation_rate, user_id
-        ) VALUES ($1, $2, $3, $4::date, $5::date, $6, $7, $8, $9, $10, $11) RETURNING *`,
+        ) VALUES ($1, $2, $3, $4, $5::date, $6::date, $7, $8, $9, $10, $11, $12) RETURNING *`,
         [
+          accountId,
           proposal.deal_id,
           proposal.proposal_value,
           proposal.payment_condition ?? null,
@@ -128,6 +130,7 @@ export class ProposalRepository extends BaseRepository {
   }
 
   async update(
+    accountId: number,
     id: number,
     proposal: Partial<Omit<Proposal, 'id' | 'created_at' | 'updated_at' | 'user_id'>>
   ): Promise<Proposal | null> {
@@ -156,14 +159,15 @@ export class ProposalRepository extends BaseRepository {
       if (proposal.intermediation_rate !== undefined) addField('intermediation_rate', proposal.intermediation_rate ?? null)
 
       if (fields.length === 0) {
-        const existing = await this.findById(id)
+        const existing = await this.findById(accountId, id)
         return existing
       }
 
       fields.push('updated_at = CURRENT_TIMESTAMP')
       values.push(id)
+      values.push(accountId)
 
-      const query = `UPDATE proposals SET ${fields.join(', ')} WHERE id = $${paramCount} RETURNING *`
+      const query = `UPDATE proposals SET ${fields.join(', ')} WHERE id = $${paramCount} AND account_id = $${paramCount + 1} RETURNING *`
       const result = await client.query(query, values)
       return result.rows.length > 0 ? result.rows[0] : null
     } finally {
@@ -171,23 +175,26 @@ export class ProposalRepository extends BaseRepository {
     }
   }
 
-  async delete(id: number): Promise<boolean> {
+  async delete(accountId: number, id: number): Promise<boolean> {
     const client = await this.getClient()
     try {
-      const result = await client.query('DELETE FROM proposals WHERE id = $1 RETURNING id', [id])
+      const result = await client.query(
+        'DELETE FROM proposals WHERE id = $1 AND account_id = $2 RETURNING id',
+        [id, accountId]
+      )
       return result.rows.length > 0
     } finally {
       this.releaseClient(client)
     }
   }
 
-  async getCount(userId?: number): Promise<number> {
+  async getCount(accountId: number, userId?: number): Promise<number> {
     const client = await this.getClient()
     try {
-      let query = 'SELECT COUNT(*) AS count FROM proposals'
-      const params: any[] = []
+      let query = 'SELECT COUNT(*) AS count FROM proposals WHERE account_id = $1'
+      const params: any[] = [accountId]
       if (userId) {
-        query += ' WHERE user_id = $1'
+        query += ' AND user_id = $2'
         params.push(userId)
       }
       const result = await client.query(query, params)
@@ -202,17 +209,17 @@ export class ProposalRepository extends BaseRepository {
    * Excludes 'rejected' and 'expired' since those are terminal states that do
    * not need salesperson attention.
    */
-  async getActiveCount(userId?: number): Promise<number> {
+  async getActiveCount(accountId: number, userId?: number): Promise<number> {
     const client = await this.getClient()
     try {
       // O card "Propostas" do Dashboard mostra apenas o que ainda precisa de
       // atenção do corretor: propostas 'pending' (Em análise) e
       // 'counter_proposal' (Contraproposta). 'accepted' vira venda no módulo
       // Vendas (e tem seu próprio card); 'rejected' e 'expired' são terminais.
-      let query = `SELECT COUNT(*) AS count FROM proposals WHERE status IN ('pending', 'counter_proposal')`
-      const params: any[] = []
+      let query = `SELECT COUNT(*) AS count FROM proposals WHERE status IN ('pending', 'counter_proposal') AND account_id = $1`
+      const params: any[] = [accountId]
       if (userId) {
-        query += ' AND user_id = $1'
+        query += ' AND user_id = $2'
         params.push(userId)
       }
       const result = await client.query(query, params)

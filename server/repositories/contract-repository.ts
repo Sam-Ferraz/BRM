@@ -17,7 +17,7 @@ export class ContractRepository extends BaseRepository {
   // Listagens
   // ---------------------------------------------------------------------------
 
-  async findAll(filters: {
+  async findAll(accountId: number, filters: {
     status?: ContractStatus | 'all'
     userId?: number          // filtra por corretor (broker vê apenas próprios)
     search?: string
@@ -41,10 +41,10 @@ export class ContractRepository extends BaseRepository {
         LEFT JOIN users broker  ON c.user_id = broker.id
         LEFT JOIN users legal_r ON c.legal_reviewed_by = legal_r.id
         LEFT JOIN users mgr_r   ON c.manager_reviewed_by = mgr_r.id
-        WHERE 1=1
+        WHERE c.account_id = $1
       `
-      const params: any[] = []
-      let n = 1
+      const params: any[] = [accountId]
+      let n = 2
 
       if (filters.status && filters.status !== 'all') {
         query += ` AND c.status = $${n}`
@@ -72,7 +72,7 @@ export class ContractRepository extends BaseRepository {
     }
   }
 
-  async findById(id: number): Promise<ContractWithDetails | null> {
+  async findById(accountId: number, id: number): Promise<ContractWithDetails | null> {
     const client = await this.getClient()
     try {
       const result = await client.query<ContractWithDetails>(
@@ -92,8 +92,8 @@ export class ContractRepository extends BaseRepository {
          LEFT JOIN users broker  ON c.user_id = broker.id
          LEFT JOIN users legal_r ON c.legal_reviewed_by = legal_r.id
          LEFT JOIN users mgr_r   ON c.manager_reviewed_by = mgr_r.id
-         WHERE c.id = $1`,
-        [id]
+         WHERE c.id = $1 AND c.account_id = $2`,
+        [id, accountId]
       )
       return result.rows[0] || null
     } finally {
@@ -101,12 +101,12 @@ export class ContractRepository extends BaseRepository {
     }
   }
 
-  async findByProposalId(proposalId: number): Promise<Contract | null> {
+  async findByProposalId(accountId: number, proposalId: number): Promise<Contract | null> {
     const client = await this.getClient()
     try {
       const result = await client.query<Contract>(
-        `SELECT * FROM contracts WHERE proposal_id = $1`,
-        [proposalId]
+        `SELECT * FROM contracts WHERE proposal_id = $1 AND account_id = $2`,
+        [proposalId, accountId]
       )
       return result.rows[0] || null
     } finally {
@@ -123,7 +123,7 @@ export class ContractRepository extends BaseRepository {
    * constraint em proposal_id — se já existir, INSERT falha e retornamos o
    * existente sem erro.
    */
-  async createFromProposal(input: {
+  async createFromProposal(accountId: number, input: {
     deal_id: number
     proposal_id: number
     user_id: number
@@ -134,18 +134,19 @@ export class ContractRepository extends BaseRepository {
       // Tenta INSERT ON CONFLICT DO NOTHING pra ficar idempotente
       const insert = await client.query<Contract>(
         `INSERT INTO contracts
-           (deal_id, proposal_id, user_id, status, final_value)
-         VALUES ($1, $2, $3, 'pending_docs', $4)
+           (account_id, deal_id, proposal_id, user_id, status, final_value)
+         VALUES ($1, $2, $3, $4, 'pending_docs', $5)
          ON CONFLICT (proposal_id) DO NOTHING
          RETURNING *`,
-        [input.deal_id, input.proposal_id, input.user_id, input.final_value ?? null]
+        [accountId, input.deal_id, input.proposal_id, input.user_id, input.final_value ?? null]
       )
       if (insert.rows[0]) return insert.rows[0]
 
-      // Conflito → retorna o existente
+      // Conflito → retorna o existente (ainda escopado por account_id pra
+      // não vazar contrato de outro tenant em caso de proposal_id repetido).
       const existing = await client.query<Contract>(
-        `SELECT * FROM contracts WHERE proposal_id = $1`,
-        [input.proposal_id]
+        `SELECT * FROM contracts WHERE proposal_id = $1 AND account_id = $2`,
+        [input.proposal_id, accountId]
       )
       if (!existing.rows[0]) throw new Error('Contract insert failed and no existing row')
       return existing.rows[0]
@@ -155,6 +156,7 @@ export class ContractRepository extends BaseRepository {
   }
 
   async updateStatus(
+    accountId: number,
     id: number,
     input: {
       status: ContractStatus
@@ -198,11 +200,12 @@ export class ContractRepository extends BaseRepository {
     }
 
     values.push(id)
+    values.push(accountId)
     const client = await this.getClient()
     try {
       const result = await client.query<Contract>(
         `UPDATE contracts SET ${fields.join(', ')}, updated_at = NOW()
-         WHERE id = $${n}
+         WHERE id = $${n} AND account_id = $${n + 1}
          RETURNING *`,
         values
       )
@@ -212,13 +215,13 @@ export class ContractRepository extends BaseRepository {
     }
   }
 
-  async getCountByStatus(userId?: number): Promise<Record<ContractStatus, number>> {
+  async getCountByStatus(accountId: number, userId?: number): Promise<Record<ContractStatus, number>> {
     const client = await this.getClient()
     try {
-      let query = `SELECT status, COUNT(*)::int AS n FROM contracts WHERE 1=1`
-      const params: any[] = []
+      let query = `SELECT status, COUNT(*)::int AS n FROM contracts WHERE account_id = $1`
+      const params: any[] = [accountId]
       if (userId !== undefined) {
-        query += ` AND user_id = $1`
+        query += ` AND user_id = $2`
         params.push(userId)
       }
       query += ` GROUP BY status`
@@ -242,14 +245,15 @@ export class ContractRepository extends BaseRepository {
   // Documentos anexados
   // ---------------------------------------------------------------------------
 
-  async listDocuments(contractId: number): Promise<ContractDocument[]> {
+  async listDocuments(accountId: number, contractId: number): Promise<ContractDocument[]> {
     const client = await this.getClient()
     try {
       const result = await client.query<ContractDocument>(
-        `SELECT * FROM contract_documents
-         WHERE contract_id = $1
-         ORDER BY doc_type, display_order, created_at`,
-        [contractId]
+        `SELECT cd.* FROM contract_documents cd
+         JOIN contracts c ON cd.contract_id = c.id
+         WHERE cd.contract_id = $1 AND c.account_id = $2
+         ORDER BY cd.doc_type, cd.display_order, cd.created_at`,
+        [contractId, accountId]
       )
       return result.rows
     } finally {
@@ -257,7 +261,7 @@ export class ContractRepository extends BaseRepository {
     }
   }
 
-  async addDocument(input: {
+  async addDocument(accountId: number, input: {
     contract_id: number
     uploader_id: number
     doc_type: ContractDocumentType
@@ -269,6 +273,15 @@ export class ContractRepository extends BaseRepository {
   }): Promise<ContractDocument> {
     const client = await this.getClient()
     try {
+      // Confirma que o contrato pertence ao tenant antes de anexar
+      const owner = await client.query(
+        `SELECT id FROM contracts WHERE id = $1 AND account_id = $2`,
+        [input.contract_id, accountId]
+      )
+      if (owner.rows.length === 0) {
+        throw new Error('Contract not found')
+      }
+
       // Pega próximo display_order pra esse tipo
       const order = await client.query<{ next_order: number }>(
         `SELECT COALESCE(MAX(display_order), -1) + 1 AS next_order
@@ -301,12 +314,15 @@ export class ContractRepository extends BaseRepository {
     }
   }
 
-  async deleteDocument(documentId: number): Promise<boolean> {
+  async deleteDocument(accountId: number, documentId: number): Promise<boolean> {
     const client = await this.getClient()
     try {
+      // DELETE só quando o documento pertence a um contrato do tenant atual
       const result = await client.query(
-        `DELETE FROM contract_documents WHERE id = $1`,
-        [documentId]
+        `DELETE FROM contract_documents
+         WHERE id = $1
+           AND contract_id IN (SELECT id FROM contracts WHERE account_id = $2)`,
+        [documentId, accountId]
       )
       return (result.rowCount ?? 0) > 0
     } finally {
@@ -314,12 +330,14 @@ export class ContractRepository extends BaseRepository {
     }
   }
 
-  async getDocumentById(documentId: number): Promise<ContractDocument | null> {
+  async getDocumentById(accountId: number, documentId: number): Promise<ContractDocument | null> {
     const client = await this.getClient()
     try {
       const result = await client.query<ContractDocument>(
-        `SELECT * FROM contract_documents WHERE id = $1`,
-        [documentId]
+        `SELECT cd.* FROM contract_documents cd
+         JOIN contracts c ON cd.contract_id = c.id
+         WHERE cd.id = $1 AND c.account_id = $2`,
+        [documentId, accountId]
       )
       return result.rows[0] || null
     } finally {

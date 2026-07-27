@@ -1,6 +1,6 @@
 import { Response, Router } from 'express'
 import { DashboardService, AppointmentService } from '../services/index.js'
-import { authenticateToken, AuthenticatedRequest } from '../middleware/auth.js'
+import { authenticateToken, requireAccount, AuthenticatedRequest } from '../middleware/auth.js'
 
 export function createDashboardRoutes(
   dashboardService: DashboardService,
@@ -8,10 +8,11 @@ export function createDashboardRoutes(
 ): Router {
   const router = Router()
 
-  router.get('/stats', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.get('/stats', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const userId = req.user!.userId
-      const stats = await dashboardService.getDashboardStats(userId)
+      const stats = await dashboardService.getDashboardStats(accountId, userId)
       res.json(stats)
     } catch (error) {
       console.error('Error fetching dashboard stats:', error)

@@ -173,7 +173,8 @@ class BaileysSession {
       this.sock = null
     }
     this.setStatus('disconnected')
-    await this.sessionRepository.updateStatus(this.ownerUserId, 'disconnected').catch(() => undefined)
+    // Provider não conhece accountId — usa variante interna (rule 9).
+    await this.sessionRepository.updateStatusInternal(this.ownerUserId, 'disconnected').catch(() => undefined)
   }
 
   // ----- internos -----
@@ -210,8 +211,10 @@ class BaileysSession {
       // Registra a sessão na tabela do banco — daqui pra frente o resto do
       // BRM enxerga esse usuário como "WhatsApp conectado".
       if (phoneNumber) {
+        // Provider não conhece accountId em memória — usa variante interna
+        // que deriva account_id via subquery em users (rule 9).
         await this.sessionRepository
-          .upsert(this.ownerUserId, phoneNumber, displayName)
+          .upsertInternal(this.ownerUserId, phoneNumber, displayName)
           .catch((error) => console.error('[Baileys] Erro upserting session:', error))
       }
     }
@@ -229,7 +232,8 @@ class BaileysSession {
         setTimeout(() => this.connect().catch(console.error), 1500 * this.reconnectAttempt)
       } else if (!shouldReconnect) {
         // Logout do dispositivo — limpa auth e exige novo QR
-        await this.sessionRepository.updateStatus(this.ownerUserId, 'disconnected').catch(() => undefined)
+        // Provider não conhece accountId — variante interna (rule 9).
+        await this.sessionRepository.updateStatusInternal(this.ownerUserId, 'disconnected').catch(() => undefined)
       }
     }
   }

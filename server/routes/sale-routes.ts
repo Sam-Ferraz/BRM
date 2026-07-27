@@ -1,7 +1,7 @@
 import { Request, Response, Router } from 'express'
 import multer from 'multer'
 import { SaleService } from '../services/sale-service.js'
-import { authenticateToken, AuthenticatedRequest } from '../middleware/auth.js'
+import { authenticateToken, requireAccount, AuthenticatedRequest } from '../middleware/auth.js'
 import storageService from '../services/storage-service.js'
 import { SaleStatus } from '../types/index.js'
 
@@ -26,13 +26,14 @@ export function createSaleRoutes(saleService: SaleService): Router {
   const router = Router()
 
   // GET /api/sales — lista com filtros opcionais (status, search, range de data)
-  router.get('/', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.get('/', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const status = (req.query.status as SaleStatus | 'all' | undefined) || 'all'
       const search = req.query.search as string | undefined
       const createdFrom = req.query.createdFrom as string | undefined
       const createdTo = req.query.createdTo as string | undefined
-      const result = await saleService.listAll({ status, search, createdFrom, createdTo })
+      const result = await saleService.listAll(accountId, { status, search, createdFrom, createdTo })
       res.json(result)
     } catch (error) {
       console.error('Error in get sales route:', error)
@@ -41,10 +42,11 @@ export function createSaleRoutes(saleService: SaleService): Router {
   })
 
   // GET /api/sales/:id
-  router.get('/:id', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.get('/:id', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const id = parseInt(req.params.id)
-      const sale = await saleService.findById(id)
+      const sale = await saleService.findById(accountId, id)
       res.json(sale)
     } catch (error) {
       if (error instanceof Error && error.message === 'Sale not found') {
@@ -57,12 +59,13 @@ export function createSaleRoutes(saleService: SaleService): Router {
   })
 
   // PATCH /api/sales/:id — atualiza dados editáveis (sale_date)
-  router.patch('/:id', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.patch('/:id', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const id = parseInt(req.params.id)
       const userId = req.user!.userId
       const { sale_date } = req.body
-      const updated = await saleService.updateDetails(id, userId, { sale_date })
+      const updated = await saleService.updateDetails(accountId, id, userId, { sale_date })
       res.json(updated)
     } catch (error) {
       if (error instanceof Error && error.message === 'Sale not found') {
@@ -75,13 +78,14 @@ export function createSaleRoutes(saleService: SaleService): Router {
   })
 
   // POST /api/sales/:id/contract — upload PDF do contrato
-  router.post('/:id/contract', authenticateToken, (req: AuthenticatedRequest, res: Response): void => {
+  router.post('/:id/contract', authenticateToken, requireAccount, (req: AuthenticatedRequest, res: Response): void => {
     uploadContract(req as any, res as any, async (uploadErr: any) => {
       if (uploadErr) {
         res.status(400).json({ error: uploadErr.message || 'Upload error' })
         return
       }
       try {
+        const accountId = req.user!.accountId
         const id = parseInt(req.params.id)
         const userId = req.user!.userId
         const file = (req as any).file as Express.Multer.File | undefined
@@ -96,7 +100,7 @@ export function createSaleRoutes(saleService: SaleService): Router {
           file.mimetype,
           id
         )
-        const updated = await saleService.updateDetails(id, userId, {
+        const updated = await saleService.updateDetails(accountId, id, userId, {
           contract_url: filePath,
           contract_filename: file.originalname,
         })
@@ -113,12 +117,13 @@ export function createSaleRoutes(saleService: SaleService): Router {
   })
 
   // POST /api/sales/:id/approve
-  router.post('/:id/approve', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.post('/:id/approve', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const id = parseInt(req.params.id)
       const userId = req.user!.userId
       const { notes } = req.body || {}
-      const updated = await saleService.approve(id, userId, notes)
+      const updated = await saleService.approve(accountId, id, userId, notes)
       res.json(updated)
     } catch (error) {
       if (error instanceof Error) {
@@ -139,10 +144,11 @@ export function createSaleRoutes(saleService: SaleService): Router {
   })
 
   // DELETE /api/sales/:id — exclui a venda permanentemente
-  router.delete('/:id', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.delete('/:id', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const id = parseInt(req.params.id)
-      const result = await saleService.deleteSale(id)
+      const result = await saleService.deleteSale(accountId, id)
       res.json(result)
     } catch (error) {
       if (error instanceof Error && error.message === 'Sale not found') {
@@ -155,12 +161,13 @@ export function createSaleRoutes(saleService: SaleService): Router {
   })
 
   // POST /api/sales/:id/reject
-  router.post('/:id/reject', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.post('/:id/reject', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const id = parseInt(req.params.id)
       const userId = req.user!.userId
       const { notes } = req.body || {}
-      const updated = await saleService.reject(id, userId, notes)
+      const updated = await saleService.reject(accountId, id, userId, notes)
       res.json(updated)
     } catch (error) {
       if (error instanceof Error) {

@@ -8,9 +8,9 @@ export class SalesAgendaService {
     this.salesAgendaRepository = salesAgendaRepository
   }
 
-  async getAllSalesAgenda(filters: QueryFilters, userId: number): Promise<ApiResponse<SalesAgenda[]>> {
+  async getAllSalesAgenda(accountId: number, filters: QueryFilters, userId: number): Promise<ApiResponse<SalesAgenda[]>> {
     try {
-      const salesAgenda = await this.salesAgendaRepository.findAll(filters, userId)
+      const salesAgenda = await this.salesAgendaRepository.findAll(accountId, filters, userId)
       return {
         data: salesAgenda,
         total: salesAgenda.length
@@ -21,14 +21,14 @@ export class SalesAgendaService {
     }
   }
 
-  async createSalesAgenda(salesAgendaData: Omit<SalesAgenda, 'id' | 'created_at' | 'updated_at' | 'date'>): Promise<SalesAgenda> {
+  async createSalesAgenda(accountId: number, salesAgendaData: Omit<SalesAgenda, 'id' | 'account_id' | 'created_at' | 'updated_at' | 'date'>): Promise<SalesAgenda> {
     try {
       // Validate required fields
       if (!salesAgendaData.product_name) {
         throw new Error('Product name is required')
       }
 
-      return await this.salesAgendaRepository.create(salesAgendaData)
+      return await this.salesAgendaRepository.create(accountId, salesAgendaData)
     } catch (error) {
       console.error('Error creating sales agenda:', error)
       if (error instanceof Error && error.message === 'Product name is required') {
@@ -38,14 +38,14 @@ export class SalesAgendaService {
     }
   }
 
-  async updateSalesAgenda(id: number, salesAgendaData: Omit<SalesAgenda, 'id' | 'created_at' | 'updated_at' | 'date'>): Promise<SalesAgenda> {
+  async updateSalesAgenda(accountId: number, id: number, salesAgendaData: Omit<SalesAgenda, 'id' | 'account_id' | 'created_at' | 'updated_at' | 'date'>): Promise<SalesAgenda> {
     try {
       // Validate required fields
       if (!salesAgendaData.product_name) {
         throw new Error('Product name is required')
       }
 
-      const updatedSalesAgenda = await this.salesAgendaRepository.update(id, salesAgendaData)
+      const updatedSalesAgenda = await this.salesAgendaRepository.update(accountId, id, salesAgendaData)
       if (!updatedSalesAgenda) {
         throw new Error('Sales agenda not found')
       }
@@ -59,9 +59,9 @@ export class SalesAgendaService {
     }
   }
 
-  async deleteSalesAgenda(id: number): Promise<{ success: boolean }> {
+  async deleteSalesAgenda(accountId: number, id: number): Promise<{ success: boolean }> {
     try {
-      const deleted = await this.salesAgendaRepository.delete(id)
+      const deleted = await this.salesAgendaRepository.delete(accountId, id)
       if (!deleted) {
         throw new Error('Sales agenda not found')
       }

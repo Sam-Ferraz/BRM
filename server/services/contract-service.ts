@@ -76,27 +76,27 @@ export class ContractService {
   // Listagem e leitura
   // ---------------------------------------------------------------------------
 
-  async list(filters: {
+  async list(accountId: number, filters: {
     status?: ContractStatus | 'all'
     userId?: number
     search?: string
   }): Promise<ApiResponse<ContractWithDetails[]>> {
-    const rows = await this.repo.findAll(filters)
+    const rows = await this.repo.findAll(accountId, filters)
     return { data: rows, total: rows.length }
   }
 
-  async getById(id: number): Promise<ContractWithDetails> {
-    const contract = await this.repo.findById(id)
+  async getById(accountId: number, id: number): Promise<ContractWithDetails> {
+    const contract = await this.repo.findById(accountId, id)
     if (!contract) throw new Error('Contract not found')
     return contract
   }
 
-  async listDocuments(contractId: number): Promise<ContractDocument[]> {
-    return this.repo.listDocuments(contractId)
+  async listDocuments(accountId: number, contractId: number): Promise<ContractDocument[]> {
+    return this.repo.listDocuments(accountId, contractId)
   }
 
-  async getCounts(userId?: number) {
-    return this.repo.getCountByStatus(userId)
+  async getCounts(accountId: number, userId?: number) {
+    return this.repo.getCountByStatus(accountId, userId)
   }
 
   // ---------------------------------------------------------------------------
@@ -108,8 +108,8 @@ export class ContractService {
    * contrato (idempotente por UNIQUE em proposal_id) e move o Deal pra
    * status 'contract' pra que apareça na nova coluna do Kanban.
    */
-  async createFromAcceptedProposal(proposalId: number): Promise<Contract> {
-    const proposal = await this.proposalRepo.findById(proposalId)
+  async createFromAcceptedProposal(accountId: number, proposalId: number): Promise<Contract> {
+    const proposal = await this.proposalRepo.findById(accountId, proposalId)
     if (!proposal) throw new Error('Proposal not found')
     if (proposal.status !== 'accepted') {
       throw new Error('Proposal not accepted — cannot create contract')
@@ -120,7 +120,7 @@ export class ContractService {
     // corrigimos depois — mas a coluna do banco é NOT NULL, então isso lança erro
     // e o auto-create fica marcado no log (best-effort).
     const brokerId = proposal.user_id ?? 0
-    const contract = await this.repo.createFromProposal({
+    const contract = await this.repo.createFromProposal(accountId, {
       deal_id: proposal.deal_id,
       proposal_id: proposal.id,
       user_id: brokerId,
@@ -129,7 +129,7 @@ export class ContractService {
 
     // Move o Deal pra status 'contract' (best-effort, não derruba se falhar)
     try {
-      await this.dealRepo.updateStatus(proposal.deal_id, 'contract' as any)
+      await this.dealRepo.updateStatus(accountId, proposal.deal_id, 'contract' as any)
     } catch (err) {
       console.error('[ContractService] Falha ao atualizar deal.status=contract:', err)
     }
@@ -151,19 +151,19 @@ export class ContractService {
   /**
    * Corretor termina de anexar documentos e envia pro jurídico revisar.
    */
-  async submitToLegal(contractId: number): Promise<Contract> {
-    const contract = await this.repo.findById(contractId)
+  async submitToLegal(accountId: number, contractId: number): Promise<Contract> {
+    const contract = await this.repo.findById(accountId, contractId)
     if (!contract) throw new Error('Contract not found')
 
     // Exige pelo menos 1 documento antes de enviar
-    const docs = await this.repo.listDocuments(contractId)
+    const docs = await this.repo.listDocuments(accountId, contractId)
     const clientDocsCount = docs.filter((d) => d.doc_type === 'client_doc').length
     if (clientDocsCount === 0) {
       throw new Error('Anexe pelo menos 1 documento antes de enviar pro jurídico')
     }
 
     this.assertTransition(contract.status, 'awaiting_legal')
-    const updated = await this.repo.updateStatus(contractId, { status: 'awaiting_legal' })
+    const updated = await this.repo.updateStatus(accountId, contractId, { status: 'awaiting_legal' })
     if (!updated) throw new Error('Failed to update contract status')
     return updated
   }
@@ -172,23 +172,23 @@ export class ContractService {
    * Jurídico aprova. Antes de chamar isso, o próprio jurídico deve ter feito
    * upload de pelo menos 1 arquivo com doc_type='contract'.
    */
-  async legalApprove(input: {
+  async legalApprove(accountId: number, input: {
     contractId: number
     reviewerId: number
     notes?: string | null
   }): Promise<Contract> {
-    const contract = await this.repo.findById(input.contractId)
+    const contract = await this.repo.findById(accountId, input.contractId)
     if (!contract) throw new Error('Contract not found')
 
     // Exige que o contrato final tenha sido anexado antes de aprovar
-    const docs = await this.repo.listDocuments(input.contractId)
+    const docs = await this.repo.listDocuments(accountId, input.contractId)
     const hasContract = docs.some((d) => d.doc_type === 'contract')
     if (!hasContract) {
       throw new Error('Anexe o contrato final antes de aprovar')
     }
 
     this.assertTransition(contract.status, 'awaiting_manager')
-    const updated = await this.repo.updateStatus(input.contractId, {
+    const updated = await this.repo.updateStatus(accountId, input.contractId, {
       status: 'awaiting_manager',
       legal_notes: input.notes ?? null,
       legal_reviewed_by: input.reviewerId,
@@ -197,7 +197,7 @@ export class ContractService {
     return updated
   }
 
-  async legalReject(input: {
+  async legalReject(accountId: number, input: {
     contractId: number
     reviewerId: number
     notes: string
@@ -205,11 +205,11 @@ export class ContractService {
     if (!input.notes?.trim()) {
       throw new Error('Justificativa é obrigatória ao rejeitar')
     }
-    const contract = await this.repo.findById(input.contractId)
+    const contract = await this.repo.findById(accountId, input.contractId)
     if (!contract) throw new Error('Contract not found')
 
     this.assertTransition(contract.status, 'legal_rejected')
-    const updated = await this.repo.updateStatus(input.contractId, {
+    const updated = await this.repo.updateStatus(accountId, input.contractId, {
       status: 'legal_rejected',
       legal_notes: input.notes.trim(),
       legal_reviewed_by: input.reviewerId,
@@ -222,12 +222,12 @@ export class ContractService {
    * Depois do jurídico rejeitar, o corretor arruma os documentos e reenvia
    * pro jurídico revisar de novo.
    */
-  async resubmitToLegal(contractId: number): Promise<Contract> {
-    const contract = await this.repo.findById(contractId)
+  async resubmitToLegal(accountId: number, contractId: number): Promise<Contract> {
+    const contract = await this.repo.findById(accountId, contractId)
     if (!contract) throw new Error('Contract not found')
 
     this.assertTransition(contract.status, 'awaiting_legal')
-    const updated = await this.repo.updateStatus(contractId, { status: 'awaiting_legal' })
+    const updated = await this.repo.updateStatus(accountId, contractId, { status: 'awaiting_legal' })
     if (!updated) throw new Error('Failed to update contract status')
     return updated
   }
@@ -236,17 +236,17 @@ export class ContractService {
    * Gestor aprova o contrato inteiro. Dispara criação da Sale (que por sua
    * vez marca o Deal como 'sold' via SaleService).
    */
-  async managerApprove(input: {
+  async managerApprove(accountId: number, input: {
     contractId: number
     reviewerId: number
     notes?: string | null
     finalValue?: string | number | null
   }): Promise<Contract> {
-    const contract = await this.repo.findById(input.contractId)
+    const contract = await this.repo.findById(accountId, input.contractId)
     if (!contract) throw new Error('Contract not found')
 
     this.assertTransition(contract.status, 'approved')
-    const updated = await this.repo.updateStatus(input.contractId, {
+    const updated = await this.repo.updateStatus(accountId, input.contractId, {
       status: 'approved',
       manager_notes: input.notes ?? null,
       manager_reviewed_by: input.reviewerId,
@@ -257,17 +257,18 @@ export class ContractService {
     // Dispara criação da Sale + copia URL do contrato + aprova de vez
     // (o gestor já aprovou no fluxo do Contract, não precisa dupla aprovação
     // em /sales). Best-effort — Sale ainda vai existir mesmo se algo falhar.
+    // SaleService agora recebe accountId como primeiro parâmetro (multi-tenancy).
     if (this.saleService) {
       try {
-        const sale = await this.saleService.createFromAcceptedProposal(contract.proposal_id)
+        const sale = await this.saleService.createFromAcceptedProposal(accountId, contract.proposal_id)
 
         // Copia o primeiro anexo tipo 'contract' pra sale.contract_url pra
         // a UI de /sales conseguir exibir o link direto do contrato
-        const docs = await this.repo.listDocuments(input.contractId)
+        const docs = await this.repo.listDocuments(accountId, input.contractId)
         const contractFile = docs.find((d) => d.doc_type === 'contract')
         const saleDate = new Date().toISOString().slice(0, 10)
 
-        await this.saleService.updateDetails(sale.id, input.reviewerId, {
+        await this.saleService.updateDetails(accountId, sale.id, input.reviewerId, {
           sale_date: saleDate,
           contract_url: contractFile?.file_url ?? null,
           contract_filename: contractFile?.filename ?? null,
@@ -275,7 +276,7 @@ export class ContractService {
 
         // Aprova a Sale já — gestor delegou tudo pelo módulo Contract
         try {
-          await this.saleService.approve(sale.id, input.reviewerId, input.notes ?? null)
+          await this.saleService.approve(accountId, sale.id, input.reviewerId, input.notes ?? null)
         } catch (approveErr) {
           console.error('[ContractService] Sale criada mas approve falhou:', approveErr)
         }
@@ -287,7 +288,7 @@ export class ContractService {
     return updated
   }
 
-  async managerReject(input: {
+  async managerReject(accountId: number, input: {
     contractId: number
     reviewerId: number
     notes: string
@@ -295,11 +296,11 @@ export class ContractService {
     if (!input.notes?.trim()) {
       throw new Error('Justificativa é obrigatória ao rejeitar')
     }
-    const contract = await this.repo.findById(input.contractId)
+    const contract = await this.repo.findById(accountId, input.contractId)
     if (!contract) throw new Error('Contract not found')
 
     this.assertTransition(contract.status, 'manager_rejected')
-    const updated = await this.repo.updateStatus(input.contractId, {
+    const updated = await this.repo.updateStatus(accountId, input.contractId, {
       status: 'manager_rejected',
       manager_notes: input.notes.trim(),
       manager_reviewed_by: input.reviewerId,
@@ -312,7 +313,7 @@ export class ContractService {
   // Documentos
   // ---------------------------------------------------------------------------
 
-  async addDocument(input: {
+  async addDocument(accountId: number, input: {
     contract_id: number
     uploader_id: number
     doc_type: ContractDocumentType
@@ -322,7 +323,7 @@ export class ContractService {
     mime_type?: string
     notes?: string
   }): Promise<ContractDocument> {
-    const contract = await this.repo.findById(input.contract_id)
+    const contract = await this.repo.findById(accountId, input.contract_id)
     if (!contract) throw new Error('Contract not found')
 
     // Regra: docs de tipo 'contract' só podem ser adicionados quando jurídico
@@ -338,18 +339,18 @@ export class ContractService {
       }
     }
 
-    return this.repo.addDocument(input)
+    return this.repo.addDocument(accountId, input)
   }
 
-  async removeDocument(documentId: number): Promise<boolean> {
-    const doc = await this.repo.getDocumentById(documentId)
+  async removeDocument(accountId: number, documentId: number): Promise<boolean> {
+    const doc = await this.repo.getDocumentById(accountId, documentId)
     if (!doc) throw new Error('Document not found')
-    const contract = await this.repo.findById(doc.contract_id)
+    const contract = await this.repo.findById(accountId, doc.contract_id)
     if (!contract) throw new Error('Contract not found')
     // Se contrato já foi aprovado, ninguém apaga anexo — imutável pra auditoria
     if (contract.status === 'approved') {
       throw new Error('Contrato já aprovado — anexos não podem ser removidos')
     }
-    return this.repo.deleteDocument(documentId)
+    return this.repo.deleteDocument(accountId, documentId)
   }
 }

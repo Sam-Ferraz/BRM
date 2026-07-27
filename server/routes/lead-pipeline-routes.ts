@@ -1,19 +1,23 @@
 import { Router, Response } from 'express'
 import { LeadPipelineService } from '../services/lead-pipeline-service.js'
-import { authenticateToken, AuthenticatedRequest } from '../middleware/auth.js'
+import { authenticateToken, requireAccount, AuthenticatedRequest } from '../middleware/auth.js'
 
 /**
  * Rotas CRUD para a Esteira de Leads. Restritas via middleware de auth —
  * a validação de que só admin/gerente podem editar fica no frontend
  * (mesmo padrão dos outros módulos administrativos hoje). Endpoint de
  * escalação em tempo real vem em outra iteração.
+ *
+ * Multi-tenancy: todas as rotas passam por requireAccount e escopam as
+ * queries pelo account_id do usuário logado.
  */
 export function createLeadPipelineRoutes(service: LeadPipelineService): Router {
   const router = Router()
 
-  router.get('/', authenticateToken, async (_req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.get('/', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      const data = await service.list()
+      const accountId = req.user!.accountId
+      const data = await service.list(accountId)
       res.json({ data })
     } catch (err) {
       console.error('Error listing lead pipelines:', err)
@@ -21,10 +25,11 @@ export function createLeadPipelineRoutes(service: LeadPipelineService): Router {
     }
   })
 
-  router.get('/:id', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.get('/:id', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const id = parseInt(req.params.id, 10)
-      const pipeline = await service.get(id)
+      const pipeline = await service.get(accountId, id)
       if (!pipeline) {
         res.status(404).json({ error: 'Esteira não encontrada' })
         return
@@ -36,9 +41,10 @@ export function createLeadPipelineRoutes(service: LeadPipelineService): Router {
     }
   })
 
-  router.post('/', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.post('/', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      const created = await service.create(req.body)
+      const accountId = req.user!.accountId
+      const created = await service.create(accountId, req.body)
       res.status(201).json({ data: created })
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Erro ao criar esteira'
@@ -47,10 +53,11 @@ export function createLeadPipelineRoutes(service: LeadPipelineService): Router {
     }
   })
 
-  router.put('/:id', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.put('/:id', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const id = parseInt(req.params.id, 10)
-      const updated = await service.update(id, req.body)
+      const updated = await service.update(accountId, id, req.body)
       if (!updated) {
         res.status(404).json({ error: 'Esteira não encontrada' })
         return
@@ -63,10 +70,11 @@ export function createLeadPipelineRoutes(service: LeadPipelineService): Router {
     }
   })
 
-  router.delete('/:id', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.delete('/:id', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const id = parseInt(req.params.id, 10)
-      const ok = await service.delete(id)
+      const ok = await service.delete(accountId, id)
       if (!ok) {
         res.status(404).json({ error: 'Esteira não encontrada' })
         return

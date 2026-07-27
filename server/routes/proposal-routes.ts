@@ -1,13 +1,14 @@
 import { Response, Router } from 'express'
 import { ProposalService } from '../services/index.js'
-import { authenticateToken, AuthenticatedRequest } from '../middleware/auth.js'
+import { authenticateToken, requireAccount, AuthenticatedRequest } from '../middleware/auth.js'
 import { ProposalStatus } from '../types/index.js'
 
 export function createProposalRoutes(proposalService: ProposalService): Router {
   const router = Router()
 
-  router.get('/', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.get('/', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const userId = req.user!.userId
       const filters = {
         search: req.query.search as string,
@@ -17,7 +18,7 @@ export function createProposalRoutes(proposalService: ProposalService): Router {
         createdFrom: req.query.createdFrom as string | undefined,
         createdTo: req.query.createdTo as string | undefined,
       }
-      const result = await proposalService.getAllProposals(filters, userId)
+      const result = await proposalService.getAllProposals(accountId, filters, userId)
       res.json(result)
     } catch (error) {
       console.error('Error in get proposals route:', error)
@@ -25,10 +26,11 @@ export function createProposalRoutes(proposalService: ProposalService): Router {
     }
   })
 
-  router.get('/:id', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.get('/:id', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const id = parseInt(req.params.id)
-      const proposal = await proposalService.getProposalById(id)
+      const proposal = await proposalService.getProposalById(accountId, id)
       res.json(proposal)
     } catch (error) {
       if (error instanceof Error && error.message === 'Proposal not found') {
@@ -40,8 +42,9 @@ export function createProposalRoutes(proposalService: ProposalService): Router {
     }
   })
 
-  router.post('/', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.post('/', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const userId = req.user!.userId
       const {
         deal_id,
@@ -55,6 +58,7 @@ export function createProposalRoutes(proposalService: ProposalService): Router {
       } = req.body
 
       const proposal = await proposalService.createProposal(
+        accountId,
         {
           deal_id,
           proposal_value,
@@ -83,8 +87,9 @@ export function createProposalRoutes(proposalService: ProposalService): Router {
     }
   })
 
-  router.put('/:id', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.put('/:id', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const id = parseInt(req.params.id)
       const {
         deal_id,
@@ -98,6 +103,7 @@ export function createProposalRoutes(proposalService: ProposalService): Router {
       } = req.body
 
       const proposal = await proposalService.updateProposal(
+        accountId,
         id,
         {
           deal_id,
@@ -125,10 +131,11 @@ export function createProposalRoutes(proposalService: ProposalService): Router {
     }
   })
 
-  router.delete('/:id', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.delete('/:id', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const id = parseInt(req.params.id)
-      const result = await proposalService.deleteProposal(id)
+      const result = await proposalService.deleteProposal(accountId, id)
       res.json(result)
     } catch (error) {
       if (error instanceof Error && error.message === 'Proposal not found') {

@@ -54,7 +54,8 @@ export function createAuthRoutes(authService: AuthService): Router {
 
   router.get('/users', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      const users = await authService.listUsers()
+      // Multi-tenancy: só lista users da account do requester
+      const users = await authService.listUsers(req.user!.accountId)
       res.json({ success: true, users })
     } catch (error) {
       res.status(500).json({ error: 'Erro interno do servidor' })

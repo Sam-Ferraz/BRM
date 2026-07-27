@@ -3,6 +3,7 @@ import { ThemeProvider } from '@/components/theme-provider'
 import { Toaster } from '@/components/ui/toaster'
 import { Toaster as SonnerToaster } from '@/components/ui/sonner'
 import { AuthProvider } from '@/contexts/AuthContext'
+import { AccountProvider } from '@/contexts/AccountContext'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import LoginPage from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
@@ -22,6 +23,7 @@ import AgendaPage from './pages/AgendaPage'
 import ConfigPage from './pages/ConfigPage'
 import UsersPage from './pages/UsersPage'
 import LeadPipelinesPage from './pages/LeadPipelinesPage'
+import AdminAccountsPage from './pages/AdminAccountsPage'
 import PermissionsPage from './pages/PermissionsPage'
 import './lib/i18n'
 import './index.css'
@@ -30,6 +32,7 @@ function App() {
   return (
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
       <AuthProvider>
+        <AccountProvider>
         <Router>
           <div className="min-h-screen">
             <Routes>
@@ -124,12 +127,18 @@ function App() {
                   <LeadPipelinesPage />
                 </ProtectedRoute>
               } />
+              <Route path="/admin/accounts" element={
+                <ProtectedRoute>
+                  <AdminAccountsPage />
+                </ProtectedRoute>
+              } />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </div>
           <Toaster />
           <SonnerToaster />
         </Router>
+        </AccountProvider>
       </AuthProvider>
     </ThemeProvider>
   )

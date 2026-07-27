@@ -8,9 +8,9 @@ export class AppointmentService {
     this.appointmentRepository = appointmentRepository
   }
 
-  async getAllAppointments(filters: QueryFilters, userId: number): Promise<ApiResponse<Appointment[]>> {
+  async getAllAppointments(accountId: number, filters: QueryFilters, userId: number): Promise<ApiResponse<Appointment[]>> {
     try {
-      const appointments = await this.appointmentRepository.findAll(filters, userId)
+      const appointments = await this.appointmentRepository.findAll(accountId, filters, userId)
       return {
         data: appointments,
         total: appointments.length
@@ -21,18 +21,25 @@ export class AppointmentService {
     }
   }
 
-  async createAppointment(appointmentData: Omit<Appointment, 'id' | 'created_at' | 'updated_at'>): Promise<Appointment> {
+  async createAppointment(
+    accountId: number,
+    appointmentData: Omit<Appointment, 'id' | 'created_at' | 'updated_at'>
+  ): Promise<Appointment> {
     try {
-      return await this.appointmentRepository.create(appointmentData)
+      return await this.appointmentRepository.create(accountId, appointmentData)
     } catch (error) {
       console.error('Error creating appointment:', error)
       throw new Error('Internal server error')
     }
   }
 
-  async updateAppointment(id: number, appointmentData: Omit<Appointment, 'id' | 'created_at' | 'updated_at'>): Promise<Appointment> {
+  async updateAppointment(
+    accountId: number,
+    id: number,
+    appointmentData: Omit<Appointment, 'id' | 'created_at' | 'updated_at'>
+  ): Promise<Appointment> {
     try {
-      const updatedAppointment = await this.appointmentRepository.update(id, appointmentData)
+      const updatedAppointment = await this.appointmentRepository.update(accountId, id, appointmentData)
       if (!updatedAppointment) {
         throw new Error('Appointment not found')
       }
@@ -46,9 +53,9 @@ export class AppointmentService {
     }
   }
 
-  async deleteAppointment(id: number): Promise<{ success: boolean }> {
+  async deleteAppointment(accountId: number, id: number): Promise<{ success: boolean }> {
     try {
-      const deleted = await this.appointmentRepository.delete(id)
+      const deleted = await this.appointmentRepository.delete(accountId, id)
       if (!deleted) {
         throw new Error('Appointment not found')
       }
@@ -62,9 +69,9 @@ export class AppointmentService {
     }
   }
 
-  async getLast7DaysAnalytics(timezone: string): Promise<{ data: AppointmentAnalytics[] }> {
+  async getLast7DaysAnalytics(accountId: number, timezone: string): Promise<{ data: AppointmentAnalytics[] }> {
     try {
-      const analytics = await this.appointmentRepository.getLast7DaysAnalytics(timezone)
+      const analytics = await this.appointmentRepository.getLast7DaysAnalytics(accountId, timezone)
       return { data: analytics }
     } catch (error) {
       console.error('Error fetching appointments analytics:', error)
@@ -72,9 +79,12 @@ export class AppointmentService {
     }
   }
 
-  async getLast7DaysAnalyticsByType(timezone: string): Promise<{ data: Record<string, AppointmentAnalytics[]> }> {
+  async getLast7DaysAnalyticsByType(
+    accountId: number,
+    timezone: string
+  ): Promise<{ data: Record<string, AppointmentAnalytics[]> }> {
     try {
-      const analytics = await this.appointmentRepository.getLast7DaysAnalyticsByType(timezone)
+      const analytics = await this.appointmentRepository.getLast7DaysAnalyticsByType(accountId, timezone)
       return { data: analytics }
     } catch (error) {
       console.error('Error fetching appointments analytics by type:', error)
@@ -82,14 +92,17 @@ export class AppointmentService {
     }
   }
 
-  async getAnalyticsByDateRange(params: {
-    from: string
-    to: string
-    timezone: string
-    dateField: 'scheduled_datetime' | 'created_at'
-  }): Promise<{ data: AppointmentAnalytics[] }> {
+  async getAnalyticsByDateRange(
+    accountId: number,
+    params: {
+      from: string
+      to: string
+      timezone: string
+      dateField: 'scheduled_datetime' | 'created_at'
+    }
+  ): Promise<{ data: AppointmentAnalytics[] }> {
     try {
-      const analytics = await this.appointmentRepository.getAnalyticsByDateRange(params)
+      const analytics = await this.appointmentRepository.getAnalyticsByDateRange(accountId, params)
       return { data: analytics }
     } catch (error) {
       console.error('Error fetching appointments analytics by date range:', error)
@@ -97,14 +110,17 @@ export class AppointmentService {
     }
   }
 
-  async getAnalyticsByTypeByDateRange(params: {
-    from: string
-    to: string
-    timezone: string
-    dateField: 'scheduled_datetime' | 'created_at'
-  }): Promise<{ data: Record<string, AppointmentAnalytics[]> }> {
+  async getAnalyticsByTypeByDateRange(
+    accountId: number,
+    params: {
+      from: string
+      to: string
+      timezone: string
+      dateField: 'scheduled_datetime' | 'created_at'
+    }
+  ): Promise<{ data: Record<string, AppointmentAnalytics[]> }> {
     try {
-      const analytics = await this.appointmentRepository.getAnalyticsByTypeByDateRange(params)
+      const analytics = await this.appointmentRepository.getAnalyticsByTypeByDateRange(accountId, params)
       return { data: analytics }
     } catch (error) {
       console.error('Error fetching appointments analytics by type by date range:', error)

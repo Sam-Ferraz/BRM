@@ -2,7 +2,7 @@ import { Request, Response, Router } from 'express'
 import crypto from 'crypto'
 import { LeadService } from '../services/index.js'
 import { LeadSourceRepository } from '../repositories/index.js'
-import { authenticateToken, AuthenticatedRequest } from '../middleware/auth.js'
+import { authenticateToken, requireAccount, AuthenticatedRequest } from '../middleware/auth.js'
 import { LeadStatus } from '../types/index.js'
 
 /**
@@ -10,7 +10,8 @@ import { LeadStatus } from '../types/index.js'
  *
  * O endpoint de webhook é PÚBLICO (sem JWT) — autenticação é por token único
  * gerado na criação da fonte. O Meta/Zapier/etc. chamam essa URL e o BRM
- * identifica a fonte pelo token.
+ * identifica a fonte pelo token — e a partir dela, o account_id (via
+ * source.account_id) usado pra criar os leads no tenant certo.
  */
 export function createLeadRoutes(
   leadService: LeadService,
@@ -110,6 +111,9 @@ export function createLeadRoutes(
         }
       }
 
+      // ingestPayload deriva o accountId de source.account_id — o webhook
+      // público não tem usuário logado, então a source é a fonte de verdade
+      // sobre em qual conta os leads devem entrar.
       const created = await leadService.ingestPayload(source, req.body)
       res.json({ received: created.length })
     } catch (error) {
@@ -123,13 +127,14 @@ export function createLeadRoutes(
   // LEAD SOURCES (somente admin)
   // =========================================================================
 
-  router.get('/sources', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.get('/sources', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       if (req.user!.role !== 'admin') {
         res.status(403).json({ error: 'forbidden' })
         return
       }
-      const sources = await leadService.listSources()
+      const accountId = req.user!.accountId
+      const sources = await leadService.listSources(accountId)
       res.json({ data: sources })
     } catch (error) {
       console.error('Error listing lead sources:', error)
@@ -137,19 +142,20 @@ export function createLeadRoutes(
     }
   })
 
-  router.post('/sources', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.post('/sources', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       if (req.user!.role !== 'admin') {
         res.status(403).json({ error: 'forbidden' })
         return
       }
+      const accountId = req.user!.accountId
       const { name, type, config } = req.body
       if (!name || typeof name !== 'string') {
         res.status(400).json({ error: 'name is required' })
         return
       }
       const safeType = type === 'meta' || type === 'webhook_generic' || type === 'manual' ? type : 'webhook_generic'
-      const source = await leadService.createSource({ name, type: safeType, config: config ?? null })
+      const source = await leadService.createSource(accountId, { name, type: safeType, config: config ?? null })
       res.json({ data: source })
     } catch (error) {
       if (error instanceof Error && error.message === 'name is required') {
@@ -163,16 +169,17 @@ export function createLeadRoutes(
     }
   })
 
-  router.put('/sources/:id', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.put('/sources/:id', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       if (req.user!.role !== 'admin') {
         res.status(403).json({ error: 'forbidden' })
         return
       }
+      const accountId = req.user!.accountId
       const id = parseInt(req.params.id)
       const { name, config, status } = req.body
       const safeStatus = status === 'paused' || status === 'active' ? status : undefined
-      const updated = await leadService.updateSource(id, { name, config, status: safeStatus })
+      const updated = await leadService.updateSource(accountId, id, { name, config, status: safeStatus })
       res.json({ data: updated })
     } catch (error) {
       if (error instanceof Error && error.message === 'LeadSource not found') {
@@ -185,14 +192,15 @@ export function createLeadRoutes(
     }
   })
 
-  router.delete('/sources/:id', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.delete('/sources/:id', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       if (req.user!.role !== 'admin') {
         res.status(403).json({ error: 'forbidden' })
         return
       }
+      const accountId = req.user!.accountId
       const id = parseInt(req.params.id)
-      const result = await leadService.deleteSource(id)
+      const result = await leadService.deleteSource(accountId, id)
       res.json(result)
     } catch (error) {
       if (error instanceof Error && error.message === 'LeadSource not found') {
@@ -208,11 +216,12 @@ export function createLeadRoutes(
   // LEADS (listar, aceitar, descartar, criar manual)
   // =========================================================================
 
-  router.get('/', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.get('/', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const status = req.query.status as LeadStatus | undefined
       const validStatus = status === 'novo' || status === 'aceito' || status === 'descartado' ? status : undefined
-      const result = await leadService.list(validStatus)
+      const result = await leadService.list(accountId, validStatus)
       res.json(result)
     } catch (error) {
       console.error('Error listing leads:', error)
@@ -220,9 +229,10 @@ export function createLeadRoutes(
     }
   })
 
-  router.get('/counts', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.get('/counts', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      const counts = await leadService.getCountByStatus()
+      const accountId = req.user!.accountId
+      const counts = await leadService.getCountByStatus(accountId)
       res.json({ data: counts })
     } catch (error) {
       console.error('Error fetching lead counts:', error)
@@ -230,10 +240,11 @@ export function createLeadRoutes(
     }
   })
 
-  router.get('/:id', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.get('/:id', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const id = parseInt(req.params.id)
-      const lead = await leadService.getById(id)
+      const lead = await leadService.getById(accountId, id)
       res.json({ data: lead })
     } catch (error) {
       if (error instanceof Error && error.message === 'Lead not found') {
@@ -245,10 +256,11 @@ export function createLeadRoutes(
     }
   })
 
-  router.post('/', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.post('/', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const { name, email, phone, notes } = req.body
-      const lead = await leadService.createManual({ name, email, phone, notes })
+      const lead = await leadService.createManual(accountId, { name, email, phone, notes })
       res.json({ data: lead })
     } catch (error) {
       console.error('Error creating manual lead:', error)
@@ -256,10 +268,11 @@ export function createLeadRoutes(
     }
   })
 
-  router.post('/:id/accept', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.post('/:id/accept', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const id = parseInt(req.params.id)
-      const result = await leadService.acceptLead(id, req.user!.userId)
+      const result = await leadService.acceptLead(accountId, id, req.user!.userId)
       res.json({ data: result })
     } catch (error) {
       if (error instanceof Error && error.message === 'Lead not found') {
@@ -275,11 +288,12 @@ export function createLeadRoutes(
     }
   })
 
-  router.post('/:id/discard', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.post('/:id/discard', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const id = parseInt(req.params.id)
       const { notes } = req.body
-      const lead = await leadService.discardLead(id, notes ?? null)
+      const lead = await leadService.discardLead(accountId, id, notes ?? null)
       res.json({ data: lead })
     } catch (error) {
       if (error instanceof Error && error.message === 'Lead not found') {

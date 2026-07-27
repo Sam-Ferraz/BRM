@@ -8,13 +8,18 @@ import { AgendaItem, GoogleCalendarStatus } from '../types/index.js'
  * Fluxo:
  *   1. Frontend chama /api/google-calendar/auth-url → devolve URL do OAuth Google
  *   2. Usuário autoriza, Google redireciona pra /api/google-calendar/callback?code=...
- *   3. Backend troca code por access_token+refresh_token, salva no DB, redireciona
- *      pro frontend com ?connected=1
+ *   3. Backend troca code por access_token+refresh_token, salva no DB (com
+ *      accountId + userId embutidos no JWT state), redireciona pro frontend
+ *      com ?connected=1
  *   4. AgendaPage puxa GET /api/calendar/agenda que agora inclui eventos do Google
  *
  * Credenciais do app são SaaS: 1 projeto no Google Cloud Console, credenciais no
  * .env (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI). Cada corretor
  * autoriza com a própria conta Google.
+ *
+ * Multi-tenancy: o accountId viaja dentro do JWT state pra sobreviver ao
+ * redirect do Google (o callback é público — não tem req.user). Todos os
+ * métodos que tocam o repositório exigem accountId.
  *
  * Puxa eventos de TODOS os calendários que o usuário deixou visíveis (`selected: true`)
  * no Google Calendar dele. Cada evento herda a cor do próprio calendário na exibição.
@@ -58,14 +63,15 @@ export class GoogleCalendarService {
 
   /**
    * Monta URL de autorização. State é um JWT assinado com JWT_SECRET (mesmo
-   * segredo da AuthService) contendo o userId + expiração curta de 10min.
-   * Isso protege contra CSRF: quem forjar um `?code=...&state=...` precisaria
-   * do JWT_SECRET pra montar um state válido.
+   * segredo da AuthService) contendo o userId + accountId + expiração curta
+   * de 10min. Isso protege contra CSRF: quem forjar um `?code=...&state=...`
+   * precisaria do JWT_SECRET pra montar um state válido. accountId no state
+   * garante tenancy no callback público.
    */
-  buildAuthUrl(userId: number): string {
+  buildAuthUrl(accountId: number, userId: number): string {
     const secret = process.env.JWT_SECRET
     if (!secret) throw new Error('JWT_SECRET não configurado')
-    const state = jwt.sign({ userId, purpose: 'google_oauth' }, secret, { expiresIn: '10m' })
+    const state = jwt.sign({ userId, accountId, purpose: 'google_oauth' }, secret, { expiresIn: '10m' })
     const params = new URLSearchParams({
       client_id: this.getClientId(),
       redirect_uri: this.getRedirectUri(),
@@ -79,25 +85,27 @@ export class GoogleCalendarService {
   }
 
   /**
-   * Valida assinatura + expiração do state e devolve o userId.
+   * Valida assinatura + expiração do state e devolve { userId, accountId }.
    * Retorna null se inválido/expirado.
    */
-  parseState(state: string): number | null {
+  parseState(state: string): { userId: number; accountId: number } | null {
     const secret = process.env.JWT_SECRET
     if (!secret) return null
     try {
-      const decoded = jwt.verify(state, secret) as { userId?: number; purpose?: string }
+      const decoded = jwt.verify(state, secret) as { userId?: number; accountId?: number; purpose?: string }
       if (decoded.purpose !== 'google_oauth') return null
-      return typeof decoded.userId === 'number' ? decoded.userId : null
+      if (typeof decoded.userId !== 'number') return null
+      if (typeof decoded.accountId !== 'number') return null
+      return { userId: decoded.userId, accountId: decoded.accountId }
     } catch {
       return null
     }
   }
 
   /**
-   * Troca o `code` do redirect por tokens e persiste.
+   * Troca o `code` do redirect por tokens e persiste na account informada.
    */
-  async handleOAuthCallback(code: string, userId: number): Promise<void> {
+  async handleOAuthCallback(code: string, accountId: number, userId: number): Promise<void> {
     const form = new URLSearchParams({
       code,
       client_id: this.getClientId(),
@@ -144,6 +152,7 @@ export class GoogleCalendarService {
     const expiresAt = new Date(Date.now() + (tokenData.expires_in * 1000))
 
     await this.repo.upsert({
+      account_id: accountId,
       user_id: userId,
       connected_email: userInfo.email || 'desconhecido',
       access_token: tokenData.access_token,
@@ -153,8 +162,8 @@ export class GoogleCalendarService {
     })
   }
 
-  async getStatus(userId: number): Promise<GoogleCalendarStatus> {
-    const conn = await this.repo.findByUserId(userId)
+  async getStatus(accountId: number, userId: number): Promise<GoogleCalendarStatus> {
+    const conn = await this.repo.findByUserId(accountId, userId)
     if (!conn) return { connected: false }
     return {
       connected: true,
@@ -163,16 +172,16 @@ export class GoogleCalendarService {
     }
   }
 
-  async disconnect(userId: number): Promise<boolean> {
-    return this.repo.deleteByUserId(userId)
+  async disconnect(accountId: number, userId: number): Promise<boolean> {
+    return this.repo.deleteByUserId(accountId, userId)
   }
 
   /**
    * Garante um access_token válido — se está pra expirar, faz refresh.
    * Margem de 60s pra evitar race com expiração no meio de um request.
    */
-  private async getValidAccessToken(userId: number): Promise<string | null> {
-    const conn = await this.repo.findByUserId(userId)
+  private async getValidAccessToken(accountId: number, userId: number): Promise<string | null> {
+    const conn = await this.repo.findByUserId(accountId, userId)
     if (!conn) return null
 
     const expiresAt = new Date(conn.token_expires_at).getTime()
@@ -196,13 +205,13 @@ export class GoogleCalendarService {
       // Se refresh_token foi revogado, o Google devolve 400 invalid_grant.
       // Neste caso apagamos a conexão pra forçar reautorização.
       if (res.status === 400 && text.includes('invalid_grant')) {
-        await this.repo.deleteByUserId(userId)
+        await this.repo.deleteByUserId(accountId, userId)
       }
       throw new Error(`Google token refresh falhou: ${res.status} ${text}`)
     }
     const data = (await res.json()) as { access_token: string; expires_in: number }
     const newExpiresAt = new Date(Date.now() + (data.expires_in * 1000))
-    await this.repo.updateAccessToken(userId, data.access_token, newExpiresAt)
+    await this.repo.updateAccessToken(accountId, userId, data.access_token, newExpiresAt)
     return data.access_token
   }
 
@@ -238,11 +247,12 @@ export class GoogleCalendarService {
    * Retorna [] se o usuário não estiver conectado.
    */
   async listEventsAsAgendaItems(
+    accountId: number,
     userId: number,
     from: Date,
     to: Date
   ): Promise<AgendaItem[]> {
-    const token = await this.getValidAccessToken(userId)
+    const token = await this.getValidAccessToken(accountId, userId)
     if (!token) return []
 
     let calendars: GoogleCalendarListEntry[]
@@ -270,7 +280,7 @@ export class GoogleCalendarService {
           const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
           if (!res.ok) {
             // 401 desconecta (refresh_token pifou); outros erros só logam e seguem
-            if (res.status === 401) await this.repo.deleteByUserId(userId)
+            if (res.status === 401) await this.repo.deleteByUserId(accountId, userId)
             console.error(`[Google] events.list falhou pro calendário "${cal.summary}": ${res.status}`)
             return [] as AgendaItem[]
           }
@@ -283,7 +293,7 @@ export class GoogleCalendarService {
       })
     )
 
-    await this.repo.markSynced(userId)
+    await this.repo.markSynced(accountId, userId)
     return results.flat()
   }
 

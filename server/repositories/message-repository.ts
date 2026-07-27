@@ -2,15 +2,21 @@ import { BaseRepository } from './base-repository.js'
 import { Message, MessageDirection, MessageStatus } from '../types/index.js'
 
 export class MessageRepository extends BaseRepository {
-  async findByConversation(conversationId: number, limit = 200): Promise<Message[]> {
+  /**
+   * Lista mensagens de uma conversa. Filtra por account_id na própria linha
+   * de messages (redundante com conversation_id → conversations.account_id
+   * mas evita JOIN e blinda a tenancy no nível da tabela).
+   */
+  async findByConversation(accountId: number, conversationId: number, limit = 200): Promise<Message[]> {
     const client = await this.getClient()
     try {
       const result = await client.query(
         `SELECT * FROM messages
          WHERE conversation_id = $1
+           AND account_id = $2
          ORDER BY sent_at ASC, id ASC
-         LIMIT $2`,
-        [conversationId, limit]
+         LIMIT $3`,
+        [conversationId, accountId, limit]
       )
       return result.rows
     } finally {
@@ -23,7 +29,7 @@ export class MessageRepository extends BaseRepository {
    * outbound nas últimas `windowHours` horas. Usado pelo ChatService para
    * detectar "interação bilateral" (= 1 atendimento).
    */
-  async hasBothDirectionsInWindow(conversationId: number, windowHours = 24): Promise<boolean> {
+  async hasBothDirectionsInWindow(accountId: number, conversationId: number, windowHours = 24): Promise<boolean> {
     const c = await this.getClient()
     try {
       const result = await c.query(
@@ -32,8 +38,9 @@ export class MessageRepository extends BaseRepository {
             BOOL_OR(direction = 'outbound') AS has_outbound
            FROM messages
           WHERE conversation_id = $1
-            AND sent_at >= NOW() - ($2 || ' hours')::INTERVAL`,
-        [conversationId, String(windowHours)]
+            AND account_id = $2
+            AND sent_at >= NOW() - ($3 || ' hours')::INTERVAL`,
+        [conversationId, accountId, String(windowHours)]
       )
       const row = result.rows[0]
       return Boolean(row?.has_inbound) && Boolean(row?.has_outbound)
@@ -42,21 +49,25 @@ export class MessageRepository extends BaseRepository {
     }
   }
 
-  async create(input: {
-    conversation_id: number
-    direction: MessageDirection
-    content: string
-    media_url?: string | null
-    status?: MessageStatus
-    provider_message_id?: string | null
-  }): Promise<Message> {
+  async create(
+    accountId: number,
+    input: {
+      conversation_id: number
+      direction: MessageDirection
+      content: string
+      media_url?: string | null
+      status?: MessageStatus
+      provider_message_id?: string | null
+    }
+  ): Promise<Message> {
     const client = await this.getClient()
     try {
       const result = await client.query(
         `INSERT INTO messages (
-           conversation_id, direction, content, media_url, status, provider_message_id
-         ) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+           account_id, conversation_id, direction, content, media_url, status, provider_message_id
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
         [
+          accountId,
           input.conversation_id,
           input.direction,
           input.content,

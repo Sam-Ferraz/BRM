@@ -56,7 +56,8 @@ export class CloudApiWhatsAppProvider implements WhatsAppProvider {
    * método apenas valida e retorna o estado atual.
    */
   async startSession(ownerUserId: number): Promise<SessionState> {
-    const session = await this.sessionRepository.findByUser(ownerUserId)
+    // Provider não conhece accountId — variante interna (rule 9).
+    const session = await this.sessionRepository.findByUserInternal(ownerUserId)
     if (!session) {
       return { status: 'pending_setup' }
     }
@@ -78,8 +79,9 @@ export class CloudApiWhatsAppProvider implements WhatsAppProvider {
 
   async stopSession(ownerUserId: number): Promise<void> {
     // Marca como desconectado sem apagar credenciais — usuário pode reativar.
+    // Provider não conhece accountId — variante interna (rule 9).
     await this.sessionRepository
-      .updateStatus(ownerUserId, 'disconnected')
+      .updateStatusInternal(ownerUserId, 'disconnected')
       .catch((error) => console.error('[CloudAPI] Erro stopSession:', error))
   }
 
@@ -89,7 +91,8 @@ export class CloudApiWhatsAppProvider implements WhatsAppProvider {
     to: string
     content: string
   }): Promise<SendMessageResult> {
-    const session = await this.sessionRepository.findByUser(input.ownerUserId)
+    // Provider não conhece accountId — variante interna (rule 9).
+    const session = await this.sessionRepository.findByUserInternal(input.ownerUserId)
     if (!session || !session.phone_number_id || !session.access_token) {
       throw new Error('whatsapp_not_connected')
     }
@@ -120,8 +123,9 @@ export class CloudApiWhatsAppProvider implements WhatsAppProvider {
       // 401/403 = token inválido. Marca a sessão como invalid_credentials
       // pra UI poder pedir que o user atualize as credenciais.
       if (response.status === 401 || response.status === 403 || errCode === 190) {
+        // Provider não conhece accountId — variante interna (rule 9).
         await this.sessionRepository
-          .updateStatus(input.ownerUserId, 'invalid_credentials')
+          .updateStatusInternal(input.ownerUserId, 'invalid_credentials')
           .catch(() => undefined)
       }
       throw new Error(`Cloud API error (${response.status}): ${errMsg}`)

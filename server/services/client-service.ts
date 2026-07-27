@@ -8,9 +8,9 @@ export class ClientService {
     this.clientRepository = clientRepository
   }
 
-  async getAllClients(filters: QueryFilters): Promise<ApiResponse<Client[]>> {
+  async getAllClients(accountId: number, filters: QueryFilters): Promise<ApiResponse<Client[]>> {
     try {
-      const clients = await this.clientRepository.findAll(filters)
+      const clients = await this.clientRepository.findAll(accountId, filters)
       return {
         data: clients,
         total: clients.length
@@ -21,18 +21,18 @@ export class ClientService {
     }
   }
 
-  async createClient(clientData: Omit<Client, 'id' | 'created_at' | 'updated_at'>): Promise<Client> {
+  async createClient(accountId: number, clientData: Omit<Client, 'id' | 'created_at' | 'updated_at'>): Promise<Client> {
     try {
-      return await this.clientRepository.create(clientData)
+      return await this.clientRepository.create(accountId, clientData)
     } catch (error) {
       console.error('Error creating client:', error)
       throw new Error('Internal server error')
     }
   }
 
-  async updateClient(id: number, clientData: Omit<Client, 'id' | 'created_at' | 'updated_at'>): Promise<Client> {
+  async updateClient(accountId: number, id: number, clientData: Omit<Client, 'id' | 'created_at' | 'updated_at'>): Promise<Client> {
     try {
-      const updatedClient = await this.clientRepository.update(id, clientData)
+      const updatedClient = await this.clientRepository.update(accountId, id, clientData)
       if (!updatedClient) {
         throw new Error('Client not found')
       }
@@ -46,9 +46,9 @@ export class ClientService {
     }
   }
 
-  async deleteClient(id: number): Promise<{ success: boolean }> {
+  async deleteClient(accountId: number, id: number): Promise<{ success: boolean }> {
     try {
-      const deleted = await this.clientRepository.delete(id)
+      const deleted = await this.clientRepository.delete(accountId, id)
       if (!deleted) {
         throw new Error('Client not found')
       }

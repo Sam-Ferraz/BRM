@@ -7,10 +7,12 @@ import { CalendarEvent, CalendarEventWithDetails, CalendarEventStatus, AgendaIte
  *
  * Regras chave:
  *   • Usuário comum só vê seus próprios compromissos.
- *   • Admin (role=admin) pode ver de qualquer usuário (querystring viewAll=1
- *     ou userId=X). Endpoint recebe o role e decide.
+ *   • Admin (role=admin) pode ver de qualquer usuário DA MESMA account
+ *     (querystring viewAll=1 ou userId=X). Endpoint recebe o role e decide.
  *   • Compromissos vinculados a cliente/deal/produto ajudam a dar contexto
  *     (ex: "Reunião de proposta com cliente X").
+ *   • Multi-tenancy: accountId obrigatório em todos os métodos — nunca vaza
+ *     dado entre accounts.
  */
 export class CalendarEventService {
   private repo: CalendarEventRepository
@@ -21,38 +23,44 @@ export class CalendarEventService {
     this.googleService = googleService
   }
 
-  async list(filters: {
-    userId?: number
-    from?: string
-    to?: string
-    status?: CalendarEventStatus | 'all'
-  }): Promise<ApiResponse<CalendarEventWithDetails[]>> {
-    const events = await this.repo.findAll(filters)
+  async list(
+    accountId: number,
+    filters: {
+      userId?: number
+      from?: string
+      to?: string
+      status?: CalendarEventStatus | 'all'
+    }
+  ): Promise<ApiResponse<CalendarEventWithDetails[]>> {
+    const events = await this.repo.findAll(accountId, filters)
     return { data: events, total: events.length }
   }
 
-  async getById(id: number): Promise<CalendarEventWithDetails> {
-    const event = await this.repo.findById(id)
+  async getById(accountId: number, id: number): Promise<CalendarEventWithDetails> {
+    const event = await this.repo.findById(accountId, id)
     if (!event) throw new Error('CalendarEvent not found')
     return event
   }
 
-  async create(input: {
-    user_id: number
-    title: string
-    description?: string | null
-    location?: string | null
-    start_at: string
-    end_at?: string | null
-    all_day?: boolean
-    color?: string | null
-    client_id?: number | null
-    deal_id?: number | null
-    product_id?: number | null
-  }): Promise<CalendarEvent> {
+  async create(
+    accountId: number,
+    input: {
+      user_id: number
+      title: string
+      description?: string | null
+      location?: string | null
+      start_at: string
+      end_at?: string | null
+      all_day?: boolean
+      color?: string | null
+      client_id?: number | null
+      deal_id?: number | null
+      product_id?: number | null
+    }
+  ): Promise<CalendarEvent> {
     if (!input.title || !input.title.trim()) throw new Error('title is required')
     if (!input.start_at) throw new Error('start_at is required')
-    return this.repo.create({
+    return this.repo.create(accountId, {
       user_id: input.user_id,
       title: input.title.trim(),
       description: input.description ?? null,
@@ -68,31 +76,39 @@ export class CalendarEventService {
     })
   }
 
-  async update(id: number, input: Partial<CalendarEvent>): Promise<CalendarEvent> {
-    const existing = await this.repo.findById(id)
+  async update(
+    accountId: number,
+    id: number,
+    input: Partial<Omit<CalendarEvent, 'id' | 'account_id' | 'user_id' | 'created_at' | 'updated_at'>>
+  ): Promise<CalendarEvent> {
+    const existing = await this.repo.findById(accountId, id)
     if (!existing) throw new Error('CalendarEvent not found')
-    const updated = await this.repo.update(id, input)
+    const updated = await this.repo.update(accountId, id, input)
     if (!updated) throw new Error('CalendarEvent not found')
     return updated
   }
 
-  async delete(id: number): Promise<{ success: boolean }> {
-    const ok = await this.repo.delete(id)
+  async delete(accountId: number, id: number): Promise<{ success: boolean }> {
+    const ok = await this.repo.delete(accountId, id)
     if (!ok) throw new Error('CalendarEvent not found')
     return { success: true }
   }
 
   /**
    * Agenda unificada: eventos + follow-ups em aberto + eventos do Google
-   * Calendar (se o usuário estiver conectado), tudo dentro do range de datas.
+   * Calendar (se o usuário estiver conectado), tudo dentro do range de datas
+   * e restrito à account do request.
    *
    * Google Calendar só é consultado quando `filters.userId` é definido
    * (usuário individual). Modo "ver time" (userId=undefined) NÃO agrega
    * Google — cada corretor tem sua própria conta Google conectada e não faz
    * sentido misturar tudo num agregado do gestor.
    */
-  async getAgenda(filters: { userId?: number; from?: string; to?: string }): Promise<ApiResponse<AgendaItem[]>> {
-    const items = await this.repo.getAgenda(filters)
+  async getAgenda(
+    accountId: number,
+    filters: { userId?: number; from?: string; to?: string }
+  ): Promise<ApiResponse<AgendaItem[]>> {
+    const items = await this.repo.getAgenda(accountId, filters)
 
     if (this.googleService && filters.userId && filters.from && filters.to) {
       try {
@@ -101,6 +117,7 @@ export class CalendarEventService {
         // Estende o `to` pra incluir o dia inteiro (endOfDay do último dia)
         to.setHours(23, 59, 59, 999)
         const googleItems = await this.googleService.listEventsAsAgendaItems(
+          accountId,
           filters.userId,
           from,
           to

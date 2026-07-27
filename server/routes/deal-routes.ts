@@ -1,12 +1,13 @@
 import { Request, Response, Router } from 'express'
 import { DealService } from '../services/index.js'
-import { authenticateToken, AuthenticatedRequest } from '../middleware/auth.js'
+import { authenticateToken, requireAccount, AuthenticatedRequest } from '../middleware/auth.js'
 
 export function createDealRoutes(dealService: DealService): Router {
   const router = Router()
 
-  router.get('/', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.get('/', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const userId = req.user!.userId
       const filters = {
         search: req.query.search as string,
@@ -15,7 +16,7 @@ export function createDealRoutes(dealService: DealService): Router {
         sortOrder: req.query.sortOrder as 'asc' | 'desc'
       }
 
-      const result = await dealService.getAllDeals(filters, userId)
+      const result = await dealService.getAllDeals(accountId, filters, userId)
       res.json(result)
     } catch (error) {
       console.error('Error in get deals route:', error)
@@ -23,10 +24,11 @@ export function createDealRoutes(dealService: DealService): Router {
     }
   })
 
-  router.get('/without-followups', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.get('/without-followups', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const userId = req.user!.userId
-      const result = await dealService.getDealsWithoutOpenFollowUps(userId)
+      const result = await dealService.getDealsWithoutOpenFollowUps(accountId, userId)
       res.json(result)
     } catch (error) {
       console.error('Error in get deals without follow-ups route:', error)
@@ -48,8 +50,9 @@ export function createDealRoutes(dealService: DealService): Router {
   }
 
   // Company-wide deal funnel grouped by status (optionally narrowed by date range)
-  router.get('/analytics/funnel', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.get('/analytics/funnel', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const from = typeof req.query.from === 'string' && ISO_DATE.test(req.query.from) ? req.query.from : undefined
       const to = typeof req.query.to === 'string' && ISO_DATE.test(req.query.to) ? req.query.to : undefined
       const timezone = isValidTimezone(req.query.timezone) ? req.query.timezone : DEFAULT_TIMEZONE
@@ -62,6 +65,7 @@ export function createDealRoutes(dealService: DealService): Router {
       }
 
       const result = await dealService.getFunnel(
+        accountId,
         from && to ? { from, to, timezone, dateField } : undefined
       )
       res.json(result)
@@ -72,9 +76,10 @@ export function createDealRoutes(dealService: DealService): Router {
   })
 
   // Performance por origem do cliente — usado pelo radar do BI.
-  router.get('/analytics/by-origin', authenticateToken, async (_req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.get('/analytics/by-origin', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      const result = await dealService.getPerformanceByOrigin()
+      const accountId = req.user!.accountId
+      const result = await dealService.getPerformanceByOrigin(accountId)
       res.json(result)
     } catch (error) {
       console.error('Error in deals by-origin analytics route:', error)
@@ -84,10 +89,11 @@ export function createDealRoutes(dealService: DealService): Router {
 
   // Cadência: deals que precisam de tag vermelha no Kanban.
   // Filtrado por user_id do requester — cada corretor vê seus próprios.
-  router.get('/analytics/cadence', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.get('/analytics/cadence', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const userId = req.user!.userId
-      const result = await dealService.getDealsNeedingCadence(userId)
+      const result = await dealService.getDealsNeedingCadence(accountId, userId)
       res.json(result)
     } catch (error) {
       console.error('Error in deals cadence route:', error)
@@ -95,8 +101,9 @@ export function createDealRoutes(dealService: DealService): Router {
     }
   })
 
-  router.post('/', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.post('/', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const userId = req.user!.userId
       const {
         client,
@@ -127,7 +134,7 @@ export function createDealRoutes(dealService: DealService): Router {
         user_id: userId,
       }
 
-      const deal = await dealService.createDeal(payload)
+      const deal = await dealService.createDeal(accountId, payload)
       res.json(deal)
     } catch (error) {
       console.error('Error in create deal route:', error)
@@ -135,8 +142,9 @@ export function createDealRoutes(dealService: DealService): Router {
     }
   })
 
-  router.put('/:id', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.put('/:id', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const userId = req.user!.userId
       const id = parseInt(req.params.id)
       const {
@@ -162,7 +170,7 @@ export function createDealRoutes(dealService: DealService): Router {
         origin_date === undefined &&
         gsv === undefined
       if (onlyStatus) {
-        const deal = await dealService.updateDealStatus(id, status)
+        const deal = await dealService.updateDealStatus(accountId, id, status)
         res.json(deal)
         return
       }
@@ -182,7 +190,7 @@ export function createDealRoutes(dealService: DealService): Router {
         user_id: userId,
       }
 
-      const deal = await dealService.updateDeal(id, payload)
+      const deal = await dealService.updateDeal(accountId, id, payload)
       res.json(deal)
     } catch (error) {
       console.error('Error in update deal route:', error)
@@ -194,10 +202,11 @@ export function createDealRoutes(dealService: DealService): Router {
     }
   })
 
-  router.delete('/:id', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.delete('/:id', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const id = parseInt(req.params.id)
-      const result = await dealService.deleteDeal(id)
+      const result = await dealService.deleteDeal(accountId, id)
       res.json(result)
     } catch (error) {
       console.error('Error in delete deal route:', error)

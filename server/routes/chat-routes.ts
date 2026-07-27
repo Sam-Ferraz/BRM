@@ -1,21 +1,23 @@
 import { Response, Router } from 'express'
 import { ChatService } from '../services/index.js'
-import { authenticateToken, AuthenticatedRequest } from '../middleware/auth.js'
+import { authenticateToken, requireAccount, AuthenticatedRequest } from '../middleware/auth.js'
 
 /**
  * /api/chat/* — endpoints de conversas e mensagens.
  *
- * Visão admin: vê todas as conversas (sem filtro por owner).
+ * Visão admin: vê todas as conversas da account (sem filtro por owner).
  * Visão corretor: apenas as suas. A regra mora no ChatService.
+ * Todas as rotas exigem accountId no token (multi-tenancy).
  */
 export function createChatRoutes(chatService: ChatService): Router {
   const router = Router()
 
   // Lista de conversas (com último preview já enriquecido)
-  router.get('/conversations', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.get('/conversations', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const viewer = { userId: req.user!.userId, role: req.user!.role }
-      const result = await chatService.listConversations(viewer)
+      const result = await chatService.listConversations(accountId, viewer)
       res.json(result)
     } catch (error) {
       console.error('Error listing conversations:', error)
@@ -24,11 +26,12 @@ export function createChatRoutes(chatService: ChatService): Router {
   })
 
   // Detalhe + histórico de mensagens (também marca como lido)
-  router.get('/conversations/:id', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.get('/conversations/:id', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const id = parseInt(req.params.id)
+      const accountId = req.user!.accountId
       const viewer = { userId: req.user!.userId, role: req.user!.role }
-      const result = await chatService.getConversation(id, viewer)
+      const result = await chatService.getConversation(accountId, id, viewer)
       res.json(result)
     } catch (error) {
       if (error instanceof Error && error.message === 'Conversation not found') {
@@ -46,11 +49,12 @@ export function createChatRoutes(chatService: ChatService): Router {
 
   // Inicia uma nova conversa (ou reutiliza existente para o mesmo contato)
   // e já envia a primeira mensagem.
-  router.post('/conversations', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.post('/conversations', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const viewer = { userId: req.user!.userId, role: req.user!.role }
       const { contact_phone, contact_name, message } = req.body
-      const result = await chatService.startConversation(viewer, contact_phone, contact_name ?? null, message)
+      const result = await chatService.startConversation(accountId, viewer, contact_phone, contact_name ?? null, message)
       res.json(result)
     } catch (error) {
       if (error instanceof Error && ['contact_phone is required', 'message is required'].includes(error.message)) {
@@ -67,12 +71,13 @@ export function createChatRoutes(chatService: ChatService): Router {
   })
 
   // Envia mensagem em conversa existente
-  router.post('/conversations/:id/messages', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.post('/conversations/:id/messages', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const id = parseInt(req.params.id)
+      const accountId = req.user!.accountId
       const viewer = { userId: req.user!.userId, role: req.user!.role }
       const { content } = req.body
-      const message = await chatService.sendMessage(id, viewer, content)
+      const message = await chatService.sendMessage(accountId, id, viewer, content)
       res.json({ data: message })
     } catch (error) {
       if (error instanceof Error && error.message === 'Conversation not found') {
@@ -95,9 +100,10 @@ export function createChatRoutes(chatService: ChatService): Router {
   // Endpoint de simulação — recebe uma mensagem entrante como se fosse o
   // webhook do provedor real. Útil para teste local enquanto não há provider.
   // Em produção este endpoint seria substituído pelo handler do webhook.
-  router.post('/inbound', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.post('/inbound', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const viewer = req.user!
+      const accountId = viewer.accountId
       const {
         owner_user_id,
         from_phone,
@@ -106,13 +112,15 @@ export function createChatRoutes(chatService: ChatService): Router {
         provider_message_id,
       } = req.body
 
-      // Admin pode simular entrada para qualquer dono; corretor só para si mesmo.
+      // Admin pode simular entrada para qualquer dono da MESMA account;
+      // corretor só para si mesmo.
       const ownerUserId =
         viewer.role === 'admin' && typeof owner_user_id === 'number'
           ? owner_user_id
           : viewer.userId
 
       const message = await chatService.receiveMessage({
+        accountId,
         ownerUserId,
         fromPhone: from_phone,
         fromName: from_name ?? null,

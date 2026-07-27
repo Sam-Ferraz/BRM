@@ -1,10 +1,14 @@
 import { Request, Response, Router } from 'express'
 import { ProductService } from '../services/index.js'
-import { authenticateToken, AuthenticatedRequest } from '../middleware/auth.js'
+import { ProductRepository } from '../repositories/index.js'
+import { authenticateToken, requireAccount, AuthenticatedRequest } from '../middleware/auth.js'
 import storageService from '../services/storage-service.js'
 import { uploadSingle, uploadMultiple, handleUploadErrors } from '../middleware/upload.js'
 
-export function createProductRoutes(productService: ProductService): Router {
+export function createProductRoutes(
+  productService: ProductService,
+  productRepository: ProductRepository
+): Router {
   const router = Router()
 
   // Public endpoint to get products (hardcoded response for security and testing)
@@ -91,12 +95,13 @@ export function createProductRoutes(productService: ProductService): Router {
       ],
       "total": 7
     }
-    
+
     res.json(hardcodedResponse)
   })
 
-  router.get('/', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.get('/', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const filters = {
         search: req.query.search as string,
         type: req.query.type as string,
@@ -104,8 +109,8 @@ export function createProductRoutes(productService: ProductService): Router {
         sortBy: req.query.sortBy as string,
         sortOrder: req.query.sortOrder as 'asc' | 'desc'
       }
-      
-      const result = await productService.getAllProducts(filters)
+
+      const result = await productService.getAllProducts(accountId, filters)
       res.json(result)
     } catch (error) {
       console.error('Error in get products route:', error)
@@ -113,13 +118,14 @@ export function createProductRoutes(productService: ProductService): Router {
     }
   })
 
-  router.post('/', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.post('/', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       // Aceita todos os campos do Product (capturer, exclusivity, bedrooms etc).
       // O service/repository validam via tipagem TS antes do INSERT.
       // user_id sempre vem do token, nunca do body, pra evitar spoofing.
+      const accountId = req.user!.accountId
       const userId = req.user!.userId
-      const product = await productService.createProduct({ ...req.body, user_id: userId })
+      const product = await productService.createProduct(accountId, { ...req.body, user_id: userId })
       res.json(product)
     } catch (error) {
       console.error('Error in create product route:', error)
@@ -127,11 +133,12 @@ export function createProductRoutes(productService: ProductService): Router {
     }
   })
 
-  router.put('/:id', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.put('/:id', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const id = parseInt(req.params.id)
       const userId = req.user!.userId
-      const product = await productService.updateProduct(id, { ...req.body, user_id: userId })
+      const product = await productService.updateProduct(accountId, id, { ...req.body, user_id: userId })
       res.json(product)
     } catch (error) {
       console.error('Error in update product route:', error)
@@ -144,15 +151,16 @@ export function createProductRoutes(productService: ProductService): Router {
   })
 
   // Toggle de visibilidade na Vitrine (sem precisar mandar o produto inteiro)
-  router.patch('/:id/availability', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.patch('/:id/availability', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const id = parseInt(req.params.id)
       const { available_for_sale } = req.body
       if (typeof available_for_sale !== 'boolean') {
         res.status(400).json({ error: 'available_for_sale (boolean) is required' })
         return
       }
-      const product = await productService.setAvailability(id, available_for_sale)
+      const product = await productService.setAvailability(accountId, id, available_for_sale)
       res.json(product)
     } catch (error) {
       if (error instanceof Error && error.message === 'Product not found') {
@@ -164,11 +172,12 @@ export function createProductRoutes(productService: ProductService): Router {
     }
   })
 
-  router.delete('/:id', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.delete('/:id', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const id = parseInt(req.params.id)
-      const result = await productService.deleteProduct(id)
-      
+      const result = await productService.deleteProduct(accountId, id)
+
       // Clean up storage files if they exist
       if (result.imagePaths.length > 0) {
         try {
@@ -178,7 +187,7 @@ export function createProductRoutes(productService: ProductService): Router {
           // Don't fail the product deletion if image cleanup fails
         }
       }
-      
+
       res.json({ success: true })
     } catch (error) {
       console.error('Error in delete product route:', error)
@@ -191,34 +200,38 @@ export function createProductRoutes(productService: ProductService): Router {
   })
 
   // Product Images routes
+  //
+  // Os endpoints públicos de leitura de imagens (listagem, arquivo individual,
+  // thumbnail) continuam sem auth pra suportar <img src> embutido no browser.
+  // As imagens são consideradas assets "públicos" — herdam via FK do produto,
+  // mas o próprio product_images não tem account_id no schema. Por isso essas
+  // rotas usam o repositório diretamente (sem passar pelo service, que exige
+  // accountId pra validar a posse do produto).
 
-  // Get all images for a product
+  // Get all images for a product (público)
   router.get('/:id/images', async (req: Request, res: Response): Promise<void> => {
     try {
       const id = parseInt(req.params.id)
-      const result = await productService.getProductImages(id)
-      res.json(result)
+      const images = await productRepository.getProductImages(id)
+      res.json({ images })
     } catch (error) {
       console.error('Error in get product images route:', error)
-      if (error instanceof Error && error.message === 'Product not found') {
-        res.status(404).json({ error: 'Product not found' })
-        return
-      }
       res.status(500).json({ error: 'Internal server error' })
     }
   })
 
   // Upload new image for a product
-  router.post('/:id/images', authenticateToken, uploadSingle, handleUploadErrors, async (req: any, res: Response): Promise<void> => {
+  router.post('/:id/images', authenticateToken, requireAccount, uploadSingle, handleUploadErrors, async (req: any, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const id = parseInt(req.params.id)
       const { alt_text } = req.body
-      
+
       if (!req.file) {
         res.status(400).json({ error: 'No image file provided' })
         return
       }
-      
+
       // Upload new image to storage
       const filePath = await storageService.uploadFile(
         req.file.buffer,
@@ -226,8 +239,8 @@ export function createProductRoutes(productService: ProductService): Router {
         req.file.mimetype,
         id
       )
-      
-      const result = await productService.addProductImage(id, filePath, alt_text || req.file.originalname)
+
+      const result = await productService.addProductImage(accountId, id, filePath, alt_text || req.file.originalname)
       res.json(result)
     } catch (error) {
       console.error('Error in upload product image route:', error)
@@ -240,15 +253,16 @@ export function createProductRoutes(productService: ProductService): Router {
   })
 
   // Upload multiple images for a product
-  router.post('/:id/images/bulk', authenticateToken, uploadMultiple, handleUploadErrors, async (req: any, res: Response): Promise<void> => {
+  router.post('/:id/images/bulk', authenticateToken, requireAccount, uploadMultiple, handleUploadErrors, async (req: any, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const id = parseInt(req.params.id)
-      
+
       if (!req.files || req.files.length === 0) {
         res.status(400).json({ error: 'No image files provided' })
         return
       }
-      
+
       const uploadPromises = req.files.map(async (file: Express.Multer.File) => {
         const filePath = await storageService.uploadFile(
           file.buffer,
@@ -258,9 +272,9 @@ export function createProductRoutes(productService: ProductService): Router {
         )
         return { url: filePath, altText: file.originalname }
       })
-      
+
       const imageData = await Promise.all(uploadPromises)
-      const result = await productService.addMultipleProductImages(id, imageData)
+      const result = await productService.addMultipleProductImages(accountId, id, imageData)
       res.json(result)
     } catch (error) {
       console.error('Error in bulk upload product images route:', error)
@@ -272,17 +286,21 @@ export function createProductRoutes(productService: ProductService): Router {
     }
   })
 
-  // Get individual image file
+  // Get individual image file (público — servido como <img src>)
   router.get('/:id/images/:imageId', async (req: Request, res: Response): Promise<void> => {
     try {
       const id = parseInt(req.params.id)
       const imageId = parseInt(req.params.imageId)
-      
-      const image = await productService.getProductImage(id, imageId)
-      
+
+      const image = await productRepository.findImageById(imageId, id)
+      if (!image) {
+        res.status(404).json({ error: 'Image not found' })
+        return
+      }
+
       // Stream image from storage
       const fileData = await storageService.getFile(image.image_url)
-      
+
       // Set appropriate headers
       res.set({
         'Content-Type': fileData.contentType,
@@ -290,12 +308,12 @@ export function createProductRoutes(productService: ProductService): Router {
         'Cache-Control': 'public, max-age=86400',
         'Last-Modified': fileData.lastModified.toUTCString()
       })
-      
+
       // Stream the file
       fileData.body.pipe(res)
     } catch (error) {
       console.error('Error in get product image route:', error)
-      if (error instanceof Error && (error.message === 'Image not found' || error.message === 'File not found')) {
+      if (error instanceof Error && error.message === 'File not found') {
         res.status(404).json({ error: 'Image not found' })
         return
       }
@@ -304,18 +322,19 @@ export function createProductRoutes(productService: ProductService): Router {
   })
 
   // Update image (set as thumbnail, change order, update alt text)
-  router.put('/:id/images/:imageId', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.put('/:id/images/:imageId', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const id = parseInt(req.params.id)
       const imageId = parseInt(req.params.imageId)
       const { is_thumbnail, display_order, alt_text } = req.body
-      
-      const result = await productService.updateProductImage(id, imageId, {
+
+      const result = await productService.updateProductImage(accountId, id, imageId, {
         is_thumbnail,
         display_order,
         alt_text
       })
-      
+
       res.json(result)
     } catch (error) {
       console.error('Error in update product image route:', error)
@@ -328,13 +347,14 @@ export function createProductRoutes(productService: ProductService): Router {
   })
 
   // Delete individual image
-  router.delete('/:id/images/:imageId', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.delete('/:id/images/:imageId', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const id = parseInt(req.params.id)
       const imageId = parseInt(req.params.imageId)
-      
-      const result = await productService.deleteProductImage(id, imageId)
-      
+
+      const result = await productService.deleteProductImage(accountId, id, imageId)
+
       // Delete from storage
       try {
         await storageService.deleteFile(result.image.image_url)
@@ -342,7 +362,7 @@ export function createProductRoutes(productService: ProductService): Router {
         console.error('Error deleting image from S3:', s3Error)
         // Don't fail the deletion if S3 cleanup fails
       }
-      
+
       res.json(result)
     } catch (error) {
       console.error('Error in delete product image route:', error)
@@ -354,15 +374,19 @@ export function createProductRoutes(productService: ProductService): Router {
     }
   })
 
-  // Get product thumbnail URL (for quick access)
+  // Get product thumbnail URL (público — servido como <img src>)
   router.get('/:id/thumbnail', async (req: Request, res: Response): Promise<void> => {
     try {
       const id = parseInt(req.params.id)
-      const thumbnail = await productService.getProductThumbnail(id)
-      
+      const thumbnail = await productRepository.getThumbnailImage(id)
+      if (!thumbnail) {
+        res.status(404).json({ error: 'Thumbnail not found' })
+        return
+      }
+
       // Stream image from storage
       const fileData = await storageService.getFile(thumbnail.image_url)
-      
+
       // Set appropriate headers
       res.set({
         'Content-Type': fileData.contentType,
@@ -370,12 +394,12 @@ export function createProductRoutes(productService: ProductService): Router {
         'Cache-Control': 'public, max-age=86400',
         'Last-Modified': fileData.lastModified.toUTCString()
       })
-      
+
       // Stream the file
       fileData.body.pipe(res)
     } catch (error) {
       console.error('Error in get product thumbnail route:', error)
-      if (error instanceof Error && (error.message === 'No thumbnail found' || error.message === 'File not found')) {
+      if (error instanceof Error && error.message === 'File not found') {
         res.status(404).json({ error: 'Thumbnail not found' })
         return
       }

@@ -2,11 +2,14 @@ import { Response, Router } from 'express'
 import { WhatsAppService } from '../services/index.js'
 import { WhatsAppProvider } from '../services/whatsapp-provider.js'
 import { WhatsAppSessionRepository } from '../repositories/index.js'
-import { authenticateToken, AuthenticatedRequest } from '../middleware/auth.js'
+import { authenticateToken, requireAccount, AuthenticatedRequest } from '../middleware/auth.js'
 
 /**
  * /api/whatsapp/* — gerencia o vínculo entre usuário do BRM e número
  * WhatsApp. Cada usuário tem no máximo uma sessão (1:1).
+ *
+ * Todas as rotas exigem accountId no token (multi-tenancy) — o webhook
+ * público fica noutro router (whatsapp-webhook-routes).
  *
  * Fluxo com Baileys:
  *   1. Frontend chama POST /api/whatsapp/start
@@ -23,10 +26,11 @@ export function createWhatsAppRoutes(
 ): Router {
   const router = Router()
 
-  router.get('/session', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.get('/session', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const userId = req.user!.userId
-      const session = await whatsappService.getSession(userId)
+      const session = await whatsappService.getSession(accountId, userId)
       res.json({ data: session })
     } catch (error) {
       console.error('Error fetching whatsapp session:', error)
@@ -34,15 +38,16 @@ export function createWhatsAppRoutes(
     }
   })
 
-  router.post('/session', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.post('/session', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const userId = req.user!.userId
       const { phone_number, display_name } = req.body
       if (!phone_number || typeof phone_number !== 'string') {
         res.status(400).json({ error: 'phone_number is required' })
         return
       }
-      const session = await whatsappService.connect(userId, phone_number, display_name ?? null)
+      const session = await whatsappService.connect(accountId, userId, phone_number, display_name ?? null)
       res.json({ data: session })
     } catch (error) {
       if (error instanceof Error && error.message === 'phone_number is required') {
@@ -54,12 +59,13 @@ export function createWhatsAppRoutes(
     }
   })
 
-  router.delete('/session', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.delete('/session', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const userId = req.user!.userId
       // Encerra também o socket Baileys (se existir) e apaga auth state em disco.
       await provider.stopSession(userId)
-      const result = await whatsappService.disconnect(userId)
+      const result = await whatsappService.disconnect(accountId, userId)
       res.json(result)
     } catch (error) {
       console.error('Error disconnecting whatsapp session:', error)
@@ -73,7 +79,7 @@ export function createWhatsAppRoutes(
    * Inicia a sessão do provedor (abre socket Baileys). Resposta imediata
    * com o estado atual; o QR aparecerá em GET /state assim que disponível.
    */
-  router.post('/start', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.post('/start', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const userId = req.user!.userId
       const state = await provider.startSession(userId)
@@ -88,7 +94,7 @@ export function createWhatsAppRoutes(
    * Estado atual da sessão (status + QR Code se aplicável). Frontend deve
    * fazer polling enquanto status !== 'connected'.
    */
-  router.get('/state', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.get('/state', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const userId = req.user!.userId
       const state = provider.getSessionState(userId)
@@ -106,8 +112,9 @@ export function createWhatsAppRoutes(
    * usuário logado. Validação básica de presença; a validade real é
    * confirmada na primeira chamada à Graph API.
    */
-  router.post('/cloud-api/connect', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  router.post('/cloud-api/connect', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const accountId = req.user!.accountId
       const userId = req.user!.userId
       const {
         phone_number,
@@ -127,6 +134,7 @@ export function createWhatsAppRoutes(
       }
 
       const session = await sessionRepository.upsertCloudApiCredentials({
+        accountId,
         userId,
         phoneNumber: String(phone_number),
         displayName: display_name ?? null,

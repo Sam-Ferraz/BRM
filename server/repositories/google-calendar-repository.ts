@@ -4,14 +4,16 @@ import { GoogleCalendarConnection } from '../types/index.js'
 /**
  * Persistência da conexão Google Calendar por usuário.
  * A tabela é 1:1 com users (UNIQUE em user_id), então upsert usa isso.
+ * Toda query filtra por account_id (tenant) — o UNIQUE em user_id garante
+ * que uma linha só pertence a uma account, mas o filtro blinda a leitura.
  */
 export class GoogleCalendarRepository extends BaseRepository {
-  async findByUserId(userId: number): Promise<GoogleCalendarConnection | null> {
+  async findByUserId(accountId: number, userId: number): Promise<GoogleCalendarConnection | null> {
     const client = await this.getClient()
     try {
       const result = await client.query<GoogleCalendarConnection>(
-        `SELECT * FROM user_google_calendar WHERE user_id = $1`,
-        [userId]
+        `SELECT * FROM user_google_calendar WHERE user_id = $1 AND account_id = $2`,
+        [userId, accountId]
       )
       return result.rows[0] || null
     } finally {
@@ -20,9 +22,11 @@ export class GoogleCalendarRepository extends BaseRepository {
   }
 
   /**
-   * Upsert por user_id. Substitui tokens e email na reautenticação.
+   * Upsert por user_id, associando a conexão à account informada.
+   * Substitui tokens e email na reautenticação.
    */
   async upsert(input: {
+    account_id: number
     user_id: number
     connected_email: string
     access_token: string
@@ -34,8 +38,8 @@ export class GoogleCalendarRepository extends BaseRepository {
     try {
       const result = await client.query<GoogleCalendarConnection>(
         `INSERT INTO user_google_calendar
-           (user_id, connected_email, access_token, refresh_token, token_expires_at, scope, last_sync_at)
-         VALUES ($1, $2, $3, $4, $5, $6, NOW())
+           (account_id, user_id, connected_email, access_token, refresh_token, token_expires_at, scope, last_sync_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
          ON CONFLICT (user_id) DO UPDATE SET
            connected_email  = EXCLUDED.connected_email,
            access_token     = EXCLUDED.access_token,
@@ -46,6 +50,7 @@ export class GoogleCalendarRepository extends BaseRepository {
            updated_at       = NOW()
          RETURNING *`,
         [
+          input.account_id,
           input.user_id,
           input.connected_email,
           input.access_token,
@@ -65,6 +70,7 @@ export class GoogleCalendarRepository extends BaseRepository {
    * O refresh_token do Google não muda a cada refresh — a gente mantém o original.
    */
   async updateAccessToken(
+    accountId: number,
     userId: number,
     accessToken: string,
     expiresAt: Date
@@ -74,32 +80,32 @@ export class GoogleCalendarRepository extends BaseRepository {
       await client.query(
         `UPDATE user_google_calendar
          SET access_token = $1, token_expires_at = $2, updated_at = NOW()
-         WHERE user_id = $3`,
-        [accessToken, expiresAt, userId]
+         WHERE user_id = $3 AND account_id = $4`,
+        [accessToken, expiresAt, userId, accountId]
       )
     } finally {
       client.release()
     }
   }
 
-  async markSynced(userId: number): Promise<void> {
+  async markSynced(accountId: number, userId: number): Promise<void> {
     const client = await this.getClient()
     try {
       await client.query(
-        `UPDATE user_google_calendar SET last_sync_at = NOW() WHERE user_id = $1`,
-        [userId]
+        `UPDATE user_google_calendar SET last_sync_at = NOW() WHERE user_id = $1 AND account_id = $2`,
+        [userId, accountId]
       )
     } finally {
       client.release()
     }
   }
 
-  async deleteByUserId(userId: number): Promise<boolean> {
+  async deleteByUserId(accountId: number, userId: number): Promise<boolean> {
     const client = await this.getClient()
     try {
       const result = await client.query(
-        `DELETE FROM user_google_calendar WHERE user_id = $1`,
-        [userId]
+        `DELETE FROM user_google_calendar WHERE user_id = $1 AND account_id = $2`,
+        [userId, accountId]
       )
       return (result.rowCount ?? 0) > 0
     } finally {
