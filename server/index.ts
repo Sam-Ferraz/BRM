@@ -73,6 +73,12 @@ import { LeadPipelineService } from './services/lead-pipeline-service.js'
 import { AccountRepository } from './repositories/account-repository.js'
 import { AccountService } from './services/account-service.js'
 import { createAccountRoutes } from './routes/account-routes.js'
+import { PasswordSetupTokenRepository } from './repositories/password-setup-token-repository.js'
+import { EmailService } from './services/email-service.js'
+import { PasswordService } from './services/password-service.js'
+import { CouponRepository } from './repositories/coupon-repository.js'
+import { CouponService } from './services/coupon-service.js'
+import { createCouponRoutes } from './routes/coupon-routes.js'
 import { createSaleRoutes } from './routes/sale-routes.js'
 import { createWhatsAppWebhookRoutes } from './routes/whatsapp-webhook-routes.js'
 import { createCalendarRoutes } from './routes/calendar-routes.js'
@@ -273,7 +279,12 @@ const leadService = new LeadService(
 
 // Setup routes
 // Login e verify passam pelo authLimiter — brute-force fica inviável.
-app.use('/api/auth', authLimiter, createAuthRoutes(authService))
+// Password setup/reset via email + Resend
+const passwordTokenRepository = new PasswordSetupTokenRepository()
+const emailService = new EmailService()
+const passwordService = new PasswordService(userRepository, passwordTokenRepository, emailService, authService)
+
+app.use('/api/auth', authLimiter, createAuthRoutes(authService, passwordService))
 app.use('/api/dashboard', createDashboardRoutes(dashboardService, appointmentService))
 app.use('/api/deals', createDealRoutes(dealService))
 app.use('/api/clients', createClientRoutes(clientService))
@@ -300,8 +311,14 @@ app.use('/api/user-mgmt', createUserManagementRoutes(userManagementService, perm
 {
   // Multi-tenancy: accounts. GET /me (qualquer user) + super-admin (BRM Demo).
   const accountRepository = new AccountRepository()
-  const accountService = new AccountService(accountRepository, userRepository)
+  const accountService = new AccountService(accountRepository, userRepository, passwordTokenRepository, emailService)
   app.use('/api/accounts', createAccountRoutes(accountService))
+}
+{
+  // Cupons de desconto — super-admin gerencia, LP valida antes do checkout.
+  const couponRepository = new CouponRepository()
+  const couponService = new CouponService(couponRepository)
+  app.use('/api/coupons', createCouponRoutes(couponService))
 }
 // Webhook público do WhatsApp Cloud API (Meta chama esse endpoint).
 // Sem autenticação — segurança via validação X-Hub-Signature-256 com

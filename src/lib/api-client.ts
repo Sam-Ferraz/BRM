@@ -81,6 +81,24 @@ export const apiClient = new ApiClient()
 // API endpoints with type safety
 
 // ---------------------------------------------------------------------------
+// Cupons de desconto
+export interface Coupon {
+  id: number
+  code: string
+  description?: string | null
+  discount_type: 'percent' | 'fixed_brl'
+  discount_value: number
+  valid_from?: string | null
+  valid_until?: string | null
+  max_uses?: number | null
+  uses_count: number
+  plan_filter?: string | null
+  is_active: boolean
+  created_at?: string
+  updated_at?: string
+}
+export type CouponPayload = Omit<Coupon, 'id' | 'uses_count' | 'created_at' | 'updated_at'>
+
 // Multi-tenancy — Account (empresa/cliente do BRM)
 export interface AccountCustomConfigLike {
   theme?: {
@@ -1359,9 +1377,11 @@ export const api = {
       plan?: 'trial' | 'basic' | 'pro' | 'enterprise'
       admin_name: string
       admin_email: string
-      admin_password: string
-    }): Promise<{ data: { account: Account; admin_user: { id: number; email: string } } }> => {
+    }): Promise<{ data: { account: Account; admin_user: { id: number; email: string; name: string }; email_sent: boolean } }> => {
       return apiClient.post('/accounts', input)
+    },
+    resendSetup: async (userId: number): Promise<{ data: { email_sent: boolean } }> => {
+      return apiClient.post('/accounts/resend-setup', { user_id: userId })
     },
     update: async (
       id: number,
@@ -1369,6 +1389,21 @@ export const api = {
     ): Promise<{ data: Account }> => {
       return apiClient.patch(`/accounts/${id}`, input)
     },
+  },
+
+  // Cupons de desconto — super-admin CRUD + LP validate público
+  coupons: {
+    list: async (): Promise<{ data: Coupon[] }> => apiClient.get('/coupons'),
+    create: async (input: CouponPayload): Promise<{ data: Coupon }> => apiClient.post('/coupons', input),
+    update: async (id: number, input: Partial<CouponPayload>): Promise<{ data: Coupon }> => apiClient.patch(`/coupons/${id}`, input),
+    delete: async (id: number): Promise<{ data: { success: boolean } }> => apiClient.delete(`/coupons/${id}`),
+    // Endpoint público (sem auth) — sua LP consome
+    validate: async (code: string, plan?: string): Promise<{
+      valid: boolean
+      error?: string
+      coupon?: { code: string; discount_type: 'percent' | 'fixed_brl'; discount_value: number; description?: string | null }
+      discount_display?: string
+    }> => apiClient.post('/coupons/validate', { code, plan }),
   },
 
   // Esteira de Leads — CRUD (admin/gerente).

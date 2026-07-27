@@ -24,6 +24,9 @@ import ConfigPage from './pages/ConfigPage'
 import UsersPage from './pages/UsersPage'
 import LeadPipelinesPage from './pages/LeadPipelinesPage'
 import AdminAccountsPage from './pages/AdminAccountsPage'
+import AdminCouponsPage from './pages/AdminCouponsPage'
+import SetupPasswordPage from './pages/SetupPasswordPage'
+import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import PermissionsPage from './pages/PermissionsPage'
 import './lib/i18n'
 import './index.css'
@@ -132,6 +135,14 @@ function App() {
                   <AdminAccountsPage />
                 </ProtectedRoute>
               } />
+              <Route path="/admin/coupons" element={
+                <ProtectedRoute>
+                  <AdminCouponsPage />
+                </ProtectedRoute>
+              } />
+              {/* Rotas públicas (sem auth) — link mágico do email cai aqui */}
+              <Route path="/setup-password" element={<SetupPasswordPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </div>

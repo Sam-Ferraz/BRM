@@ -87,6 +87,24 @@ export function createAccountRoutes(service: AccountService): Router {
     }
   }))
 
+  // Reenvia email de setup pra user que ainda não definiu senha.
+  // Body: { user_id: number }. Só super-admin usa.
+  router.post('/resend-setup', authenticateToken, requireAccount, (req: AuthenticatedRequest, res: Response) => requireSuperAdmin(req, res, async () => {
+    try {
+      const userId = parseInt(req.body?.user_id, 10)
+      if (!Number.isFinite(userId)) {
+        res.status(400).json({ error: 'user_id é obrigatório' })
+        return
+      }
+      const result = await service.resendSetupEmail(userId)
+      res.json({ data: result })
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Erro ao reenviar email'
+      console.error('Error resending setup email:', err)
+      res.status(400).json({ error: msg })
+    }
+  }))
+
   router.patch('/:id', authenticateToken, requireAccount, (req: AuthenticatedRequest, res: Response) => requireSuperAdmin(req, res, async () => {
     try {
       const id = parseInt(req.params.id, 10)

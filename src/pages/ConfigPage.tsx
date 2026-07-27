@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next"
 import { Link, useSearchParams } from "react-router-dom"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Settings, CheckCircle2, XCircle, Users as UsersIcon, Shield, ChevronRight, Route as RouteIcon, Building2 } from "lucide-react"
+import { ArrowLeft, Settings, CheckCircle2, XCircle, Users as UsersIcon, Shield, ChevronRight, Route as RouteIcon, Building2, Tag } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { LanguageSelector } from "@/components/language-selector"
@@ -204,25 +204,44 @@ export default function ConfigPage() {
                   <ChevronRight className="w-5 h-5 text-muted-foreground" />
                 </Link>
 
-                {/* Super-admin: contas cliente. Só aparece pro admin da BRM Demo (account_id=1). */}
+                {/* Super-admin: contas cliente + cupons. Só admin da BRM Demo (account_id=1). */}
                 {user?.account_id === 1 && (
-                  <Link
-                    to="/admin/accounts"
-                    className="flex items-center justify-between rounded-md p-3 hover:bg-accent transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-amber-100 rounded-lg">
-                        <Building2 className="w-5 h-5 text-amber-700" />
+                  <>
+                    <Link
+                      to="/admin/accounts"
+                      className="flex items-center justify-between rounded-md p-3 hover:bg-accent transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-amber-100 rounded-lg">
+                          <Building2 className="w-5 h-5 text-amber-700" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">Contas cliente (super-admin)</p>
+                          <p className="text-xs text-muted-foreground">
+                            Provisionar novas empresas + gerenciar planos
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm font-medium">Contas cliente (super-admin)</p>
-                        <p className="text-xs text-muted-foreground">
-                          Provisionar novas empresas + gerenciar planos
-                        </p>
+                      <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                    </Link>
+                    <Link
+                      to="/admin/coupons"
+                      className="flex items-center justify-between rounded-md p-3 hover:bg-accent transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-purple-100 rounded-lg">
+                          <Tag className="w-5 h-5 text-purple-700" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">Cupons de desconto</p>
+                          <p className="text-xs text-muted-foreground">
+                            Códigos que a LP aceita antes do checkout
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                    <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                  </Link>
+                      <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                    </Link>
+                  </>
                 )}
               </CardContent>
             </Card>

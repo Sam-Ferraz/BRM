@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react"
 import { Link, Navigate } from "react-router-dom"
-import { ArrowLeft, Plus, Building2, User, Check, X, Copy } from "lucide-react"
+import { ArrowLeft, Plus, Building2, User, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -43,7 +43,6 @@ type ProvisionPayload = {
   plan: 'trial' | 'basic' | 'pro' | 'enterprise'
   admin_name: string
   admin_email: string
-  admin_password: string
 }
 
 const emptyPayload = (): ProvisionPayload => ({
@@ -51,14 +50,7 @@ const emptyPayload = (): ProvisionPayload => ({
   plan: 'trial',
   admin_name: '',
   admin_email: '',
-  admin_password: '',
 })
-
-// Gera senha temporária aleatória (14 caracteres, alfanum + símbolos leves)
-function generateTempPassword(): string {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789'
-  return Array.from({ length: 14 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
-}
 
 export default function AdminAccountsPage() {
   const { user: currentUser } = useAuth()
@@ -71,7 +63,8 @@ export default function AdminAccountsPage() {
   const [lastCreated, setLastCreated] = useState<{
     account_name: string
     admin_email: string
-    admin_password: string
+    admin_user_id: number
+    email_sent: boolean
   } | null>(null)
 
   const loadAll = useCallback(async () => {
@@ -100,21 +93,26 @@ export default function AdminAccountsPage() {
   }
 
   const openCreate = () => {
-    setPayload({ ...emptyPayload(), admin_password: generateTempPassword() })
+    setPayload(emptyPayload())
     setDialogOpen(true)
   }
 
   const handleProvision = async () => {
     setSaving(true)
     try {
-      await api.accounts.provision(payload)
-      // Guarda pra mostrar credenciais na tela DEPOIS de fechar o dialog
+      const res = await api.accounts.provision(payload)
       setLastCreated({
         account_name: payload.account_name,
         admin_email: payload.admin_email,
-        admin_password: payload.admin_password,
+        admin_user_id: res.data.admin_user.id,
+        email_sent: res.data.email_sent,
       })
-      toast({ title: 'Account criada com sucesso' })
+      toast({
+        title: 'Conta criada',
+        description: res.data.email_sent
+          ? 'Email de convite enviado ao cliente'
+          : 'Conta criada, mas o email falhou — use "Reenviar"',
+      })
       setDialogOpen(false)
       loadAll()
     } catch (err) {
@@ -125,6 +123,21 @@ export default function AdminAccountsPage() {
       })
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleResendSetup = async () => {
+    if (!lastCreated) return
+    try {
+      await api.accounts.resendSetup(lastCreated.admin_user_id)
+      toast({ title: 'Email reenviado' })
+      setLastCreated({ ...lastCreated, email_sent: true })
+    } catch (err) {
+      toast({
+        title: 'Erro',
+        description: err instanceof Error ? err.message : 'Falha ao reenviar',
+        variant: 'destructive',
+      })
     }
   }
 
@@ -156,16 +169,7 @@ export default function AdminAccountsPage() {
     }
   }
 
-  const copyCredentials = async () => {
-    if (!lastCreated) return
-    const text = `BRM — Credenciais de acesso\n\nEmpresa: ${lastCreated.account_name}\nURL: https://app.brm.tec.br\nEmail: ${lastCreated.admin_email}\nSenha temporária: ${lastCreated.admin_password}\n\nRecomendamos trocar a senha no primeiro login.`
-    try {
-      await navigator.clipboard.writeText(text)
-      toast({ title: 'Credenciais copiadas' })
-    } catch {
-      toast({ title: 'Copie manualmente', variant: 'destructive' })
-    }
-  }
+  // Não copia mais credenciais — cliente recebe email direto com link mágico
 
   return (
     <div className="min-h-screen bg-background">
@@ -183,38 +187,29 @@ export default function AdminAccountsPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-        {/* Credenciais recém-criadas — banner destacado */}
+        {/* Confirmação de conta criada + email enviado */}
         {lastCreated && (
-          <Card className="border-emerald-300 bg-emerald-50">
+          <Card className={lastCreated.email_sent ? 'border-emerald-300 bg-emerald-50' : 'border-amber-300 bg-amber-50'}>
             <CardHeader>
-              <CardTitle className="text-emerald-900 flex items-center gap-2">
+              <CardTitle className={lastCreated.email_sent ? 'text-emerald-900 flex items-center gap-2' : 'text-amber-900 flex items-center gap-2'}>
                 <Check className="w-5 h-5" />
-                Credenciais de "{lastCreated.account_name}"
+                {lastCreated.email_sent ? 'Conta criada e email enviado' : 'Conta criada — email falhou'}
               </CardTitle>
-              <p className="text-xs text-emerald-800">
-                Envie essas credenciais pro cliente por WhatsApp/email. Elas não vão ser mostradas de novo.
+              <p className={lastCreated.email_sent ? 'text-xs text-emerald-800' : 'text-xs text-amber-800'}>
+                Empresa <strong>{lastCreated.account_name}</strong>. Admin{' '}
+                <strong className="font-mono">{lastCreated.admin_email}</strong>.
+                {lastCreated.email_sent
+                  ? ' O cliente vai receber um email com link pra definir a senha.'
+                  : ' Reenvie o email — pode ter sido falha temporária do provedor.'}
               </p>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <Label className="text-emerald-900">Email</Label>
-                  <p className="font-mono text-sm p-2 bg-white border border-emerald-200 rounded">
-                    {lastCreated.admin_email}
-                  </p>
-                </div>
-                <div>
-                  <Label className="text-emerald-900">Senha temporária</Label>
-                  <p className="font-mono text-sm p-2 bg-white border border-emerald-200 rounded">
-                    {lastCreated.admin_password}
-                  </p>
-                </div>
-              </div>
+            <CardContent>
               <div className="flex gap-2">
-                <Button size="sm" onClick={copyCredentials}>
-                  <Copy className="w-4 h-4 mr-1.5" />
-                  Copiar tudo
-                </Button>
+                {!lastCreated.email_sent && (
+                  <Button size="sm" onClick={handleResendSetup}>
+                    Reenviar email
+                  </Button>
+                )}
                 <Button size="sm" variant="outline" onClick={() => setLastCreated(null)}>
                   Fechar
                 </Button>
@@ -349,26 +344,9 @@ export default function AdminAccountsPage() {
                   placeholder="admin@empresa.com.br"
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Senha temporária *</Label>
-                <div className="flex gap-2">
-                  <Input
-                    value={payload.admin_password}
-                    onChange={(e) => setPayload((p) => ({ ...p, admin_password: e.target.value }))}
-                    className="font-mono"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setPayload((p) => ({ ...p, admin_password: generateTempPassword() }))}
-                  >
-                    Gerar
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  O cliente deve trocar essa senha no primeiro login.
-                </p>
-              </div>
+              <p className="text-xs text-muted-foreground bg-blue-50 border border-blue-200 rounded p-2">
+                O cliente vai receber um email com link mágico pra definir a própria senha (válido por 48h).
+              </p>
             </div>
           </div>
 

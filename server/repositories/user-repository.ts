@@ -55,7 +55,7 @@ export class UserRepository extends BaseRepository {
   async create(
     name: string,
     email: string,
-    passwordHash: string,
+    passwordHash: string | null,
     role: string = 'user',
     accountId: number
   ): Promise<User> {
@@ -68,6 +68,18 @@ export class UserRepository extends BaseRepository {
         [name, email, passwordHash, role, accountId]
       )
       return result.rows[0]
+    } finally {
+      this.releaseClient(client)
+    }
+  }
+
+  async updatePassword(userId: number, passwordHash: string): Promise<void> {
+    const client = await this.getClient()
+    try {
+      await client.query(
+        `UPDATE users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
+        [passwordHash, userId]
+      )
     } finally {
       this.releaseClient(client)
     }

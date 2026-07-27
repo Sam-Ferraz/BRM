@@ -1,9 +1,70 @@
 import { Request, Response, Router } from 'express'
 import { AuthService } from '../services/index.js'
+import { PasswordService } from '../services/password-service.js'
 import { authenticateToken, AuthenticatedRequest } from '../middleware/auth.js'
 
-export function createAuthRoutes(authService: AuthService): Router {
+export function createAuthRoutes(
+  authService: AuthService,
+  passwordService: PasswordService
+): Router {
   const router = Router()
+
+  // --- Password setup / reset via link magico ---
+
+  router.get('/validate-setup-token', async (req: Request, res: Response): Promise<void> => {
+    try {
+      const token = String(req.query.token || '')
+      if (!token) {
+        res.status(400).json({ valid: false, error: 'token é obrigatório' })
+        return
+      }
+      const result = await passwordService.validateToken(token)
+      if (!result) {
+        res.json({ valid: false })
+        return
+      }
+      res.json({ valid: true, ...result })
+    } catch (err) {
+      console.error('validate-setup-token error:', err)
+      res.status(500).json({ valid: false, error: 'Erro interno' })
+    }
+  })
+
+  router.post('/setup-password', async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { token, password } = req.body
+      if (!token || !password) {
+        res.status(400).json({ success: false, error: 'token e password são obrigatórios' })
+        return
+      }
+      const result = await passwordService.applyPassword(token, password)
+      if (!result.success) {
+        res.status(400).json(result)
+        return
+      }
+      res.json(result)
+    } catch (err) {
+      console.error('setup-password error:', err)
+      res.status(500).json({ success: false, error: 'Erro interno' })
+    }
+  })
+
+  router.post('/request-password-reset', async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { email } = req.body
+      if (!email) {
+        res.status(400).json({ success: false, error: 'email é obrigatório' })
+        return
+      }
+      // Sempre retorna sucesso pra não vazar quais emails existem
+      await passwordService.requestReset(email)
+      res.json({ success: true })
+    } catch (err) {
+      console.error('request-password-reset error:', err)
+      // Mesmo em erro, retorna sucesso silencioso
+      res.json({ success: true })
+    }
+  })
 
   router.post('/login', async (req: Request, res: Response): Promise<void> => {
     try {
