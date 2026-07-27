@@ -1,8 +1,10 @@
 import express from 'express'
 import cors from 'cors'
+import helmet from 'helmet'
 import dotenv from 'dotenv'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import { authLimiter, webhookLimiter } from './middleware/rate-limits.js'
 
 // Import repositories
 import {
@@ -84,6 +86,17 @@ const app = express()
 const PORT = process.env.PORT || 3002
 
 // Middleware
+// -----------------------------------------------------------------------------
+// Segurança HTTP (helmet) — headers padrão recomendados.
+// CSP fica DESLIGADA porque o Vite/React em prod inclui scripts inline e
+// ativar sem tuning quebra a app. Reavaliar após auditoria de assets.
+// crossOriginEmbedderPolicy também off porque bloqueia recursos externos
+// (S3, google-analytics, etc) usados no front.
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false,
+}))
+
 app.use(cors({
   origin: process.env.CLIENT_URL || 'http://localhost:5173',
   credentials: true
@@ -256,7 +269,8 @@ const leadService = new LeadService(
 )
 
 // Setup routes
-app.use('/api/auth', createAuthRoutes(authService))
+// Login e verify passam pelo authLimiter — brute-force fica inviável.
+app.use('/api/auth', authLimiter, createAuthRoutes(authService))
 app.use('/api/dashboard', createDashboardRoutes(dashboardService, appointmentService))
 app.use('/api/deals', createDealRoutes(dealService))
 app.use('/api/clients', createClientRoutes(clientService))
@@ -282,8 +296,8 @@ app.use('/api/user-mgmt', createUserManagementRoutes(userManagementService, perm
 }
 // Webhook público do WhatsApp Cloud API (Meta chama esse endpoint).
 // Sem autenticação — segurança via validação X-Hub-Signature-256 com
-// app_secret cadastrado por usuário.
-app.use('/api/whatsapp', createWhatsAppWebhookRoutes(whatsappSessionRepository, () => chatServiceRef))
+// app_secret cadastrado por usuário. Rate limit protege contra flood.
+app.use('/api/whatsapp', webhookLimiter, createWhatsAppWebhookRoutes(whatsappSessionRepository, () => chatServiceRef))
 
 // Serve React app for all non-API routes (client-side routing)
 app.get('*', (req, res) => {

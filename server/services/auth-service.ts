@@ -4,7 +4,11 @@ import { UserRepository } from '../repositories/index.js'
 import { AuthResult } from '../types/index.js'
 
 const JWT_SECRET = process.env.JWT_SECRET!
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d'
+// 1 dia: token vazado fica exposto no máximo 24h antes de precisar re-login.
+// Se um dia implementarmos refresh token, aí sim baixamos pra 15min no access
+// token. Enquanto isso, 1d é o ponto de equilíbrio entre segurança e UX (o
+// corretor não é forçado a re-logar no meio do dia).
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '1d'
 
 export class AuthService {
   private userRepository: UserRepository

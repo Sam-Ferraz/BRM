@@ -41,32 +41,16 @@ export function createAuthRoutes(authService: AuthService): Router {
     }
   })
 
-  router.post('/register', async (req: Request, res: Response): Promise<void> => {
-    try {
-      const { name, email, password, role } = req.body
-      
-      if (!name || !email || !password) {
-        res.status(400).json({ error: 'Nome, email e senha são obrigatórios' })
-        return
-      }
-      
-      const result = await authService.registerUser(name, email, password, role)
-      
-      if (!result.success) {
-        res.status(400).json({ error: result.error })
-        return
-      }
-      
-      res.json({
-        success: true,
-        token: result.token,
-        user: result.user
-      })
-    } catch (error) {
-      console.error('Register endpoint error:', error)
-      res.status(500).json({ error: 'Erro interno do servidor' })
-    }
-  })
+  // POST /register foi REMOVIDO em 2026-07-27 por questão de segurança.
+  //
+  // Antes: qualquer pessoa na internet criava conta como 'user' anonimamente.
+  // Agora: criação de usuário passa exclusivamente por /api/user-mgmt/users
+  // (gated por role admin). Isso mantém o CRM fechado — só admin cadastra
+  // corretor/gerente/etc.
+  //
+  // Se um dia precisarmos de signup público (ex: onboarding de conta trial),
+  // essa rota vira POST /api/accounts/signup e cria também a organization,
+  // não só o user. Não reabrir esta rota como estava.
 
   router.get('/users', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
