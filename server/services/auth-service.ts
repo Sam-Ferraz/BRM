@@ -116,4 +116,8 @@ export class AuthService {
     const users = await this.userRepository.findAll(accountId)
     return users.map(u => ({ id: u.id, name: u.name, email: u.email }))
   }
+
+  async getUserById(id: number) {
+    return this.userRepository.findById(id)
+  }
 }

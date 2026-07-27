@@ -62,11 +62,30 @@ export function createAuthRoutes(authService: AuthService): Router {
     }
   })
 
-  router.get('/verify', authenticateToken, (req: AuthenticatedRequest, res: Response): void => {
-    res.json({
-      success: true,
-      user: req.user
-    })
+  router.get('/verify', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    // Retorna o user no MESMO formato do /login (snake_case, com nome do banco),
+    // pra que o AuthContext do frontend não termine com objetos inconsistentes
+    // (ex: accountId camelCase vs account_id snake_case).
+    try {
+      const user = await authService.getUserById(req.user!.userId)
+      if (!user) {
+        res.status(401).json({ error: 'User not found' })
+        return
+      }
+      res.json({
+        success: true,
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          account_id: user.account_id,
+        },
+      })
+    } catch (err) {
+      console.error('Verify error:', err)
+      res.status(500).json({ error: 'Erro interno do servidor' })
+    }
   })
 
   router.post('/logout', (req: Request, res: Response): void => {
