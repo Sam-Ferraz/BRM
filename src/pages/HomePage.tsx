@@ -74,6 +74,17 @@ const STATUS_COLOR: Record<string, string> = {
   sold: "bg-green-100 text-green-800",
 }
 
+/**
+ * Extrai as iniciais do nome do cliente pra usar no avatar (max 2 letras).
+ * Ex: "Débora Quagliato Aires Caetano" → "DC" ; "Felipe" → "F"
+ */
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return "?"
+  if (parts.length === 1) return parts[0][0]?.toUpperCase() || "?"
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+}
+
 function formatCurrency(value: string | number | null | undefined): string {
   if (value === null || value === undefined || value === "") return "—"
   const n = typeof value === "string" ? parseFloat(value) : value
@@ -281,35 +292,46 @@ export default function HomePage() {
                   type="button"
                   onClick={() => handleSelect(deal.id)}
                   className={cn(
-                    "w-full text-left p-3 border-b hover:bg-accent transition-colors",
+                    "w-full text-left p-3 border-b hover:bg-accent transition-colors flex gap-3 items-start",
                     isSelected && "bg-accent",
                   )}
                 >
-                  <div className="flex items-start justify-between gap-2 mb-1">
-                    <div className="min-w-0 flex-1">
-                      <div className="font-medium text-sm truncate">{deal.client}</div>
-                      <div className="text-xs text-muted-foreground truncate">
-                        {deal.property_name || "—"}
-                      </div>
-                    </div>
-                    <div className="shrink-0 text-right">
-                      <div className="text-[10px] text-muted-foreground">
-                        {formatRelative(deal.updated_at)}
-                      </div>
-                      <DealCodeBadge id={deal.id} readOnly className="text-[9px] mt-0.5" />
-                    </div>
+                  {/* Avatar circular — cor da marca #0c343d, iniciais do cliente em branco */}
+                  <div
+                    className="shrink-0 w-11 h-11 rounded-full flex items-center justify-center text-white font-semibold text-sm"
+                    style={{ backgroundColor: "#0c343d" }}
+                    title={deal.client}
+                  >
+                    {getInitials(deal.client)}
                   </div>
-                  <div className="flex items-center justify-between gap-2 mt-1.5">
-                    <span className="text-xs font-semibold">{formatCurrency(deal.gsv)}</span>
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        "text-[10px] h-4 px-1 border-0",
-                        STATUS_COLOR[deal.status] || "bg-slate-100 text-slate-800",
-                      )}
-                    >
-                      {STATUS_LABEL[deal.status] || deal.status}
-                    </Badge>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <div className="min-w-0 flex-1">
+                        <div className="font-medium text-sm truncate">{deal.client}</div>
+                        <div className="text-xs text-muted-foreground truncate">
+                          {deal.property_name || "—"}
+                        </div>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <div className="text-[10px] text-muted-foreground">
+                          {formatRelative(deal.updated_at)}
+                        </div>
+                        <DealCodeBadge id={deal.id} readOnly className="text-[9px] mt-0.5" />
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between gap-2 mt-1.5">
+                      <span className="text-xs font-semibold">{formatCurrency(deal.gsv)}</span>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "text-[10px] h-4 px-1 border-0",
+                          STATUS_COLOR[deal.status] || "bg-slate-100 text-slate-800",
+                        )}
+                      >
+                        {STATUS_LABEL[deal.status] || deal.status}
+                      </Badge>
+                    </div>
                   </div>
                 </button>
               )
@@ -329,7 +351,7 @@ export default function HomePage() {
       >
         {selectedDeal ? (
           <>
-            {/* Header estilo WhatsApp: nome do cliente + código + botão voltar (mobile) */}
+            {/* Header estilo WhatsApp: avatar + nome do cliente + código + botão voltar (mobile) */}
             <header className="shrink-0 p-3 bg-card border-b flex items-center gap-3">
               <button
                 className="md:hidden p-1 rounded hover:bg-accent"
@@ -337,6 +359,13 @@ export default function HomePage() {
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
+              {/* Avatar do cliente aberto */}
+              <div
+                className="shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm"
+                style={{ backgroundColor: "#0c343d" }}
+              >
+                {getInitials(selectedDeal.client)}
+              </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <h1 className="font-semibold text-base truncate">{selectedDeal.client}</h1>
