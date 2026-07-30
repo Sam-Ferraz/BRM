@@ -184,22 +184,32 @@ export default function HomePage() {
     <div className="h-screen w-screen overflow-hidden bg-background flex">
       {/* ============================================================ */}
       {/* Coluna C — módulos                                            */}
+      {/* Contorno na cor da marca (#0c343d) + widgets com efeito 3D    */}
       {/* ============================================================ */}
       <aside
         className={cn(
-          "shrink-0 w-16 flex-col items-center border-r bg-card",
-          "hidden md:flex", // esconde no mobile
+          "shrink-0 w-16 flex-col items-center bg-card",
+          "hidden md:flex",
         )}
+        style={{
+          borderRight: "2px solid #0c343d",
+          boxShadow: "inset -1px 0 0 rgba(12,52,61,0.15)",
+        }}
       >
         <Link
           to="/dashboard-legacy"
-          className="w-10 h-10 mt-3 mb-2 rounded-lg bg-primary/10 flex items-center justify-center text-primary hover:bg-primary/20"
+          className="w-11 h-11 mt-3 mb-2 rounded-xl flex items-center justify-center text-white transition-all hover:scale-105 hover:-translate-y-0.5"
+          style={{
+            backgroundColor: "#0c343d",
+            boxShadow:
+              "0 4px 6px -1px rgba(12,52,61,0.35), 0 2px 4px -1px rgba(12,52,61,0.25), inset 0 1px 0 rgba(255,255,255,0.15)",
+          }}
           title={account?.name || "Home"}
         >
           <HomeIcon className="w-5 h-5" />
         </Link>
-        <div className="h-px w-8 bg-border my-2" />
-        <nav className="flex-1 flex flex-col gap-1 py-2 overflow-y-auto w-full items-center">
+        <div className="h-px w-8 bg-[#0c343d]/20 my-2" />
+        <nav className="flex-1 flex flex-col gap-1.5 py-2 overflow-y-auto w-full items-center">
           {MODULES.map((m) => {
             const Icon = m.icon
             return (
@@ -207,25 +217,37 @@ export default function HomePage() {
                 key={m.path}
                 to={m.path}
                 title={m.label}
-                className="w-10 h-10 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                className="w-11 h-11 rounded-xl flex items-center justify-center text-[#0c343d] bg-white transition-all hover:scale-105 hover:-translate-y-0.5 hover:text-white hover:bg-[#0c343d]"
+                style={{
+                  boxShadow:
+                    "0 2px 4px rgba(12,52,61,0.15), 0 1px 2px rgba(12,52,61,0.10), inset 0 1px 0 rgba(255,255,255,0.7)",
+                }}
               >
                 <Icon className="w-5 h-5" />
               </Link>
             )
           })}
         </nav>
-        <div className="w-full flex flex-col items-center gap-1 py-2 border-t">
+        <div className="w-full flex flex-col items-center gap-1.5 py-2 border-t border-[#0c343d]/20">
           <Link
             to="/settings"
             title="Configurações"
-            className="w-10 h-10 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-accent hover:text-foreground"
+            className="w-11 h-11 rounded-xl flex items-center justify-center text-[#0c343d] bg-white transition-all hover:scale-105 hover:-translate-y-0.5 hover:text-white hover:bg-[#0c343d]"
+            style={{
+              boxShadow:
+                "0 2px 4px rgba(12,52,61,0.15), 0 1px 2px rgba(12,52,61,0.10), inset 0 1px 0 rgba(255,255,255,0.7)",
+            }}
           >
             <Settings className="w-5 h-5" />
           </Link>
           <button
             title="Sair"
             onClick={logout}
-            className="w-10 h-10 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-red-50 hover:text-red-600"
+            className="w-11 h-11 rounded-xl flex items-center justify-center text-[#0c343d] bg-white transition-all hover:scale-105 hover:-translate-y-0.5 hover:text-white hover:bg-red-600"
+            style={{
+              boxShadow:
+                "0 2px 4px rgba(12,52,61,0.15), 0 1px 2px rgba(12,52,61,0.10), inset 0 1px 0 rgba(255,255,255,0.7)",
+            }}
           >
             <LogOut className="w-5 h-5" />
           </button>
