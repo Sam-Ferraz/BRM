@@ -210,86 +210,9 @@ export default function HomePage() {
   return (
     <div className="h-screen w-screen overflow-hidden bg-background flex">
       {/* ============================================================ */}
-      {/* Coluna C — módulos                                            */}
-      {/* Contorno na cor da marca (#0c343d) + widgets com efeito 3D    */}
-      {/* ============================================================ */}
-      <aside
-        className={cn(
-          "shrink-0 w-20 flex-col items-center bg-card border-r",
-          "hidden md:flex",
-        )}
-      >
-        <Link
-          to="/dashboard-legacy"
-          className="w-11 h-11 mt-3 mb-2 rounded-xl flex items-center justify-center text-white transition-all hover:scale-105 hover:-translate-y-0.5"
-          style={{
-            backgroundColor: "#0c343d",
-            boxShadow:
-              "0 4px 6px -1px rgba(12,52,61,0.35), 0 2px 4px -1px rgba(12,52,61,0.25), inset 0 1px 0 rgba(255,255,255,0.15)",
-          }}
-          title={account?.name || "Home"}
-        >
-          <HomeIcon className="w-5 h-5" />
-        </Link>
-        <div className="h-px w-8 bg-[#0c343d]/20 my-2" />
-        <nav className="flex-1 flex flex-col gap-1.5 py-2 overflow-y-auto w-full items-center">
-          {MODULES.map((m) => {
-            const Icon = m.icon
-            const count = m.countKey && stats ? Number(stats[m.countKey] || 0) : 0
-            const showBadge = count > 0
-            return (
-              <Link
-                key={m.path}
-                to={m.path}
-                title={m.label + (showBadge ? ` (${count})` : "")}
-                className="relative w-11 h-11 rounded-xl flex items-center justify-center text-[#0c343d] bg-white transition-all hover:scale-105 hover:-translate-y-0.5 hover:text-white hover:bg-[#0c343d]"
-                style={{
-                  boxShadow:
-                    "0 2px 4px rgba(12,52,61,0.15), 0 1px 2px rgba(12,52,61,0.10), inset 0 1px 0 rgba(255,255,255,0.7)",
-                }}
-              >
-                <Icon className="w-5 h-5" />
-                {/* Badge discreto no canto nordeste — contador do módulo */}
-                {showBadge && (
-                  <span
-                    className="absolute -top-2 -right-2.5 min-w-[18px] h-[18px] px-1 rounded-full text-white text-[10px] font-semibold flex items-center justify-center leading-none ring-2 ring-card"
-                    style={{ backgroundColor: "#0c343d" }}
-                  >
-                    {count > 99 ? "99+" : count}
-                  </span>
-                )}
-              </Link>
-            )
-          })}
-        </nav>
-        <div className="w-full flex flex-col items-center gap-1.5 py-2 border-t border-[#0c343d]/20">
-          <Link
-            to="/settings"
-            title="Configurações"
-            className="w-11 h-11 rounded-xl flex items-center justify-center text-[#0c343d] bg-white transition-all hover:scale-105 hover:-translate-y-0.5 hover:text-white hover:bg-[#0c343d]"
-            style={{
-              boxShadow:
-                "0 2px 4px rgba(12,52,61,0.15), 0 1px 2px rgba(12,52,61,0.10), inset 0 1px 0 rgba(255,255,255,0.7)",
-            }}
-          >
-            <Settings className="w-5 h-5" />
-          </Link>
-          <button
-            title="Sair"
-            onClick={logout}
-            className="w-11 h-11 rounded-xl flex items-center justify-center text-[#0c343d] bg-white transition-all hover:scale-105 hover:-translate-y-0.5 hover:text-white hover:bg-red-600"
-            style={{
-              boxShadow:
-                "0 2px 4px rgba(12,52,61,0.15), 0 1px 2px rgba(12,52,61,0.10), inset 0 1px 0 rgba(255,255,255,0.7)",
-            }}
-          >
-            <LogOut className="w-5 h-5" />
-          </button>
-        </div>
-      </aside>
-
-      {/* ============================================================ */}
       {/* Coluna B — lista de Negócios                                  */}
+      {/* Sidebar vertical C foi removida — modulos vao na bottom nav   */}
+      {/* pra desktop E mobile, seguindo o padrao WhatsApp mobile.       */}
       {/* ============================================================ */}
       <aside
         className={cn(
@@ -302,29 +225,29 @@ export default function HomePage() {
           <div className="flex items-center justify-between gap-2">
             <h2 className="font-semibold text-base">Negócios</h2>
             <div className="flex items-center gap-1">
-              {/* Botões Home/Configurações/Sair — SÓ MOBILE (desktop tem na sidebar C) */}
+              {/* Atalhos Home/Configurações/Sair no canto superior direito */}
               <Link
                 to="/dashboard-legacy"
                 title="Home"
-                className="md:hidden p-2 rounded-full hover:bg-accent text-[#0c343d]"
+                className="p-2 rounded-full hover:bg-accent text-[#0c343d]"
               >
                 <HomeIcon className="w-4 h-4" />
               </Link>
               <Link
                 to="/settings"
                 title="Configurações"
-                className="md:hidden p-2 rounded-full hover:bg-accent text-[#0c343d]"
+                className="p-2 rounded-full hover:bg-accent text-[#0c343d]"
               >
                 <Settings className="w-4 h-4" />
               </Link>
               <button
                 onClick={logout}
                 title="Sair"
-                className="md:hidden p-2 rounded-full hover:bg-red-50 text-[#0c343d] hover:text-red-600"
+                className="p-2 rounded-full hover:bg-red-50 text-[#0c343d] hover:text-red-600"
               >
                 <LogOut className="w-4 h-4" />
               </button>
-              {/* Botão "novo negócio" — desktop e mobile */}
+              {/* Botão "novo negócio" */}
               <Link to="/deals?new=true" title="Novo negócio">
                 <Button size="sm" variant="ghost">
                   <Plus className="w-4 h-4" />
@@ -344,7 +267,7 @@ export default function HomePage() {
         </div>
 
         {/* Lista scrollável — padding-bottom extra em mobile pra bottom nav não cortar último item */}
-        <div className="flex-1 overflow-y-auto pb-20 md:pb-0">
+        <div className="flex-1 overflow-y-auto pb-20">
           {loading ? (
             <div className="p-6 text-center text-sm text-muted-foreground">Carregando...</div>
           ) : filteredDeals.length === 0 ? (
@@ -413,7 +336,7 @@ export default function HomePage() {
       {/* ============================================================ */}
       <section
         className={cn(
-          "flex-1 flex-col overflow-hidden bg-muted/30 pb-20 md:pb-0",
+          "flex-1 flex-col overflow-hidden bg-muted/30 pb-20",
           mobilePanel === "editor" ? "flex" : "hidden md:flex",
         )}
       >
@@ -471,15 +394,16 @@ export default function HomePage() {
       </section>
 
       {/* ============================================================ */}
-      {/* Bottom nav mobile — só aparece em telas < md (768px)          */}
+      {/* Bottom nav — VALE PRA DESKTOP E MOBILE                        */}
       {/* Widgets no rodapé, cada um com nome abaixo. Scroll horizontal */}
-      {/* pra caber todos. Métricas no canto nordeste igual desktop.    */}
+      {/* garante que caiba em telas estreitas; em desktop os itens se  */}
+      {/* distribuem justificados no espaço disponível.                 */}
       {/* ============================================================ */}
       <nav
-        className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-card border-t overflow-x-auto"
+        className="fixed bottom-0 left-0 right-0 z-40 bg-card border-t overflow-x-auto"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
-        <div className="flex items-stretch gap-1 px-2 py-2 min-w-max">
+        <div className="flex items-stretch gap-1 px-2 py-2 min-w-max md:justify-center">
           {MODULES.map((m) => {
             const Icon = m.icon
             const count = m.countKey && stats ? Number(stats[m.countKey] || 0) : 0
@@ -488,11 +412,11 @@ export default function HomePage() {
               <Link
                 key={m.path}
                 to={m.path}
-                className="relative shrink-0 flex flex-col items-center gap-0.5 min-w-[64px] px-2 py-1.5 rounded-lg text-[#0c343d] hover:bg-accent transition-colors"
+                className="relative shrink-0 flex flex-col items-center gap-0.5 min-w-[68px] md:min-w-[76px] px-2 py-1.5 rounded-lg text-[#0c343d] hover:bg-accent transition-colors"
               >
                 <div className="relative">
                   <Icon className="w-5 h-5" />
-                  {/* Badge nordeste — mesmo estilo desktop */}
+                  {/* Badge nordeste com contador */}
                   {showBadge && (
                     <span
                       className="absolute -top-2 -right-2.5 min-w-[16px] h-[16px] px-1 rounded-full text-white text-[9px] font-semibold flex items-center justify-center leading-none ring-2 ring-card"
@@ -502,7 +426,7 @@ export default function HomePage() {
                     </span>
                   )}
                 </div>
-                <span className="text-[10px] font-medium leading-tight">{m.label}</span>
+                <span className="text-[10px] md:text-[11px] font-medium leading-tight whitespace-nowrap">{m.label}</span>
               </Link>
             )
           })}
