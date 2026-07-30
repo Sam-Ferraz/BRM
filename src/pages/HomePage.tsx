@@ -300,25 +300,37 @@ export default function HomePage() {
         {/* Header da lista */}
         <div className="shrink-0 p-3 border-b space-y-2">
           <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              {/* Menu mobile — abre drawer com módulos */}
-              <button
-                className="md:hidden p-2 rounded hover:bg-accent"
-                onClick={() => {
-                  const modulePath = prompt("Ir para módulo: /deals, /appointments, /clients, etc")
-                  if (modulePath) navigate(modulePath)
-                }}
-                title="Módulos"
+            <h2 className="font-semibold text-base">Negócios</h2>
+            <div className="flex items-center gap-1">
+              {/* Botões Home/Configurações/Sair — SÓ MOBILE (desktop tem na sidebar C) */}
+              <Link
+                to="/dashboard-legacy"
+                title="Home"
+                className="md:hidden p-2 rounded-full hover:bg-accent text-[#0c343d]"
               >
-                <Menu className="w-5 h-5" />
+                <HomeIcon className="w-4 h-4" />
+              </Link>
+              <Link
+                to="/settings"
+                title="Configurações"
+                className="md:hidden p-2 rounded-full hover:bg-accent text-[#0c343d]"
+              >
+                <Settings className="w-4 h-4" />
+              </Link>
+              <button
+                onClick={logout}
+                title="Sair"
+                className="md:hidden p-2 rounded-full hover:bg-red-50 text-[#0c343d] hover:text-red-600"
+              >
+                <LogOut className="w-4 h-4" />
               </button>
-              <h2 className="font-semibold text-base">Negócios</h2>
+              {/* Botão "novo negócio" — desktop e mobile */}
+              <Link to="/deals?new=true" title="Novo negócio">
+                <Button size="sm" variant="ghost">
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </Link>
             </div>
-            <Link to="/deals?new=true" title="Novo negócio">
-              <Button size="sm" variant="ghost">
-                <Plus className="w-4 h-4" />
-              </Button>
-            </Link>
           </div>
           <div className="relative">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -331,8 +343,8 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Lista scrollável */}
-        <div className="flex-1 overflow-y-auto">
+        {/* Lista scrollável — padding-bottom extra em mobile pra bottom nav não cortar último item */}
+        <div className="flex-1 overflow-y-auto pb-20 md:pb-0">
           {loading ? (
             <div className="p-6 text-center text-sm text-muted-foreground">Carregando...</div>
           ) : filteredDeals.length === 0 ? (
@@ -401,7 +413,7 @@ export default function HomePage() {
       {/* ============================================================ */}
       <section
         className={cn(
-          "flex-1 flex-col overflow-hidden bg-muted/30",
+          "flex-1 flex-col overflow-hidden bg-muted/30 pb-20 md:pb-0",
           mobilePanel === "editor" ? "flex" : "hidden md:flex",
         )}
       >
@@ -457,6 +469,45 @@ export default function HomePage() {
           </div>
         )}
       </section>
+
+      {/* ============================================================ */}
+      {/* Bottom nav mobile — só aparece em telas < md (768px)          */}
+      {/* Widgets no rodapé, cada um com nome abaixo. Scroll horizontal */}
+      {/* pra caber todos. Métricas no canto nordeste igual desktop.    */}
+      {/* ============================================================ */}
+      <nav
+        className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-card border-t overflow-x-auto"
+        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      >
+        <div className="flex items-stretch gap-1 px-2 py-2 min-w-max">
+          {MODULES.map((m) => {
+            const Icon = m.icon
+            const count = m.countKey && stats ? Number(stats[m.countKey] || 0) : 0
+            const showBadge = count > 0
+            return (
+              <Link
+                key={m.path}
+                to={m.path}
+                className="relative shrink-0 flex flex-col items-center gap-0.5 min-w-[64px] px-2 py-1.5 rounded-lg text-[#0c343d] hover:bg-accent transition-colors"
+              >
+                <div className="relative">
+                  <Icon className="w-5 h-5" />
+                  {/* Badge nordeste — mesmo estilo desktop */}
+                  {showBadge && (
+                    <span
+                      className="absolute -top-2 -right-2.5 min-w-[16px] h-[16px] px-1 rounded-full text-white text-[9px] font-semibold flex items-center justify-center leading-none ring-2 ring-card"
+                      style={{ backgroundColor: "#0c343d" }}
+                    >
+                      {count > 99 ? "99+" : count}
+                    </span>
+                  )}
+                </div>
+                <span className="text-[10px] font-medium leading-tight">{m.label}</span>
+              </Link>
+            )
+          })}
+        </div>
+      </nav>
     </div>
   )
 }
