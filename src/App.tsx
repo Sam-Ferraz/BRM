@@ -27,6 +27,7 @@ import AdminAccountsPage from './pages/AdminAccountsPage'
 import AdminCouponsPage from './pages/AdminCouponsPage'
 import SetupPasswordPage from './pages/SetupPasswordPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
+import HomePage from './pages/HomePage'
 import PermissionsPage from './pages/PermissionsPage'
 import './lib/i18n'
 import './index.css'
@@ -40,7 +41,14 @@ function App() {
           <div className="min-h-screen">
             <Routes>
               <Route path="/" element={<LoginPage />} />
+              {/* Home no estilo WhatsApp — layout 3 colunas com editor de deal inline */}
               <Route path="/dashboard" element={
+                <ProtectedRoute>
+                  <HomePage />
+                </ProtectedRoute>
+              } />
+              {/* Dashboard antigo (widgets grid) — mantido como fallback / acesso via ícone Home */}
+              <Route path="/dashboard-legacy" element={
                 <ProtectedRoute>
                   <DashboardPage />
                 </ProtectedRoute>
