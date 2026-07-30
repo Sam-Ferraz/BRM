@@ -26,7 +26,7 @@ import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/hooks/use-auth"
 import { useAccount } from "@/hooks/use-account"
 import { useToast } from "@/hooks/use-toast"
-import { api, type Deal } from "@/lib/api-client"
+import { api, type Deal, type DashboardStats } from "@/lib/api-client"
 import { DealEditor } from "@/components/deal-editor"
 import { DealCodeBadge } from "@/components/deal-code-badge"
 import { cn } from "@/lib/utils"
@@ -36,19 +36,32 @@ import { cn } from "@/lib/utils"
  * a dia do corretor. Cada item vira só um link — clique redireciona pra
  * página do módulo (que continua com layout tradicional).
  */
-const MODULES: { path: string; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
-  { path: "/deals",        label: "Negócios",     icon: Briefcase },
-  { path: "/appointments", label: "Atendimentos", icon: HeadphonesIcon },
-  { path: "/follow-ups",   label: "Follow-ups",   icon: ClipboardCheck },
+/**
+ * Cada módulo tem um `countKey` que mapeia pro campo correspondente em
+ * DashboardStats. Assim reusamos os mesmos contadores do home antigo,
+ * mas agora renderizados como badge discreto no canto de cada ícone.
+ * Módulos sem countKey (ex: Agenda, BI) não mostram badge.
+ */
+type ModuleItem = {
+  path: string
+  label: string
+  icon: React.ComponentType<{ className?: string }>
+  countKey?: keyof DashboardStats
+}
+
+const MODULES: ModuleItem[] = [
+  { path: "/deals",        label: "Negócios",     icon: Briefcase,      countKey: "totalDeals" },
+  { path: "/appointments", label: "Atendimentos", icon: HeadphonesIcon, countKey: "totalAppointments" },
+  { path: "/follow-ups",   label: "Follow-ups",   icon: ClipboardCheck, countKey: "totalFollowUps" },
   { path: "/agenda",       label: "Agenda",       icon: CalendarDays },
-  { path: "/chat",         label: "Chat",         icon: MessageCircle },
-  { path: "/leads",        label: "Leads",        icon: Inbox },
-  { path: "/proposals",    label: "Propostas",    icon: FileSignature },
-  { path: "/contracts",    label: "Contratos",    icon: FileCheck2 },
-  { path: "/sales",        label: "Vendas",       icon: Key },
-  { path: "/clients",      label: "Clientes",     icon: Users },
-  { path: "/products",     label: "Imóveis",      icon: Package },
-  { path: "/sales-agenda", label: "Vitrine",      icon: Store },
+  { path: "/chat",         label: "Chat",         icon: MessageCircle,  countKey: "pendingChatAndCalls" },
+  { path: "/leads",        label: "Leads",        icon: Inbox,          countKey: "newLeads" },
+  { path: "/proposals",    label: "Propostas",    icon: FileSignature,  countKey: "totalProposals" },
+  { path: "/contracts",    label: "Contratos",    icon: FileCheck2,     countKey: "totalContracts" },
+  { path: "/sales",        label: "Vendas",       icon: Key,            countKey: "totalSales" },
+  { path: "/clients",      label: "Clientes",     icon: Users,          countKey: "totalClients" },
+  { path: "/products",     label: "Imóveis",      icon: Package,        countKey: "totalProducts" },
+  { path: "/sales-agenda", label: "Vitrine",      icon: Store,          countKey: "totalShowcaseProducts" },
   { path: "/analytics",    label: "BI",           icon: BarChart3 },
 ]
 
@@ -120,6 +133,20 @@ export default function HomePage() {
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [search, setSearch] = useState("")
   const [mobilePanel, setMobilePanel] = useState<"list" | "editor">("list")
+  const [stats, setStats] = useState<DashboardStats | null>(null)
+
+  // Contadores dos módulos (mesmos do home antigo) — badge discreto no ícone
+  useEffect(() => {
+    let cancelled = false
+    api.dashboard.getStats()
+      .then((data) => {
+        if (!cancelled) setStats(data)
+      })
+      .catch((err) => console.warn("[HomePage] falha ao buscar stats:", err))
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const loadDeals = useCallback(async () => {
     try {
@@ -188,7 +215,7 @@ export default function HomePage() {
       {/* ============================================================ */}
       <aside
         className={cn(
-          "shrink-0 w-16 flex-col items-center bg-card",
+          "shrink-0 w-20 flex-col items-center bg-card",
           "hidden md:flex",
         )}
         style={{
@@ -212,18 +239,29 @@ export default function HomePage() {
         <nav className="flex-1 flex flex-col gap-1.5 py-2 overflow-y-auto w-full items-center">
           {MODULES.map((m) => {
             const Icon = m.icon
+            const count = m.countKey && stats ? Number(stats[m.countKey] || 0) : 0
+            const showBadge = count > 0
             return (
               <Link
                 key={m.path}
                 to={m.path}
-                title={m.label}
-                className="w-11 h-11 rounded-xl flex items-center justify-center text-[#0c343d] bg-white transition-all hover:scale-105 hover:-translate-y-0.5 hover:text-white hover:bg-[#0c343d]"
+                title={m.label + (showBadge ? ` (${count})` : "")}
+                className="relative w-11 h-11 rounded-xl flex items-center justify-center text-[#0c343d] bg-white transition-all hover:scale-105 hover:-translate-y-0.5 hover:text-white hover:bg-[#0c343d]"
                 style={{
                   boxShadow:
                     "0 2px 4px rgba(12,52,61,0.15), 0 1px 2px rgba(12,52,61,0.10), inset 0 1px 0 rgba(255,255,255,0.7)",
                 }}
               >
                 <Icon className="w-5 h-5" />
+                {/* Badge discreto no canto superior direito — contador do módulo */}
+                {showBadge && (
+                  <span
+                    className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full text-white text-[10px] font-semibold flex items-center justify-center leading-none ring-2 ring-card"
+                    style={{ backgroundColor: "#0c343d" }}
+                  >
+                    {count > 99 ? "99+" : count}
+                  </span>
+                )}
               </Link>
             )
           })}
