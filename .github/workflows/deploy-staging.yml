@@ -17,8 +17,33 @@ jobs:
     name: Deploy staging
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout (apenas pra mostrar o commit no log)
+      # fetch-depth: 0 → traz histórico completo + tags pra conseguir calcular
+      # quantos commits estão adiantados em relação à última tag prod-*.
+      - name: Checkout com histórico completo
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Mostra quantos commits estão adiantados em relação a prod
+        run: |
+          echo "::group::📦 Delta staging vs prod"
+          LAST_PROD_TAG=$(git tag --sort=-creatordate -l "prod-*" | head -1)
+          if [ -n "$LAST_PROD_TAG" ]; then
+            COUNT=$(git rev-list --count "$LAST_PROD_TAG..HEAD" 2>/dev/null || echo "?")
+            if [ "$COUNT" = "0" ]; then
+              echo "✅ Staging está IGUAL a prod ($LAST_PROD_TAG). Nada pendente."
+            else
+              echo "🚀 Staging tem $COUNT commit(s) NOVOS em relação a $LAST_PROD_TAG:"
+              echo ""
+              git log --pretty=format:'  • %h  %s%n     %an, %ar' "$LAST_PROD_TAG..HEAD"
+              echo ""
+              echo ""
+              echo "::notice title=🚀 $COUNT commit(s) aguardando prod::Rode 'Deploy to Production' quando estiver pronto."
+            fi
+          else
+            echo "📌 Nenhuma tag prod-* ainda — primeiro deploy pra prod pendente."
+          fi
+          echo "::endgroup::"
 
       - name: Decodifica chave privada (base64) e configura agente SSH
         env:
