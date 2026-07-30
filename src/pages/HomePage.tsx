@@ -220,40 +220,15 @@ export default function HomePage() {
           mobilePanel === "list" ? "flex" : "hidden md:flex",
         )}
       >
-        {/* Header da lista */}
+        {/* Header da lista B — simples: só título + busca (atalhos moveram pro header A) */}
         <div className="shrink-0 p-3 border-b space-y-2">
           <div className="flex items-center justify-between gap-2">
             <h2 className="font-semibold text-base">Negócios</h2>
-            <div className="flex items-center gap-1">
-              {/* Atalhos Home/Configurações/Sair no canto superior direito */}
-              <Link
-                to="/dashboard-legacy"
-                title="Home"
-                className="p-2 rounded-full hover:bg-accent text-[#0c343d]"
-              >
-                <HomeIcon className="w-4 h-4" />
-              </Link>
-              <Link
-                to="/settings"
-                title="Configurações"
-                className="p-2 rounded-full hover:bg-accent text-[#0c343d]"
-              >
-                <Settings className="w-4 h-4" />
-              </Link>
-              <button
-                onClick={logout}
-                title="Sair"
-                className="p-2 rounded-full hover:bg-red-50 text-[#0c343d] hover:text-red-600"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
-              {/* Botão "novo negócio" */}
-              <Link to="/deals?new=true" title="Novo negócio">
-                <Button size="sm" variant="ghost">
-                  <Plus className="w-4 h-4" />
-                </Button>
-              </Link>
-            </div>
+            <Link to="/deals?new=true" title="Novo negócio">
+              <Button size="sm" variant="ghost">
+                <Plus className="w-4 h-4" />
+              </Button>
+            </Link>
           </div>
           <div className="relative">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -342,7 +317,8 @@ export default function HomePage() {
       >
         {selectedDeal ? (
           <>
-            {/* Header estilo WhatsApp: avatar + nome do cliente + código + botão voltar (mobile) */}
+            {/* Header estilo WhatsApp: avatar + nome + código à esquerda,
+                atalhos Home/Config/Sair à direita (igual imagem alvo) */}
             <header className="shrink-0 p-3 bg-card border-b flex items-center gap-3">
               <button
                 className="md:hidden p-1 rounded hover:bg-accent"
@@ -367,6 +343,30 @@ export default function HomePage() {
                   {selectedDeal.client_phone && ` · ${selectedDeal.client_phone}`}
                 </p>
               </div>
+              {/* Atalhos no canto direito — Home, Configurações, Sair */}
+              <div className="shrink-0 flex items-center gap-1">
+                <Link
+                  to="/dashboard-legacy"
+                  title="Home"
+                  className="p-2 rounded-full hover:bg-accent text-[#0c343d]"
+                >
+                  <HomeIcon className="w-5 h-5" />
+                </Link>
+                <Link
+                  to="/settings"
+                  title="Configurações"
+                  className="p-2 rounded-full hover:bg-accent text-[#0c343d]"
+                >
+                  <Settings className="w-5 h-5" />
+                </Link>
+                <button
+                  onClick={logout}
+                  title="Sair"
+                  className="p-2 rounded-full hover:bg-red-50 text-[#0c343d] hover:text-red-600"
+                >
+                  <LogOut className="w-5 h-5" />
+                </button>
+              </div>
             </header>
 
             {/* Editor: Tabs Histórico (default) + Informações */}
@@ -382,14 +382,29 @@ export default function HomePage() {
             </div>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center text-center p-6">
-            <div>
-              <Briefcase className="w-14 h-14 mx-auto text-muted-foreground/40 mb-3" />
-              <p className="text-muted-foreground">
-                Selecione um negócio na lista pra ver o histórico de atendimento.
-              </p>
+          <>
+            {/* Header vazio — mantém os atalhos Home/Config/Sair mesmo sem deal aberto */}
+            <header className="shrink-0 p-3 bg-card border-b flex items-center justify-end gap-1">
+              <Link to="/dashboard-legacy" title="Home" className="p-2 rounded-full hover:bg-accent text-[#0c343d]">
+                <HomeIcon className="w-5 h-5" />
+              </Link>
+              <Link to="/settings" title="Configurações" className="p-2 rounded-full hover:bg-accent text-[#0c343d]">
+                <Settings className="w-5 h-5" />
+              </Link>
+              <button onClick={logout} title="Sair" className="p-2 rounded-full hover:bg-red-50 text-[#0c343d] hover:text-red-600">
+                <LogOut className="w-5 h-5" />
+              </button>
+            </header>
+            <div className="flex-1 flex items-center justify-center text-center p-6">
+              <div>
+                <Briefcase className="w-14 h-14 mx-auto text-muted-foreground/40 mb-3" />
+                <p className="text-muted-foreground">
+                  Selecione um negócio na lista pra ver o histórico de atendimento.
+                </p>
+              </div>
             </div>
-          </div>
+          </>
+
         )}
       </section>
 
@@ -403,7 +418,7 @@ export default function HomePage() {
         className="fixed bottom-0 left-0 right-0 z-40 bg-card border-t overflow-x-auto"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
-        <div className="flex items-stretch gap-1 px-2 py-2 min-w-max md:justify-center">
+        <div className="flex items-stretch gap-2 md:gap-4 px-3 py-3 min-w-max md:justify-center">
           {MODULES.map((m) => {
             const Icon = m.icon
             const count = m.countKey && stats ? Number(stats[m.countKey] || 0) : 0
@@ -412,21 +427,21 @@ export default function HomePage() {
               <Link
                 key={m.path}
                 to={m.path}
-                className="relative shrink-0 flex flex-col items-center gap-0.5 min-w-[68px] md:min-w-[76px] px-2 py-1.5 rounded-lg text-[#0c343d] hover:bg-accent transition-colors"
+                className="relative shrink-0 flex flex-col items-center gap-1 min-w-[76px] md:min-w-[86px] px-2 py-1 rounded-lg text-[#0c343d] hover:bg-accent transition-colors"
               >
                 <div className="relative">
-                  <Icon className="w-5 h-5" />
+                  <Icon className="w-6 h-6 md:w-7 md:h-7" strokeWidth={1.75} />
                   {/* Badge nordeste com contador */}
                   {showBadge && (
                     <span
-                      className="absolute -top-2 -right-2.5 min-w-[16px] h-[16px] px-1 rounded-full text-white text-[9px] font-semibold flex items-center justify-center leading-none ring-2 ring-card"
+                      className="absolute -top-2 -right-3 min-w-[20px] h-[20px] px-1 rounded-full text-white text-[11px] font-semibold flex items-center justify-center leading-none ring-2 ring-card"
                       style={{ backgroundColor: "#0c343d" }}
                     >
                       {count > 99 ? "99+" : count}
                     </span>
                   )}
                 </div>
-                <span className="text-[10px] md:text-[11px] font-medium leading-tight whitespace-nowrap">{m.label}</span>
+                <span className="text-[11px] md:text-[12px] font-medium leading-tight whitespace-nowrap">{m.label}</span>
               </Link>
             )
           })}
