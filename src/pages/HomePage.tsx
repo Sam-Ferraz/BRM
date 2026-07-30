@@ -215,13 +215,9 @@ export default function HomePage() {
       {/* ============================================================ */}
       <aside
         className={cn(
-          "shrink-0 w-20 flex-col items-center bg-card",
+          "shrink-0 w-20 flex-col items-center bg-card border-r",
           "hidden md:flex",
         )}
-        style={{
-          borderRight: "2px solid #0c343d",
-          boxShadow: "inset -1px 0 0 rgba(12,52,61,0.15)",
-        }}
       >
         <Link
           to="/dashboard-legacy"
@@ -253,10 +249,10 @@ export default function HomePage() {
                 }}
               >
                 <Icon className="w-5 h-5" />
-                {/* Badge discreto no canto superior direito — contador do módulo */}
+                {/* Badge discreto no canto nordeste — contador do módulo */}
                 {showBadge && (
                   <span
-                    className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full text-white text-[10px] font-semibold flex items-center justify-center leading-none ring-2 ring-card"
+                    className="absolute -top-2 -right-2.5 min-w-[18px] h-[18px] px-1 rounded-full text-white text-[10px] font-semibold flex items-center justify-center leading-none ring-2 ring-card"
                     style={{ backgroundColor: "#0c343d" }}
                   >
                     {count > 99 ? "99+" : count}
