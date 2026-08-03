@@ -451,66 +451,9 @@ export default function HomePage() {
         )}
       </section>
 
-      {/* ============================================================ */}
-      {/* Bottom nav — VALE PRA DESKTOP E MOBILE                        */}
-      {/* Widgets no rodapé, cada um com nome abaixo. Scroll horizontal */}
-      {/* garante que caiba em telas estreitas; em desktop os itens se  */}
-      {/* distribuem justificados no espaço disponível.                 */}
-      {/* ============================================================ */}
-      <nav
-        ref={navRef}
-        onMouseDown={onNavMouseDown}
-        onMouseMove={onNavMouseMove}
-        onMouseUp={onNavMouseUp}
-        onMouseLeave={onNavMouseUp}
-        onClickCapture={onNavLinkClickCapture}
-        className="fixed bottom-0 left-0 right-0 z-40 bg-card border-t overflow-x-auto cursor-grab select-none"
-        style={{
-          paddingBottom: "env(safe-area-inset-bottom)",
-          // Momentum scroll no iOS/mobile (Safari respeita, resto ignora)
-          WebkitOverflowScrolling: "touch",
-          // Efeito "roleta": cada item encaixa no ponto ao terminar de arrastar
-          scrollSnapType: "x proximity",
-          // Nao propaga o scroll horizontal pra pagina (evita "bounce" da URL bar)
-          overscrollBehaviorX: "contain",
-          // Some com a scrollbar visual — o gesto substitui o feedback
-          scrollbarWidth: "none",
-        }}
-      >
-        <style>{`
-          /* Esconde scrollbar no WebKit (Chrome/Safari) */
-          nav::-webkit-scrollbar { display: none; }
-        `}</style>
-        <div className="flex items-stretch gap-2 md:gap-4 px-3 py-3 min-w-max md:justify-center">
-          {MODULES.map((m) => {
-            const Icon = m.icon
-            const count = m.countKey && stats ? Number(stats[m.countKey] || 0) : 0
-            const showBadge = count > 0
-            return (
-              <Link
-                key={m.path}
-                to={m.path}
-                style={{ scrollSnapAlign: "center" }}
-                className="relative shrink-0 flex flex-col items-center gap-1 min-w-[76px] md:min-w-[86px] px-2 py-1 rounded-lg text-[#0c343d] hover:bg-accent transition-colors"
-              >
-                <div className="relative">
-                  <Icon className="w-6 h-6 md:w-7 md:h-7" strokeWidth={1.75} />
-                  {/* Badge nordeste com contador */}
-                  {showBadge && (
-                    <span
-                      className="absolute -top-2 -right-3 min-w-[20px] h-[20px] px-1 rounded-full text-white text-[11px] font-semibold flex items-center justify-center leading-none ring-2 ring-card"
-                      style={{ backgroundColor: "#0c343d" }}
-                    >
-                      {count > 99 ? "99+" : count}
-                    </span>
-                  )}
-                </div>
-                <span className="text-[11px] md:text-[12px] font-medium leading-tight whitespace-nowrap">{m.label}</span>
-              </Link>
-            )
-          })}
-        </div>
-      </nav>
+      {/* BottomNav agora vem do ProtectedRoute — vale pra TODAS as páginas
+          autenticadas, não só o home. Isso evita que o rodapé "desapareça"
+          quando o usuário clica num widget e navega pra outro módulo. */}
     </div>
   )
 }

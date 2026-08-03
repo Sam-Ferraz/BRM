@@ -1,5 +1,6 @@
 import { useAuth } from '@/hooks/use-auth'
 import { Navigate, useLocation } from 'react-router-dom'
+import { BottomNav } from './bottom-nav'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
@@ -18,9 +19,15 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   }
 
   if (!isAuthenticated) {
-    // Redirect to login page with return url
     return <Navigate to="/" state={{ from: location }} replace />
   }
 
-  return <>{children}</>
+  // Bottom nav aparece em TODAS as páginas autenticadas. Padding-bottom no
+  // wrapper garante que a nav (~72px) não corte o conteúdo da página.
+  return (
+    <>
+      <div className="pb-20">{children}</div>
+      <BottomNav />
+    </>
+  )
 }
