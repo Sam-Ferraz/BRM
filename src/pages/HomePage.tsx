@@ -88,6 +88,28 @@ const STATUS_COLOR: Record<string, string> = {
 }
 
 /**
+ * Sanitiza um telefone pro formato do WhatsApp (só dígitos, sem +, hífens,
+ * parênteses ou espaços). Retorna null se não sobrar dígitos suficientes.
+ */
+function toWhatsAppNumber(phone: string | null | undefined): string | null {
+  if (!phone) return null
+  const digits = phone.replace(/\D/g, "")
+  if (digits.length < 10) return null
+  return digits
+}
+
+/**
+ * Abre o WhatsApp Web/app em uma NOVA aba pro numero informado. Usar
+ * target=_blank + noopener preserva a aba do BRM — usuario volta e continua
+ * de onde parou.
+ */
+function openWhatsApp(phone: string | null | undefined) {
+  const num = toWhatsAppNumber(phone)
+  if (!num) return
+  window.open(`https://wa.me/${num}`, "_blank", "noopener,noreferrer")
+}
+
+/**
  * Extrai as iniciais do nome do cliente pra usar no avatar (max 2 letras).
  * Ex: "Débora Quagliato Aires Caetano" → "DC" ; "Felipe" → "F"
  */
@@ -306,13 +328,18 @@ export default function HomePage() {
                   )}
                 >
                   {/* Avatar circular — cor da marca #0c343d, iniciais do cliente em branco */}
-                  <div
-                    className="shrink-0 w-11 h-11 rounded-full flex items-center justify-center text-white font-semibold text-sm"
+                  <button
+                    type="button"
+                    className="shrink-0 w-11 h-11 rounded-full flex items-center justify-center text-white font-semibold text-sm transition-transform hover:scale-110 cursor-pointer"
                     style={{ backgroundColor: "#0c343d" }}
-                    title={deal.client}
+                    title={deal.client_phone ? `Abrir WhatsApp de ${deal.client}` : "Sem telefone cadastrado"}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      if (deal.client_phone) openWhatsApp(deal.client_phone)
+                    }}
                   >
                     {getInitials(deal.client)}
-                  </div>
+                  </button>
 
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-2 mb-1">
@@ -369,13 +396,16 @@ export default function HomePage() {
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
-              {/* Avatar do cliente aberto */}
-              <div
-                className="shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm"
+              {/* Avatar do cliente aberto — clique abre WhatsApp em nova aba */}
+              <button
+                type="button"
+                className="shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm transition-transform hover:scale-110 cursor-pointer"
                 style={{ backgroundColor: "#0c343d" }}
+                title={selectedDeal.client_phone ? `Abrir WhatsApp de ${selectedDeal.client}` : "Sem telefone cadastrado"}
+                onClick={() => selectedDeal.client_phone && openWhatsApp(selectedDeal.client_phone)}
               >
                 {getInitials(selectedDeal.client)}
-              </div>
+              </button>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <h1 className="font-semibold text-base truncate">{selectedDeal.client}</h1>
@@ -386,15 +416,9 @@ export default function HomePage() {
                   {selectedDeal.client_phone && ` · ${selectedDeal.client_phone}`}
                 </p>
               </div>
-              {/* Atalhos no canto direito — Home, Configurações, Sair */}
+              {/* Atalhos no canto direito — Configurações e Sair (Home agora
+                  fica na bottom nav como primeiro widget) */}
               <div className="shrink-0 flex items-center gap-1">
-                <Link
-                  to="/dashboard-legacy"
-                  title="Home"
-                  className="p-2 rounded-full hover:bg-accent text-[#0c343d]"
-                >
-                  <HomeIcon className="w-5 h-5" />
-                </Link>
                 <Link
                   to="/settings"
                   title="Configurações"
@@ -426,11 +450,8 @@ export default function HomePage() {
           </>
         ) : (
           <>
-            {/* Header vazio — mantém os atalhos Home/Config/Sair mesmo sem deal aberto */}
+            {/* Header vazio — Configurações e Sair (Home agora na bottom nav) */}
             <header className="shrink-0 p-3 bg-card border-b flex items-center justify-end gap-1">
-              <Link to="/dashboard-legacy" title="Home" className="p-2 rounded-full hover:bg-accent text-[#0c343d]">
-                <HomeIcon className="w-5 h-5" />
-              </Link>
               <Link to="/settings" title="Configurações" className="p-2 rounded-full hover:bg-accent text-[#0c343d]">
                 <Settings className="w-5 h-5" />
               </Link>

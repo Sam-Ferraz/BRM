@@ -3,6 +3,7 @@ import { Link } from "react-router-dom"
 import {
   Briefcase, Users, Package, HeadphonesIcon, ClipboardCheck, FileSignature, FileCheck2,
   Key, MessageCircle, Inbox, Store, BarChart3, CalendarDays, ChevronLeft, ChevronRight,
+  Home as HomeIcon,
 } from "lucide-react"
 import { api, type DashboardStats } from "@/lib/api-client"
 
@@ -26,6 +27,7 @@ type ModuleItem = {
 }
 
 const MODULES: ModuleItem[] = [
+  { path: "/dashboard",    label: "Home",         icon: HomeIcon },
   { path: "/deals",        label: "Negócios",     icon: Briefcase,      countKey: "totalDeals" },
   { path: "/appointments", label: "Atendimentos", icon: HeadphonesIcon, countKey: "totalAppointments" },
   { path: "/follow-ups",   label: "Follow-ups",   icon: ClipboardCheck, countKey: "totalFollowUps" },
