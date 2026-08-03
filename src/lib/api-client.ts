@@ -18,8 +18,11 @@ class ApiClient {
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`
     const headers = this.getAuthHeaders()
-    
+
     const response = await fetch(url, {
+      // no-store impede que browser/proxy sirvam versão em cache — critico pra
+      // dados que mudam em tempo real (telefone editado, novo appointment, etc)
+      cache: 'no-store',
       ...options,
       headers: {
         ...headers,
