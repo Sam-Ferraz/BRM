@@ -13,7 +13,7 @@
  * Mobile: pilha vertical — na primeira carga mostra só B; ao selecionar,
  * mostra A com botão de "voltar". C vira drawer no header.
  */
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import {
   Briefcase, Users, Package, HeadphonesIcon, ClipboardCheck, FileSignature, FileCheck2,
@@ -206,6 +206,49 @@ export default function HomePage() {
     setSelectedId(id)
     setMobilePanel("editor")
   }
+
+  // Bottom nav — mouse drag horizontal (touch já funciona nativo via overflow-x-auto)
+  // No mobile, o browser cuida do momentum scroll. No desktop, precisamos
+  // implementar o "grab and drag" manualmente pra dar a mesma sensacao de roleta.
+  const navRef = useRef<HTMLElement | null>(null)
+  const dragRef = useRef<{ startX: number; startScrollLeft: number; moved: boolean } | null>(null)
+
+  const onNavMouseDown = useCallback((e: React.MouseEvent<HTMLElement>) => {
+    // Nao interfere quando o click e em cima de um Link filho — deixa passar
+    // pra navegar. Se arrastar horizontal >5px, cancelamos a navegacao no click.
+    if (e.button !== 0) return
+    const el = navRef.current
+    if (!el) return
+    dragRef.current = { startX: e.pageX, startScrollLeft: el.scrollLeft, moved: false }
+    el.style.cursor = "grabbing"
+  }, [])
+
+  const onNavMouseMove = useCallback((e: React.MouseEvent<HTMLElement>) => {
+    const st = dragRef.current
+    const el = navRef.current
+    if (!st || !el) return
+    const dx = e.pageX - st.startX
+    if (Math.abs(dx) > 5) st.moved = true
+    el.scrollLeft = st.startScrollLeft - dx
+  }, [])
+
+  const onNavMouseUp = useCallback((_e: React.MouseEvent<HTMLElement>) => {
+    const el = navRef.current
+    if (el) el.style.cursor = "grab"
+    // Deixa dragRef.current NULL depois de um tick pra o handler de click do
+    // Link poder checar `moved` antes de a navegacao acontecer.
+    setTimeout(() => {
+      dragRef.current = null
+    }, 0)
+  }, [])
+
+  // Se o usuario arrastou, cancela a navegacao do click no Link filho
+  const onNavLinkClickCapture = useCallback((e: React.MouseEvent<HTMLElement>) => {
+    if (dragRef.current?.moved) {
+      e.preventDefault()
+      e.stopPropagation()
+    }
+  }, [])
 
   return (
     <div className="h-screen w-screen overflow-hidden bg-background flex">
@@ -415,9 +458,29 @@ export default function HomePage() {
       {/* distribuem justificados no espaço disponível.                 */}
       {/* ============================================================ */}
       <nav
-        className="fixed bottom-0 left-0 right-0 z-40 bg-card border-t overflow-x-auto"
-        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+        ref={navRef}
+        onMouseDown={onNavMouseDown}
+        onMouseMove={onNavMouseMove}
+        onMouseUp={onNavMouseUp}
+        onMouseLeave={onNavMouseUp}
+        onClickCapture={onNavLinkClickCapture}
+        className="fixed bottom-0 left-0 right-0 z-40 bg-card border-t overflow-x-auto cursor-grab select-none"
+        style={{
+          paddingBottom: "env(safe-area-inset-bottom)",
+          // Momentum scroll no iOS/mobile (Safari respeita, resto ignora)
+          WebkitOverflowScrolling: "touch",
+          // Efeito "roleta": cada item encaixa no ponto ao terminar de arrastar
+          scrollSnapType: "x proximity",
+          // Nao propaga o scroll horizontal pra pagina (evita "bounce" da URL bar)
+          overscrollBehaviorX: "contain",
+          // Some com a scrollbar visual — o gesto substitui o feedback
+          scrollbarWidth: "none",
+        }}
       >
+        <style>{`
+          /* Esconde scrollbar no WebKit (Chrome/Safari) */
+          nav::-webkit-scrollbar { display: none; }
+        `}</style>
         <div className="flex items-stretch gap-2 md:gap-4 px-3 py-3 min-w-max md:justify-center">
           {MODULES.map((m) => {
             const Icon = m.icon
@@ -427,6 +490,7 @@ export default function HomePage() {
               <Link
                 key={m.path}
                 to={m.path}
+                style={{ scrollSnapAlign: "center" }}
                 className="relative shrink-0 flex flex-col items-center gap-1 min-w-[76px] md:min-w-[86px] px-2 py-1 rounded-lg text-[#0c343d] hover:bg-accent transition-colors"
               >
                 <div className="relative">
