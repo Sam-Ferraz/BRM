@@ -18,7 +18,7 @@ import { Link, useNavigate } from "react-router-dom"
 import {
   Briefcase, Users, Package, HeadphonesIcon, ClipboardCheck, FileSignature, FileCheck2,
   Key, MessageCircle, Inbox, Store, BarChart3, CalendarDays, Settings, LogOut, Search,
-  Menu, ArrowLeft, Home as HomeIcon, Plus, ChevronLeft, ChevronRight,
+  Menu, ArrowLeft, Home as HomeIcon, Plus,
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -212,39 +212,6 @@ export default function HomePage() {
   // implementar o "grab and drag" manualmente pra dar a mesma sensacao de roleta.
   const navRef = useRef<HTMLElement | null>(null)
   const dragRef = useRef<{ startX: number; startScrollLeft: number; moved: boolean } | null>(null)
-  // Estado das setas de rolagem (opcao B pra quando o swipe/drag falha)
-  const [canScrollLeft, setCanScrollLeft] = useState(false)
-  const [canScrollRight, setCanScrollRight] = useState(false)
-
-  const updateArrows = useCallback(() => {
-    const el = navRef.current
-    if (!el) return
-    setCanScrollLeft(el.scrollLeft > 4)
-    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4)
-  }, [])
-
-  // Atualiza setas quando a nav monta ou o conteudo muda (stats carrega tarde)
-  useEffect(() => {
-    updateArrows()
-    const el = navRef.current
-    if (!el) return
-    el.addEventListener("scroll", updateArrows, { passive: true })
-    const ro = new ResizeObserver(updateArrows)
-    ro.observe(el)
-    window.addEventListener("resize", updateArrows)
-    return () => {
-      el.removeEventListener("scroll", updateArrows)
-      ro.disconnect()
-      window.removeEventListener("resize", updateArrows)
-    }
-  }, [updateArrows, stats])
-
-  const scrollNav = useCallback((dir: "left" | "right") => {
-    const el = navRef.current
-    if (!el) return
-    const amount = Math.max(200, el.clientWidth * 0.6)
-    el.scrollBy({ left: dir === "left" ? -amount : amount, behavior: "smooth" })
-  }, [])
 
   const onNavMouseDown = useCallback((e: React.MouseEvent<HTMLElement>) => {
     // Nao interfere quando o click e em cima de um Link filho — deixa passar
@@ -490,39 +457,6 @@ export default function HomePage() {
       {/* garante que caiba em telas estreitas; em desktop os itens se  */}
       {/* distribuem justificados no espaço disponível.                 */}
       {/* ============================================================ */}
-      {/* Wrapper fixo pra segurar a nav + as setas laterais (opcao B pro drag) */}
-      <div
-        className="fixed bottom-0 left-0 right-0 z-40 bg-card border-t"
-        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
-      >
-        {/* Seta esquerda */}
-        {canScrollLeft && (
-          <button
-            type="button"
-            onClick={() => scrollNav("left")}
-            aria-label="Rolar para a esquerda"
-            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 h-full px-2 flex items-center justify-center text-[#0c343d] hover:bg-accent/60 transition-colors"
-            style={{
-              background: "linear-gradient(to right, hsl(var(--card)) 60%, transparent)",
-            }}
-          >
-            <ChevronLeft className="w-6 h-6" />
-          </button>
-        )}
-        {/* Seta direita */}
-        {canScrollRight && (
-          <button
-            type="button"
-            onClick={() => scrollNav("right")}
-            aria-label="Rolar para a direita"
-            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 h-full px-2 flex items-center justify-center text-[#0c343d] hover:bg-accent/60 transition-colors"
-            style={{
-              background: "linear-gradient(to left, hsl(var(--card)) 60%, transparent)",
-            }}
-          >
-            <ChevronRight className="w-6 h-6" />
-          </button>
-        )}
       <nav
         ref={navRef}
         onMouseDown={onNavMouseDown}
@@ -530,8 +464,9 @@ export default function HomePage() {
         onMouseUp={onNavMouseUp}
         onMouseLeave={onNavMouseUp}
         onClickCapture={onNavLinkClickCapture}
-        className="overflow-x-auto cursor-grab select-none"
+        className="fixed bottom-0 left-0 right-0 z-40 bg-card border-t overflow-x-auto cursor-grab select-none"
         style={{
+          paddingBottom: "env(safe-area-inset-bottom)",
           // Momentum scroll no iOS/mobile (Safari respeita, resto ignora)
           WebkitOverflowScrolling: "touch",
           // Efeito "roleta": cada item encaixa no ponto ao terminar de arrastar
@@ -576,7 +511,6 @@ export default function HomePage() {
           })}
         </div>
       </nav>
-      </div>
     </div>
   )
 }
