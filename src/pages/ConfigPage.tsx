@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, Settings, CheckCircle2, XCircle, Users as UsersIcon, Shield, ChevronRight, Route as RouteIcon, Building2, Tag } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
+import { useBottomNavPreference } from "@/hooks/use-bottom-nav-preference"
+import { Switch } from "@/components/ui/switch"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { LanguageSelector } from "@/components/language-selector"
 import { TimezoneSelector } from "@/components/timezone-selector"
@@ -247,6 +249,9 @@ export default function ConfigPage() {
             </Card>
           )}
 
+          {/* Navegação — bottom nav com widgets sobrevoando */}
+          <NavigationSettings />
+
           {/* Timezone Settings */}
           <Card>
             <CardHeader>
@@ -326,5 +331,35 @@ export default function ConfigPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+/**
+ * NavigationSettings — card na página de Configurações que deixa o usuário
+ * ligar/desligar a bottom nav com widgets sobrevoando. Preferência salva
+ * em localStorage e propagada em tempo real pra todas as ProtectedRoutes.
+ */
+function NavigationSettings() {
+  const { enabled, setEnabled } = useBottomNavPreference()
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Navegação</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="flex items-center justify-between">
+          <div className="flex-1 pr-4">
+            <p className="text-sm font-medium mb-1">Rodapé com módulos sobrevoando</p>
+            <p className="text-xs text-muted-foreground">
+              Quando ligado, uma barra fixa aparece no rodapé de todas as telas
+              com atalhos pros módulos (Negócios, Atendimentos, Clientes, etc.).
+              Você pode deslizar horizontalmente ou usar as setas laterais pra
+              navegar. Desligue se preferir uma interface mais limpa.
+            </p>
+          </div>
+          <Switch checked={enabled} onCheckedChange={setEnabled} />
+        </div>
+      </CardContent>
+    </Card>
   )
 }

@@ -1,6 +1,7 @@
 import { useAuth } from '@/hooks/use-auth'
 import { Navigate, useLocation } from 'react-router-dom'
 import { BottomNav } from './bottom-nav'
+import { useBottomNavPreference } from '@/hooks/use-bottom-nav-preference'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
@@ -9,6 +10,7 @@ interface ProtectedRouteProps {
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { isAuthenticated, isLoading } = useAuth()
   const location = useLocation()
+  const { enabled: showBottomNav } = useBottomNavPreference()
 
   if (isLoading) {
     return (
@@ -22,12 +24,12 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     return <Navigate to="/" state={{ from: location }} replace />
   }
 
-  // Bottom nav aparece em TODAS as páginas autenticadas. Padding-bottom no
-  // wrapper garante que a nav (~72px) não corte o conteúdo da página.
+  // Bottom nav só aparece se o usuário quiser (toggle em Configurações).
+  // Quando ligada, adicionamos padding-bottom pro conteúdo não ser cortado.
   return (
     <>
-      <div className="pb-20">{children}</div>
-      <BottomNav />
+      <div className={showBottomNav ? "pb-20" : ""}>{children}</div>
+      {showBottomNav && <BottomNav />}
     </>
   )
 }
