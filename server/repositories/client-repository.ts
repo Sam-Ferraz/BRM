@@ -33,6 +33,19 @@ export class ClientRepository extends BaseRepository {
     }
   }
 
+  async findById(accountId: number, id: number): Promise<Client | null> {
+    const client = await this.getClient()
+    try {
+      const result = await client.query(
+        'SELECT * FROM clients WHERE id = $1 AND account_id = $2',
+        [id, accountId]
+      )
+      return result.rows[0] || null
+    } finally {
+      this.releaseClient(client)
+    }
+  }
+
   async create(accountId: number, clientData: Omit<Client, 'id' | 'created_at' | 'updated_at'>): Promise<Client> {
     const client = await this.getClient()
     try {

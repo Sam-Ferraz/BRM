@@ -204,7 +204,7 @@ const dashboardService = new DashboardService(
   contractRepository
 )
 const dealService = new DealService(dealRepository)
-const clientService = new ClientService(clientRepository)
+const clientService = new ClientService(clientRepository, dealRepository)
 const productService = new ProductService(productRepository)
 const appointmentService = new AppointmentService(appointmentRepository)
 const salesAgendaService = new SalesAgendaService(salesAgendaRepository)

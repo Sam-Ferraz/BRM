@@ -143,6 +143,33 @@ export class DealRepository extends BaseRepository {
     }
   }
 
+  /**
+   * Sincroniza o telefone de todos os deals de um cliente quando o
+   * ClientService atualiza o cadastro. Como o vinculo hoje e por nome
+   * (deal.client = client.name), fazemos UPDATE em cascata escopado por
+   * account + nome. Se o nome mudou tambem, o caller deve passar o nome
+   * ANTIGO em oldClientName.
+   */
+  async syncPhoneByClientName(
+    accountId: number,
+    clientName: string,
+    newPhone: string | null
+  ): Promise<number> {
+    const client = await this.getClient()
+    try {
+      const result = await client.query(
+        `UPDATE deals
+            SET client_phone = $1,
+                updated_at = CURRENT_TIMESTAMP
+          WHERE account_id = $2 AND client = $3`,
+        [newPhone, accountId, clientName]
+      )
+      return result.rowCount ?? 0
+    } finally {
+      this.releaseClient(client)
+    }
+  }
+
   async delete(accountId: number, id: number): Promise<boolean> {
     const client = await this.getClient()
     try {
