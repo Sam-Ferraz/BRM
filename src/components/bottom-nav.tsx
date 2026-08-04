@@ -68,7 +68,7 @@ const NAV: NavEntry[] = [
   },
   {
     kind: "group",
-    label: "Vitrine",
+    label: "Produtos",
     icon: Store,
     children: [
       { label: "Imóveis", path: "/products",     icon: Package, countKey: "totalProducts" },
@@ -77,7 +77,7 @@ const NAV: NavEntry[] = [
   },
   {
     kind: "group",
-    label: "BI",
+    label: "Inteligência",
     icon: BarChart3,
     children: [
       { label: "Agenda", path: "/agenda",    icon: CalendarDays },
