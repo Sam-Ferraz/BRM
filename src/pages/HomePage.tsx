@@ -348,7 +348,7 @@ export default function HomePage() {
                       <div className="min-w-0 flex-1">
                         <div className="font-medium text-sm truncate">{deal.client}</div>
                         <div className="text-xs text-muted-foreground truncate">
-                          {deal.property_name || "—"}
+                          {deal.description || "—"}
                         </div>
                       </div>
                       <div className="shrink-0 text-right">
