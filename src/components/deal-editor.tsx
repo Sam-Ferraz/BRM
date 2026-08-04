@@ -21,7 +21,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { Plus } from "lucide-react"
+import { Plus, MessageCircle, Phone } from "lucide-react"
 import { CurrencyInput } from "@/components/ui/currency-input"
 import { ClientSearch } from "@/components/client-search"
 import { ProductSearch } from "@/components/product-search"
@@ -345,22 +345,53 @@ export function DealEditor({
     <>
       {deal ? (
         <Tabs defaultValue={defaultTab} className="flex-1 flex flex-col min-h-0">
-          {/* Bar acima das tabs: tabs + botao Novo atendimento (sempre visivel) */}
-          <div className="flex items-center gap-3 shrink-0">
-            <TabsList className="flex-1">
-              <TabsTrigger value="history" className="flex-1">Histórico de atendimento</TabsTrigger>
-              <TabsTrigger value="info" className="flex-1">Informações</TabsTrigger>
-            </TabsList>
+          {/* Barra acima das tabs: Novo atendimento + Chat WA + Ligacao */}
+          <div className="flex items-center gap-2 shrink-0 mb-2">
             <Button
               type="button"
               size="sm"
               onClick={() => setNewAppointmentOpen(true)}
-              className="shrink-0"
             >
               <Plus className="w-4 h-4 mr-1.5" />
               Novo atendimento
             </Button>
+            {/* Chat WhatsApp — abre wa.me em nova aba */}
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              title={deal.client_phone ? `WhatsApp ${deal.client_phone}` : "Sem telefone cadastrado"}
+              disabled={!deal.client_phone}
+              onClick={() => {
+                if (!deal.client_phone) return
+                const digits = deal.client_phone.replace(/\D/g, "")
+                if (digits.length < 10) return
+                window.open(`https://wa.me/${digits}`, "_blank", "noopener,noreferrer")
+              }}
+            >
+              <MessageCircle className="w-4 h-4" />
+            </Button>
+            {/* Ligacao — abre discador do dispositivo (tel:) */}
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              title={deal.client_phone ? `Ligar para ${deal.client_phone}` : "Sem telefone cadastrado"}
+              disabled={!deal.client_phone}
+              onClick={() => {
+                if (!deal.client_phone) return
+                const digits = deal.client_phone.replace(/\D/g, "")
+                if (digits.length < 10) return
+                window.location.href = `tel:+${digits}`
+              }}
+            >
+              <Phone className="w-4 h-4" />
+            </Button>
           </div>
+          <TabsList className="w-full shrink-0">
+            <TabsTrigger value="history" className="flex-1">Histórico de atendimento</TabsTrigger>
+            <TabsTrigger value="info" className="flex-1">Informações</TabsTrigger>
+          </TabsList>
           <TabsContent
             value="history"
             className="flex-1 min-h-0 mt-2 data-[state=inactive]:hidden overflow-hidden flex flex-col"
