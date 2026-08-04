@@ -71,15 +71,10 @@ export function DealAppointmentsTimeline({
 
   return (
     <div className="flex flex-col gap-3 h-full">
-      {/* Header + CTA */}
-      <div className="flex items-center justify-between shrink-0">
-        <div>
-          <h3 className="font-semibold text-base">Linha do tempo</h3>
-        </div>
-        <Button type="button" size="sm" onClick={onAddAppointment}>
-          <Plus className="w-4 h-4 mr-1.5" />
-          Novo atendimento
-        </Button>
+      {/* Header (CTA "Novo atendimento" agora vive no DealEditor, fora das
+          tabs — assim aparece independente da aba selecionada) */}
+      <div className="shrink-0">
+        <h3 className="font-semibold text-base">Linha do tempo</h3>
       </div>
 
       {/* Lista */}

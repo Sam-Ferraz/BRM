@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { Plus } from "lucide-react"
 import { CurrencyInput } from "@/components/ui/currency-input"
 import { ClientSearch } from "@/components/client-search"
 import { ProductSearch } from "@/components/product-search"
@@ -344,10 +345,22 @@ export function DealEditor({
     <>
       {deal ? (
         <Tabs defaultValue={defaultTab} className="flex-1 flex flex-col min-h-0">
-          <TabsList className="w-full shrink-0">
-            <TabsTrigger value="history" className="flex-1">Histórico de atendimento</TabsTrigger>
-            <TabsTrigger value="info" className="flex-1">Informações</TabsTrigger>
-          </TabsList>
+          {/* Bar acima das tabs: tabs + botao Novo atendimento (sempre visivel) */}
+          <div className="flex items-center gap-3 shrink-0">
+            <TabsList className="flex-1">
+              <TabsTrigger value="history" className="flex-1">Histórico de atendimento</TabsTrigger>
+              <TabsTrigger value="info" className="flex-1">Informações</TabsTrigger>
+            </TabsList>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => setNewAppointmentOpen(true)}
+              className="shrink-0"
+            >
+              <Plus className="w-4 h-4 mr-1.5" />
+              Novo atendimento
+            </Button>
+          </div>
           <TabsContent
             value="history"
             className="flex-1 min-h-0 mt-2 data-[state=inactive]:hidden overflow-hidden flex flex-col"
