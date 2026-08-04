@@ -75,11 +75,6 @@ export function DealAppointmentsTimeline({
       <div className="flex items-center justify-between shrink-0">
         <div>
           <h3 className="font-semibold text-base">Linha do tempo</h3>
-          <p className="text-xs text-muted-foreground">
-            {clientName
-              ? `Atendimentos vinculados a este Negócio (${clientName})`
-              : "Atendimentos vinculados a este Negócio"}
-          </p>
         </div>
         <Button type="button" size="sm" onClick={onAddAppointment}>
           <Plus className="w-4 h-4 mr-1.5" />
