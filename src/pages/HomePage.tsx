@@ -500,10 +500,10 @@ function NewRecordMenu() {
         <button
           type="button"
           title="Novo cadastro"
-          className="w-6 h-6 rounded-full flex items-center justify-center transition-transform hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+          className="w-6 h-6 rounded-full inline-flex items-center justify-center leading-none transition-transform hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
           style={{ backgroundColor: "#0c343d", color: "#f3f3f3" }}
         >
-          <Plus className="w-3.5 h-3.5" strokeWidth={2.5} />
+          <Plus className="w-3.5 h-3.5 shrink-0 block" strokeWidth={2.75} />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
