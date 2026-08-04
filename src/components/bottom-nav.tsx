@@ -27,7 +27,7 @@ type ModuleItem = {
 }
 
 const MODULES: ModuleItem[] = [
-  { path: "/dashboard",    label: "Home",         icon: HomeIcon },
+  { path: "/dashboard",    label: "Início",       icon: HomeIcon },
   { path: "/deals",        label: "Negócios",     icon: Briefcase,      countKey: "totalDeals" },
   { path: "/appointments", label: "Atendimentos", icon: HeadphonesIcon, countKey: "totalAppointments" },
   { path: "/follow-ups",   label: "Follow-ups",   icon: ClipboardCheck, countKey: "totalFollowUps" },
