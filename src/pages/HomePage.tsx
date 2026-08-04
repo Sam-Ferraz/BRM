@@ -34,8 +34,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
@@ -502,28 +500,24 @@ function NewRecordMenu() {
         <button
           type="button"
           title="Novo cadastro"
-          className="w-9 h-9 rounded-full flex items-center justify-center transition-transform hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+          className="w-7 h-7 rounded-full flex items-center justify-center transition-transform hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
           style={{ backgroundColor: "#0c343d", color: "#f3f3f3" }}
         >
-          <Plus className="w-5 h-5" strokeWidth={2.5} />
+          <Plus className="w-4 h-4" strokeWidth={2.5} />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
-        <DropdownMenuLabel className="text-xs text-muted-foreground">
-          Novo cadastro
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => navigate("/deals?new=true")}>
           <Briefcase className="w-4 h-4 mr-2" />
-          Negócio
+          Novo negócio
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => navigate("/products?new=true")}>
           <Package className="w-4 h-4 mr-2" />
-          Imóvel
+          Novo imóvel
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => navigate("/clients?new=true")}>
           <Users className="w-4 h-4 mr-2" />
-          Cliente
+          Novo cliente
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
