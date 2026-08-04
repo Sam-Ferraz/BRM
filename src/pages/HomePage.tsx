@@ -295,7 +295,7 @@ export default function HomePage() {
         {/* Header da lista B — simples: só título + busca (atalhos moveram pro header A) */}
         <div className="shrink-0 p-3 border-b space-y-2">
           <div className="flex items-center justify-between gap-2">
-            <h2 className="font-semibold text-base">Negócios</h2>
+            <h2 className="font-semibold text-base">BRM</h2>
           </div>
           <div className="relative">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
