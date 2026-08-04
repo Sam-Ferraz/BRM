@@ -1,54 +1,108 @@
 import { useCallback, useEffect, useRef, useState } from "react"
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import {
   Briefcase, Users, Package, HeadphonesIcon, ClipboardCheck, FileSignature, FileCheck2,
   Key, MessageCircle, Inbox, Store, BarChart3, CalendarDays, ChevronLeft, ChevronRight,
   Home as HomeIcon,
 } from "lucide-react"
 import { api, type DashboardStats } from "@/lib/api-client"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
 /**
- * BottomNav — barra de módulos fixa no rodapé, presente em TODAS as páginas
- * autenticadas. Widgets rolam horizontal via swipe/drag/setas.
+ * BottomNav — barra fixa no rodape com widgets AGRUPADOS.
  *
- * Design: badges nordeste com contadores vindos de /api/dashboard/stats
- * (fetch único quando o componente monta — reusado entre páginas).
+ * 6 widgets principais:
+ *   1. Inicio (link direto)
+ *   2. Negocios (grupo → Negocios, Atendimentos, Follow-ups, Propostas, Contratos, Vendas)
+ *   3. Clientes (grupo → Clientes, Leads)
+ *   4. Vitrine (grupo → Vitrine, Imoveis)
+ *   5. BI (grupo → BI, Agenda)
+ *   6. Chat (link direto)
  *
- * Setas laterais aparecem como "opção B" quando swipe/drag falha; usam
- * apenas listener de scroll simples (sem ResizeObserver) pra evitar
- * overhead / loops de re-render.
+ * Grupos abrem popover PRA CIMA com sub-items em coluna vertical. A ordem
+ * na config e "de baixo pra cima" (primeiro item da array aparece no topo
+ * do popover — mais alto na tela, mais longe do widget clicado).
+ *
+ * Cache de stats em memoria (variavel de modulo) — evita re-fetch ao trocar
+ * de pagina dentro da mesma sessao.
  */
 
-type ModuleItem = {
+type CountKey = keyof DashboardStats
+
+type SubItem = {
   path: string
   label: string
   icon: React.ComponentType<{ className?: string; strokeWidth?: number }>
-  countKey?: keyof DashboardStats
+  countKey?: CountKey
 }
 
-const MODULES: ModuleItem[] = [
-  { path: "/dashboard",    label: "Início",       icon: HomeIcon },
-  { path: "/deals",        label: "Negócios",     icon: Briefcase,      countKey: "totalDeals" },
-  { path: "/appointments", label: "Atendimentos", icon: HeadphonesIcon, countKey: "totalAppointments" },
-  { path: "/follow-ups",   label: "Follow-ups",   icon: ClipboardCheck, countKey: "totalFollowUps" },
-  { path: "/agenda",       label: "Agenda",       icon: CalendarDays },
-  { path: "/chat",         label: "Chat",         icon: MessageCircle,  countKey: "pendingChatAndCalls" },
-  { path: "/leads",        label: "Leads",        icon: Inbox,          countKey: "newLeads" },
-  { path: "/proposals",    label: "Propostas",    icon: FileSignature,  countKey: "totalProposals" },
-  { path: "/contracts",    label: "Contratos",    icon: FileCheck2,     countKey: "totalContracts" },
-  { path: "/sales",        label: "Vendas",       icon: Key,            countKey: "totalSales" },
-  { path: "/clients",      label: "Clientes",     icon: Users,          countKey: "totalClients" },
-  { path: "/products",     label: "Imóveis",      icon: Package,        countKey: "totalProducts" },
-  { path: "/sales-agenda", label: "Vitrine",      icon: Store,          countKey: "totalShowcaseProducts" },
-  { path: "/analytics",    label: "BI",           icon: BarChart3 },
+type NavEntry =
+  | { kind: "link"; label: string; icon: React.ComponentType<{ className?: string; strokeWidth?: number }>; path: string; countKey?: CountKey }
+  | { kind: "group"; label: string; icon: React.ComponentType<{ className?: string; strokeWidth?: number }>; children: SubItem[] }
+
+const NAV: NavEntry[] = [
+  { kind: "link", label: "Início", icon: HomeIcon, path: "/dashboard" },
+  {
+    kind: "group",
+    label: "Negócios",
+    icon: Briefcase,
+    // Ordem "de baixo pra cima": Negócios aparece no topo do popover,
+    // Vendas mais próximo do widget (base do popover).
+    children: [
+      { label: "Vendas",      path: "/sales",        icon: Key,            countKey: "totalSales" },
+      { label: "Contratos",   path: "/contracts",    icon: FileCheck2,     countKey: "totalContracts" },
+      { label: "Propostas",   path: "/proposals",    icon: FileSignature,  countKey: "totalProposals" },
+      { label: "Follow-ups",  path: "/follow-ups",   icon: ClipboardCheck, countKey: "totalFollowUps" },
+      { label: "Atendimentos", path: "/appointments", icon: HeadphonesIcon, countKey: "totalAppointments" },
+      { label: "Negócios",    path: "/deals",        icon: Briefcase,      countKey: "totalDeals" },
+    ],
+  },
+  {
+    kind: "group",
+    label: "Clientes",
+    icon: Users,
+    children: [
+      { label: "Leads",    path: "/leads",   icon: Inbox, countKey: "newLeads" },
+      { label: "Clientes", path: "/clients", icon: Users, countKey: "totalClients" },
+    ],
+  },
+  {
+    kind: "group",
+    label: "Vitrine",
+    icon: Store,
+    children: [
+      { label: "Imóveis", path: "/products",     icon: Package, countKey: "totalProducts" },
+      { label: "Vitrine", path: "/sales-agenda", icon: Store,   countKey: "totalShowcaseProducts" },
+    ],
+  },
+  {
+    kind: "group",
+    label: "BI",
+    icon: BarChart3,
+    children: [
+      { label: "Agenda", path: "/agenda",    icon: CalendarDays },
+      { label: "BI",     path: "/analytics", icon: BarChart3 },
+    ],
+  },
+  { kind: "link", label: "Chat", icon: MessageCircle, path: "/chat", countKey: "pendingChatAndCalls" },
 ]
 
-// Módulo de estado compartilhado — a nav aparece em várias páginas mas fetcha
-// stats só uma vez por sessão (cache de módulo em memória).
 let statsCache: DashboardStats | null = null
+
+/** Soma contadores de um grupo (usado como badge do grupo). */
+function sumGroupCount(children: SubItem[], stats: DashboardStats | null): number {
+  if (!stats) return 0
+  let total = 0
+  for (const c of children) {
+    if (c.countKey) total += Number(stats[c.countKey] || 0)
+  }
+  return total
+}
 
 export function BottomNav() {
   const [stats, setStats] = useState<DashboardStats | null>(statsCache)
+  const [openGroup, setOpenGroup] = useState<string | null>(null)
+  const navigate = useNavigate()
   const navRef = useRef<HTMLElement | null>(null)
   const dragRef = useRef<{ startX: number; startScrollLeft: number; moved: boolean } | null>(null)
   const [canScrollLeft, setCanScrollLeft] = useState(false)
@@ -69,9 +123,6 @@ export function BottomNav() {
     }
   }, [])
 
-  // Recalcula setas somente em scroll do usuário (SEM ResizeObserver — evita
-  // loops que causaram lentidão no experimento anterior). Fazemos check
-  // inicial no mount uma vez.
   useEffect(() => {
     const el = navRef.current
     if (!el) return
@@ -81,9 +132,7 @@ export function BottomNav() {
     }
     check()
     el.addEventListener("scroll", check, { passive: true })
-    return () => {
-      el.removeEventListener("scroll", check)
-    }
+    return () => el.removeEventListener("scroll", check)
   }, [stats])
 
   const onNavMouseDown = useCallback((e: React.MouseEvent<HTMLElement>) => {
@@ -118,6 +167,18 @@ export function BottomNav() {
     const amount = Math.max(200, el.clientWidth * 0.6)
     el.scrollBy({ left: dir === "left" ? -amount : amount, behavior: "smooth" })
   }, [])
+
+  const renderBadge = (count: number) => {
+    if (count <= 0) return null
+    return (
+      <span
+        className="absolute -top-2 -right-3 min-w-[20px] h-[20px] px-1 rounded-full text-white text-[11px] font-semibold flex items-center justify-center leading-none ring-2 ring-card"
+        style={{ backgroundColor: "#0c343d" }}
+      >
+        {count > 99 ? "99+" : count}
+      </span>
+    )
+  }
 
   return (
     <div
@@ -161,30 +222,81 @@ export function BottomNav() {
         }}
       >
         <style>{`.brm-bottom-nav::-webkit-scrollbar { display: none; }`}</style>
-        <div className="flex items-stretch gap-2 md:gap-4 px-3 py-3 min-w-max md:justify-center">
-          {MODULES.map((m) => {
-            const Icon = m.icon
-            const count = m.countKey && stats ? Number(stats[m.countKey] || 0) : 0
-            const showBadge = count > 0
+        <div className="flex items-stretch gap-2 md:gap-6 px-3 py-3 min-w-max md:justify-center">
+          {NAV.map((entry) => {
+            const Icon = entry.icon
+            if (entry.kind === "link") {
+              const count = entry.countKey && stats ? Number(stats[entry.countKey] || 0) : 0
+              return (
+                <Link
+                  key={entry.path}
+                  to={entry.path}
+                  className="relative shrink-0 flex flex-col items-center gap-1 min-w-[76px] md:min-w-[86px] px-2 py-1 rounded-lg text-[#0c343d] hover:bg-accent transition-colors"
+                >
+                  <div className="relative">
+                    <Icon className="w-6 h-6 md:w-7 md:h-7" strokeWidth={1.75} />
+                    {renderBadge(count)}
+                  </div>
+                  <span className="text-[11px] md:text-[12px] font-medium leading-tight whitespace-nowrap">{entry.label}</span>
+                </Link>
+              )
+            }
+            // Grupo — abre popover com sub-items
+            const totalCount = sumGroupCount(entry.children, stats)
             return (
-              <Link
-                key={m.path}
-                to={m.path}
-                className="relative shrink-0 flex flex-col items-center gap-1 min-w-[76px] md:min-w-[86px] px-2 py-1 rounded-lg text-[#0c343d] hover:bg-accent transition-colors"
+              <Popover
+                key={entry.label}
+                open={openGroup === entry.label}
+                onOpenChange={(v) => setOpenGroup(v ? entry.label : null)}
               >
-                <div className="relative">
-                  <Icon className="w-6 h-6 md:w-7 md:h-7" strokeWidth={1.75} />
-                  {showBadge && (
-                    <span
-                      className="absolute -top-2 -right-3 min-w-[20px] h-[20px] px-1 rounded-full text-white text-[11px] font-semibold flex items-center justify-center leading-none ring-2 ring-card"
-                      style={{ backgroundColor: "#0c343d" }}
-                    >
-                      {count > 99 ? "99+" : count}
-                    </span>
-                  )}
-                </div>
-                <span className="text-[11px] md:text-[12px] font-medium leading-tight whitespace-nowrap">{m.label}</span>
-              </Link>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    className="relative shrink-0 flex flex-col items-center gap-1 min-w-[76px] md:min-w-[86px] px-2 py-1 rounded-lg text-[#0c343d] hover:bg-accent transition-colors"
+                  >
+                    <div className="relative">
+                      <Icon className="w-6 h-6 md:w-7 md:h-7" strokeWidth={1.75} />
+                      {renderBadge(totalCount)}
+                    </div>
+                    <span className="text-[11px] md:text-[12px] font-medium leading-tight whitespace-nowrap">{entry.label}</span>
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent
+                  side="top"
+                  align="center"
+                  sideOffset={8}
+                  className="p-1 w-48"
+                >
+                  <div className="flex flex-col">
+                    {entry.children.map((child) => {
+                      const ChildIcon = child.icon
+                      const count = child.countKey && stats ? Number(stats[child.countKey] || 0) : 0
+                      return (
+                        <button
+                          key={child.path}
+                          type="button"
+                          onClick={() => {
+                            setOpenGroup(null)
+                            navigate(child.path)
+                          }}
+                          className="relative flex items-center gap-2 px-3 py-2 text-sm rounded-md hover:bg-accent text-[#0c343d] transition-colors"
+                        >
+                          <ChildIcon className="w-4 h-4 shrink-0" strokeWidth={1.75} />
+                          <span className="flex-1 text-left">{child.label}</span>
+                          {count > 0 && (
+                            <span
+                              className="min-w-[20px] h-[20px] px-1 rounded-full text-white text-[10px] font-semibold flex items-center justify-center leading-none"
+                              style={{ backgroundColor: "#0c343d" }}
+                            >
+                              {count > 99 ? "99+" : count}
+                            </span>
+                          )}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </PopoverContent>
+              </Popover>
             )
           })}
         </div>
