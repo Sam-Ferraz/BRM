@@ -30,6 +30,14 @@ import { api, type Deal, type DashboardStats } from "@/lib/api-client"
 import { DealEditor } from "@/components/deal-editor"
 import { DealCodeBadge } from "@/components/deal-code-badge"
 import { cn } from "@/lib/utils"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 /**
  * Módulos que aparecem na coluna C. Ordem escolhida por importância no dia
@@ -290,11 +298,6 @@ export default function HomePage() {
         <div className="shrink-0 p-3 border-b space-y-2">
           <div className="flex items-center justify-between gap-2">
             <h2 className="font-semibold text-base">Negócios</h2>
-            <Link to="/deals?new=true" title="Novo negócio">
-              <Button size="sm" variant="ghost">
-                <Plus className="w-4 h-4" />
-              </Button>
-            </Link>
           </div>
           <div className="relative">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -417,9 +420,10 @@ export default function HomePage() {
                   {selectedDeal.client_phone && ` · ${selectedDeal.client_phone}`}
                 </p>
               </div>
-              {/* Atalhos no canto direito — Configurações e Sair (Home agora
-                  fica na bottom nav como primeiro widget) */}
-              <div className="shrink-0 flex items-center gap-1">
+              {/* Atalhos no canto direito — botão + circular (novo cadastro),
+                  Configurações e Sair (Home fica na bottom nav) */}
+              <div className="shrink-0 flex items-center gap-2">
+                <NewRecordMenu />
                 <Link
                   to="/settings"
                   title="Configurações"
@@ -451,8 +455,9 @@ export default function HomePage() {
           </>
         ) : (
           <>
-            {/* Header vazio — Configurações e Sair (Home agora na bottom nav) */}
-            <header className="shrink-0 p-3 bg-card border-b flex items-center justify-end gap-1">
+            {/* Header vazio — botão +, Configurações e Sair */}
+            <header className="shrink-0 p-3 bg-card border-b flex items-center justify-end gap-2">
+              <NewRecordMenu />
               <Link to="/settings" title="Configurações" className="p-2 rounded-full hover:bg-accent text-[#0c343d]">
                 <Settings className="w-5 h-5" />
               </Link>
@@ -477,5 +482,50 @@ export default function HomePage() {
           autenticadas, não só o home. Isso evita que o rodapé "desapareça"
           quando o usuário clica num widget e navega pra outro módulo. */}
     </div>
+  )
+}
+
+/**
+ * NewRecordMenu — botão circular com "+" que abre um menu com atalhos
+ * pra criação rápida de Negócio, Imóvel ou Cliente. Cor da marca
+ * (#0c343d) preenchida, texto #f3f3f3.
+ *
+ * Cada opção redireciona pra página do módulo com querystring `?new=true`
+ * que as páginas de listagem já sabem interpretar pra abrir o dialog de
+ * novo registro.
+ */
+function NewRecordMenu() {
+  const navigate = useNavigate()
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          title="Novo cadastro"
+          className="w-9 h-9 rounded-full flex items-center justify-center transition-transform hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+          style={{ backgroundColor: "#0c343d", color: "#f3f3f3" }}
+        >
+          <Plus className="w-5 h-5" strokeWidth={2.5} />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-48">
+        <DropdownMenuLabel className="text-xs text-muted-foreground">
+          Novo cadastro
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => navigate("/deals?new=true")}>
+          <Briefcase className="w-4 h-4 mr-2" />
+          Negócio
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => navigate("/products?new=true")}>
+          <Package className="w-4 h-4 mr-2" />
+          Imóvel
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => navigate("/clients?new=true")}>
+          <Users className="w-4 h-4 mr-2" />
+          Cliente
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }
