@@ -409,13 +409,17 @@ export default function HomePage() {
                 {getInitials(selectedDeal.client)}
               </button>
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <h1 className="font-semibold text-base truncate">{selectedDeal.client}</h1>
                   <DealCodeBadge id={selectedDeal.id} readOnly />
+                  {selectedDeal.client_phone && (
+                    <span className="inline-flex items-center rounded-md border bg-muted/40 px-2 py-0.5 font-mono text-xs font-semibold text-foreground">
+                      {selectedDeal.client_phone}
+                    </span>
+                  )}
                 </div>
                 <p className="text-xs text-muted-foreground truncate">
                   {selectedDeal.property_name || "Sem imóvel vinculado"}
-                  {selectedDeal.client_phone && ` · ${selectedDeal.client_phone}`}
                 </p>
               </div>
               {/* Atalhos no canto direito — botão + circular (novo cadastro),
