@@ -271,6 +271,8 @@ export interface Deal {
   client: string
   origin_date: string
   description?: string
+  /** Snapshot original do lead (webhook Meta / form). Read-only na UI. */
+  lead_data?: string | null
   client_phone?: string
   client_origin?: 'online_lead' | 'own_portfolio' | 'duty_shift' | 'referral' | 'street_client'
   purpose?: 'investment' | 'recreation' | 'both'

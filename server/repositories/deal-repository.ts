@@ -58,6 +58,7 @@ export class DealRepository extends BaseRepository {
           client,
           origin_date,
           description,
+          lead_data,
           client_phone,
           client_origin,
           purpose,
@@ -66,12 +67,13 @@ export class DealRepository extends BaseRepository {
           property_name,
           status,
           user_id
-        ) VALUES ($1, $2, $3::date, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
+        ) VALUES ($1, $2, $3::date, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *`,
         [
           accountId,
           deal.client,
           deal.origin_date || null,
           deal.description || null,
+          deal.lead_data || null,
           deal.client_phone || null,
           deal.client_origin || null,
           deal.purpose || null,
@@ -137,6 +139,8 @@ export class DealRepository extends BaseRepository {
           accountId,
         ]
       )
+      // Nota: lead_data NAO e sobrescrito no UPDATE — e read-only pelo
+      // corretor. So o webhook/importacao inicial popula esse campo.
       return result.rows.length > 0 ? result.rows[0] : null
     } finally {
       this.releaseClient(client)

@@ -315,6 +315,25 @@ export function DealEditor({
           </Select>
         </div>
 
+        {/* Se o negocio vem de Lead online, mostra o snapshot bruto do lead
+            (readonly) ACIMA do campo Descricao. lead_data e persistido pelo
+            webhook/importacao e nao pode ser editado pelo corretor. */}
+        {deal?.client_origin === "online_lead" && deal?.lead_data && (
+          <div className="space-y-2">
+            <Label htmlFor="lead_data">Lead</Label>
+            <Textarea
+              id="lead_data"
+              rows={5}
+              value={deal.lead_data}
+              readOnly
+              className="bg-muted resize-none font-mono text-xs"
+            />
+            <p className="text-xs text-muted-foreground">
+              Dados originais recebidos pelo webhook do Meta (nome, email, telefone e respostas do formulário).
+            </p>
+          </div>
+        )}
+
         <div className="space-y-2">
           <Label htmlFor="description">{t("description")}</Label>
           <Textarea
@@ -322,6 +341,7 @@ export function DealEditor({
             rows={3}
             value={formData.description}
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            placeholder="Título ou observações do negócio"
           />
         </div>
       </div>

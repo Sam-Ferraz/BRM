@@ -150,6 +150,9 @@ export interface Deal {
   client: string
   origin_date: string
   description?: string | null
+  // Snapshot original do lead (nome, email, telefone, form data do Meta).
+  // Existe apenas quando client_origin='online_lead'. Read-only na UI.
+  lead_data?: string | null
   client_phone?: string | null
   client_origin?: 'online_lead' | 'own_portfolio' | 'duty_shift' | 'referral' | 'street_client' | null
   purpose?: 'investment' | 'recreation' | 'both' | null
