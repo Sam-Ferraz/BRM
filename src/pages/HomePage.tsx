@@ -69,7 +69,7 @@ const STATUS_LABEL: Record<string, string> = {
   service_cold: "Atendimento", service_mild: "Atendimento", service_warm: "Atendimento",
   visit_foreseen_cold: "Agendamento", visit_foreseen_mild: "Agendamento", visit_foreseen_warm: "Agendamento",
   visit_done_cold: "Apresentação", visit_done_mild: "Apresentação", visit_done_warm: "Apresentação",
-  proposal: "Proposta", sold: "Vendido",
+  proposal: "Proposta", contract: "Contrato", sold: "Vendido",
   discarded_no_profile: "Descartado", discarded_no_interest: "Descartado",
   discarded_competitor: "Descartado", discarded_error: "Descartado",
 }
@@ -84,6 +84,7 @@ const STATUS_COLOR: Record<string, string> = {
   visit_done_mild: "bg-yellow-100 text-yellow-800",
   visit_done_warm: "bg-orange-100 text-orange-800",
   proposal: "bg-purple-100 text-purple-800",
+  contract: "bg-cyan-100 text-cyan-800",
   sold: "bg-green-100 text-green-800",
 }
 
