@@ -126,7 +126,7 @@ export default function LoginPage() {
             min-h + flex garante alinhamento vertical exato — padding só não
             resolveria porque o texto tem baseline diferente de altura. */}
         <CardHeader className="text-center min-h-[140px] flex items-center justify-center p-0">
-          <CardTitle className="text-4xl font-bold text-primary tracking-wide leading-none">BRM</CardTitle>
+          <img src="/brm-logo-full.svg" alt="BRM" className="h-16 w-auto" />
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-6">

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 100" fill="none">
+  <rect x="8" y="15" width="32" height="32" rx="6" fill="#9e9e9e"/>
+  <rect x="8" y="53" width="32" height="32" rx="6" fill="#9e9e9e"/>
+  <rect x="52" y="15" width="32" height="70" rx="6" fill="#0c343d"/>
+  <text x="105" y="78" font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif" font-size="72" font-weight="700" fill="#0c343d" letter-spacing="2">BRM</text>
+</svg>
