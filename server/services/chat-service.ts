@@ -178,6 +178,7 @@ export class ChatService {
 
     let providerMessageId: string | null = null
     let status: 'sent' | 'failed' = 'sent'
+    let providerError: Error | null = null
     try {
       const result = await this.whatsappProvider.sendMessage({
         ownerUserId,
@@ -189,6 +190,7 @@ export class ChatService {
     } catch (error) {
       console.error('Error sending WhatsApp message via provider:', error)
       status = 'failed'
+      providerError = error instanceof Error ? error : new Error(String(error))
     }
 
     const message = await this.messageRepository.create(accountId, {
@@ -199,6 +201,11 @@ export class ChatService {
       provider_message_id: providerMessageId,
     })
     await this.conversationRepository.touchLastMessage(accountId, conversationId, 'outbound')
+    // Propaga o erro real do provider (Cloud API 400/401/etc) pro handler HTTP,
+    // que devolve pro toast do BRM. A mensagem fica salva com status='failed'
+    // pra ficar registro visual, mas o toast avisa o motivo (ex: destinatário
+    // não autorizado no modo teste, token expirado, phone number id errado).
+    if (providerError) throw providerError
     // Pode ter completado interação bilateral (já houve inbound antes nas 24h).
     const conv = await this.conversationRepository.findById(accountId, conversationId)
     if (conv) await this.tryRegisterServiceFromConversation(accountId, conv)
