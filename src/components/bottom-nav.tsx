@@ -3,10 +3,11 @@ import { Link, useNavigate } from "react-router-dom"
 import {
   Briefcase, Users, Package, HeadphonesIcon, ClipboardCheck, FileSignature, FileCheck2,
   Key, MessageCircle, Inbox, Store, BarChart3, CalendarDays, ChevronLeft, ChevronRight,
-  Home as HomeIcon, Eye,
+  Home as HomeIcon, Eye, Settings, LogOut,
 } from "lucide-react"
 import { api, type DashboardStats } from "@/lib/api-client"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { useAuth } from "@/hooks/use-auth"
 
 /**
  * BottomNav — barra fixa no rodape com widgets AGRUPADOS.
@@ -85,6 +86,7 @@ const NAV: NavEntry[] = [
     ],
   },
   { kind: "link", label: "Chat", icon: MessageCircle, path: "/chat", countKey: "pendingChatAndCalls" },
+  { kind: "link", label: "Config.", icon: Settings, path: "/settings" },
 ]
 
 let statsCache: DashboardStats | null = null
@@ -103,6 +105,7 @@ export function BottomNav() {
   const [stats, setStats] = useState<DashboardStats | null>(statsCache)
   const [openGroup, setOpenGroup] = useState<string | null>(null)
   const navigate = useNavigate()
+  const { logout } = useAuth()
   const navRef = useRef<HTMLElement | null>(null)
   const dragRef = useRef<{ startX: number; startScrollLeft: number; moved: boolean } | null>(null)
   const [canScrollLeft, setCanScrollLeft] = useState(false)
@@ -299,6 +302,17 @@ export function BottomNav() {
               </Popover>
             )
           })}
+          {/* Widget Sair — nao e Link, chama logout() */}
+          <button
+            type="button"
+            onClick={logout}
+            className="relative shrink-0 flex flex-col items-center gap-1 min-w-[76px] md:min-w-[86px] px-2 py-1 rounded-lg text-[#0c343d] hover:bg-red-50 hover:text-red-600 transition-colors"
+          >
+            <div className="relative">
+              <LogOut className="w-6 h-6 md:w-7 md:h-7" strokeWidth={1.75} />
+            </div>
+            <span className="text-[11px] md:text-[12px] font-medium leading-tight whitespace-nowrap">Sair</span>
+          </button>
         </div>
       </nav>
     </div>

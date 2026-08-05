@@ -17,7 +17,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import {
   Briefcase, Users, Package, HeadphonesIcon, ClipboardCheck, FileSignature, FileCheck2,
-  Key, MessageCircle, Inbox, Store, BarChart3, CalendarDays, Settings, LogOut, Search,
+  Key, MessageCircle, Inbox, Store, BarChart3, CalendarDays, Search,
   Menu, ArrowLeft, Home as HomeIcon, Plus,
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
@@ -153,7 +153,7 @@ function formatRelative(dateStr: string | Date | undefined): string {
 }
 
 export default function HomePage() {
-  const { user, logout } = useAuth()
+  const { user } = useAuth()
   const { account } = useAccount()
   const { toast } = useToast()
   const navigate = useNavigate()
@@ -422,25 +422,8 @@ export default function HomePage() {
                   {selectedDeal.property_name || "Sem imóvel vinculado"}
                 </p>
               </div>
-              {/* Atalhos no canto direito — botão + circular (novo cadastro),
-                  Configurações e Sair (Home fica na bottom nav) */}
-              <div className="shrink-0 flex items-center gap-2">
-                <NewRecordMenu />
-                <Link
-                  to="/settings"
-                  title="Configurações"
-                  className="p-2 rounded-full hover:bg-accent text-[#0c343d]"
-                >
-                  <Settings className="w-5 h-5" />
-                </Link>
-                <button
-                  onClick={logout}
-                  title="Sair"
-                  className="p-2 rounded-full hover:bg-red-50 text-[#0c343d] hover:text-red-600"
-                >
-                  <LogOut className="w-5 h-5" />
-                </button>
-              </div>
+              {/* Atalhos Configurações/Sair movidos pra bottom nav.
+                  Botão + agora é FAB flutuante no canto inferior direito. */}
             </header>
 
             {/* Editor: Tabs Histórico (default) + Informações */}
@@ -457,16 +440,8 @@ export default function HomePage() {
           </>
         ) : (
           <>
-            {/* Header vazio — botão +, Configurações e Sair */}
-            <header className="shrink-0 p-3 bg-card border-b flex items-center justify-end gap-2">
-              <NewRecordMenu />
-              <Link to="/settings" title="Configurações" className="p-2 rounded-full hover:bg-accent text-[#0c343d]">
-                <Settings className="w-5 h-5" />
-              </Link>
-              <button onClick={logout} title="Sair" className="p-2 rounded-full hover:bg-red-50 text-[#0c343d] hover:text-red-600">
-                <LogOut className="w-5 h-5" />
-              </button>
-            </header>
+            {/* Header vazio — Config/Sair na bottom nav, + no FAB flutuante */}
+            <header className="shrink-0 p-3 bg-card border-b flex items-center justify-end gap-2" />
             <div className="flex-1 flex items-center justify-center text-center p-6">
               <div>
                 <Briefcase className="w-14 h-14 mx-auto text-muted-foreground/40 mb-3" />
@@ -483,6 +458,12 @@ export default function HomePage() {
       {/* BottomNav agora vem do ProtectedRoute — vale pra TODAS as páginas
           autenticadas, não só o home. Isso evita que o rodapé "desapareça"
           quando o usuário clica num widget e navega pra outro módulo. */}
+
+      {/* FAB flutuante do "+" no canto inferior direito. bottom-24 fica
+          acima da bottom nav (~72px + margem). Aparece apenas na home. */}
+      <div className="fixed bottom-24 right-6 z-30">
+        <NewRecordMenu floating />
+      </div>
     </div>
   )
 }
@@ -496,23 +477,26 @@ export default function HomePage() {
  * que as páginas de listagem já sabem interpretar pra abrir o dialog de
  * novo registro.
  */
-function NewRecordMenu() {
+function NewRecordMenu({ floating }: { floating?: boolean }) {
   const navigate = useNavigate()
+  const size = floating ? "w-14 h-14" : "w-6 h-6"
+  const iconSize = floating ? 26 : 14
+  const shadow = floating
+    ? "shadow-[0_6px_16px_rgba(12,52,61,0.35),0_2px_6px_rgba(12,52,61,0.2)] hover:shadow-[0_8px_20px_rgba(12,52,61,0.4),0_3px_8px_rgba(12,52,61,0.25)] hover:-translate-y-0.5 transition-all"
+    : ""
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
           type="button"
           title="Novo cadastro"
-          className="w-6 h-6 rounded-full flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+          className={`${size} rounded-full flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${shadow}`}
           style={{ backgroundColor: "#0c343d", color: "#f3f3f3" }}
         >
-          {/* SVG inline com viewBox 24 centralizado — mais previsivel que o
-              icone do lucide, que tem paths com espessura variavel. */}
           <svg
             viewBox="0 0 24 24"
-            width="14"
-            height="14"
+            width={iconSize}
+            height={iconSize}
             fill="none"
             stroke="currentColor"
             strokeWidth="3"
