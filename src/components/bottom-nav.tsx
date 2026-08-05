@@ -224,7 +224,28 @@ export function BottomNav() {
           scrollbarWidth: "none",
         }}
       >
-        <style>{`.brm-bottom-nav::-webkit-scrollbar { display: none; }`}</style>
+        <style>{`
+          .brm-bottom-nav::-webkit-scrollbar { display: none; }
+
+          /* Popover dos grupos (Negocios, Clientes, etc): abre subindo a
+             partir da base do widget clicado. !important pra vencer os
+             animate-in do tailwindcss-animate herdados via className. */
+          .brm-popover-up {
+            animation: brm-slide-up 90ms ease-out forwards !important;
+            transform-origin: bottom center;
+          }
+          .brm-popover-up[data-state="closed"] {
+            animation: brm-slide-down 60ms ease-in forwards !important;
+          }
+          @keyframes brm-slide-up {
+            from { opacity: 0; transform: translateY(12px); }
+            to   { opacity: 1; transform: translateY(0); }
+          }
+          @keyframes brm-slide-down {
+            from { opacity: 1; transform: translateY(0); }
+            to   { opacity: 0; transform: translateY(12px); }
+          }
+        `}</style>
         <div className="flex items-stretch gap-2 md:gap-6 px-3 py-3 min-w-max md:justify-center">
           {NAV.map((entry) => {
             const Icon = entry.icon
@@ -268,14 +289,7 @@ export function BottomNav() {
                   side="top"
                   align="center"
                   sideOffset={8}
-                  className="p-1 w-48"
-                  style={{
-                    // Aparecimento instantaneo — desabilita qualquer animacao
-                    // herdada de tailwindcss-animate ou keyframes customizados.
-                    animation: "none",
-                    transition: "none",
-                    transformOrigin: "bottom center",
-                  }}
+                  className="p-1 w-48 brm-popover-up"
                 >
                   <div className="flex flex-col">
                     {entry.children.map((child) => {
