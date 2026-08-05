@@ -65,6 +65,12 @@ export function createChatRoutes(chatService: ChatService): Router {
         res.status(409).json({ error: 'whatsapp_not_connected' })
         return
       }
+      // Expõe o erro real (ex: Cloud API 401/403 com detalhe da Meta) pra debug
+      if (error instanceof Error) {
+        console.error('Error starting conversation:', error)
+        res.status(500).json({ error: error.message })
+        return
+      }
       console.error('Error starting conversation:', error)
       res.status(500).json({ error: 'Internal server error' })
     }
