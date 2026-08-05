@@ -269,6 +269,13 @@ export function BottomNav() {
                   align="center"
                   sideOffset={8}
                   className="p-1 w-48"
+                  style={{
+                    // Aparecimento instantaneo — desabilita qualquer animacao
+                    // herdada de tailwindcss-animate ou keyframes customizados.
+                    animation: "none",
+                    transition: "none",
+                    transformOrigin: "bottom center",
+                  }}
                 >
                   <div className="flex flex-col">
                     {entry.children.map((child) => {
