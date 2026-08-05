@@ -479,8 +479,8 @@ export default function HomePage() {
  */
 function NewRecordMenu({ floating }: { floating?: boolean }) {
   const navigate = useNavigate()
-  const size = floating ? "w-14 h-14" : "w-6 h-6"
-  const iconSize = floating ? 26 : 14
+  const size = floating ? "w-12 h-12" : "w-6 h-6"
+  const iconSize = floating ? 22 : 14
   const shadow = floating
     ? "shadow-[0_6px_16px_rgba(12,52,61,0.35),0_2px_6px_rgba(12,52,61,0.2)] hover:shadow-[0_8px_20px_rgba(12,52,61,0.4),0_3px_8px_rgba(12,52,61,0.25)] hover:-translate-y-0.5 transition-all"
     : ""
