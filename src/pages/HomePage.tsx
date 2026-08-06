@@ -36,6 +36,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 /**
  * Módulos que aparecem na coluna C. Ordem escolhida por importância no dia
@@ -161,6 +168,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true)
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [search, setSearch] = useState("")
+  const [statusFilter, setStatusFilter] = useState<string>("all")
   const [mobilePanel, setMobilePanel] = useState<"list" | "editor">("list")
   const [stats, setStats] = useState<DashboardStats | null>(null)
 
@@ -201,15 +209,23 @@ export default function HomePage() {
   }, [loadDeals])
 
   const filteredDeals = useMemo(() => {
-    if (!search.trim()) return deals
-    const q = search.toLowerCase()
-    return deals.filter(
-      (d) =>
-        d.client.toLowerCase().includes(q) ||
-        (d.property_name && d.property_name.toLowerCase().includes(q)) ||
-        (d.client_phone && d.client_phone.includes(q)),
-    )
-  }, [deals, search])
+    let list = deals
+    // Filtro por grupo de status (Atendimento, Agendamento, etc)
+    if (statusFilter !== "all") {
+      list = list.filter((d) => STATUS_LABEL[d.status] === statusFilter)
+    }
+    // Filtro por busca (cliente, imovel, telefone)
+    if (search.trim()) {
+      const q = search.toLowerCase()
+      list = list.filter(
+        (d) =>
+          d.client.toLowerCase().includes(q) ||
+          (d.property_name && d.property_name.toLowerCase().includes(q)) ||
+          (d.client_phone && d.client_phone.includes(q)),
+      )
+    }
+    return list
+  }, [deals, search, statusFilter])
 
   const selectedDeal = useMemo(
     () => deals.find((d) => d.id === selectedId) || null,
@@ -292,11 +308,26 @@ export default function HomePage() {
           mobilePanel === "list" ? "flex" : "hidden md:flex",
         )}
       >
-        {/* Header da lista B — simples: só título + busca (atalhos moveram pro header A) */}
+        {/* Header da lista B — logo + filtro de status + busca */}
         <div className="shrink-0 p-3 border-b space-y-2">
           <div className="flex items-center justify-between gap-2">
-            <img src="/brm-logo-full.svg" alt="BRM" className="h-6 w-auto" />
+            <img src="/brm-logo-full.svg" alt="BRM" className="h-9 w-auto" />
           </div>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="h-9">
+              <SelectValue placeholder="Filtrar por status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os status</SelectItem>
+              <SelectItem value="Atendimento">Atendimento</SelectItem>
+              <SelectItem value="Agendamento">Agendamento</SelectItem>
+              <SelectItem value="Apresentação">Apresentação</SelectItem>
+              <SelectItem value="Proposta">Proposta</SelectItem>
+              <SelectItem value="Contrato">Contrato</SelectItem>
+              <SelectItem value="Vendido">Vendido</SelectItem>
+              <SelectItem value="Descartado">Descartado</SelectItem>
+            </SelectContent>
+          </Select>
           <div className="relative">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
