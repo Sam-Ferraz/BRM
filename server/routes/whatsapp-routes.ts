@@ -31,7 +31,21 @@ export function createWhatsAppRoutes(
       const accountId = req.user!.accountId
       const userId = req.user!.userId
       const session = await whatsappService.getSession(accountId, userId)
-      res.json({ data: session })
+      // Debug: exibe presença/ausência dos campos Cloud API sem vazar os valores.
+      // Ajuda a diagnosticar quando o toast diz "conectado" mas o provider
+      // acusa whatsapp_not_connected (indica que phone_number_id ou access_token
+      // estão null no banco — geralmente porque foi conectado via Baileys).
+      const debug = session
+        ? {
+            provider: (session as any).provider ?? null,
+            status: (session as any).status ?? null,
+            has_phone_number_id: !!(session as any).phone_number_id,
+            has_access_token: !!(session as any).access_token,
+            has_app_secret: !!(session as any).app_secret,
+            has_verify_token: !!(session as any).verify_token,
+          }
+        : null
+      res.json({ data: session, debug })
     } catch (error) {
       console.error('Error fetching whatsapp session:', error)
       res.status(500).json({ error: 'Internal server error' })
