@@ -280,7 +280,7 @@ export default function HomePage() {
   }, [])
 
   return (
-    <div className="h-screen w-screen overflow-hidden bg-background flex">
+    <div className="h-[100dvh] w-screen overflow-hidden bg-background flex pb-20">
       {/* ============================================================ */}
       {/* Coluna B — lista de Negócios                                  */}
       {/* Sidebar vertical C foi removida — modulos vao na bottom nav   */}
@@ -308,8 +308,8 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Lista scrollável — padding-bottom extra em mobile pra bottom nav não cortar último item */}
-        <div className="flex-1 overflow-y-auto pb-20">
+        {/* Lista scrollavel — sem pb extra: pai ja reserva 80px pra bottom-nav */}
+        <div className="flex-1 overflow-y-auto">
           {loading ? (
             <div className="p-6 text-center text-sm text-muted-foreground">Carregando...</div>
           ) : filteredDeals.length === 0 ? (

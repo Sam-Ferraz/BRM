@@ -133,9 +133,15 @@ export function BottomNav() {
       setCanScrollLeft(el.scrollLeft > 4)
       setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4)
     }
-    check()
+    // rAF garante que o scrollWidth ja esta calculado apos o layout inicial
+    requestAnimationFrame(check)
+    // Re-checa em resize/rotate (mobile) — sem ResizeObserver pra evitar loop
+    window.addEventListener("resize", check)
     el.addEventListener("scroll", check, { passive: true })
-    return () => el.removeEventListener("scroll", check)
+    return () => {
+      window.removeEventListener("resize", check)
+      el.removeEventListener("scroll", check)
+    }
   }, [stats])
 
   const onNavMouseDown = useCallback((e: React.MouseEvent<HTMLElement>) => {
@@ -196,7 +202,7 @@ export function BottomNav() {
           className="absolute left-0 top-0 bottom-0 z-10 px-2 flex items-center justify-center text-[#0c343d] hover:bg-accent/60 transition-colors"
           style={{ background: "linear-gradient(to right, hsl(var(--card)) 65%, transparent)" }}
         >
-          <ChevronLeft className="w-6 h-6" />
+          <ChevronLeft className="w-7 h-7" strokeWidth={2.5} />
         </button>
       )}
       {canScrollRight && (
@@ -207,7 +213,7 @@ export function BottomNav() {
           className="absolute right-0 top-0 bottom-0 z-10 px-2 flex items-center justify-center text-[#0c343d] hover:bg-accent/60 transition-colors"
           style={{ background: "linear-gradient(to left, hsl(var(--card)) 65%, transparent)" }}
         >
-          <ChevronRight className="w-6 h-6" />
+          <ChevronRight className="w-7 h-7" strokeWidth={2.5} />
         </button>
       )}
       <nav
@@ -225,7 +231,7 @@ export function BottomNav() {
         }}
       >
         <style>{`.brm-bottom-nav::-webkit-scrollbar { display: none; }`}</style>
-        <div className="flex items-stretch gap-2 md:gap-6 px-3 py-3 min-w-max md:justify-center">
+        <div className="flex items-stretch gap-2 md:gap-6 px-3 py-4 min-w-max md:justify-center">
           {NAV.map((entry) => {
             const Icon = entry.icon
             if (entry.kind === "link") {
