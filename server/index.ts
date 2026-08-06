@@ -246,7 +246,10 @@ const incomingHandler = async (input: Parameters<NonNullable<ChatService['receiv
   return chatServiceRef.receiveMessage(input)
 }
 
-const providerKind = process.env.WHATSAPP_PROVIDER || 'baileys'
+// Default agora eh 'cloud_api' (Meta oficial, BYOK) — o antigo Baileys ficou
+// como opcao legada. Sobrescreva com WHATSAPP_PROVIDER=baileys no .env se
+// precisar do fluxo QR/WhatsApp Web em algum ambiente especifico.
+const providerKind = process.env.WHATSAPP_PROVIDER || 'cloud_api'
 const whatsappProvider =
   providerKind === 'stub'
     ? new StubWhatsAppProvider()
