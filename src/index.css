@@ -28,13 +28,21 @@ html {
 }
 
 /*
- * DESKTOP/WEB: reduz mais 10% (agora 9px, contra o padrao 12px = -25%
- * total). Como Tailwind usa rem em tudo, escala widgets, fontes,
- * paddings e a altura da bottom-nav proporcionalmente.
+ * DESKTOP/WEB: escala independente por secao via CSS zoom.
+ *   .brm-zoom-web-a — area principal do app (aside + main)   → +25%
+ *   .brm-zoom-web-b — bottom-nav                              → -20%
+ * As duas so aplicam em telas >= 768px. Mobile ignora e usa a escala
+ * global do @media (max-width: 767px) acima.
  */
 @media (min-width: 768px) {
   html {
-    font-size: 9px;
+    font-size: 12px;
+  }
+  .brm-zoom-web-a {
+    zoom: 1.25;
+  }
+  .brm-zoom-web-b {
+    zoom: 0.8;
   }
 }
 

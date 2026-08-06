@@ -191,7 +191,7 @@ export function BottomNav() {
 
   return (
     <div
-      className="fixed bottom-0 left-0 right-0 z-40 bg-card border-t"
+      className="fixed bottom-0 left-0 right-0 z-40 bg-card border-t brm-zoom-web-b"
       style={{
         paddingBottom: "env(safe-area-inset-bottom)",
         overscrollBehavior: "contain",
