@@ -3,6 +3,21 @@ import crypto from 'crypto'
 import { WhatsAppSessionRepository } from '../repositories/index.js'
 import { ChatService } from '../services/chat-service.js'
 
+// Buffer em memoria com as ultimas 20 tentativas de webhook.
+// Zera a cada restart do processo. So pra debug — nao persiste.
+const webhookLog: Array<{
+  at: string
+  outcome: string
+  phone_number_id?: string
+  message_count?: number
+  signature_valid?: boolean
+  error?: string
+}> = []
+function logWebhook(entry: (typeof webhookLog)[0]): void {
+  webhookLog.unshift(entry)
+  if (webhookLog.length > 20) webhookLog.pop()
+}
+
 /**
  * Endpoint público que recebe eventos do WhatsApp Cloud API (Meta).
  *
@@ -51,9 +66,17 @@ export function createWhatsAppWebhookRoutes(
   })
 
   // ---------------------------------------------------------------------------
+  // GET — endpoint de debug que retorna as ultimas 20 tentativas de webhook
+  // ---------------------------------------------------------------------------
+  router.get('/webhook-debug', (_req: Request, res: Response): void => {
+    res.json({ entries: webhookLog, count: webhookLog.length })
+  })
+
+  // ---------------------------------------------------------------------------
   // POST — eventos do WhatsApp
   // ---------------------------------------------------------------------------
   router.post('/webhook', async (req: Request, res: Response): Promise<void> => {
+    const at = new Date().toISOString()
     try {
       const signature = req.headers['x-hub-signature-256'] as string | undefined
       const rawBody = (req as any).rawBody as string | undefined
@@ -68,6 +91,7 @@ export function createWhatsAppWebhookRoutes(
       if (!phoneNumberId) {
         // Pode ser um evento que não temos interesse (account_update, etc).
         // Respondemos 200 pra Meta não ficar reentregando.
+        logWebhook({ at, outcome: 'no_phone_number_id' })
         res.status(200).send('no phone_number_id')
         return
       }
@@ -75,17 +99,21 @@ export function createWhatsAppWebhookRoutes(
       const session = await sessionRepository.findByPhoneNumberId(phoneNumberId)
       if (!session || !session.app_secret) {
         console.warn('[Webhook] phone_number_id desconhecido:', phoneNumberId)
+        logWebhook({ at, outcome: 'unknown_phone_number_id', phone_number_id: phoneNumberId })
         res.status(200).send('unknown phone_number_id') // 200 evita retry
         return
       }
 
       // Valida assinatura HMAC SHA-256 com app_secret do user
+      let signatureValid: boolean | undefined
       if (signature && rawBody) {
         const expected =
           'sha256=' +
           crypto.createHmac('sha256', session.app_secret).update(rawBody).digest('hex')
-        if (signature !== expected) {
+        signatureValid = signature === expected
+        if (!signatureValid) {
           console.warn(`[Webhook] Assinatura inválida pra user_id=${session.user_id}`)
+          logWebhook({ at, outcome: 'invalid_signature', phone_number_id: phoneNumberId, signature_valid: false })
           res.status(403).send('invalid signature')
           return
         }
@@ -125,9 +153,17 @@ export function createWhatsAppWebhookRoutes(
         }
       }
 
+      logWebhook({
+        at,
+        outcome: 'processed',
+        phone_number_id: phoneNumberId,
+        message_count: messages.length,
+        signature_valid: signatureValid,
+      })
       res.status(200).send('ok')
     } catch (error) {
       console.error('[Webhook] Erro inesperado:', error)
+      logWebhook({ at, outcome: 'exception', error: error instanceof Error ? error.message : String(error) })
       // Respondemos 200 pra Meta não ficar reentregando — o erro fica no log
       res.status(200).send('error logged')
     }
