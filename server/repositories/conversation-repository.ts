@@ -180,4 +180,22 @@ export class ConversationRepository extends BaseRepository {
       this.releaseClient(client)
     }
   }
+
+  /**
+   * Apaga a conversa e (via ON DELETE CASCADE no schema de messages) todas
+   * as mensagens associadas. Retorna true se apagou, false se nao existia
+   * naquela account.
+   */
+  async deleteById(accountId: number, id: number): Promise<boolean> {
+    const client = await this.getClient()
+    try {
+      const result = await client.query(
+        'DELETE FROM conversations WHERE id = $1 AND account_id = $2',
+        [id, accountId],
+      )
+      return (result.rowCount ?? 0) > 0
+    } finally {
+      this.releaseClient(client)
+    }
+  }
 }

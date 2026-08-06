@@ -69,6 +69,18 @@ export class ChatService {
     return { conversation: refreshed, messages }
   }
 
+  async deleteConversation(
+    accountId: number,
+    id: number,
+    viewer: { userId: number; role: string }
+  ): Promise<{ deleted: boolean }> {
+    const existing = await this.conversationRepository.findById(accountId, id)
+    if (!existing) throw new Error('Conversation not found')
+    this.assertCanView(existing.owner_user_id, viewer)
+    const deleted = await this.conversationRepository.deleteById(accountId, id)
+    return { deleted }
+  }
+
   /**
    * Cria conversa nova (ou recupera a existente para o mesmo contato) e envia
    * mensagem. Usado quando o vendedor inicia conversa do zero.
