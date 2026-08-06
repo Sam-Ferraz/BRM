@@ -35,16 +35,19 @@ export function createWhatsAppRoutes(
       // Ajuda a diagnosticar quando o toast diz "conectado" mas o provider
       // acusa whatsapp_not_connected (indica que phone_number_id ou access_token
       // estão null no banco — geralmente porque foi conectado via Baileys).
-      const debug = session
-        ? {
-            provider: (session as any).provider ?? null,
-            status: (session as any).status ?? null,
-            has_phone_number_id: !!(session as any).phone_number_id,
-            has_access_token: !!(session as any).access_token,
-            has_app_secret: !!(session as any).app_secret,
-            has_verify_token: !!(session as any).verify_token,
-          }
-        : null
+      const debug = {
+        viewer_user_id: userId,
+        viewer_account_id: accountId,
+        session_user_id: (session as any)?.user_id ?? null,
+        session_account_id: (session as any)?.account_id ?? null,
+        ids_match: !!session && (session as any).user_id === userId,
+        provider: (session as any)?.provider ?? null,
+        status: (session as any)?.status ?? null,
+        has_phone_number_id: !!(session as any)?.phone_number_id,
+        has_access_token: !!(session as any)?.access_token,
+        has_app_secret: !!(session as any)?.app_secret,
+        has_verify_token: !!(session as any)?.verify_token,
+      }
       res.json({ data: session, debug })
     } catch (error) {
       console.error('Error fetching whatsapp session:', error)
