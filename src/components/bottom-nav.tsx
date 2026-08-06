@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom"
 import {
   Briefcase, Users, Package, HeadphonesIcon, ClipboardCheck, FileSignature, FileCheck2,
   Key, MessageCircle, Inbox, Store, BarChart3, CalendarDays, ChevronLeft, ChevronRight,
-  Home as HomeIcon, Eye, Settings, LogOut,
+  Home as HomeIcon, Eye, Settings, LogOut, Building,
 } from "lucide-react"
 import { api, type DashboardStats } from "@/lib/api-client"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -70,7 +70,7 @@ const NAV: NavEntry[] = [
   {
     kind: "group",
     label: "Imóveis",
-    icon: Store,
+    icon: Building,
     children: [
       { label: "Imóveis", path: "/products",     icon: Package, countKey: "totalProducts" },
       { label: "Vitrine", path: "/sales-agenda", icon: Store,   countKey: "totalShowcaseProducts" },
