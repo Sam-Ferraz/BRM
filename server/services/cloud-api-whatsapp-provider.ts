@@ -9,6 +9,22 @@ import { WhatsAppSessionRepository } from '../repositories/index.js'
  * Callback chamado quando uma mensagem entrante chega via webhook do
  * Meta Cloud API. O server/index.ts conecta isso ao ChatService.receiveMessage.
  */
+/**
+ * Normaliza celular BR pro formato aceito pelo WhatsApp Cloud API.
+ * Celulares BR tem 13 dig (55 + DDD 2 dig + 9 + 8 dig), mas o wa_id da Meta
+ * vem sempre no formato antigo com 12 dig (55 + DDD + 8 dig, sem o 9).
+ * Removemos o 9 pra que respostas a mensagens recebidas usem o mesmo wa_id
+ * que a Meta usa — evita erro #131030 quando o numero autorizado no modo
+ * teste foi cadastrado com 9.
+ * Fixos BR (13 dig sem 9 no lugar 4) e demais paises passam sem alteracao.
+ */
+function normalizeBrCellPhone(digits: string): string {
+  if (digits.length === 13 && digits.startsWith('55') && digits[4] === '9') {
+    return digits.slice(0, 4) + digits.slice(5)
+  }
+  return digits
+}
+
 export type IncomingMessageHandler = (input: {
   ownerUserId: number
   fromPhone: string
@@ -98,7 +114,12 @@ export class CloudApiWhatsAppProvider implements WhatsAppProvider {
     }
 
     // WhatsApp Cloud API espera o "to" só com dígitos (E.164 sem o +).
-    const to = input.to.replace(/\D/g, '')
+    // Pra celular BR, remove o 9 depois do DDD — Meta usa o wa_id no formato
+    // antigo (12 dig: 55 + DDD + 8 dig) e nao no formato atual (13 dig com 9).
+    // Sem essa normalizacao, respostas a mensagens recebidas caem no erro
+    // #131030 (nao autorizado) porque o numero salvo na conversa e o wa_id
+    // sem 9, mas o usuario cadastrou/autorizou com 9.
+    const to = normalizeBrCellPhone(input.to.replace(/\D/g, ''))
     const url = `https://graph.facebook.com/v18.0/${session.phone_number_id}/messages`
 
     const response = await fetch(url, {
