@@ -317,12 +317,12 @@ export function BottomNav() {
           <button
             type="button"
             onClick={logout}
-            className="relative shrink-0 flex flex-col items-center gap-1 min-w-[76px] md:min-w-[86px] px-2 py-1 rounded-lg text-[#0c343d] hover:bg-red-50 hover:text-red-600 transition-colors"
+            className="relative shrink-0 flex flex-col items-center gap-1.5 min-w-[86px] md:min-w-[96px] px-2 py-1.5 rounded-lg text-[#0c343d] hover:bg-red-50 hover:text-red-600 transition-colors"
           >
             <div className="relative">
-              <LogOut className="w-6 h-6 md:w-7 md:h-7" strokeWidth={1.75} />
+              <LogOut className="w-7 h-7 md:w-8 md:h-8" strokeWidth={1.75} />
             </div>
-            <span className="text-[11px] md:text-[12px] font-medium leading-tight whitespace-nowrap">Sair</span>
+            <span className="text-[14px] md:text-[15px] font-medium leading-tight whitespace-nowrap">Sair</span>
           </button>
         </div>
       </nav>

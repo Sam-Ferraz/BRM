@@ -10,8 +10,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
-import { Pencil, ChevronDown, User, Package } from "lucide-react"
-import { api, type Deal } from "@/lib/api-client"
+import { Pencil, ChevronDown, User, Package, Inbox } from "lucide-react"
+import { api, type Deal, type LeadWithDetails } from "@/lib/api-client"
 
 /**
  * DealsKanbanView — visualização em colunas dos Negócios agrupados por fase.
@@ -47,6 +47,15 @@ interface PhaseColumn {
 }
 
 const PHASES: PhaseColumn[] = [
+  {
+    // Leads ainda nao atendidos — a coluna nao aceita drop, so exibe
+    // leads com status 'novo' (nao aceitos ainda).
+    key: "no_service",
+    label: "Sem atendimento",
+    statuses: [],
+    hasTemperature: false,
+    headerColor: "bg-slate-100 text-slate-900 border-slate-300",
+  },
   {
     key: "service",
     label: "Atendimento",
@@ -180,11 +189,12 @@ function tempIndicator(temp: Temperature | undefined): { color: string; label: s
 
 interface DealsKanbanViewProps {
   deals: Deal[]
+  leads?: LeadWithDetails[]
   onEdit: (deal: Deal) => void
   onStatusChange: (dealId: number, newStatus: Deal["status"]) => Promise<void>
 }
 
-export function DealsKanbanView({ deals, onEdit, onStatusChange }: DealsKanbanViewProps) {
+export function DealsKanbanView({ deals, leads = [], onEdit, onStatusChange }: DealsKanbanViewProps) {
   const { t } = useTranslation()
   const [draggingId, setDraggingId] = useState<number | null>(null)
   const [dragOverPhase, setDragOverPhase] = useState<string | null>(null)
@@ -374,7 +384,13 @@ export function DealsKanbanView({ deals, onEdit, onStatusChange }: DealsKanbanVi
         onMouseLeave={stopScrollDrag}
       >
         {PHASES.map((phase) => {
+          const isNoService = phase.key === "no_service"
+          // Leads em espera na coluna "Sem atendimento": nao aceitos e sem deal.
+          const leadsInPhase = isNoService
+            ? leads.filter((l) => l.status !== "aceito" && !l.deal_id)
+            : []
           const dealsInPhase = dealsByPhase[phase.key] || []
+          const itemCount = isNoService ? leadsInPhase.length : dealsInPhase.length
           const totalValue = dealsInPhase.reduce((sum, d) => {
             const v = typeof d.gsv === "string" ? parseFloat(d.gsv) : (d.gsv || 0)
             return sum + (isNaN(v) ? 0 : v)
@@ -388,9 +404,9 @@ export function DealsKanbanView({ deals, onEdit, onStatusChange }: DealsKanbanVi
                   ? "border-primary bg-primary/5"
                   : "border-transparent bg-muted/30"
               }`}
-              onDragOver={handleDragOver(phase.key)}
-              onDragLeave={handleDragLeave(phase.key)}
-              onDrop={handleDrop(phase)}
+              onDragOver={isNoService ? undefined : handleDragOver(phase.key)}
+              onDragLeave={isNoService ? undefined : handleDragLeave(phase.key)}
+              onDrop={isNoService ? undefined : handleDrop(phase)}
             >
               {/* Header da coluna — sticky */}
               <div
@@ -399,7 +415,7 @@ export function DealsKanbanView({ deals, onEdit, onStatusChange }: DealsKanbanVi
                 <div className="flex items-center justify-between gap-2">
                   <div className="font-semibold text-sm">{phase.label}</div>
                   <Badge variant="secondary" className="bg-white/60 text-xs">
-                    {dealsInPhase.length}
+                    {itemCount}
                   </Badge>
                 </div>
                 {totalValue > 0 && (
@@ -411,7 +427,35 @@ export function DealsKanbanView({ deals, onEdit, onStatusChange }: DealsKanbanVi
 
               {/* Cards */}
               <div className="flex-1 p-2 space-y-2 min-h-[80px]">
-                {dealsInPhase.length === 0 ? (
+                {isNoService ? (
+                  leadsInPhase.length === 0 ? (
+                    <div className="text-center py-6 text-xs text-muted-foreground">—</div>
+                  ) : (
+                    leadsInPhase.map((lead) => (
+                      <Card key={`lead-${lead.id}`} className="p-2.5 bg-white">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5">
+                              <Inbox className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                              <div className="font-medium text-sm truncate">
+                                {lead.name || lead.phone || lead.email || "Lead sem nome"}
+                              </div>
+                            </div>
+                            {lead.phone && (
+                              <div className="text-[11px] text-muted-foreground mt-1">{lead.phone}</div>
+                            )}
+                            {lead.source_name && (
+                              <div className="text-[10px] text-muted-foreground mt-0.5">
+                                {lead.source_name}
+                              </div>
+                            )}
+                          </div>
+                          <Badge variant="outline" className="text-[10px]">Lead</Badge>
+                        </div>
+                      </Card>
+                    ))
+                  )
+                ) : dealsInPhase.length === 0 ? (
                   <div className="text-center py-6 text-xs text-muted-foreground">
                     {isDragOver ? "Solte aqui" : "—"}
                   </div>

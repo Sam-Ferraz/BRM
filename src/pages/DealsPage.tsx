@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { ArrowLeft, Plus, Pencil, Trash2, Search, Briefcase, List, LayoutGrid, ArrowUpDown } from "lucide-react"
-import { api, type Deal } from "@/lib/api-client"
+import { api, type Deal, type LeadWithDetails } from "@/lib/api-client"
 import { DealForm } from "@/components/forms/deal-form"
 import { DealsKanbanView } from "@/components/deals-kanban-view"
 import { useToast } from "@/hooks/use-toast"
@@ -33,6 +33,7 @@ export default function DealsPage() {
   const { t } = useTranslation()
   const [searchParams, setSearchParams] = useSearchParams()
   const [deals, setDeals] = useState<Deal[]>([])
+  const [leads, setLeads] = useState<LeadWithDetails[]>([])
   const [loading, setLoading] = useState(true)
   const [formLoading, setFormLoading] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
@@ -116,6 +117,12 @@ export default function DealsPage() {
       
       const result = await api.deals.getAll(filters)
       setDeals(result.data)
+      // Busca leads em paralelo pra alimentar a coluna 'Sem atendimento' do
+      // kanban. Falha silenciosa: se leads nao carregar, kanban ainda funciona.
+      api.leads
+        .list()
+        .then((r) => setLeads(r.data || []))
+        .catch(() => setLeads([]))
     } catch (error) {
       toast({
         title: t('error'),
@@ -424,6 +431,7 @@ export default function DealsPage() {
             ) : viewMode === "kanban" ? (
               <DealsKanbanView
                 deals={filteredDeals}
+                leads={leads}
                 onEdit={(deal) => {
                   setEditingDeal(deal)
                   setIsFormOpen(true)
