@@ -251,7 +251,7 @@ export function BottomNav() {
                     <Icon className="w-7 h-7 md:w-8 md:h-8" strokeWidth={1.75} />
                     {renderBadge(count)}
                   </div>
-                  <span className="text-[12px] md:text-[13px] font-medium leading-tight whitespace-nowrap">{entry.label}</span>
+                  <span className="text-[14px] md:text-[15px] font-medium leading-tight whitespace-nowrap">{entry.label}</span>
                 </Link>
               )
             }
@@ -272,7 +272,7 @@ export function BottomNav() {
                       <Icon className="w-7 h-7 md:w-8 md:h-8" strokeWidth={1.75} />
                       {renderBadge(totalCount)}
                     </div>
-                    <span className="text-[12px] md:text-[13px] font-medium leading-tight whitespace-nowrap">{entry.label}</span>
+                    <span className="text-[14px] md:text-[15px] font-medium leading-tight whitespace-nowrap">{entry.label}</span>
                   </button>
                 </PopoverTrigger>
                 <PopoverContent
