@@ -307,6 +307,7 @@ export default function HomePage() {
           "shrink-0 w-full md:w-[340px] flex-col border-r bg-card",
           mobilePanel === "list" ? "flex" : "hidden md:flex",
         )}
+        style={{ paddingTop: "env(safe-area-inset-top)" }}
       >
         {/* Header da lista B — logo + filtro de status + busca */}
         <div className="shrink-0 p-4 border-b space-y-3">
