@@ -17,6 +17,13 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
   ArrowLeft,
   MessageCircle,
   Plus,
@@ -57,6 +64,10 @@ export default function ChatPage() {
 
   const [conversations, setConversations] = useState<ConversationWithDetails[]>([])
   const [conversationsLoading, setConversationsLoading] = useState(true)
+
+  // Filtro por corretor (admin apenas). 'all' = todas as conversas de todos.
+  const [ownerFilter, setOwnerFilter] = useState<string>("all")
+  const [brokers, setBrokers] = useState<{ id: number; name: string }[]>([])
 
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
@@ -121,6 +132,17 @@ export default function ChatPage() {
     fetchConversations()
   }, [fetchSession, fetchConversations])
 
+  // Admin: carrega lista de corretores pro filtro. Feito uma vez ao montar.
+  useEffect(() => {
+    if (user?.role !== "admin") return
+    api.users
+      .list()
+      .then((list) => setBrokers(list.map((u) => ({ id: u.id, name: u.name }))))
+      .catch(() => {
+        // Silencia — filtro fica indisponivel, mas o resto do chat continua ok.
+      })
+  }, [user?.role])
+
   useEffect(() => {
     if (selectedId !== null) {
       fetchConversation(selectedId)
@@ -134,6 +156,13 @@ export default function ChatPage() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
+
+  // Aplica filtro por corretor (admin). Corretor comum ja recebe so as
+  // suas do backend, entao aqui e no-op pra ele.
+  const filteredConversations =
+    ownerFilter === "all"
+      ? conversations
+      : conversations.filter((c) => String(c.owner_user_id) === ownerFilter)
 
   const handleSendMessage = async () => {
     if (!draft.trim() || !selectedId) return
@@ -265,21 +294,41 @@ export default function ChatPage() {
         <Card className="overflow-hidden">
           <div className="grid grid-cols-1 md:grid-cols-[320px_1fr] h-[600px]">
             {/* === Coluna esquerda: lista de conversas === */}
-            <div className="border-r flex flex-col">
-              <div className="p-3 border-b">
+            <div className="border-r flex flex-col min-h-0">
+              {/* Filtro por corretor (so admin ve) */}
+              {isAdmin && brokers.length > 0 && (
+                <div className="shrink-0 p-2 border-b bg-muted/30">
+                  <Select value={ownerFilter} onValueChange={setOwnerFilter}>
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue placeholder="Filtrar por corretor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos os corretores</SelectItem>
+                      {brokers.map((b) => (
+                        <SelectItem key={b.id} value={String(b.id)}>
+                          {b.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              <div className="shrink-0 p-3 border-b">
                 <p className="text-sm font-medium text-foreground">{t("conversations")}</p>
               </div>
-              <div className="flex-1 overflow-y-auto">
+              <div className="flex-1 overflow-y-auto min-h-0">
                 {conversationsLoading ? (
                   <div className="p-6 text-center text-sm text-muted-foreground">
                     {t("loading")}…
                   </div>
-                ) : conversations.length === 0 ? (
+                ) : filteredConversations.length === 0 ? (
                   <div className="p-6 text-center text-sm text-muted-foreground">
-                    {t("noConversationsYet")}
+                    {ownerFilter !== "all"
+                      ? "Nenhuma conversa deste corretor"
+                      : t("noConversationsYet")}
                   </div>
                 ) : (
-                  conversations.map((c) => {
+                  filteredConversations.map((c) => {
                     const isSelected = c.id === selectedId
                     const displayName = c.client_name || c.contact_name || c.contact_phone
                     return (
