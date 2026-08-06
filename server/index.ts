@@ -53,6 +53,7 @@ import {
 import { StubWhatsAppProvider } from './services/whatsapp-provider.js'
 import { BaileysWhatsAppProvider } from './services/baileys-whatsapp-provider.js'
 import { CloudApiWhatsAppProvider } from './services/cloud-api-whatsapp-provider.js'
+import { MultiWhatsAppProvider } from './services/multi-whatsapp-provider.js'
 
 // Import routes
 import { createAuthRoutes } from './routes/auth-routes.js'
@@ -246,10 +247,12 @@ const incomingHandler = async (input: Parameters<NonNullable<ChatService['receiv
   return chatServiceRef.receiveMessage(input)
 }
 
-// Default agora eh 'cloud_api' (Meta oficial, BYOK) — o antigo Baileys ficou
-// como opcao legada. Sobrescreva com WHATSAPP_PROVIDER=baileys no .env se
-// precisar do fluxo QR/WhatsApp Web em algum ambiente especifico.
-const providerKind = process.env.WHATSAPP_PROVIDER || 'cloud_api'
+// Provider agora e escolhido em runtime por sessao via MultiWhatsAppProvider —
+// evita depender da env WHATSAPP_PROVIDER (que estava obrigando um caminho
+// unico e quebrando o fluxo Cloud API mesmo com sessao correta). Se voce
+// quiser forcar um provider unico em algum ambiente, ainda pode setar
+// WHATSAPP_PROVIDER=stub|cloud_api|baileys.
+const providerKind = process.env.WHATSAPP_PROVIDER || 'multi'
 const whatsappProvider =
   providerKind === 'stub'
     ? new StubWhatsAppProvider()
@@ -258,7 +261,19 @@ const whatsappProvider =
           incoming: incomingHandler,
           sessionRepository: whatsappSessionRepository,
         })
-      : new BaileysWhatsAppProvider({
+      : providerKind === 'multi'
+        ? new MultiWhatsAppProvider(
+            new CloudApiWhatsAppProvider({
+              incoming: incomingHandler,
+              sessionRepository: whatsappSessionRepository,
+            }),
+            new BaileysWhatsAppProvider({
+              incoming: incomingHandler,
+              sessionRepository: whatsappSessionRepository,
+            }),
+            whatsappSessionRepository,
+          )
+        : new BaileysWhatsAppProvider({
           incoming: incomingHandler,
           sessionRepository: whatsappSessionRepository,
         })
