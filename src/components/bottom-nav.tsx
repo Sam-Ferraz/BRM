@@ -236,7 +236,7 @@ export function BottomNav() {
         }}
       >
         <style>{`.brm-bottom-nav::-webkit-scrollbar { display: none; }`}</style>
-        <div className="flex items-stretch gap-2 md:gap-6 px-3 py-4 min-w-max md:justify-center">
+        <div className="flex items-stretch gap-3 md:gap-6 px-3 py-5 min-w-max md:justify-center">
           {NAV.map((entry) => {
             const Icon = entry.icon
             if (entry.kind === "link") {
@@ -245,13 +245,13 @@ export function BottomNav() {
                 <Link
                   key={entry.path}
                   to={entry.path}
-                  className="relative shrink-0 flex flex-col items-center gap-1 min-w-[76px] md:min-w-[86px] px-2 py-1 rounded-lg text-[#0c343d] hover:bg-accent transition-colors"
+                  className="relative shrink-0 flex flex-col items-center gap-1.5 min-w-[86px] md:min-w-[96px] px-2 py-1.5 rounded-lg text-[#0c343d] hover:bg-accent transition-colors"
                 >
                   <div className="relative">
-                    <Icon className="w-6 h-6 md:w-7 md:h-7" strokeWidth={1.75} />
+                    <Icon className="w-7 h-7 md:w-8 md:h-8" strokeWidth={1.75} />
                     {renderBadge(count)}
                   </div>
-                  <span className="text-[11px] md:text-[12px] font-medium leading-tight whitespace-nowrap">{entry.label}</span>
+                  <span className="text-[12px] md:text-[13px] font-medium leading-tight whitespace-nowrap">{entry.label}</span>
                 </Link>
               )
             }
@@ -266,13 +266,13 @@ export function BottomNav() {
                 <PopoverTrigger asChild>
                   <button
                     type="button"
-                    className="relative shrink-0 flex flex-col items-center gap-1 min-w-[76px] md:min-w-[86px] px-2 py-1 rounded-lg text-[#0c343d] hover:bg-accent transition-colors"
+                    className="relative shrink-0 flex flex-col items-center gap-1.5 min-w-[86px] md:min-w-[96px] px-2 py-1.5 rounded-lg text-[#0c343d] hover:bg-accent transition-colors"
                   >
                     <div className="relative">
-                      <Icon className="w-6 h-6 md:w-7 md:h-7" strokeWidth={1.75} />
+                      <Icon className="w-7 h-7 md:w-8 md:h-8" strokeWidth={1.75} />
                       {renderBadge(totalCount)}
                     </div>
-                    <span className="text-[11px] md:text-[12px] font-medium leading-tight whitespace-nowrap">{entry.label}</span>
+                    <span className="text-[12px] md:text-[13px] font-medium leading-tight whitespace-nowrap">{entry.label}</span>
                   </button>
                 </PopoverTrigger>
                 <PopoverContent

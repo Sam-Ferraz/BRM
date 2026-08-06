@@ -296,7 +296,7 @@ export default function HomePage() {
   }, [])
 
   return (
-    <div className="h-[100dvh] w-screen overflow-hidden bg-background flex pb-20">
+    <div className="h-[100dvh] w-screen overflow-hidden bg-background flex pb-24">
       {/* ============================================================ */}
       {/* Coluna B — lista de Negócios                                  */}
       {/* Sidebar vertical C foi removida — modulos vao na bottom nav   */}
@@ -309,7 +309,7 @@ export default function HomePage() {
         )}
       >
         {/* Header da lista B — logo + filtro de status + busca */}
-        <div className="shrink-0 p-3 border-b space-y-2">
+        <div className="shrink-0 p-4 border-b space-y-3">
           <div className="flex items-center justify-between gap-2">
             <img src="/brm-logo-full.svg" alt="BRM" className="h-9 w-auto" />
           </div>
