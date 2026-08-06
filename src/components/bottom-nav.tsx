@@ -192,7 +192,11 @@ export function BottomNav() {
   return (
     <div
       className="fixed bottom-0 left-0 right-0 z-40 bg-card border-t"
-      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      style={{
+        paddingBottom: "env(safe-area-inset-bottom)",
+        overscrollBehavior: "contain",
+        touchAction: "pan-x",
+      }}
     >
       {canScrollLeft && (
         <button
@@ -202,7 +206,7 @@ export function BottomNav() {
           className="absolute left-0 top-0 bottom-0 z-10 px-2 flex items-center justify-center text-[#0c343d] hover:bg-accent/60 transition-colors"
           style={{ background: "linear-gradient(to right, hsl(var(--card)) 65%, transparent)" }}
         >
-          <ChevronLeft className="w-7 h-7" strokeWidth={2.5} />
+          <ChevronLeft className="w-9 h-9" strokeWidth={2.5} />
         </button>
       )}
       {canScrollRight && (
@@ -213,7 +217,7 @@ export function BottomNav() {
           className="absolute right-0 top-0 bottom-0 z-10 px-2 flex items-center justify-center text-[#0c343d] hover:bg-accent/60 transition-colors"
           style={{ background: "linear-gradient(to left, hsl(var(--card)) 65%, transparent)" }}
         >
-          <ChevronRight className="w-7 h-7" strokeWidth={2.5} />
+          <ChevronRight className="w-9 h-9" strokeWidth={2.5} />
         </button>
       )}
       <nav
@@ -226,7 +230,8 @@ export function BottomNav() {
         className="overflow-x-auto cursor-grab select-none brm-bottom-nav"
         style={{
           WebkitOverflowScrolling: "touch",
-          overscrollBehaviorX: "contain",
+          overscrollBehavior: "contain",
+          touchAction: "pan-x",
           scrollbarWidth: "none",
         }}
       >
