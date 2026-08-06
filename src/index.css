@@ -15,6 +15,19 @@ html {
 }
 
 /*
+ * MOBILE: escala global sobe pra 15px (+25%) — atende cliente com
+ * dificuldade de visao. Como Tailwind dimensiona tudo em rem, aumentar
+ * a font-size raiz escala TODAS as fontes, paddings, ganhos, ícones (w-N/h-N)
+ * e widths de dialog proporcionalmente. Uma linha faz a plataforma inteira
+ * ficar dois niveis maior em telefone/tablet pequeno.
+ */
+@media (max-width: 767px) {
+  html {
+    font-size: 15px;
+  }
+}
+
+/*
  * Paleta BRM — 2 modos com a mesma cor secundária.
  *
  * Cor secundária (marca): #0c343d = HSL(190, 67%, 14%) — verde-azulado
