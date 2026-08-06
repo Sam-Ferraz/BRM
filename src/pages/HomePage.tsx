@@ -492,7 +492,7 @@ export default function HomePage() {
 
       {/* FAB flutuante do "+" no canto inferior direito. bottom-24 fica
           acima da bottom nav (~72px + margem). Aparece apenas na home. */}
-      <div className="fixed bottom-24 right-6 z-30">
+      <div className="fixed bottom-32 right-6 z-30">
         <NewRecordMenu floating />
       </div>
     </div>
