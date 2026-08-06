@@ -64,8 +64,11 @@ export default function DealsPage() {
   // Modo de visualização: lista (tabela tradicional) ou kanban (colunas por fase)
   // Persistido em localStorage pra manter a escolha do usuário entre sessões
   const [viewMode, setViewMode] = useState<"list" | "kanban">(() => {
+    // Default agora e kanban — usuario pediu que a pagina de Negocios abra
+    // sempre no kanban primeiro. Se o usuario ja tinha trocado pra list em
+    // sessao anterior, respeitamos essa escolha (localStorage).
     const stored = typeof window !== "undefined" ? localStorage.getItem("deals:viewMode") : null
-    return stored === "kanban" ? "kanban" : "list"
+    return stored === "list" ? "list" : "kanban"
   })
   useEffect(() => {
     localStorage.setItem("deals:viewMode", viewMode)
