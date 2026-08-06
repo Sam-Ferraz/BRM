@@ -28,18 +28,14 @@ html {
 }
 
 /*
- * DESKTOP/WEB: escala independente por secao via CSS zoom.
- *   .brm-zoom-web-a — area principal do app (aside + main)   → +25%
- *   .brm-zoom-web-b — bottom-nav                              → -20%
- * As duas so aplicam em telas >= 768px. Mobile ignora e usa a escala
- * global do @media (max-width: 767px) acima.
+ * DESKTOP/WEB: mantem font-size padrao do sistema em 12.6px na raiz
+ * (5% maior que o original de 12px) — atende ao pedido de aumentar
+ * secao A. A bottom-nav (secao B) tem override via zoom pra ficar
+ * menor sem escalar junto.
  */
 @media (min-width: 768px) {
   html {
-    font-size: 12px;
-  }
-  .brm-zoom-web-a {
-    zoom: 0.85;
+    font-size: 12.6px;
   }
   .brm-zoom-web-b {
     zoom: 0.8;

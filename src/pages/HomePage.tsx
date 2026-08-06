@@ -296,7 +296,7 @@ export default function HomePage() {
   }, [])
 
   return (
-    <div className="h-[100dvh] w-screen overflow-hidden bg-background flex pb-28 brm-zoom-web-a">
+    <div className="h-[100dvh] w-screen overflow-hidden bg-background flex pb-28">
       {/* ============================================================ */}
       {/* Coluna B — lista de Negócios                                  */}
       {/* Sidebar vertical C foi removida — modulos vao na bottom nav   */}
