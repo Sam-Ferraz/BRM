@@ -19,6 +19,7 @@ import { api, type FollowUpWithDetails, type Deal } from "@/lib/api-client"
 import { FollowUpForm } from "@/components/forms/followup-form"
 import { useToast } from "@/hooks/use-toast"
 import { format } from "date-fns"
+import { formatDateOnly } from "@/lib/datetime"
 
 export default function FollowUpsPage() {
   const { t } = useTranslation()
@@ -329,7 +330,7 @@ export default function FollowUpsPage() {
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Calendar className="h-4 w-4 text-muted-foreground" />
-                          {format(new Date(followUp.next_action_date), 'dd/MM/yyyy')}
+                          {formatDateOnly(followUp.next_action_date)}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -430,7 +431,7 @@ export default function FollowUpsPage() {
                           {t(deal.status)}
                         </Badge>
                       </TableCell>
-                      <TableCell>{deal.origin_date ? format(new Date(deal.origin_date), 'dd/MM/yyyy') : '-'}</TableCell>
+                      <TableCell>{deal.origin_date ? formatDateOnly(deal.origin_date) : '-'}</TableCell>
                       <TableCell>{deal.property_name || '-'}</TableCell>
                     </TableRow>
                   ))}

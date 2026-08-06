@@ -203,6 +203,22 @@ export function formatDateTime(dateTimeStr: string, timezone?: string): string {
   }
 }
 
+/**
+ * Formata uma string 'yyyy-MM-dd' (coluna DATE do Postgres, sem hora) pra
+ * 'dd/MM/yyyy' sem passar por conversao de timezone.
+ *
+ * O padrao 'new Date("2026-08-10")' interpreta como UTC meia-noite, e em
+ * timezone BR (UTC-3) vira '2026-08-09T21:00' → aparece 1 dia a menos.
+ * Aqui parseamos os componentes manualmente e formatamos direto — a data
+ * exibida e sempre a mesma que esta no banco.
+ */
+export function formatDateOnly(dateStr: string | null | undefined): string {
+  if (!dateStr) return ''
+  const [y, m, d] = dateStr.split('T')[0].split('-')
+  if (!y || !m || !d) return dateStr
+  return `${d}/${m}/${y}`
+}
+
 export function formatDate(dateStr: string, timezone?: string): string {
   if (!dateStr) return ""
   
