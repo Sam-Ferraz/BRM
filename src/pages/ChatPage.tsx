@@ -332,12 +332,16 @@ export default function ChatPage() {
               </div>
             </div>
 
-            {/* === Coluna direita: janela de chat === */}
-            <div className="flex flex-col bg-gradient-to-br from-slate-50 to-white dark:from-slate-900/40 dark:to-slate-900/20">
+            {/* === Coluna direita: janela de chat ===
+                min-h-0 e overflow-hidden garantem que o flex-1 do historico
+                de mensagens (abaixo) fique confinado — sem isso o scroll do
+                historico "empurra" o header pra fora e ele fica cortado
+                pelo header pai do BRM. */}
+            <div className="flex flex-col bg-gradient-to-br from-slate-50 to-white dark:from-slate-900/40 dark:to-slate-900/20 min-h-0 overflow-hidden">
               {currentConversation ? (
                 <>
-                  {/* Header da conversa */}
-                  <div className="p-3 border-b bg-card/80 backdrop-blur-sm flex items-center gap-3">
+                  {/* Header da conversa — shrink-0 pra nao ser espremido pelo historico */}
+                  <div className="shrink-0 p-3 border-b bg-card/80 backdrop-blur-sm flex items-center gap-3">
                     <Avatar className="w-9 h-9">
                       <AvatarFallback className="bg-emerald-100 text-emerald-700 text-xs">
                         {getInitials(
