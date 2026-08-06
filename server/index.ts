@@ -247,36 +247,27 @@ const incomingHandler = async (input: Parameters<NonNullable<ChatService['receiv
   return chatServiceRef.receiveMessage(input)
 }
 
-// Provider agora e escolhido em runtime por sessao via MultiWhatsAppProvider —
-// evita depender da env WHATSAPP_PROVIDER (que estava obrigando um caminho
-// unico e quebrando o fluxo Cloud API mesmo com sessao correta). Se voce
-// quiser forcar um provider unico em algum ambiente, ainda pode setar
-// WHATSAPP_PROVIDER=stub|cloud_api|baileys.
-const providerKind = process.env.WHATSAPP_PROVIDER || 'multi'
+// Provider agora e SEMPRE MultiWhatsAppProvider (que delega por sessao),
+// exceto se WHATSAPP_PROVIDER=stub for setado (usado em testes unitarios).
+// Ignoramos deliberadamente valores 'baileys' ou 'cloud_api' que possam
+// estar setados no ambiente porque o roteamento correto e feito por sessao
+// pelo Multi. Se algum ambiente antigo tinha WHATSAPP_PROVIDER=baileys
+// setado, ele ficaria travado no Baileys mesmo com sessao Cloud API.
+const providerKind = process.env.WHATSAPP_PROVIDER === 'stub' ? 'stub' : 'multi'
 const whatsappProvider =
   providerKind === 'stub'
     ? new StubWhatsAppProvider()
-    : providerKind === 'cloud_api'
-      ? new CloudApiWhatsAppProvider({
+    : new MultiWhatsAppProvider(
+        new CloudApiWhatsAppProvider({
           incoming: incomingHandler,
           sessionRepository: whatsappSessionRepository,
-        })
-      : providerKind === 'multi'
-        ? new MultiWhatsAppProvider(
-            new CloudApiWhatsAppProvider({
-              incoming: incomingHandler,
-              sessionRepository: whatsappSessionRepository,
-            }),
-            new BaileysWhatsAppProvider({
-              incoming: incomingHandler,
-              sessionRepository: whatsappSessionRepository,
-            }),
-            whatsappSessionRepository,
-          )
-        : new BaileysWhatsAppProvider({
+        }),
+        new BaileysWhatsAppProvider({
           incoming: incomingHandler,
           sessionRepository: whatsappSessionRepository,
-        })
+        }),
+        whatsappSessionRepository,
+      )
 
 const whatsappService = new WhatsAppService(whatsappSessionRepository)
 const chatService = new ChatService(
