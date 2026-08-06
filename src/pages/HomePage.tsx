@@ -35,10 +35,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSub,
-  DropdownMenuSubTrigger,
-  DropdownMenuSubContent,
-  DropdownMenuPortal,
 } from "@/components/ui/dropdown-menu"
 
 /**
@@ -513,29 +509,10 @@ function NewRecordMenu({ floating }: { floating?: boolean }) {
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
-        {/* Novo negocio → submenu com [Novo negocio, Novo atendimento, Nova proposta] */}
-        <DropdownMenuSub>
-          <DropdownMenuSubTrigger>
-            <Briefcase className="w-4 h-4 mr-2" />
-            Novo negócio
-          </DropdownMenuSubTrigger>
-          <DropdownMenuPortal>
-            <DropdownMenuSubContent className="w-48">
-              <DropdownMenuItem onClick={() => navigate("/deals?new=true")}>
-                <Briefcase className="w-4 h-4 mr-2" />
-                Novo negócio
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate("/appointments?new=true")}>
-                <HeadphonesIcon className="w-4 h-4 mr-2" />
-                Novo atendimento
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate("/proposals?new=true")}>
-                <FileSignature className="w-4 h-4 mr-2" />
-                Nova proposta
-              </DropdownMenuItem>
-            </DropdownMenuSubContent>
-          </DropdownMenuPortal>
-        </DropdownMenuSub>
+        <DropdownMenuItem onClick={() => navigate("/deals?new=true")}>
+          <Briefcase className="w-4 h-4 mr-2" />
+          Novo negócio
+        </DropdownMenuItem>
         <DropdownMenuItem onClick={() => navigate("/appointments?new=true")}>
           <HeadphonesIcon className="w-4 h-4 mr-2" />
           Novo atendimento
