@@ -28,13 +28,13 @@ html {
 }
 
 /*
- * DESKTOP/WEB: reduz 20% (12px → 10px) — usuario pediu que na versao web
- * widgets e letras fiquem menores. Mesma logica: uma linha escala tudo
- * proporcionalmente porque Tailwind usa rem.
+ * DESKTOP/WEB: reduz mais 10% (agora 9px, contra o padrao 12px = -25%
+ * total). Como Tailwind usa rem em tudo, escala widgets, fontes,
+ * paddings e a altura da bottom-nav proporcionalmente.
  */
 @media (min-width: 768px) {
   html {
-    font-size: 10px;
+    font-size: 9px;
   }
 }
 
