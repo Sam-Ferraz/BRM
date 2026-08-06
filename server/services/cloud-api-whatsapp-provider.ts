@@ -10,19 +10,32 @@ import { WhatsAppSessionRepository } from '../repositories/index.js'
  * Meta Cloud API. O server/index.ts conecta isso ao ChatService.receiveMessage.
  */
 /**
- * Normaliza celular BR pro formato aceito pelo WhatsApp Cloud API.
- * Celulares BR tem 13 dig (55 + DDD 2 dig + 9 + 8 dig), mas o wa_id da Meta
- * vem sempre no formato antigo com 12 dig (55 + DDD + 8 dig, sem o 9).
- * Removemos o 9 pra que respostas a mensagens recebidas usem o mesmo wa_id
- * que a Meta usa — evita erro #131030 quando o numero autorizado no modo
- * teste foi cadastrado com 9.
- * Fixos BR (13 dig sem 9 no lugar 4) e demais paises passam sem alteracao.
+ * Retorna variantes do numero pra tentar em ordem no envio. Pra celular BR
+ * existem 2 formatos usados por WhatsApp:
+ *   - 13 dig: 55 + DDD (2) + 9 + 8 (formato atual, brasileiro comum)
+ *   - 12 dig: 55 + DDD (2) + 8 (formato antigo, usado pelo wa_id da Meta)
+ *
+ * A Cloud API em geral aceita os dois; MAS a lista de destinatarios
+ * autorizados do modo TESTE bate por string exata — se o usuario autorizou
+ * com 9 e a Meta entrega wa_id sem 9, respostas caem em #131030.
+ *
+ * Retornamos o input primeiro, depois a variante alternativa (se aplicavel),
+ * pra que o sendMessage tente ambas antes de desistir. Em producao, com
+ * numero real e sem lista de autorizados, a primeira ja sempre passa.
  */
-function normalizeBrCellPhone(digits: string): string {
-  if (digits.length === 13 && digits.startsWith('55') && digits[4] === '9') {
-    return digits.slice(0, 4) + digits.slice(5)
+function brPhoneVariants(digits: string): string[] {
+  if (digits.startsWith('55')) {
+    // Celular atual (13 dig com 9): oferece variante sem 9
+    if (digits.length === 13 && digits[4] === '9') {
+      return [digits, digits.slice(0, 4) + digits.slice(5)]
+    }
+    // Formato antigo/wa_id (12 dig sem 9): oferece variante com 9 pra celular
+    // Assumimos que o DDD comum de celular e >= 11; adiciona o 9 apos DDD.
+    if (digits.length === 12) {
+      return [digits, digits.slice(0, 4) + '9' + digits.slice(4)]
+    }
   }
-  return digits
+  return [digits]
 }
 
 export type IncomingMessageHandler = (input: {
@@ -114,46 +127,53 @@ export class CloudApiWhatsAppProvider implements WhatsAppProvider {
     }
 
     // WhatsApp Cloud API espera o "to" só com dígitos (E.164 sem o +).
-    // Pra celular BR, remove o 9 depois do DDD — Meta usa o wa_id no formato
-    // antigo (12 dig: 55 + DDD + 8 dig) e nao no formato atual (13 dig com 9).
-    // Sem essa normalizacao, respostas a mensagens recebidas caem no erro
-    // #131030 (nao autorizado) porque o numero salvo na conversa e o wa_id
-    // sem 9, mas o usuario cadastrou/autorizou com 9.
-    const to = normalizeBrCellPhone(input.to.replace(/\D/g, ''))
+    const digits = input.to.replace(/\D/g, '')
+    const variants = brPhoneVariants(digits)
     const url = `https://graph.facebook.com/v18.0/${session.phone_number_id}/messages`
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${session.access_token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        messaging_product: 'whatsapp',
-        to,
-        type: 'text',
-        text: { body: input.content },
-      }),
-    })
+    let lastError: { status: number; msg: string; code?: number } | null = null
 
-    if (!response.ok) {
+    for (const to of variants) {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messaging_product: 'whatsapp',
+          to,
+          type: 'text',
+          text: { body: input.content },
+        }),
+      })
+
+      if (response.ok) {
+        const data: any = await response.json()
+        const providerMessageId = data?.messages?.[0]?.id || `cloud-api-${Date.now()}`
+        return { providerMessageId }
+      }
+
       const errBody: any = await response.json().catch(() => ({}))
-      const errMsg = errBody?.error?.message || response.statusText
-      const errCode = errBody?.error?.code
+      lastError = {
+        status: response.status,
+        msg: errBody?.error?.message || response.statusText,
+        code: errBody?.error?.code,
+      }
 
       // 401/403 = token inválido. Marca a sessão como invalid_credentials
-      // pra UI poder pedir que o user atualize as credenciais.
-      if (response.status === 401 || response.status === 403 || errCode === 190) {
-        // Provider não conhece accountId — variante interna (rule 9).
+      // e para de tentar variantes (o problema nao vai mudar).
+      if (response.status === 401 || response.status === 403 || lastError.code === 190) {
         await this.sessionRepository
           .updateStatusInternal(input.ownerUserId, 'invalid_credentials')
           .catch(() => undefined)
+        break
       }
-      throw new Error(`Cloud API error (${response.status}): ${errMsg}`)
+
+      // Se nao for erro de numero nao autorizado, para de tentar variantes.
+      if (lastError.code !== 131030) break
     }
 
-    const data: any = await response.json()
-    const providerMessageId = data?.messages?.[0]?.id || `cloud-api-${Date.now()}`
-    return { providerMessageId }
+    throw new Error(`Cloud API error (${lastError?.status}): ${lastError?.msg}`)
   }
 }
