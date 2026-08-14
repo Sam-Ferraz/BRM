@@ -339,13 +339,13 @@ export default function HomePage() {
                 className="pl-8 h-9"
               />
             </div>
-            {/* Toggle lista/kanban — lista fica na HomePage (visual atual),
-                kanban vai pra /deals que abre direto no kanban */}
+            {/* Toggle lista/kanban — ambos claros no estado normal;
+                ao hover, o botao fica escuro (invertido). */}
             <div className="shrink-0 flex items-center gap-1 border rounded-md p-0.5">
               <button
                 type="button"
                 title="Visualizacao em lista"
-                className="h-8 w-8 flex items-center justify-center rounded bg-transparent hover:bg-accent text-[#0c343d]"
+                className="h-8 w-8 flex items-center justify-center rounded bg-transparent text-[#0c343d] hover:bg-[#0c343d] hover:text-white transition-colors"
               >
                 <List className="w-4 h-4" />
               </button>
@@ -353,7 +353,7 @@ export default function HomePage() {
                 type="button"
                 title="Visualizacao em kanban"
                 onClick={() => navigate("/deals")}
-                className="h-8 w-8 flex items-center justify-center rounded bg-[#0c343d] text-white hover:bg-[#0c343d]/90"
+                className="h-8 w-8 flex items-center justify-center rounded bg-transparent text-[#0c343d] hover:bg-[#0c343d] hover:text-white transition-colors"
               >
                 <LayoutGrid className="w-4 h-4" />
               </button>
