@@ -18,7 +18,7 @@ import { Link, useNavigate } from "react-router-dom"
 import {
   Briefcase, Users, Package, HeadphonesIcon, ClipboardCheck, FileSignature, FileCheck2,
   Key, MessageCircle, Inbox, Store, BarChart3, CalendarDays, Search,
-  Menu, ArrowLeft, Home as HomeIcon, Plus,
+  Menu, ArrowLeft, Home as HomeIcon, Plus, List, LayoutGrid,
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -329,14 +329,35 @@ export default function HomePage() {
               <SelectItem value="Descartado">Descartado</SelectItem>
             </SelectContent>
           </Select>
-          <div className="relative">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar cliente, imóvel, telefone..."
-              className="pl-8 h-9"
-            />
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1 min-w-0">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar cliente, imóvel, telefone..."
+                className="pl-8 h-9"
+              />
+            </div>
+            {/* Toggle lista/kanban — lista fica na HomePage (visual atual),
+                kanban vai pra /deals que abre direto no kanban */}
+            <div className="shrink-0 flex items-center gap-1 border rounded-md p-0.5">
+              <button
+                type="button"
+                title="Visualizacao em lista"
+                className="h-8 w-8 flex items-center justify-center rounded bg-transparent hover:bg-accent text-[#0c343d]"
+              >
+                <List className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                title="Visualizacao em kanban"
+                onClick={() => navigate("/deals")}
+                className="h-8 w-8 flex items-center justify-center rounded bg-[#0c343d] text-white hover:bg-[#0c343d]/90"
+              >
+                <LayoutGrid className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
 
