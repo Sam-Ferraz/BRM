@@ -436,7 +436,7 @@ export default function HomePage() {
       {/* ============================================================ */}
       <section
         className={cn(
-          "flex-1 flex-col overflow-hidden bg-muted/30 pb-20",
+          "flex-1 flex-col overflow-hidden bg-muted/30",
           mobilePanel === "editor" ? "flex" : "hidden md:flex",
         )}
       >
