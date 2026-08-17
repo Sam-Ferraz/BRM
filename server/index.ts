@@ -59,6 +59,8 @@ import { MultiWhatsAppProvider } from './services/multi-whatsapp-provider.js'
 import { createAuthRoutes } from './routes/auth-routes.js'
 import { createDashboardRoutes } from './routes/dashboard-routes.js'
 import { createDealRoutes } from './routes/deal-routes.js'
+import { createDealLabelRoutes, createDealLabelAssignmentRoutes } from './routes/deal-label-routes.js'
+import { DealLabelRepository } from './repositories/deal-label-repository.js'
 import { createClientRoutes } from './routes/client-routes.js'
 import { createProductRoutes } from './routes/product-routes.js'
 import { createAppointmentRoutes } from './routes/appointment-routes.js'
@@ -171,6 +173,7 @@ app.get('/health', (req, res) => {
 // Initialize repositories
 const userRepository = new UserRepository()
 const dealRepository = new DealRepository()
+const dealLabelRepository = new DealLabelRepository()
 const clientRepository = new ClientRepository()
 const productRepository = new ProductRepository()
 const appointmentRepository = new AppointmentRepository()
@@ -296,6 +299,8 @@ const passwordService = new PasswordService(userRepository, passwordTokenReposit
 app.use('/api/auth', authLimiter, createAuthRoutes(authService, passwordService))
 app.use('/api/dashboard', createDashboardRoutes(dashboardService, appointmentService))
 app.use('/api/deals', createDealRoutes(dealService))
+app.use('/api/deals', createDealLabelAssignmentRoutes(dealLabelRepository))
+app.use('/api/deal-labels', createDealLabelRoutes(dealLabelRepository))
 app.use('/api/clients', createClientRoutes(clientService))
 app.use('/api/products', createProductRoutes(productService, productRepository))
 app.use('/api/appointments', createAppointmentRoutes(appointmentService))

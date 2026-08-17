@@ -20,8 +20,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { ArrowLeft, Plus, Pencil, Trash2, Search, Briefcase, List, LayoutGrid, ArrowUpDown } from "lucide-react"
-import { api, type Deal, type LeadWithDetails } from "@/lib/api-client"
+import { ArrowLeft, Plus, Pencil, Trash2, Search, Briefcase, List, LayoutGrid, ArrowUpDown, Tags, X, Check } from "lucide-react"
+import { api, type Deal, type LeadWithDetails, type DealLabel } from "@/lib/api-client"
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
 import { DealForm } from "@/components/forms/deal-form"
 import { DealsKanbanView } from "@/components/deals-kanban-view"
 import { useToast } from "@/hooks/use-toast"
@@ -35,6 +36,12 @@ export default function DealsPage() {
   const [deals, setDeals] = useState<Deal[]>([])
   const [leads, setLeads] = useState<LeadWithDetails[]>([])
   const [loading, setLoading] = useState(true)
+  // Etiquetas (estilo Trello): CRUD + filtro por selecionadas
+  const [labels, setLabels] = useState<DealLabel[]>([])
+  const [selectedLabelIds, setSelectedLabelIds] = useState<Set<number>>(new Set())
+  const [newLabelName, setNewLabelName] = useState("")
+  const [newLabelColor, setNewLabelColor] = useState("#0c343d")
+  const [labelsOpen, setLabelsOpen] = useState(false)
   const [formLoading, setFormLoading] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("Todos")
@@ -137,6 +144,16 @@ export default function DealsPage() {
   useEffect(() => {
     fetchDeals()
   }, [fetchDeals])
+
+  // Carrega etiquetas da account uma vez ao montar. Falha silenciosa —
+  // se falhar, o Popover mostra "Nenhuma etiqueta ainda" e o CRUD ainda
+  // funciona pra criar novas.
+  useEffect(() => {
+    api.dealLabels
+      .list()
+      .then((r) => setLabels(r.data || []))
+      .catch(() => setLabels([]))
+  }, [])
 
   // Fetch de cadência: uma chamada só, cache local. Roda no mount e sempre que
   // um deal é criado/atualizado (via fetchDeals mudar de referência não basta,
@@ -379,30 +396,131 @@ export default function DealsPage() {
                 </SelectContent>
               </Select>
 
-              {/* Ordenar por — controla sortBy/sortOrder do fetch */}
-              <Select
-                value={sortBy ? `${sortBy}:${sortOrder}` : "updated_at:desc"}
-                onValueChange={(v) => {
-                  const [col, ord] = v.split(":")
-                  setSortBy(col)
-                  setSortOrder(ord as "asc" | "desc")
-                }}
-              >
-                <SelectTrigger className="w-[220px]">
-                  <ArrowUpDown className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="updated_at:desc">Atualizado recentemente</SelectItem>
-                  <SelectItem value="updated_at:asc">Atualizado mais antigo</SelectItem>
-                  <SelectItem value="origin_date:desc">Data de Origem (mais nova)</SelectItem>
-                  <SelectItem value="origin_date:asc">Data de Origem (mais antiga)</SelectItem>
-                  <SelectItem value="gsv:desc">VGV (maior)</SelectItem>
-                  <SelectItem value="gsv:asc">VGV (menor)</SelectItem>
-                  <SelectItem value="client:asc">Cliente (A → Z)</SelectItem>
-                  <SelectItem value="client:desc">Cliente (Z → A)</SelectItem>
-                </SelectContent>
-              </Select>
+              {/* Etiquetas (estilo Trello) — substitui o antigo "Ordenar por" */}
+              <Popover open={labelsOpen} onOpenChange={setLabelsOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-[220px] justify-between h-9">
+                    <span className="flex items-center gap-1.5 text-sm">
+                      <Tags className="w-3.5 h-3.5 text-muted-foreground" />
+                      {selectedLabelIds.size > 0
+                        ? `${selectedLabelIds.size} etiqueta(s)`
+                        : "Etiquetas"}
+                    </span>
+                    <span className="text-xs text-muted-foreground">▼</span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-72 p-3 space-y-2">
+                  <div className="text-xs font-medium text-muted-foreground">Filtrar por etiqueta</div>
+                  {labels.length === 0 ? (
+                    <div className="text-xs text-muted-foreground text-center py-2">
+                      Nenhuma etiqueta ainda
+                    </div>
+                  ) : (
+                    <div className="space-y-1 max-h-48 overflow-y-auto">
+                      {labels.map((lb) => {
+                        const isSelected = selectedLabelIds.has(lb.id)
+                        return (
+                          <div
+                            key={lb.id}
+                            className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-accent"
+                          >
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedLabelIds((prev) => {
+                                  const next = new Set(prev)
+                                  if (next.has(lb.id)) next.delete(lb.id)
+                                  else next.add(lb.id)
+                                  return next
+                                })
+                              }}
+                              className="flex-1 flex items-center gap-2 text-left text-sm"
+                            >
+                              <span
+                                className="inline-block w-5 h-3 rounded"
+                                style={{ backgroundColor: lb.color }}
+                              />
+                              <span className="flex-1 truncate">{lb.name}</span>
+                              {isSelected && <Check className="w-3.5 h-3.5 text-primary" />}
+                            </button>
+                            <button
+                              type="button"
+                              title="Excluir etiqueta"
+                              onClick={async () => {
+                                if (!confirm(`Excluir etiqueta "${lb.name}"?`)) return
+                                try {
+                                  await api.dealLabels.delete(lb.id)
+                                  setLabels((l) => l.filter((x) => x.id !== lb.id))
+                                  setSelectedLabelIds((prev) => {
+                                    const next = new Set(prev)
+                                    next.delete(lb.id)
+                                    return next
+                                  })
+                                } catch (err) {
+                                  toast({
+                                    title: t("error"),
+                                    description: err instanceof Error ? err.message : String(err),
+                                    variant: "destructive",
+                                  })
+                                }
+                              }}
+                              className="opacity-0 group-hover:opacity-100 hover:text-red-600 transition-opacity"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                  <div className="border-t pt-2 space-y-2">
+                    <div className="text-xs font-medium text-muted-foreground">Nova etiqueta</div>
+                    <Input
+                      value={newLabelName}
+                      onChange={(e) => setNewLabelName(e.target.value)}
+                      placeholder="Nome"
+                      className="h-8 text-sm"
+                    />
+                    <div className="flex items-center gap-1.5">
+                      {["#0c343d", "#dc2626", "#ea580c", "#facc15", "#16a34a", "#0ea5e9", "#8b5cf6", "#78716c"].map(
+                        (c) => (
+                          <button
+                            key={c}
+                            type="button"
+                            onClick={() => setNewLabelColor(c)}
+                            className={`w-6 h-6 rounded-full border-2 transition-all ${
+                              newLabelColor === c ? "border-foreground scale-110" : "border-transparent"
+                            }`}
+                            style={{ backgroundColor: c }}
+                            title={c}
+                          />
+                        ),
+                      )}
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={async () => {
+                        const name = newLabelName.trim()
+                        if (!name) return
+                        try {
+                          const result = await api.dealLabels.create({ name, color: newLabelColor })
+                          setLabels((l) => [...l, result.data].sort((a, b) => a.name.localeCompare(b.name)))
+                          setNewLabelName("")
+                        } catch (err) {
+                          toast({
+                            title: t("error"),
+                            description: err instanceof Error ? err.message : String(err),
+                            variant: "destructive",
+                          })
+                        }
+                      }}
+                      className="w-full h-8 text-xs"
+                    >
+                      Criar
+                    </Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
               {/* Toggle Lista/Kanban */}
               <div className="flex gap-1 border rounded-md p-0.5 shrink-0">
                 <Button

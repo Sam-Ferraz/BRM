@@ -1555,4 +1555,37 @@ export const api = {
       },
     },
   },
+
+  // Etiquetas de negocios (estilo Trello)
+  dealLabels: {
+    list: async (): Promise<{ data: DealLabel[] }> => {
+      return apiClient.get<{ data: DealLabel[] }>('/deal-labels')
+    },
+    create: async (input: { name: string; color: string }): Promise<{ data: DealLabel }> => {
+      return apiClient.post<{ data: DealLabel }>('/deal-labels', input)
+    },
+    update: async (id: number, input: { name?: string; color?: string }): Promise<{ data: DealLabel }> => {
+      return apiClient.put<{ data: DealLabel }>(`/deal-labels/${id}`, input)
+    },
+    delete: async (id: number): Promise<{ deleted: boolean }> => {
+      return apiClient.delete<{ deleted: boolean }>(`/deal-labels/${id}`)
+    },
+    listOfDeal: async (dealId: number): Promise<{ data: DealLabel[] }> => {
+      return apiClient.get<{ data: DealLabel[] }>(`/deals/${dealId}/labels`)
+    },
+    assignToDeal: async (dealId: number, labelId: number): Promise<{ assigned: boolean }> => {
+      return apiClient.post<{ assigned: boolean }>(`/deals/${dealId}/labels/${labelId}`, {})
+    },
+    unassignFromDeal: async (dealId: number, labelId: number): Promise<{ removed: boolean }> => {
+      return apiClient.delete<{ removed: boolean }>(`/deals/${dealId}/labels/${labelId}`)
+    },
+  },
+}
+
+export interface DealLabel {
+  id: number
+  account_id: number
+  name: string
+  color: string
+  created_at?: string
 }
