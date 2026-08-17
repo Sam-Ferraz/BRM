@@ -296,7 +296,7 @@ export default function HomePage() {
   }, [])
 
   return (
-    <div className="h-[100dvh] w-screen overflow-hidden bg-background flex pb-28">
+    <div className="h-[100dvh] w-screen overflow-hidden bg-background flex">
       {/* ============================================================ */}
       {/* Coluna B — lista de Negócios                                  */}
       {/* Sidebar vertical C foi removida — modulos vao na bottom nav   */}
@@ -361,8 +361,10 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Lista scrollavel — sem pb extra: pai ja reserva 80px pra bottom-nav */}
-        <div className="flex-1 overflow-y-auto">
+        {/* Lista scrollavel — pb-28 garante que o ultimo item nao fica
+            coberto pela bottom-nav fixed (o pai nao tem mais pb, pra o
+            bg-card do aside se estender ate o rodape sem faixa branca) */}
+        <div className="flex-1 overflow-y-auto pb-28">
           {loading ? (
             <div className="p-6 text-center text-sm text-muted-foreground">Carregando...</div>
           ) : filteredDeals.length === 0 ? (
@@ -479,8 +481,9 @@ export default function HomePage() {
                   Botão + agora é FAB flutuante no canto inferior direito. */}
             </header>
 
-            {/* Editor: Tabs Histórico (default) + Informações */}
-            <div className="flex-1 min-h-0 overflow-hidden p-4">
+            {/* Editor: Tabs Histórico (default) + Informações. pb-28 evita
+                que o card seja coberto pela bottom-nav fixed */}
+            <div className="flex-1 min-h-0 overflow-hidden p-4 pb-28">
               <div className="h-full max-w-4xl mx-auto bg-card rounded-lg border p-4 flex flex-col">
                 <DealEditor
                   deal={selectedDeal}
