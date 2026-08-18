@@ -25,24 +25,49 @@ export class EmailService {
     this.appUrl = process.env.APP_URL || 'http://localhost:5173'
   }
 
+  /**
+   * Diagnostico do estado do email service — usado por endpoint de debug
+   * pra super-admin conferir se RESEND_API_KEY esta setado e qual EMAIL_FROM
+   * o processo esta usando.
+   */
+  getDiagnostics(): { has_api_key: boolean; from: string; app_url: string } {
+    return {
+      has_api_key: this.resend !== null,
+      from: this.from,
+      app_url: this.appUrl,
+    }
+  }
+
   private async send(to: string, subject: string, html: string): Promise<void> {
     if (!this.resend) {
       console.warn('[EmailService] RESEND_API_KEY não configurado — email não enviado')
       console.warn(`  To: ${to}`)
       console.warn(`  Subject: ${subject}`)
       console.warn(`  HTML: ${html.substring(0, 200)}...`)
-      return
+      throw new Error('RESEND_API_KEY nao configurado no servidor')
     }
     try {
-      await this.resend.emails.send({
+      const result = await this.resend.emails.send({
         from: this.from,
         to,
         subject,
         html,
       })
+      // O SDK do Resend retorna { data: null, error: {...} } em erros de dominio/validacao
+      // — nao lanca. Precisamos checar manualmente pra propagar como excecao.
+      if ((result as any)?.error) {
+        const err = (result as any).error
+        console.error('[EmailService] Resend retornou erro:', err)
+        throw new Error(
+          typeof err === 'string'
+            ? err
+            : err?.message || err?.name || JSON.stringify(err),
+        )
+      }
     } catch (err) {
       console.error('[EmailService] falha ao enviar:', err)
-      throw new Error('Falha ao enviar email')
+      if (err instanceof Error) throw err
+      throw new Error(String(err))
     }
   }
 

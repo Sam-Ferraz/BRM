@@ -76,6 +76,19 @@ export function createAccountRoutes(service: AccountService): Router {
     }
   }))
 
+  // Diagnostico de config do sistema de email (super-admin). Retorna
+  // has_api_key/from/app_url pra confirmar se o servidor esta configurado
+  // corretamente pra mandar email. Nao expoe secrets.
+  router.get('/email-diagnostics', authenticateToken, requireAccount, (req: AuthenticatedRequest, res: Response) => requireSuperAdmin(req, res, async () => {
+    try {
+      const diag = service.getEmailDiagnostics()
+      res.json({ data: diag })
+    } catch (err) {
+      console.error('Error fetching email diagnostics:', err)
+      res.status(500).json({ error: 'Internal server error' })
+    }
+  }))
+
   router.post('/', authenticateToken, requireAccount, (req: AuthenticatedRequest, res: Response) => requireSuperAdmin(req, res, async () => {
     try {
       const result = await service.provisionNewAccount(req.body)

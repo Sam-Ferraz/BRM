@@ -53,6 +53,8 @@ export class AccountService {
     account: Account
     admin_user: { id: number; email: string; name: string }
     email_sent: boolean
+    email_error: string | null
+    setup_token: string
   }> {
     if (!payload.account_name?.trim()) throw new Error('account_name é obrigatório')
     if (!payload.admin_name?.trim()) throw new Error('admin_name é obrigatório')
@@ -81,6 +83,7 @@ export class AccountService {
     const token = await this.tokenRepo.create(admin.id, 'setup', 48)
 
     let email_sent = false
+    let email_error: string | null = null
     try {
       await this.emailService.sendSetupPasswordEmail({
         to: admin.email,
@@ -93,20 +96,34 @@ export class AccountService {
       // Não rollback — a conta foi criada. Se email falhou, super-admin
       // pode reenviar o link pela UI. O token continua válido.
       console.error('[AccountService] email de setup falhou:', err)
+      email_error = err instanceof Error ? err.message : String(err)
     }
 
     return {
       account,
       admin_user: { id: admin.id, email: admin.email, name: admin.name },
       email_sent,
+      email_error,
+      // Token exposto pra super-admin poder copiar o link manualmente se
+      // email falhar. Formato do link: {APP_URL}/setup-password?token=...
+      setup_token: token,
     }
+  }
+
+  /**
+   * Retorna o diagnostico do EmailService — usado por super-admin pra
+   * verificar se RESEND_API_KEY esta configurado e qual EMAIL_FROM/APP_URL
+   * o processo esta usando.
+   */
+  getEmailDiagnostics(): { has_api_key: boolean; from: string; app_url: string } {
+    return this.emailService.getDiagnostics()
   }
 
   /**
    * Reenvia o email de setup (útil se o cliente não recebeu o primeiro
    * ou perdeu). Só pra users que ainda NÃO têm senha definida.
    */
-  async resendSetupEmail(userId: number): Promise<{ email_sent: boolean }> {
+  async resendSetupEmail(userId: number): Promise<{ email_sent: boolean; email_error: string | null; setup_token: string }> {
     const user = await this.userRepo.findById(userId)
     if (!user) throw new Error('Usuário não encontrado')
     const account = await this.accountRepo.findById(user.account_id)
@@ -121,10 +138,14 @@ export class AccountService {
         accountName: account.name,
         token,
       })
-      return { email_sent: true }
+      return { email_sent: true, email_error: null, setup_token: token }
     } catch (err) {
       console.error('[AccountService] resend email falhou:', err)
-      return { email_sent: false }
+      return {
+        email_sent: false,
+        email_error: err instanceof Error ? err.message : String(err),
+        setup_token: token,
+      }
     }
   }
 }
