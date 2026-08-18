@@ -42,6 +42,11 @@ export default function DealsPage() {
   const [newLabelName, setNewLabelName] = useState("")
   const [newLabelColor, setNewLabelColor] = useState("#0c343d")
   const [labelsOpen, setLabelsOpen] = useState(false)
+  // Edicao inline de etiqueta: id sendo editada + valores em rascunho
+  const [editingLabelId, setEditingLabelId] = useState<number | null>(null)
+  const [editingName, setEditingName] = useState("")
+  const [editingColor, setEditingColor] = useState("#0c343d")
+  const LABEL_COLORS = ["#0c343d", "#dc2626", "#ea580c", "#facc15", "#16a34a", "#0ea5e9", "#8b5cf6", "#78716c"]
   const [formLoading, setFormLoading] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("Todos")
@@ -419,10 +424,69 @@ export default function DealsPage() {
                     <div className="space-y-1 max-h-48 overflow-y-auto">
                       {labels.map((lb) => {
                         const isSelected = selectedLabelIds.has(lb.id)
+                        const isEditing = editingLabelId === lb.id
+                        if (isEditing) {
+                          return (
+                            <div key={lb.id} className="rounded border p-2 space-y-2 bg-muted/40">
+                              <Input
+                                value={editingName}
+                                onChange={(e) => setEditingName(e.target.value)}
+                                className="h-7 text-sm"
+                                autoFocus
+                              />
+                              <div className="flex items-center gap-1.5">
+                                {LABEL_COLORS.map((c) => (
+                                  <button
+                                    key={c}
+                                    type="button"
+                                    onClick={() => setEditingColor(c)}
+                                    className={`w-5 h-5 rounded-full border-2 transition-all ${
+                                      editingColor === c ? "border-foreground scale-110" : "border-transparent"
+                                    }`}
+                                    style={{ backgroundColor: c }}
+                                  />
+                                ))}
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  size="sm"
+                                  className="h-7 text-xs flex-1"
+                                  onClick={async () => {
+                                    const name = editingName.trim()
+                                    if (!name) return
+                                    try {
+                                      const result = await api.dealLabels.update(lb.id, { name, color: editingColor })
+                                      setLabels((l) =>
+                                        l.map((x) => (x.id === lb.id ? result.data : x)).sort((a, b) => a.name.localeCompare(b.name)),
+                                      )
+                                      setEditingLabelId(null)
+                                    } catch (err) {
+                                      toast({
+                                        title: t("error"),
+                                        description: err instanceof Error ? err.message : String(err),
+                                        variant: "destructive",
+                                      })
+                                    }
+                                  }}
+                                >
+                                  Salvar
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 text-xs"
+                                  onClick={() => setEditingLabelId(null)}
+                                >
+                                  Cancelar
+                                </Button>
+                              </div>
+                            </div>
+                          )
+                        }
                         return (
                           <div
                             key={lb.id}
-                            className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-accent"
+                            className="flex items-center gap-1 rounded px-1 py-1 hover:bg-accent"
                           >
                             <button
                               type="button"
@@ -434,7 +498,7 @@ export default function DealsPage() {
                                   return next
                                 })
                               }}
-                              className="flex-1 flex items-center gap-2 text-left text-sm"
+                              className="flex-1 flex items-center gap-2 text-left text-sm px-1 py-0.5"
                             >
                               <span
                                 className="inline-block w-5 h-3 rounded"
@@ -442,6 +506,18 @@ export default function DealsPage() {
                               />
                               <span className="flex-1 truncate">{lb.name}</span>
                               {isSelected && <Check className="w-3.5 h-3.5 text-primary" />}
+                            </button>
+                            <button
+                              type="button"
+                              title="Editar etiqueta"
+                              onClick={() => {
+                                setEditingLabelId(lb.id)
+                                setEditingName(lb.name)
+                                setEditingColor(lb.color)
+                              }}
+                              className="p-1 rounded hover:bg-muted hover:text-foreground text-muted-foreground transition-colors"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
                             </button>
                             <button
                               type="button"
@@ -464,9 +540,9 @@ export default function DealsPage() {
                                   })
                                 }
                               }}
-                              className="opacity-0 group-hover:opacity-100 hover:text-red-600 transition-opacity"
+                              className="p-1 rounded hover:bg-red-50 hover:text-red-600 text-muted-foreground transition-colors"
                             >
-                              <X className="w-3.5 h-3.5" />
+                              <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           </div>
                         )

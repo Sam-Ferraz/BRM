@@ -29,6 +29,7 @@ import { useToast } from "@/hooks/use-toast"
 import { api, type Deal, type DashboardStats } from "@/lib/api-client"
 import { DealEditor } from "@/components/deal-editor"
 import { DealCodeBadge } from "@/components/deal-code-badge"
+import { DealLabelsInline } from "@/components/deal-labels-inline"
 import { cn } from "@/lib/utils"
 import {
   DropdownMenu,
@@ -467,6 +468,7 @@ export default function HomePage() {
                 <div className="flex items-center gap-2 flex-wrap">
                   <h1 className="font-semibold text-base truncate">{selectedDeal.client}</h1>
                   <DealCodeBadge id={selectedDeal.id} readOnly />
+                  <DealLabelsInline dealId={selectedDeal.id} compact />
                   {selectedDeal.client_phone && (
                     <span className="inline-flex items-center rounded-md border bg-muted/40 px-2 py-0.5 font-mono text-xs font-semibold text-foreground">
                       {selectedDeal.client_phone}

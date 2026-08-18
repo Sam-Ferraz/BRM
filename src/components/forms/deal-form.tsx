@@ -14,6 +14,7 @@ import { CurrencyInput } from "@/components/ui/currency-input"
 import { ClientSearch } from "@/components/client-search"
 import { ProductSearch } from "@/components/product-search"
 import { DealCodeBadge } from "@/components/deal-code-badge"
+import { DealLabelsInline } from "@/components/deal-labels-inline"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { DealAppointmentsTimeline } from "@/components/deal-appointments-timeline"
 import { AppointmentForm } from "@/components/forms/appointment-form"
@@ -426,9 +427,10 @@ export function DealForm({ deal, open, onOpenChange, onSubmit, loading }: DealFo
         })}
       >
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+          <DialogTitle className="flex items-center gap-2 flex-wrap">
             <span>{deal ? t('editDeal') : t('newDeal')}</span>
             {deal && <DealCodeBadge id={deal.id} />}
+            {deal && <DealLabelsInline dealId={deal.id} compact />}
           </DialogTitle>
         </DialogHeader>
         {deal ? (
