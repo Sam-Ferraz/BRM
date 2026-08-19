@@ -287,7 +287,12 @@ export function createLeadRoutes(
         const name = typeof row.name === 'string' ? row.name.trim() : ''
         const phone = typeof row.phone === 'string' ? row.phone.trim() : ''
         const email = typeof row.email === 'string' ? row.email.trim() : ''
-        const notes = typeof row.notes === 'string' ? row.notes.trim() : null
+        const rawNotes = typeof row.notes === 'string' ? row.notes.trim() : ''
+        const source = typeof row.source === 'string' ? row.source.trim() : ''
+        // Origem entra como prefixo nas notas (schema atual so tem lead_sources
+        // com id numerico — pra evitar migration/complexidade, guardamos o
+        // texto de Origem no proprio campo notes prefixado).
+        const notes = source ? (rawNotes ? `Origem: ${source} | ${rawNotes}` : `Origem: ${source}`) : (rawNotes || null)
         // Requer pelo menos um identificador (nome ou telefone)
         if (!name && !phone) {
           skipped++

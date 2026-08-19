@@ -49,12 +49,14 @@ export class AccountService {
     plan?: string
     admin_name: string
     admin_email: string
+    admin_password?: string  // Opcional — se vier, seta senha direto (sem email de setup)
   }): Promise<{
     account: Account
     admin_user: { id: number; email: string; name: string }
     email_sent: boolean
     email_error: string | null
-    setup_token: string
+    setup_token: string | null
+    password_set: boolean
   }> {
     if (!payload.account_name?.trim()) throw new Error('account_name é obrigatório')
     if (!payload.admin_name?.trim()) throw new Error('admin_name é obrigatório')
@@ -70,16 +72,36 @@ export class AccountService {
       is_active: true,
     })
 
-    // password_hash = null → user existe mas não pode logar até definir senha
+    // Se admin_password veio no payload, hasheia com bcrypt e cria user
+    // ja logavel. Senao, cria com password_hash=null + envia email de setup.
+    let passwordHash: string | null = null
+    const passwordSet = !!(payload.admin_password && payload.admin_password.length >= 4)
+    if (passwordSet) {
+      const bcrypt = await import('bcrypt')
+      passwordHash = await bcrypt.hash(payload.admin_password!, 10)
+    }
+
     const admin = await this.userRepo.create(
       payload.admin_name.trim(),
       email,
-      null,
+      passwordHash,
       'admin',
       account.id
     )
 
-    // Gera token válido por 48h
+    // Se senha ja foi setada, nao gera token nem manda email
+    if (passwordSet) {
+      return {
+        account,
+        admin_user: { id: admin.id, email: admin.email, name: admin.name },
+        email_sent: false,
+        email_error: null,
+        setup_token: null,
+        password_set: true,
+      }
+    }
+
+    // Fluxo padrao: gera token de 48h + email de setup
     const token = await this.tokenRepo.create(admin.id, 'setup', 48)
 
     let email_sent = false
@@ -104,9 +126,8 @@ export class AccountService {
       admin_user: { id: admin.id, email: admin.email, name: admin.name },
       email_sent,
       email_error,
-      // Token exposto pra super-admin poder copiar o link manualmente se
-      // email falhar. Formato do link: {APP_URL}/setup-password?token=...
       setup_token: token,
+      password_set: false,
     }
   }
 

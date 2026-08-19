@@ -21,6 +21,7 @@ interface ParsedRow {
   phone?: string
   email?: string
   notes?: string
+  source?: string
 }
 
 // Parser CSV simples — suporta virgula ou ponto-e-virgula, aspas duplas
@@ -43,6 +44,7 @@ function parseCsv(text: string): ParsedRow[] {
       else if (["telefone", "phone", "celular", "whatsapp"].includes(h)) row.phone = val
       else if (["email", "e-mail", "e_mail"].includes(h)) row.email = val
       else if (["observacoes", "observacao", "notes", "notas", "descricao"].includes(h)) row.notes = val
+      else if (["origem", "source", "fonte", "canal"].includes(h)) row.source = val
     })
     if (row.name || row.phone) rows.push(row)
   }
@@ -70,9 +72,9 @@ function splitCsvLine(line: string, sep: string): string[] {
   return result
 }
 
-const TEMPLATE_CSV = `Nome,Telefone,Email,Observacoes
-João Silva,+5547999999999,joao@email.com,Interessado em apartamento
-Maria Souza,+5547988888888,maria@email.com,Casa em Bombinhas
+const TEMPLATE_CSV = `Nome,Telefone,Email,Origem,Observacoes
+João Silva,+5547999999999,joao@email.com,Facebook,Interessado em apartamento
+Maria Souza,+5547988888888,maria@email.com,Indicação,Casa em Bombinhas
 `
 
 export function ImportLeadsCard() {
@@ -140,7 +142,7 @@ export function ImportLeadsCard() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <FileSpreadsheet className="w-5 h-5" />
-          Importar clientes (leads)
+          Importação Clientes
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -148,7 +150,7 @@ export function ImportLeadsCard() {
           <p className="font-medium">Como importar:</p>
           <ol className="list-decimal pl-5 space-y-1 text-xs text-muted-foreground">
             <li>Baixe o modelo CSV abaixo</li>
-            <li>Preencha no Excel ou Google Sheets (colunas: Nome, Telefone, Email, Observacoes)</li>
+            <li>Preencha no Excel ou Google Sheets (colunas: Nome, Telefone, Email, Origem, Observacoes)</li>
             <li>Salve como CSV e envie aqui</li>
             <li>Os leads importados aparecem no funil de Negocios na coluna <strong>Sem atendimento</strong></li>
           </ol>
