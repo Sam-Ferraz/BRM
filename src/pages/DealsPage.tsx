@@ -53,7 +53,10 @@ export default function DealsPage() {
   const LABEL_COLORS = ["#0c343d", "#dc2626", "#ea580c", "#facc15", "#16a34a", "#0ea5e9", "#8b5cf6", "#78716c"]
   const [formLoading, setFormLoading] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState("Todos")
+  // Filtro por qualificacao (temperatura extraida do status): cold/mild/warm.
+  // Aplicado client-side; substitui o antigo statusFilter que listava as
+  // 16 combinacoes status x temperatura.
+  const [qualificationFilter, setQualificationFilter] = useState<"all" | "cold" | "mild" | "warm">("all")
   const [sortBy, setSortBy] = useState("")
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc")
 
@@ -70,6 +73,11 @@ export default function DealsPage() {
   //               ok      = client_origin='online_lead' AND NOT overdue;
   //               na      = client_origin !== 'online_lead' (sem análise).
   const filteredDeals = deals.filter((d) => {
+    // Filtro por qualificacao (temperatura extraida do sufixo do status)
+    if (qualificationFilter !== "all") {
+      if (!d.status.endsWith(`_${qualificationFilter}`)) return false
+    }
+    // Filtro por cadencia (client-side, usa o Set fetchado)
     if (cadenceFilter === "all") return true
     const isOverdue = cadenceOverdueSet.has(d.id)
     const isLead = d.client_origin === "online_lead"
@@ -125,7 +133,6 @@ export default function DealsPage() {
       const filters: any = {}
       
       if (searchTerm) filters.search = searchTerm
-      if (statusFilter !== "Todos") filters.status = statusFilter
       if (sortBy) {
         filters.sortBy = sortBy
         filters.sortOrder = sortOrder
@@ -148,7 +155,7 @@ export default function DealsPage() {
     } finally {
       setLoading(false)
     }
-  }, [searchTerm, statusFilter, sortBy, sortOrder, toast, t])
+  }, [searchTerm, sortBy, sortOrder, toast, t])
 
   useEffect(() => {
     fetchDeals()
@@ -367,16 +374,27 @@ export default function DealsPage() {
                   className="pl-9"
                 />
               </div>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <Select value={qualificationFilter} onValueChange={(v) => setQualificationFilter(v as typeof qualificationFilter)}>
                 <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder={t('status')} />
+                  <SelectValue placeholder="Qualificação" />
                 </SelectTrigger>
                 <SelectContent>
-                  {statusOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="all">Qualificação: Todas</SelectItem>
+                  <SelectItem value="cold">
+                    <span className="inline-flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-blue-500" /> Frio
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="mild">
+                    <span className="inline-flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-amber-500" /> Morno
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="warm">
+                    <span className="inline-flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-red-500" /> Quente
+                    </span>
+                  </SelectItem>
                 </SelectContent>
               </Select>
 
