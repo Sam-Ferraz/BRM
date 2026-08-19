@@ -77,7 +77,7 @@ export class AccountService {
     let passwordHash: string | null = null
     const passwordSet = !!(payload.admin_password && payload.admin_password.length >= 4)
     if (passwordSet) {
-      const bcrypt = await import('bcrypt')
+      const bcrypt = (await import('bcryptjs')).default
       passwordHash = await bcrypt.hash(payload.admin_password!, 10)
     }
 
