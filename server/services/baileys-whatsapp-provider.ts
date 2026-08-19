@@ -189,9 +189,28 @@ class BaileysSession {
   }
 
   async connect(): Promise<void> {
+    console.log(`[Baileys] connect() start user=${this.ownerUserId}`)
     await fs.mkdir(this.authDir, { recursive: true })
     const { state, saveCreds } = await useMultiFileAuthState(this.authDir)
-    const { version } = await fetchLatestBaileysVersion()
+
+    // fetchLatestBaileysVersion faz HTTP pro GitHub pra pegar a versao mais
+    // recente do WhatsApp Web. Em servidores sem net externa (ou lentos),
+    // isso trava o start do QR indefinidamente. Damos 3s de timeout e caimos
+    // pra uma versao hardcoded conhecida-boa. Baileys tolera versoes minor
+    // desatualizadas por semanas sem problema.
+    let version: readonly [number, number, number] = [2, 3000, 1015901307]
+    try {
+      const result = await Promise.race([
+        fetchLatestBaileysVersion(),
+        new Promise<{ version: typeof version }>((_, reject) =>
+          setTimeout(() => reject(new Error('fetchLatestBaileysVersion timeout')), 3000),
+        ),
+      ])
+      version = result.version
+      console.log(`[Baileys] versao atual: ${version.join('.')}`)
+    } catch (err) {
+      console.warn(`[Baileys] fallback pra versao hardcoded ${version.join('.')}:`, err)
+    }
 
     this.setStatus('connecting')
 
@@ -202,6 +221,7 @@ class BaileysSession {
       browser: ['BRM', 'Chrome', '1.0'],
       // syncFullHistory: false (default) — só pega mensagens novas, não o histórico todo
     })
+    console.log(`[Baileys] socket criado user=${this.ownerUserId}`)
     this.sock = sock
 
     sock.ev.on('creds.update', saveCreds)
