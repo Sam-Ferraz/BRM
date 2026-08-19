@@ -25,6 +25,17 @@ export interface AccountCustomConfig {
     currency?: string
     language?: string
   }
+  // Override por-account das colunas do Kanban de Negocios. Chave = key
+  // da PhaseColumn ('service', 'visit_foreseen', 'proposal', etc). Deixar
+  // qualquer campo vazio = mantem o default do sistema.
+  pipeline_columns?: {
+    [key: string]: {
+      label?: string
+      color?: string  // hex background do header (ex: '#dbeafe')
+      hidden?: boolean
+      position?: number
+    }
+  }
 }
 
 export interface Account {

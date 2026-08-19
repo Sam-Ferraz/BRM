@@ -20,19 +20,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { ArrowLeft, Plus, Pencil, Trash2, Search, Briefcase, List, LayoutGrid, ArrowUpDown, Tags, X, Check } from "lucide-react"
+import { ArrowLeft, Plus, Pencil, Trash2, Search, Briefcase, List, LayoutGrid, ArrowUpDown, Tags, X, Check, Columns3 } from "lucide-react"
 import { api, type Deal, type LeadWithDetails, type DealLabel } from "@/lib/api-client"
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
 import { DealForm } from "@/components/forms/deal-form"
 import { DealsKanbanView } from "@/components/deals-kanban-view"
+import { ManagePipelineColumnsDialog } from "@/components/manage-pipeline-columns-dialog"
 import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/hooks/use-auth"
 import { ReactiveDateTime } from "@/components/reactive-datetime"
 import { DealCodeBadge } from "@/components/deal-code-badge"
 import { CadenceIndicator, deriveCadenceState } from "@/components/cadence-indicator"
 
 export default function DealsPage() {
   const { t } = useTranslation()
+  const { user } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
+  const [columnsDialogOpen, setColumnsDialogOpen] = useState(false)
   const [deals, setDeals] = useState<Deal[]>([])
   const [leads, setLeads] = useState<LeadWithDetails[]>([])
   const [loading, setLoading] = useState(true)
@@ -597,6 +601,19 @@ export default function DealsPage() {
                   </div>
                 </PopoverContent>
               </Popover>
+              {/* Gerenciar colunas — so admin ve, so aparece no modo kanban */}
+              {viewMode === "kanban" && user?.role === "admin" && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setColumnsDialogOpen(true)}
+                  className="h-8 px-2 shrink-0"
+                  title="Gerenciar colunas do Kanban"
+                >
+                  <Columns3 className="w-4 h-4 mr-1" />
+                  <span className="hidden sm:inline">Colunas</span>
+                </Button>
+              )}
               {/* Toggle Lista/Kanban */}
               <div className="flex gap-1 border rounded-md p-0.5 shrink-0">
                 <Button
@@ -619,6 +636,10 @@ export default function DealsPage() {
                 </Button>
               </div>
             </div>
+            <ManagePipelineColumnsDialog
+              open={columnsDialogOpen}
+              onOpenChange={setColumnsDialogOpen}
+            />
 
             {loading ? (
               <div className="text-center py-8">{t('loadingDeals')}</div>

@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Pencil, ChevronDown, User, Package, Inbox } from "lucide-react"
 import { api, type Deal, type DealLabel, type LeadWithDetails } from "@/lib/api-client"
+import { useAccount } from "@/hooks/use-account"
 
 /**
  * DealsKanbanView — visualização em colunas dos Negócios agrupados por fase.
@@ -196,6 +197,30 @@ interface DealsKanbanViewProps {
 
 export function DealsKanbanView({ deals, leads = [], onEdit, onStatusChange }: DealsKanbanViewProps) {
   const { t } = useTranslation()
+  const { account } = useAccount()
+
+  /**
+   * Aplica override do custom_config.pipeline_columns sobre PHASES:
+   * renomeia label, muda cor do header (via style inline), oculta e
+   * reordena. Se nao ha override, retorna PHASES intacto.
+   */
+  const phasesToRender = useMemo(() => {
+    const overrides = account?.custom_config?.pipeline_columns
+    if (!overrides) return PHASES.map((p) => ({ ...p, overrideColorHex: undefined as string | undefined }))
+    const withOverrides = PHASES.map((p, idx) => {
+      const ov = overrides[p.key] || {}
+      return {
+        ...p,
+        label: ov.label ?? p.label,
+        overrideColorHex: ov.color,
+        _hidden: ov.hidden ?? false,
+        _position: ov.position ?? idx,
+      }
+    })
+    return withOverrides
+      .filter((p) => !p._hidden)
+      .sort((a, b) => a._position - b._position)
+  }, [account?.custom_config?.pipeline_columns])
   const [draggingId, setDraggingId] = useState<number | null>(null)
   const [dragOverPhase, setDragOverPhase] = useState<string | null>(null)
   // Se o usuário dropou num descartado, precisamos perguntar o motivo
@@ -413,7 +438,7 @@ export function DealsKanbanView({ deals, leads = [], onEdit, onStatusChange }: D
         onMouseUp={stopScrollDrag}
         onMouseLeave={stopScrollDrag}
       >
-        {PHASES.map((phase) => {
+        {phasesToRender.map((phase) => {
           const isNoService = phase.key === "no_service"
           // Leads em espera na coluna "Sem atendimento": nao aceitos e sem deal.
           const leadsInPhase = isNoService
@@ -438,9 +463,13 @@ export function DealsKanbanView({ deals, leads = [], onEdit, onStatusChange }: D
               onDragLeave={isNoService ? undefined : handleDragLeave(phase.key)}
               onDrop={isNoService ? undefined : handleDrop(phase)}
             >
-              {/* Header da coluna — sticky */}
+              {/* Header da coluna — sticky. Se ha override de cor (hex),
+                  usa via style; senao usa a classe Tailwind default. */}
               <div
-                className={`sticky top-0 z-10 px-3 py-2 rounded-t-lg border-b ${phase.headerColor}`}
+                className={`sticky top-0 z-10 px-3 py-2 rounded-t-lg border-b ${
+                  phase.overrideColorHex ? "text-slate-900 border-slate-300" : phase.headerColor
+                }`}
+                style={phase.overrideColorHex ? { backgroundColor: phase.overrideColorHex } : undefined}
               >
                 <div className="flex items-center justify-between gap-2">
                   <div className="font-semibold text-sm">{phase.label}</div>

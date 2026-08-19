@@ -125,6 +125,14 @@ export interface AccountCustomConfigLike {
     currency?: string
     language?: string
   }
+  pipeline_columns?: {
+    [key: string]: {
+      label?: string
+      color?: string
+      hidden?: boolean
+      position?: number
+    }
+  }
 }
 export interface Account {
   id: number
