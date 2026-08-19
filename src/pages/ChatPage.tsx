@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   Dialog,
   DialogContent,
@@ -81,6 +81,10 @@ export default function ChatPage() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  // Cache de fotos de contato por telefone. Buscadas via Baileys quando
+  // uma conversa aparece na lista. Undefined = ainda nao tentou, null =
+  // tentou e nao tem foto (privacidade ou contato sem foto).
+  const [contactPhotos, setContactPhotos] = useState<Record<string, string | null>>({})
 
   // Carrega sessão WhatsApp do usuário logado
   const fetchSession = useCallback(async () => {
@@ -144,6 +148,37 @@ export default function ChatPage() {
         // Silencia — filtro fica indisponivel, mas o resto do chat continua ok.
       })
   }, [user?.role])
+
+  // Busca fotos de contato via Baileys quando a lista de conversas muda.
+  // Consulta so telefones ainda nao verificados (contactPhotos[phone] === undefined).
+  // Depois de tentar, cachea o resultado (URL ou null) pra evitar refetch.
+  useEffect(() => {
+    if (!isConnected) return
+    const phones = Array.from(
+      new Set(
+        conversations
+          .map((c) => c.contact_phone)
+          .filter((p) => !!p && contactPhotos[p as string] === undefined) as string[],
+      ),
+    )
+    if (phones.length === 0) return
+    Promise.all(
+      phones.map(async (phone) => {
+        try {
+          const res = await api.whatsapp.getContactPhoto(phone)
+          return [phone, res.data.url] as const
+        } catch {
+          return [phone, null] as const
+        }
+      }),
+    ).then((results) => {
+      setContactPhotos((prev) => {
+        const next = { ...prev }
+        for (const [phone, url] of results) next[phone] = url
+        return next
+      })
+    })
+  }, [conversations, isConnected, contactPhotos])
 
   useEffect(() => {
     if (selectedId !== null) {
@@ -367,6 +402,9 @@ export default function ChatPage() {
                         }`}
                       >
                         <Avatar className="w-9 h-9 shrink-0">
+                          {contactPhotos[c.contact_phone] && (
+                            <AvatarImage src={contactPhotos[c.contact_phone] as string} alt={displayName} />
+                          )}
                           <AvatarFallback className="bg-emerald-100 text-emerald-700 text-xs">
                             {getInitials(displayName, c.contact_phone)}
                           </AvatarFallback>
@@ -418,6 +456,12 @@ export default function ChatPage() {
                   {/* Header da conversa — shrink-0 pra nao ser espremido pelo historico */}
                   <div className="shrink-0 p-3 border-b bg-card/80 backdrop-blur-sm flex items-center gap-3">
                     <Avatar className="w-9 h-9">
+                      {currentConversation.contact_phone && contactPhotos[currentConversation.contact_phone] && (
+                        <AvatarImage
+                          src={contactPhotos[currentConversation.contact_phone] as string}
+                          alt={currentConversation.client_name || currentConversation.contact_name || currentConversation.contact_phone}
+                        />
+                      )}
                       <AvatarFallback className="bg-emerald-100 text-emerald-700 text-xs">
                         {getInitials(
                           currentConversation.client_name || currentConversation.contact_name,
