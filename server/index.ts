@@ -257,6 +257,13 @@ const incomingHandler = async (input: Parameters<NonNullable<ChatService['receiv
 // pelo Multi. Se algum ambiente antigo tinha WHATSAPP_PROVIDER=baileys
 // setado, ele ficaria travado no Baileys mesmo com sessao Cloud API.
 const providerKind = process.env.WHATSAPP_PROVIDER === 'stub' ? 'stub' : 'multi'
+// Instancias explicitas pra pode passar o Baileys direto no createWhatsAppRoutes
+// (as rotas /start, /state, DELETE /session usam Baileys sem passar pelo Multi
+// pra garantir fluxo QR mesmo quando a sessao ja esta como provider='cloud_api').
+const baileysProviderSingleton = new BaileysWhatsAppProvider({
+  incoming: incomingHandler,
+  sessionRepository: whatsappSessionRepository,
+})
 const whatsappProvider =
   providerKind === 'stub'
     ? new StubWhatsAppProvider()
@@ -265,10 +272,7 @@ const whatsappProvider =
           incoming: incomingHandler,
           sessionRepository: whatsappSessionRepository,
         }),
-        new BaileysWhatsAppProvider({
-          incoming: incomingHandler,
-          sessionRepository: whatsappSessionRepository,
-        }),
+        baileysProviderSingleton,
         whatsappSessionRepository,
       )
 
@@ -307,7 +311,7 @@ app.use('/api/appointments', createAppointmentRoutes(appointmentService))
 app.use('/api/sales-agenda', createSalesAgendaRoutes(salesAgendaService))
 app.use('/api/follow-ups', createFollowUpRoutes(followUpService))
 app.use('/api/proposals', createProposalRoutes(proposalService))
-app.use('/api/whatsapp', createWhatsAppRoutes(whatsappService, whatsappProvider, whatsappSessionRepository))
+app.use('/api/whatsapp', createWhatsAppRoutes(whatsappService, whatsappProvider, whatsappSessionRepository, baileysProviderSingleton))
 app.use('/api/chat', createChatRoutes(chatService))
 app.use('/api/leads', createLeadRoutes(leadService, leadSourceRepository))
 app.use('/api/sales', createSaleRoutes(saleService))

@@ -22,8 +22,15 @@ import { authenticateToken, requireAccount, AuthenticatedRequest } from '../midd
 export function createWhatsAppRoutes(
   whatsappService: WhatsAppService,
   provider: WhatsAppProvider,
-  sessionRepository: WhatsAppSessionRepository
+  sessionRepository: WhatsAppSessionRepository,
+  // Provider Baileys explicito — as rotas /start, /state e DELETE /session
+  // usam ele diretamente pra garantir fluxo QR mesmo quando a sessao no banco
+  // ja esta como provider='cloud_api'. Sem isso, o MultiProvider rotearia
+  // pro CloudApi (que retorna 'connected' sem gerar QR) e o dialog trava.
+  baileysProvider?: WhatsAppProvider,
 ): Router {
+  // Se nao veio explicito, usa o provider principal (backward compat).
+  const baileys = baileysProvider ?? provider
   const router = Router()
 
   router.get('/session', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
@@ -81,7 +88,7 @@ export function createWhatsAppRoutes(
       const accountId = req.user!.accountId
       const userId = req.user!.userId
       // Encerra também o socket Baileys (se existir) e apaga auth state em disco.
-      await provider.stopSession(userId)
+      await baileys.stopSession(userId)
       const result = await whatsappService.disconnect(accountId, userId)
       res.json(result)
     } catch (error) {
@@ -93,13 +100,16 @@ export function createWhatsAppRoutes(
   // ------------------- Pareamento via QR Code (Baileys) -------------------
 
   /**
-   * Inicia a sessão do provedor (abre socket Baileys). Resposta imediata
-   * com o estado atual; o QR aparecerá em GET /state assim que disponível.
+   * Inicia a sessão Baileys (socket WhatsApp Web). Resposta imediata com o
+   * estado atual; o QR aparecerá em GET /state assim que disponível.
+   * Usa baileysProvider diretamente (nao via Multi) porque o Multi rotearia
+   * pro Cloud API quando a sessao ja existe com provider='cloud_api', e o
+   * Cloud API nao gera QR.
    */
   router.post('/start', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const userId = req.user!.userId
-      const state = await provider.startSession(userId)
+      const state = await baileys.startSession(userId)
       res.json({ data: state })
     } catch (error) {
       console.error('Error starting whatsapp session:', error)
@@ -114,7 +124,7 @@ export function createWhatsAppRoutes(
   router.get('/state', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const userId = req.user!.userId
-      const state = provider.getSessionState(userId)
+      const state = baileys.getSessionState(userId)
       res.json({ data: state })
     } catch (error) {
       console.error('Error fetching whatsapp state:', error)
