@@ -120,6 +120,36 @@ export class AppointmentRepository extends BaseRepository {
   }
 
   /**
+   * Busca o atendimento (type='chat', origin='whatsapp') dessa conversa
+   * criado no MESMO DIA CALENDARIO (00:00-23:59) na timezone informada.
+   * Usado pra garantir "1 dia = 1 atendimento por conversa" independente
+   * de quantas mensagens/ligacoes houver naquele dia.
+   */
+  async findChatOfConversationOnDay(
+    accountId: number,
+    conversationId: number,
+    timezone = 'America/Sao_Paulo',
+  ): Promise<Appointment | null> {
+    const c = await this.getClient()
+    try {
+      const result = await c.query(
+        `SELECT * FROM appointments
+           WHERE conversation_id = $1
+             AND origin = 'whatsapp'
+             AND account_id = $2
+             AND (created_at AT TIME ZONE 'UTC' AT TIME ZONE $3)::date
+                 = (NOW() AT TIME ZONE 'UTC' AT TIME ZONE $3)::date
+           ORDER BY created_at DESC
+           LIMIT 1`,
+        [conversationId, accountId, timezone],
+      )
+      return result.rows[0] ?? null
+    } finally {
+      this.releaseClient(c)
+    }
+  }
+
+  /**
    * Marca um atendimento como respondido. Usado quando o corretor envia a
    * primeira resposta numa conversa (interação bilateral completa).
    * Filtra por account_id pra garantir que só marca atendimentos da account

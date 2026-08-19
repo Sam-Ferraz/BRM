@@ -329,18 +329,28 @@ export class ChatService {
    * Chamado após cada send/receive. Idempotente, falhas são silenciosas (log
    * só) — não devem quebrar o fluxo de mensagem.
    */
+  /**
+   * Regra nova: QUALQUER interacao (msg inbound/outbound ou ligacao) numa
+   * conversa dentro de um dia calendario (00:00-23:59 America/Sao_Paulo)
+   * gera 1 unico atendimento. Se ja existe atendimento dessa conversa no
+   * mesmo dia, so garante que esta marcado como respondido. No dia
+   * seguinte, uma nova interacao gera um novo atendimento.
+   *
+   * Elimina a necessidade do corretor registrar atendimento/ligacao
+   * manualmente — o BRM contabiliza automaticamente pelas conversas do
+   * WhatsApp. Corretor so registra visita/proposta/contrato/venda.
+   */
   private async tryRegisterServiceFromConversation(
     accountId: number,
     conversation: { id: number; owner_user_id: number; contact_name?: string | null; contact_phone: string }
   ): Promise<void> {
     if (!this.appointmentRepository) return
     try {
-      const bilateral = await this.messageRepository.hasBothDirectionsInWindow(accountId, conversation.id, 24)
-      if (!bilateral) return
-
-      const existing = await this.appointmentRepository.findRecentChatByConversation(accountId, conversation.id, 24)
+      const existing = await this.appointmentRepository.findChatOfConversationOnDay(
+        accountId,
+        conversation.id,
+      )
       if (existing) {
-        // Já existe um atendimento na janela — só garante que está marcado como respondido.
         if (!existing.answered) await this.appointmentRepository.markAnswered(accountId, existing.id)
         return
       }
