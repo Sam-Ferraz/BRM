@@ -129,6 +129,93 @@ export class ChatService {
   }
 
   /**
+   * Envia midia (imagem/audio/video/documento) numa conversa existente.
+   * Salva o buffer em disco (uploads/whatsapp/{ownerUserId}/{filename})
+   * e dispara o send via provider (Baileys). O media_url e persistido na
+   * mensagem outbound pra o frontend renderizar de volta.
+   */
+  async sendMediaMessage(
+    accountId: number,
+    conversationId: number,
+    viewer: { userId: number; role: string },
+    file: { buffer: Buffer; mimetype: string; originalname: string; size: number },
+    caption?: string,
+  ): Promise<Message> {
+    const conversation = await this.conversationRepository.findById(accountId, conversationId)
+    if (!conversation) throw new Error('Conversation not found')
+    this.assertCanView(conversation.owner_user_id, viewer)
+
+    // Detecta tipo pela mimetype pra escolher payload do Baileys
+    const mime = (file.mimetype || '').toLowerCase()
+    const kind: 'image' | 'audio' | 'video' | 'document' = mime.startsWith('image/')
+      ? 'image'
+      : mime.startsWith('audio/')
+      ? 'audio'
+      : mime.startsWith('video/')
+      ? 'video'
+      : 'document'
+
+    // Salva arquivo local pra servir depois via /uploads/*
+    const path = await import('path')
+    const fs = await import('fs/promises')
+    const timestamp = Date.now()
+    const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_')
+    const filename = `out-${timestamp}-${safeName}`
+    const relDir = path.join('uploads', 'whatsapp', String(conversation.owner_user_id))
+    const absDir = path.resolve(relDir)
+    await fs.mkdir(absDir, { recursive: true })
+    await fs.writeFile(path.join(absDir, filename), file.buffer)
+    const mediaUrl = `/${relDir.replace(/\\/g, '/')}/${filename}`
+
+    // Envia via provider (Baileys hoje; CloudApi lanca media_not_supported)
+    const session = await this.sessionRepository.findByUser(accountId, conversation.owner_user_id)
+    const fromPhone = session?.phone_number || 'unknown'
+
+    let providerMessageId: string | null = null
+    let status: 'sent' | 'failed' = 'sent'
+    let providerError: Error | null = null
+    try {
+      if (!(this.whatsappProvider as any).sendMedia) {
+        throw new Error('Este provider nao suporta envio de midia. Use WhatsApp Web (Baileys).')
+      }
+      const result = await (this.whatsappProvider as any).sendMedia({
+        ownerUserId: conversation.owner_user_id,
+        from: fromPhone,
+        to: conversation.contact_phone,
+        buffer: file.buffer,
+        mimetype: file.mimetype,
+        filename: file.originalname,
+        caption: caption ?? null,
+        kind,
+      })
+      providerMessageId = result.providerMessageId
+    } catch (error) {
+      console.error('Error sending media via provider:', error)
+      status = 'failed'
+      providerError = error instanceof Error ? error : new Error(String(error))
+    }
+
+    const contentLabel = caption?.trim() || {
+      image: '🖼️ Imagem',
+      audio: '🎤 Áudio',
+      video: '🎬 Vídeo',
+      document: '📎 Documento',
+    }[kind]
+
+    const message = await this.messageRepository.create(accountId, {
+      conversation_id: conversationId,
+      direction: 'outbound',
+      content: contentLabel,
+      media_url: mediaUrl,
+      status,
+      provider_message_id: providerMessageId,
+    })
+    await this.conversationRepository.touchLastMessage(accountId, conversationId, 'outbound')
+    if (providerError) throw providerError
+    return message
+  }
+
+  /**
    * Simula/roteia recebimento de mensagem entrante. Em produção este caminho
    * é chamado pelo webhook do provedor real e pelo callback incoming dos
    * providers (Baileys/CloudApi).

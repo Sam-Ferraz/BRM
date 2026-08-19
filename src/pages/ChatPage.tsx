@@ -35,6 +35,7 @@ import {
   LinkIcon,
   Unlink,
   UserCircle2,
+  Paperclip,
 } from "lucide-react"
 import {
   api,
@@ -79,6 +80,7 @@ export default function ChatPage() {
   const [isNewConversationOpen, setIsNewConversationOpen] = useState(false)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Carrega sessão WhatsApp do usuário logado
   const fetchSession = useCallback(async () => {
@@ -163,6 +165,30 @@ export default function ChatPage() {
     ownerFilter === "all"
       ? conversations
       : conversations.filter((c) => String(c.owner_user_id) === ownerFilter)
+
+  const handleMediaFilePick = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    // Limpa input pra permitir escolher o mesmo arquivo de novo depois
+    e.target.value = ""
+    if (!file || !selectedId) return
+    try {
+      setSending(true)
+      // Se o compositor tem texto rascunhado, envia junto como caption
+      const caption = draft.trim() || undefined
+      const result = await api.chat.sendMedia(selectedId, file, file.name, caption)
+      setMessages((prev) => [...prev, result.data])
+      if (caption) setDraft("")
+      fetchConversations()
+    } catch (error) {
+      toast({
+        title: t("error"),
+        description: error instanceof Error ? error.message : "Erro ao enviar arquivo",
+        variant: "destructive",
+      })
+    } finally {
+      setSending(false)
+    }
+  }
 
   const handleSendMessage = async () => {
     if (!draft.trim() || !selectedId) return
@@ -524,6 +550,27 @@ export default function ChatPage() {
 
                   {/* Input para responder */}
                   <div className="p-3 border-t bg-card flex items-end gap-2">
+                    {/* Botao anexo (📎) — abre file picker. Aceita imagem,
+                        audio, video e documento comum. Ao selecionar, faz
+                        upload e envio via api.chat.sendMedia. Requer Baileys
+                        conectado (Cloud API atualmente nao aceita midia). */}
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*,audio/*,video/*,.pdf,.doc,.docx,.xls,.xlsx"
+                      className="hidden"
+                      onChange={handleMediaFilePick}
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={!isConnected || sending}
+                      title="Anexar imagem, audio, video ou documento"
+                    >
+                      <Paperclip className="w-4 h-4" />
+                    </Button>
                     <Textarea
                       rows={1}
                       value={draft}

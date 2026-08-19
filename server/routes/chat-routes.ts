@@ -1,6 +1,14 @@
 import { Response, Router } from 'express'
+import multer from 'multer'
 import { ChatService } from '../services/index.js'
 import { authenticateToken, requireAccount, AuthenticatedRequest } from '../middleware/auth.js'
+
+// Upload de midia pro WhatsApp (imagem/audio/video/documento). Memory storage
+// porque o chat-service salva o buffer em disco depois de decidir o path.
+const mediaUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 16 * 1024 * 1024 }, // 16MB — limite do WhatsApp
+})
 
 /**
  * /api/chat/* — endpoints de conversas e mensagens.
@@ -101,6 +109,45 @@ export function createChatRoutes(chatService: ChatService): Router {
       res.status(500).json({ error: 'Internal server error' })
     }
   })
+
+  // Envia midia (imagem/audio/video/documento) em conversa existente.
+  // Body multipart: campo 'file' + campo opcional 'caption'.
+  router.post(
+    '/conversations/:id/media',
+    authenticateToken,
+    requireAccount,
+    mediaUpload.single('file'),
+    async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+      try {
+        const id = parseInt(req.params.id)
+        const accountId = req.user!.accountId
+        const viewer = { userId: req.user!.userId, role: req.user!.role }
+        const file = (req as any).file as Express.Multer.File | undefined
+        if (!file) {
+          res.status(400).json({ error: 'file is required' })
+          return
+        }
+        const caption = typeof req.body?.caption === 'string' ? req.body.caption : undefined
+        const message = await chatService.sendMediaMessage(accountId, id, viewer, file, caption)
+        res.json({ data: message })
+      } catch (error) {
+        if (error instanceof Error && error.message === 'Conversation not found') {
+          res.status(404).json({ error: 'Conversation not found' })
+          return
+        }
+        if (error instanceof Error && error.message === 'forbidden') {
+          res.status(403).json({ error: 'forbidden' })
+          return
+        }
+        if (error instanceof Error) {
+          console.error('Error sending media:', error)
+          res.status(500).json({ error: error.message })
+          return
+        }
+        res.status(500).json({ error: 'Internal server error' })
+      }
+    },
+  )
 
   // Envia mensagem em conversa existente
   router.post('/conversations/:id/messages', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {

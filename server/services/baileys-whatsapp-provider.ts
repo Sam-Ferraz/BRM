@@ -113,19 +113,53 @@ export class BaileysWhatsAppProvider implements WhatsAppProvider {
     to: string
     content: string
   }): Promise<SendMessageResult> {
-    let session = this.sessions.get(input.ownerUserId)
+    const session = await this.ensureConnected(input.ownerUserId)
+    const jid = toJid(input.to)
+    const sent = await session.sock!.sendMessage(jid, { text: input.content })
+    return { providerMessageId: sent?.key?.id ?? `baileys-${Date.now()}` }
+  }
+
+  async sendMedia(input: {
+    ownerUserId: number
+    to: string
+    buffer: Buffer
+    mimetype: string
+    filename?: string | null
+    caption?: string | null
+    kind: 'image' | 'audio' | 'video' | 'document'
+  }): Promise<SendMessageResult> {
+    const session = await this.ensureConnected(input.ownerUserId)
+    const jid = toJid(input.to)
+    let payload: any
+    if (input.kind === 'image') {
+      payload = { image: input.buffer, mimetype: input.mimetype, caption: input.caption ?? undefined }
+    } else if (input.kind === 'audio') {
+      payload = { audio: input.buffer, mimetype: input.mimetype, ptt: true }
+    } else if (input.kind === 'video') {
+      payload = { video: input.buffer, mimetype: input.mimetype, caption: input.caption ?? undefined }
+    } else {
+      payload = {
+        document: input.buffer,
+        mimetype: input.mimetype,
+        fileName: input.filename ?? 'arquivo',
+        caption: input.caption ?? undefined,
+      }
+    }
+    const sent = await session.sock!.sendMessage(jid, payload)
+    return { providerMessageId: sent?.key?.id ?? `baileys-${Date.now()}` }
+  }
+
+  private async ensureConnected(ownerUserId: number): Promise<BaileysSession> {
+    let session = this.sessions.get(ownerUserId)
     if (!session || session.state.status !== 'connected') {
-      // Tenta reabrir se já tem credenciais salvas em disco
-      session = new BaileysSession(input.ownerUserId, this.authDir, this.incoming, this.sessionRepository)
-      this.sessions.set(input.ownerUserId, session)
+      session = new BaileysSession(ownerUserId, this.authDir, this.incoming, this.sessionRepository)
+      this.sessions.set(ownerUserId, session)
       await session.connect()
     }
     if (!session.sock || session.state.status !== 'connected') {
       throw new Error('whatsapp_not_connected')
     }
-    const jid = toJid(input.to)
-    const sent = await session.sock.sendMessage(jid, { text: input.content })
-    return { providerMessageId: sent?.key?.id ?? `baileys-${Date.now()}` }
+    return session
   }
 }
 

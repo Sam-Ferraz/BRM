@@ -41,6 +41,21 @@ export interface WhatsAppProvider {
   }): Promise<SendMessageResult>
 
   /**
+   * Envia midia (imagem, audio, video, documento) — opcional (nao suportado
+   * por Cloud API sem template ou por Stub). Providers que nao implementam
+   * lancam Error('media_not_supported').
+   */
+  sendMedia?(input: {
+    ownerUserId: number
+    to: string
+    buffer: Buffer
+    mimetype: string
+    filename?: string | null
+    caption?: string | null
+    kind: 'image' | 'audio' | 'video' | 'document'
+  }): Promise<SendMessageResult>
+
+  /**
    * Inicia uma sessão para o usuário. Para Baileys, abre o socket e emite QR.
    * Para o stub, basta marcar como conectado. Não bloqueia esperando QR ser
    * escaneado — retorna imediatamente; o frontend faz polling em getSessionState.

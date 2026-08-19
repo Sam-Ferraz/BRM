@@ -40,6 +40,20 @@ export class MultiWhatsAppProvider implements WhatsAppProvider {
     return provider.sendMessage(input)
   }
 
+  async sendMedia(input: {
+    ownerUserId: number
+    to: string
+    buffer: Buffer
+    mimetype: string
+    filename?: string | null
+    caption?: string | null
+    kind: 'image' | 'audio' | 'video' | 'document'
+  }): Promise<SendMessageResult> {
+    const provider = await this.pick(input.ownerUserId)
+    if (!provider.sendMedia) throw new Error('media_not_supported')
+    return provider.sendMedia(input)
+  }
+
   async startSession(ownerUserId: number): Promise<SessionState> {
     const provider = await this.pick(ownerUserId)
     return provider.startSession(ownerUserId)

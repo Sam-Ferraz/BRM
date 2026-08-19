@@ -1502,6 +1502,32 @@ export const api = {
     sendMessage: async (conversationId: number, content: string): Promise<{ data: Message }> => {
       return apiClient.post<{ data: Message }>(`/chat/conversations/${conversationId}/messages`, { content })
     },
+    /**
+     * Envia midia (imagem/audio/video/documento) numa conversa. Usa multipart
+     * direto via fetch pra o multer parsear no backend. Requer WhatsApp Web
+     * (Baileys) conectado — Cloud API atualmente nao aceita midia.
+     */
+    sendMedia: async (
+      conversationId: number,
+      file: File | Blob,
+      filename: string,
+      caption?: string,
+    ): Promise<{ data: Message }> => {
+      const form = new FormData()
+      form.append('file', file, filename)
+      if (caption) form.append('caption', caption)
+      const token = localStorage.getItem('token') || ''
+      const res = await fetch(`/api/chat/conversations/${conversationId}/media`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: form,
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || `HTTP ${res.status}`)
+      }
+      return res.json()
+    },
     // Endpoint stub para simular entrada de mensagem enquanto não há provedor real.
     simulateInbound: async (input: {
       owner_user_id?: number
