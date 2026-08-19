@@ -150,34 +150,43 @@ export default function ChatPage() {
   }, [user?.role])
 
   // Busca fotos de contato via Baileys quando a lista de conversas muda.
-  // Consulta so telefones ainda nao verificados (contactPhotos[phone] === undefined).
-  // Depois de tentar, cachea o resultado (URL ou null) pra evitar refetch.
+  // Defensivo: se api.whatsapp.getContactPhoto nao existir (bundle antigo
+  // cacheado no browser), pula silenciosamente — nao pode crashar o chat.
   useEffect(() => {
     if (!isConnected) return
-    const phones = Array.from(
-      new Set(
-        conversations
-          .map((c) => c.contact_phone)
-          .filter((p) => !!p && contactPhotos[p as string] === undefined) as string[],
-      ),
-    )
-    if (phones.length === 0) return
-    Promise.all(
-      phones.map(async (phone) => {
-        try {
-          const res = await api.whatsapp.getContactPhoto(phone)
-          return [phone, res.data.url] as const
-        } catch {
-          return [phone, null] as const
-        }
-      }),
-    ).then((results) => {
-      setContactPhotos((prev) => {
-        const next = { ...prev }
-        for (const [phone, url] of results) next[phone] = url
-        return next
-      })
-    })
+    if (typeof (api as any)?.whatsapp?.getContactPhoto !== 'function') return
+    try {
+      const phones = Array.from(
+        new Set(
+          conversations
+            .map((c) => c.contact_phone)
+            .filter((p) => !!p && contactPhotos[p as string] === undefined) as string[],
+        ),
+      )
+      if (phones.length === 0) return
+      Promise.all(
+        phones.map(async (phone) => {
+          try {
+            const res = await api.whatsapp.getContactPhoto(phone)
+            return [phone, res.data.url] as const
+          } catch {
+            return [phone, null] as const
+          }
+        }),
+      )
+        .then((results) => {
+          setContactPhotos((prev) => {
+            const next = { ...prev }
+            for (const [phone, url] of results) next[phone] = url
+            return next
+          })
+        })
+        .catch(() => {
+          /* silencia — nao pode crashar o chat */
+        })
+    } catch {
+      /* silencia — nao pode crashar o chat */
+    }
   }, [conversations, isConnected, contactPhotos])
 
   useEffect(() => {
