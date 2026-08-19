@@ -268,6 +268,52 @@ export function createLeadRoutes(
     }
   })
 
+  // Importacao em lote de leads a partir de CSV parseado no frontend.
+  // Body: { leads: [{ name?, email?, phone?, notes? }, ...] }
+  // Retorna: { created: number, skipped: number, errors: string[] }
+  router.post('/import', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const accountId = req.user!.accountId
+      const rows = Array.isArray(req.body?.leads) ? req.body.leads : []
+      if (rows.length === 0) {
+        res.status(400).json({ error: 'leads array vazio ou ausente' })
+        return
+      }
+      let created = 0
+      let skipped = 0
+      const errors: string[] = []
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i] || {}
+        const name = typeof row.name === 'string' ? row.name.trim() : ''
+        const phone = typeof row.phone === 'string' ? row.phone.trim() : ''
+        const email = typeof row.email === 'string' ? row.email.trim() : ''
+        const notes = typeof row.notes === 'string' ? row.notes.trim() : null
+        // Requer pelo menos um identificador (nome ou telefone)
+        if (!name && !phone) {
+          skipped++
+          errors.push(`Linha ${i + 2}: sem nome e sem telefone (ignorada)`)
+          continue
+        }
+        try {
+          await leadService.createManual(accountId, {
+            name: name || null,
+            email: email || null,
+            phone: phone || null,
+            notes,
+          })
+          created++
+        } catch (err) {
+          skipped++
+          errors.push(`Linha ${i + 2}: ${err instanceof Error ? err.message : String(err)}`)
+        }
+      }
+      res.json({ data: { created, skipped, errors: errors.slice(0, 20) } })
+    } catch (error) {
+      console.error('Error importing leads:', error)
+      res.status(500).json({ error: error instanceof Error ? error.message : 'Internal server error' })
+    }
+  })
+
   router.post('/:id/accept', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const accountId = req.user!.accountId

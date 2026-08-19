@@ -1551,6 +1551,9 @@ export const api = {
       const query = status ? `?status=${status}` : ''
       return apiClient.get<ApiResponse<LeadWithDetails>>(`/leads${query}`)
     },
+    import: async (leads: Array<{ name?: string; email?: string; phone?: string; notes?: string }>): Promise<{ data: { created: number; skipped: number; errors: string[] } }> => {
+      return apiClient.post<{ data: { created: number; skipped: number; errors: string[] } }>('/leads/import', { leads })
+    },
     getCounts: async (): Promise<{ data: Record<LeadStatus, number> }> => {
       return apiClient.get<{ data: Record<LeadStatus, number> }>(`/leads/counts`)
     },
