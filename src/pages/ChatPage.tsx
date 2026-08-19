@@ -152,8 +152,11 @@ export default function ChatPage() {
   // Busca fotos de contato via Baileys quando a lista de conversas muda.
   // Defensivo: se api.whatsapp.getContactPhoto nao existir (bundle antigo
   // cacheado no browser), pula silenciosamente — nao pode crashar o chat.
+  // Usa session?.status inline em vez de isConnected pra evitar temporal
+  // dead zone no bundle minificado (isConnected e declarado depois deste
+  // useEffect no fluxo do componente).
   useEffect(() => {
-    if (!isConnected) return
+    if (session?.status !== 'connected') return
     if (typeof (api as any)?.whatsapp?.getContactPhoto !== 'function') return
     try {
       const phones = Array.from(
@@ -187,7 +190,7 @@ export default function ChatPage() {
     } catch {
       /* silencia — nao pode crashar o chat */
     }
-  }, [conversations, isConnected, contactPhotos])
+  }, [conversations, session?.status, contactPhotos])
 
   useEffect(() => {
     if (selectedId !== null) {
