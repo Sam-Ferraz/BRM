@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react"
 import { Link, Navigate } from "react-router-dom"
-import { ArrowLeft, Plus, Building2, User, Check } from "lucide-react"
+import { ArrowLeft, Plus, Building2, User, Check, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -136,6 +136,27 @@ export default function AdminAccountsPage() {
       toast({
         title: 'Erro',
         description: err instanceof Error ? err.message : 'Falha ao reenviar',
+        variant: 'destructive',
+      })
+    }
+  }
+
+  const handleDelete = async (acc: Account) => {
+    // Dupla confirmacao — acao IRREVERSIVEL, apaga TODOS os dados da account
+    if (!confirm(`⚠️ EXCLUIR EMPRESA "${acc.name}"?\n\nIsso apaga TODOS os dados dessa conta:\n- Usuarios\n- Negocios\n- Clientes\n- Imoveis\n- Conversas\n- Etiquetas\n- Etc\n\nAcao IRREVERSIVEL. Continuar?`)) return
+    const typed = prompt(`Pra confirmar, digite exatamente o nome da empresa:\n\n${acc.name}`)
+    if (typed !== acc.name) {
+      toast({ title: 'Cancelado', description: 'Nome nao confere', variant: 'destructive' })
+      return
+    }
+    try {
+      await api.accounts.delete(acc.id)
+      toast({ title: 'Empresa excluida', description: `${acc.name} e todos os dados foram apagados` })
+      loadAccounts()
+    } catch (err) {
+      toast({
+        title: 'Erro ao excluir',
+        description: err instanceof Error ? err.message : String(err),
         variant: 'destructive',
       })
     }
@@ -279,6 +300,16 @@ export default function AdminAccountsPage() {
                         disabled={acc.id === 1}
                       />
                     </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDelete(acc)}
+                      disabled={acc.id === 1}
+                      title={acc.id === 1 ? 'BRM Demo nao pode ser excluida' : `Excluir ${acc.name}`}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
                   </div>
                 </div>
               ))

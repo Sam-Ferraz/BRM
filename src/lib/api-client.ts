@@ -1402,6 +1402,9 @@ export const api = {
     ): Promise<{ data: Account }> => {
       return apiClient.patch(`/accounts/${id}`, input)
     },
+    delete: async (id: number): Promise<{ data: { deleted: boolean } }> => {
+      return apiClient.delete(`/accounts/${id}`)
+    },
   },
 
   // Cupons de desconto — super-admin CRUD + LP validate público

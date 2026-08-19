@@ -40,6 +40,17 @@ export class AccountService {
   }
 
   /**
+   * Exclui a account e TODOS os dados (deals, clients, users, msgs, etc)
+   * via cascade manual em transacao. Acao IRREVERSIVEL.
+   */
+  async deleteAccount(id: number): Promise<{ deleted: boolean }> {
+    const acc = await this.accountRepo.findById(id)
+    if (!acc) throw new Error('Account nao encontrada')
+    const deleted = await this.accountRepo.deleteWithCascade(id)
+    return { deleted }
+  }
+
+  /**
    * Cria nova account + primeiro user admin dela (SEM senha), gera token
    * de setup e dispara email de convite. Cliente clica no link e define
    * sua própria senha.

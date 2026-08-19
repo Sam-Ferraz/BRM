@@ -133,5 +133,22 @@ export function createAccountRoutes(service: AccountService): Router {
     }
   }))
 
+  // Exclusao IRREVERSIVEL (super-admin). Bloqueia account #1 (BRM Demo).
+  router.delete('/:id', authenticateToken, requireAccount, (req: AuthenticatedRequest, res: Response) => requireSuperAdmin(req, res, async () => {
+    try {
+      const id = parseInt(req.params.id, 10)
+      if (id === 1) {
+        res.status(403).json({ error: 'Nao e permitido excluir a account #1 (BRM Demo)' })
+        return
+      }
+      const result = await service.deleteAccount(id)
+      res.json({ data: result })
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Erro ao excluir account'
+      console.error('Error deleting account:', err)
+      res.status(msg.includes('nao encontrada') ? 404 : 400).json({ error: msg })
+    }
+  }))
+
   return router
 }
