@@ -1573,6 +1573,13 @@ export const api = {
     listOfDeal: async (dealId: number): Promise<{ data: DealLabel[] }> => {
       return apiClient.get<{ data: DealLabel[] }>(`/deals/${dealId}/labels`)
     },
+    // Bulk lookup: retorna labels de varios deals numa unica query — usado
+    // pelo Kanban pra evitar N+1 ao renderizar cards. Cada row tem deal_id.
+    listByDeals: async (dealIds: number[]): Promise<{ data: Array<DealLabel & { deal_id: number }> }> => {
+      if (dealIds.length === 0) return { data: [] }
+      const ids = dealIds.join(',')
+      return apiClient.get<{ data: Array<DealLabel & { deal_id: number }> }>(`/deal-labels/by-deals?ids=${ids}`)
+    },
     assignToDeal: async (dealId: number, labelId: number): Promise<{ assigned: boolean }> => {
       return apiClient.post<{ assigned: boolean }>(`/deals/${dealId}/labels/${labelId}`, {})
     },

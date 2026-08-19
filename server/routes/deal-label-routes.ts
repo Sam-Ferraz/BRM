@@ -29,6 +29,29 @@ export function createDealLabelRoutes(repo: DealLabelRepository): Router {
     },
   )
 
+  // Bulk: labels de varios deals de uma vez (evita N+1 no Kanban)
+  // Query: ?ids=1,2,3 → retorna Array<Label & { deal_id }>
+  router.get(
+    '/by-deals',
+    authenticateToken,
+    requireAccount,
+    async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+      try {
+        const accountId = req.user!.accountId
+        const idsParam = (req.query.ids as string) || ''
+        const dealIds = idsParam
+          .split(',')
+          .map((s) => parseInt(s.trim(), 10))
+          .filter((n) => Number.isFinite(n))
+        const rows = await repo.findByDeals(accountId, dealIds)
+        res.json({ data: rows })
+      } catch (err) {
+        console.error('Error bulk listing deal labels:', err)
+        res.status(500).json({ error: err instanceof Error ? err.message : 'Internal server error' })
+      }
+    },
+  )
+
   // Cria nova etiqueta
   router.post(
     '/',

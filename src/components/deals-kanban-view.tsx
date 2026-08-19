@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import { Pencil, ChevronDown, User, Package, Inbox } from "lucide-react"
-import { api, type Deal, type LeadWithDetails } from "@/lib/api-client"
+import { api, type Deal, type DealLabel, type LeadWithDetails } from "@/lib/api-client"
 
 /**
  * DealsKanbanView — visualização em colunas dos Negócios agrupados por fase.
@@ -218,6 +218,36 @@ export function DealsKanbanView({ deals, leads = [], onEdit, onStatusChange }: D
       cancelled = true
     }
   }, [deals.length])
+
+  // Bulk lookup das etiquetas de todos os deals — evita N+1. Reagrupa em
+  // Map<dealId, DealLabel[]> pra o <DealCard> consultar em O(1).
+  const [labelsByDeal, setLabelsByDeal] = useState<Map<number, DealLabel[]>>(new Map())
+  useEffect(() => {
+    let cancelled = false
+    const dealIds = deals.map((d) => d.id)
+    if (dealIds.length === 0) {
+      setLabelsByDeal(new Map())
+      return
+    }
+    api.dealLabels
+      .listByDeals(dealIds)
+      .then((res) => {
+        if (cancelled) return
+        const map = new Map<number, DealLabel[]>()
+        for (const row of res.data) {
+          const list = map.get(row.deal_id) || []
+          list.push(row)
+          map.set(row.deal_id, list)
+        }
+        setLabelsByDeal(map)
+      })
+      .catch((err) => {
+        console.warn("[Kanban] falha ao buscar etiquetas:", err)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [deals])
 
   // Drag-to-scroll horizontal: usuário clica numa área vazia (não em card do
   // deal, que tem seu próprio HTML5 drag) e arrasta pra rolar as colunas.
@@ -470,6 +500,7 @@ export function DealsKanbanView({ deals, leads = [], onEdit, onStatusChange }: D
                       onEdit={() => onEdit(deal)}
                       onMoveTo={(targetPhase) => handleManualStatusChange(deal, targetPhase)}
                       needsCadence={cadenceSet.has(deal.id)}
+                      labels={labelsByDeal.get(deal.id) || []}
                     />
                   ))
                 )}
@@ -494,13 +525,21 @@ interface DealCardProps {
   onEdit: () => void
   onMoveTo: (phase: PhaseColumn) => void
   needsCadence?: boolean
+  labels?: DealLabel[]
 }
 
-function DealCard({ deal, isDragging, onDragStart, onDragEnd, onEdit, onMoveTo, needsCadence }: DealCardProps) {
+// Cor de fundo da badge de temperatura no rodape do card
+const TEMP_BADGE: Record<"cold" | "mild" | "warm", { label: string; bg: string }> = {
+  cold: { label: "Frio", bg: "#3b82f6" },
+  mild: { label: "Morno", bg: "#f59e0b" },
+  warm: { label: "Quente", bg: "#ef4444" },
+}
+
+function DealCard({ deal, isDragging, onDragStart, onDragEnd, onEdit, onMoveTo, needsCadence, labels = [] }: DealCardProps) {
   const temp = getTemperature(deal.status)
-  const tempInfo = tempIndicator(temp)
   // Origem: lead vs manual (heurística — se tem lead_id no futuro, usar aquilo)
   const fromLead = deal.client_origin === "online_lead"
+  const tempBadge = temp ? TEMP_BADGE[temp] : null
 
   return (
     <Card
@@ -512,15 +551,10 @@ function DealCard({ deal, isDragging, onDragStart, onDragEnd, onEdit, onMoveTo, 
         isDragging ? "opacity-40" : "hover:shadow-md"
       }`}
     >
-      {/* Header do card: nome cliente + menu */}
+      {/* Header do card: nome cliente + menu (bolinha de temperatura movida
+          pra badge no rodape junto com etiquetas) */}
       <div className="flex items-start justify-between gap-2 mb-1.5">
         <div className="flex items-center gap-1.5 min-w-0 flex-1">
-          {temp && (
-            <span
-              className={`inline-block w-2 h-2 rounded-full shrink-0 ${tempInfo.color}`}
-              title={tempInfo.label}
-            />
-          )}
           <span className="font-medium text-sm truncate">{deal.client}</span>
         </div>
         <DropdownMenu>
@@ -562,16 +596,9 @@ function DealCard({ deal, isDragging, onDragStart, onDragEnd, onEdit, onMoveTo, 
             {formatCurrency(deal.gsv)}
           </div>
         )}
-        <div className="flex items-center justify-between gap-2">
-          {deal.client_phone && (
-            <span className="truncate">{deal.client_phone}</span>
-          )}
-          {fromLead && (
-            <Badge variant="outline" className="text-[9px] h-4 px-1 border-blue-400 text-blue-700">
-              Lead
-            </Badge>
-          )}
-        </div>
+        {deal.client_phone && (
+          <div className="truncate">{deal.client_phone}</div>
+        )}
         {needsCadence && (
           <div className="pt-1">
             <Badge
@@ -584,6 +611,37 @@ function DealCard({ deal, isDragging, onDragStart, onDragEnd, onEdit, onMoveTo, 
           </div>
         )}
       </div>
+
+      {/* Rodape do card: etiquetas + temperatura + Lead. Aparece em qualquer
+          coluna exceto 'Sem atendimento' (leads nao classificados) — nesse
+          caso o card e renderizado por outro componente e nao chega aqui. */}
+      {(labels.length > 0 || tempBadge || fromLead) && (
+        <div className="mt-2 pt-2 border-t flex flex-wrap items-center gap-1">
+          {labels.map((lb) => (
+            <span
+              key={lb.id}
+              className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium text-white"
+              style={{ backgroundColor: lb.color }}
+              title={lb.name}
+            >
+              {lb.name}
+            </span>
+          ))}
+          {tempBadge && (
+            <span
+              className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium text-white"
+              style={{ backgroundColor: tempBadge.bg }}
+            >
+              {tempBadge.label}
+            </span>
+          )}
+          {fromLead && (
+            <Badge variant="outline" className="text-[9px] h-4 px-1 border-blue-400 text-blue-700">
+              Lead
+            </Badge>
+          )}
+        </div>
+      )}
     </Card>
   )
 }

@@ -107,6 +107,32 @@ export class DealLabelRepository extends BaseRepository {
     }
   }
 
+  /**
+   * Bulk lookup: retorna todas as (deal_id, label) das dealIds passadas.
+   * Usado pelo Kanban pra evitar N+1 queries ao renderizar cards com
+   * suas etiquetas. Filtra por account (defesa em profundidade).
+   */
+  async findByDeals(
+    accountId: number,
+    dealIds: number[],
+  ): Promise<Array<DealLabel & { deal_id: number }>> {
+    if (dealIds.length === 0) return []
+    const client = await this.getClient()
+    try {
+      const result = await client.query(
+        `SELECT dl.*, a.deal_id
+           FROM deal_labels dl
+           JOIN deal_label_assignments a ON a.label_id = dl.id
+          WHERE a.deal_id = ANY($1::int[]) AND dl.account_id = $2
+          ORDER BY dl.name ASC`,
+        [dealIds, accountId],
+      )
+      return result.rows
+    } finally {
+      this.releaseClient(client)
+    }
+  }
+
   async assignToDeal(accountId: number, dealId: number, labelId: number): Promise<boolean> {
     // Confere que o label pertence a mesma account (defesa em profundidade)
     const label = await this.findById(accountId, labelId)
