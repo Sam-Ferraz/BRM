@@ -198,15 +198,15 @@ class BaileysSession {
     // isso trava o start do QR indefinidamente. Damos 3s de timeout e caimos
     // pra uma versao hardcoded conhecida-boa. Baileys tolera versoes minor
     // desatualizadas por semanas sem problema.
-    let version: readonly [number, number, number] = [2, 3000, 1015901307]
+    let version: [number, number, number] = [2, 3000, 1015901307]
     try {
       const result = await Promise.race([
         fetchLatestBaileysVersion(),
-        new Promise<{ version: typeof version }>((_, reject) =>
+        new Promise<{ version: [number, number, number] }>((_, reject) =>
           setTimeout(() => reject(new Error('fetchLatestBaileysVersion timeout')), 3000),
         ),
       ])
-      version = result.version
+      version = result.version as [number, number, number]
       console.log(`[Baileys] versao atual: ${version.join('.')}`)
     } catch (err) {
       console.warn(`[Baileys] fallback pra versao hardcoded ${version.join('.')}:`, err)
