@@ -5,8 +5,9 @@ import makeWASocket, {
   useMultiFileAuthState,
   DisconnectReason,
   fetchLatestBaileysVersion,
+  downloadMediaMessage,
 } from '@whiskeysockets/baileys'
-import type { WASocket } from '@whiskeysockets/baileys'
+import type { WASocket, WAMessage } from '@whiskeysockets/baileys'
 import { Boom } from '@hapi/boom'
 import {
   WhatsAppProvider,
@@ -26,6 +27,17 @@ export type IncomingMessageHandler = (input: {
   fromName?: string | null
   content: string
   providerMessageId?: string | null
+  /**
+   * URL relativa ao servidor onde a midia baixada foi salva
+   * (ex: /uploads/whatsapp/12/msg-abc.jpg). Undefined pra mensagens
+   * de texto puro.
+   */
+  mediaUrl?: string | null
+  /**
+   * Tipo semantico da mensagem — usado pelo frontend pra decidir
+   * como renderizar (image tag, audio player, badge de ligacao).
+   */
+  mediaType?: 'image' | 'audio' | 'video' | 'document' | 'call_missed' | null
 }) => Promise<unknown>
 
 /**
@@ -161,6 +173,10 @@ class BaileysSession {
     sock.ev.on('creds.update', saveCreds)
     sock.ev.on('connection.update', (update) => this.handleConnectionUpdate(update))
     sock.ev.on('messages.upsert', (m) => this.handleMessages(m))
+    // Eventos de chamada (voz/video). Baileys nao permite atender — so
+    // notifica quando alguem liga. Persistimos como 'call_missed' pro
+    // corretor ver que teve uma tentativa de ligacao.
+    sock.ev.on('call', (calls) => this.handleCalls(calls))
   }
 
   async disconnect(): Promise<void> {
@@ -246,12 +262,39 @@ class BaileysSession {
       const remoteJid: string | undefined = msg.key?.remoteJid
       if (!remoteJid || remoteJid.endsWith('@g.us')) continue // ignora grupos
 
-      const content = extractTextContent(msg.message)
-      if (!content) continue // ignora mensagens sem texto (mídia, sticker, etc.)
-
       const fromPhone = extractPhoneFromJid(remoteJid)
       const fromName: string | null = msg.pushName || null
       const providerMessageId: string | null = msg.key?.id ?? null
+
+      // Detecta tipo da mensagem: text | image | audio | video | document
+      const mediaInfo = detectMediaType(msg.message)
+      let content = extractTextContent(msg.message) || ''
+      let mediaUrl: string | null = null
+
+      if (mediaInfo) {
+        // Baixa a midia via Baileys e salva local em uploads/whatsapp/{userId}/
+        try {
+          const buffer = (await downloadMediaMessage(msg as WAMessage, 'buffer', {})) as Buffer
+          const ext = mediaInfo.ext
+          const filename = `${providerMessageId ?? Date.now()}.${ext}`
+          const relDir = path.join('uploads', 'whatsapp', String(this.ownerUserId))
+          const absDir = path.resolve(relDir)
+          await fs.mkdir(absDir, { recursive: true })
+          await fs.writeFile(path.join(absDir, filename), buffer)
+          mediaUrl = `/${relDir.replace(/\\/g, '/')}/${filename}`
+          // Se nao tem legenda, coloca placeholder pro frontend saber que
+          // e mensagem de midia (o media_type ja diferencia, mas ajuda
+          // na UI generica que renderiza content string)
+          if (!content) content = mediaLabel(mediaInfo.type)
+        } catch (err) {
+          console.error('[Baileys] Erro baixando midia:', err)
+          // Sem midia baixada: ainda persiste como texto placeholder
+          if (!content) content = mediaLabel(mediaInfo.type)
+        }
+      }
+
+      // Sem texto E sem midia = evento vazio (sticker, protocol msg) — pula
+      if (!content && !mediaUrl) continue
 
       try {
         await this.incoming({
@@ -260,12 +303,84 @@ class BaileysSession {
           fromName,
           content,
           providerMessageId,
+          mediaUrl,
+          mediaType: mediaInfo?.type ?? null,
         })
       } catch (error) {
         console.error('[Baileys] Erro persistindo mensagem entrante:', error)
       }
     }
   }
+
+  /**
+   * Handler de eventos de ligacao. Baileys emite 'call' quando alguem esta
+   * ligando pro numero pareado. Nao conseguimos atender — persistimos como
+   * mensagem 'call_missed' pro corretor ver e retornar a ligacao pelo app.
+   */
+  private async handleCalls(calls: any[]): Promise<void> {
+    for (const call of calls || []) {
+      // Baileys emite varios status ('offer', 'accept', 'timeout', 'reject').
+      // Persistimos apenas o 'offer' (chegada da ligacao) pra nao duplicar.
+      if (call.status !== 'offer') continue
+      const remoteJid: string | undefined = call.from
+      if (!remoteJid || remoteJid.endsWith('@g.us')) continue
+      const fromPhone = extractPhoneFromJid(remoteJid)
+      const kind = call.isVideo ? 'Videochamada' : 'Ligacao'
+      try {
+        await this.incoming({
+          ownerUserId: this.ownerUserId,
+          fromPhone: fromPhone || remoteJid,
+          fromName: null,
+          content: `📞 ${kind} recebida (nao atendida no BRM — retorne pelo WhatsApp)`,
+          providerMessageId: call.id ?? `call-${Date.now()}`,
+          mediaUrl: null,
+          mediaType: 'call_missed',
+        })
+      } catch (err) {
+        console.error('[Baileys] Erro persistindo evento de call:', err)
+      }
+    }
+  }
+}
+
+/**
+ * Inspeciona a mensagem Baileys e retorna o tipo de midia + extensao pra
+ * salvar o arquivo. Retorna null se e mensagem de texto puro.
+ */
+function detectMediaType(message: any): { type: 'image' | 'audio' | 'video' | 'document'; ext: string } | null {
+  if (message.imageMessage) return { type: 'image', ext: guessExt(message.imageMessage?.mimetype) || 'jpg' }
+  if (message.audioMessage) return { type: 'audio', ext: guessExt(message.audioMessage?.mimetype) || 'ogg' }
+  if (message.videoMessage) return { type: 'video', ext: guessExt(message.videoMessage?.mimetype) || 'mp4' }
+  if (message.documentMessage) return { type: 'document', ext: guessExt(message.documentMessage?.mimetype) || 'bin' }
+  return null
+}
+
+function guessExt(mime?: string): string | null {
+  if (!mime) return null
+  const map: Record<string, string> = {
+    'image/jpeg': 'jpg',
+    'image/png': 'png',
+    'image/webp': 'webp',
+    'image/gif': 'gif',
+    'audio/ogg': 'ogg',
+    'audio/mpeg': 'mp3',
+    'audio/mp4': 'm4a',
+    'audio/webm': 'webm',
+    'video/mp4': 'mp4',
+    'video/webm': 'webm',
+    'application/pdf': 'pdf',
+  }
+  const base = mime.split(';')[0].trim()
+  return map[base] || null
+}
+
+function mediaLabel(type: 'image' | 'audio' | 'video' | 'document'): string {
+  return {
+    image: '🖼️ Imagem',
+    audio: '🎤 Áudio',
+    video: '🎬 Vídeo',
+    document: '📎 Documento',
+  }[type]
 }
 
 // ===========================================================================

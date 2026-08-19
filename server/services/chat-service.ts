@@ -145,6 +145,13 @@ export class ChatService {
     fromName?: string | null
     content: string
     providerMessageId?: string | null
+    // Mensagens de midia (imagem/audio/video/documento) baixadas pelo provider
+    // e salvas em /uploads/whatsapp/... — URL relativa ao servidor.
+    mediaUrl?: string | null
+    // Tipo semantico. O schema atual so tem media_url, entao guardamos o tipo
+    // implicitamente pela extensao do arquivo — o frontend detecta e renderiza
+    // image/audio/video adequadamente.
+    mediaType?: 'image' | 'audio' | 'video' | 'document' | 'call_missed' | null
   }): Promise<Message> {
     if (!input.content) throw new Error('content is required')
 
@@ -165,6 +172,7 @@ export class ChatService {
       conversation_id: conversation.id,
       direction: 'inbound',
       content: input.content,
+      media_url: input.mediaUrl ?? null,
       status: 'received',
       provider_message_id: input.providerMessageId ?? null,
     })

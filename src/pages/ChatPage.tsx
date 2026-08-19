@@ -454,7 +454,57 @@ export default function ChatPage() {
                                     : "bg-card border border-border text-foreground"
                                 }`}
                               >
-                                <p className="text-sm whitespace-pre-wrap break-words">{m.content}</p>
+                                {(() => {
+                                  // Detecta tipo de midia pela extensao do media_url
+                                  // (o schema atual so tem media_url — o tipo semantico
+                                  // e inferido). Ligacao vem no content com prefixo 📞.
+                                  const url = (m as any).media_url as string | undefined
+                                  const isCall = m.content?.startsWith("📞")
+                                  const ext = url ? url.split(".").pop()?.toLowerCase() : ""
+                                  const isImage = ext && ["jpg", "jpeg", "png", "gif", "webp"].includes(ext)
+                                  const isAudio = ext && ["ogg", "mp3", "m4a", "webm", "wav"].includes(ext)
+                                  const isVideo = ext && ["mp4", "mov", "webm"].includes(ext)
+                                  if (isCall) {
+                                    return (
+                                      <div className="flex items-center gap-2 py-1">
+                                        <span className="text-lg">📞</span>
+                                        <p className="text-sm whitespace-pre-wrap break-words">{m.content.replace(/^📞\s*/, "")}</p>
+                                      </div>
+                                    )
+                                  }
+                                  return (
+                                    <>
+                                      {isImage && url && (
+                                        <a href={url} target="_blank" rel="noopener noreferrer">
+                                          <img
+                                            src={url}
+                                            alt="Imagem"
+                                            className="rounded max-h-64 w-auto mb-1"
+                                          />
+                                        </a>
+                                      )}
+                                      {isAudio && url && (
+                                        <audio controls src={url} className="max-w-full mb-1" />
+                                      )}
+                                      {isVideo && url && (
+                                        <video controls src={url} className="rounded max-h-64 w-auto mb-1" />
+                                      )}
+                                      {url && !isImage && !isAudio && !isVideo && (
+                                        <a
+                                          href={url}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className={`text-xs underline break-all ${isOutbound ? "text-white" : "text-primary"}`}
+                                        >
+                                          📎 Abrir arquivo
+                                        </a>
+                                      )}
+                                      {m.content && (
+                                        <p className="text-sm whitespace-pre-wrap break-words">{m.content}</p>
+                                      )}
+                                    </>
+                                  )
+                                })()}
                                 <div
                                   className={`flex items-center justify-end gap-1 mt-1 text-[10px] ${
                                     isOutbound ? "text-emerald-100" : "text-muted-foreground"
