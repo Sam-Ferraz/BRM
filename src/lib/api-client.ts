@@ -1453,6 +1453,12 @@ export const api = {
 
   // WhatsApp — sessão (vínculo entre usuário do BRM e número WhatsApp)
   whatsapp: {
+    getBaileysDebug: async (): Promise<{ data: { session_in_memory: boolean; status: string; socket_alive: boolean; events: Array<{ at: string; event: string; detail?: string }> } }> => {
+      return apiClient.get('/whatsapp/baileys-debug')
+    },
+    getContactPhoto: async (phone: string): Promise<{ data: { url: string | null } }> => {
+      return apiClient.get(`/whatsapp/contact-photo?phone=${encodeURIComponent(phone)}`)
+    },
     getSession: async (): Promise<{ data: WhatsAppSession | null }> => {
       return apiClient.get<{ data: WhatsAppSession | null }>('/whatsapp/session')
     },

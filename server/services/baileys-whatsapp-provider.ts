@@ -60,6 +60,8 @@ export class BaileysWhatsAppProvider implements WhatsAppProvider {
   private incoming: IncomingMessageHandler
   private sessionRepository: WhatsAppSessionRepository
   private authDir: string
+  // Metricas em memoria pra endpoint de debug
+  public debugLog: Array<{ at: string; userId: number; event: string; detail?: string }> = []
 
   constructor(opts: {
     incoming: IncomingMessageHandler
@@ -69,6 +71,43 @@ export class BaileysWhatsAppProvider implements WhatsAppProvider {
     this.incoming = opts.incoming
     this.sessionRepository = opts.sessionRepository
     this.authDir = opts.authDir ?? path.resolve('./auth/whatsapp')
+    // Registra a instancia globalmente pra o handleMessages da BaileysSession
+    // conseguir loggar eventos no debugLog do provider
+    ;(BaileysWhatsAppProvider as any).__lastInstance = this
+  }
+
+  logEvent(userId: number, event: string, detail?: string): void {
+    this.debugLog.unshift({ at: new Date().toISOString(), userId, event, detail })
+    if (this.debugLog.length > 50) this.debugLog.pop()
+  }
+
+  getDebug(userId: number): {
+    session_in_memory: boolean
+    status: string
+    socket_alive: boolean
+    events: Array<{ at: string; userId: number; event: string; detail?: string }>
+  } {
+    const s = this.sessions.get(userId)
+    return {
+      session_in_memory: !!s,
+      status: s?.state?.status ?? 'idle',
+      socket_alive: !!s?.sock,
+      events: this.debugLog.filter((e) => e.userId === userId).slice(0, 20),
+    }
+  }
+
+  async getContactPhoto(userId: number, phone: string): Promise<string | null> {
+    const session = this.sessions.get(userId)
+    if (!session?.sock) return null
+    try {
+      const digits = phone.replace(/\D/g, '')
+      const jid = `${digits}@s.whatsapp.net`
+      // 'image' pra foto grande; 'preview' seria thumbnail
+      const url = await session.sock.profilePictureUrl(jid, 'image').catch(() => null)
+      return url ?? null
+    } catch {
+      return null
+    }
   }
 
   // -------------------------------------------------------------------------
@@ -309,12 +348,22 @@ class BaileysSession {
   }
 
   private async handleMessages({ messages, type }: any): Promise<void> {
+    // Log de tudo que chega pra facilitar debug — usa a instancia singleton
+    // do provider registrada no construtor (BaileysProvider.__lastInstance)
+    const parent = (BaileysWhatsAppProvider as any).__lastInstance
+    if (parent) parent.logEvent(this.ownerUserId, 'messages.upsert', `type=${type} count=${messages?.length || 0}`)
     if (type !== 'notify') return
     for (const msg of messages || []) {
       // Ignora mensagens enviadas pelo próprio usuário e mensagens sem chave
-      if (!msg.message || msg.key?.fromMe) continue
+      if (!msg.message || msg.key?.fromMe) {
+        if (parent) parent.logEvent(this.ownerUserId, 'skip', `reason=${msg.key?.fromMe ? 'fromMe' : 'no_message'}`)
+        continue
+      }
       const remoteJid: string | undefined = msg.key?.remoteJid
-      if (!remoteJid || remoteJid.endsWith('@g.us')) continue // ignora grupos
+      if (!remoteJid || remoteJid.endsWith('@g.us')) {
+        if (parent) parent.logEvent(this.ownerUserId, 'skip', `reason=group jid=${remoteJid}`)
+        continue // ignora grupos
+      }
 
       const fromPhone = extractPhoneFromJid(remoteJid)
       const fromName: string | null = msg.pushName || null
@@ -360,8 +409,10 @@ class BaileysSession {
           mediaUrl,
           mediaType: mediaInfo?.type ?? null,
         })
+        if (parent) parent.logEvent(this.ownerUserId, 'persisted', `from=${fromPhone} content=${content.slice(0, 40)}`)
       } catch (error) {
         console.error('[Baileys] Erro persistindo mensagem entrante:', error)
+        if (parent) parent.logEvent(this.ownerUserId, 'error', String(error).slice(0, 200))
       }
     }
   }

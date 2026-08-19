@@ -121,6 +121,37 @@ export function createWhatsAppRoutes(
    * Estado atual da sessão (status + QR Code se aplicável). Frontend deve
    * fazer polling enquanto status !== 'connected'.
    */
+  // Debug do Baileys — retorna status do socket em memoria + ultimas 20
+  // ocorrencias (msg received, skip, error) pra diagnosticar por que uma
+  // msg nao chegou no BRM.
+  router.get('/baileys-debug', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const userId = req.user!.userId
+      const info = (baileys as any).getDebug ? (baileys as any).getDebug(userId) : { note: 'debug indisponivel' }
+      res.json({ data: info })
+    } catch (err) {
+      res.status(500).json({ error: err instanceof Error ? err.message : 'Internal' })
+    }
+  })
+
+  // Foto de perfil do contato (via Baileys sock.profilePictureUrl).
+  // Query: ?phone=+5547999999999. Retorna { url: string | null }.
+  // Depende da configuracao de privacidade do contato — pode retornar null.
+  router.get('/contact-photo', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const userId = req.user!.userId
+      const phone = String(req.query.phone || '')
+      if (!phone) {
+        res.status(400).json({ error: 'phone is required' })
+        return
+      }
+      const url = (baileys as any).getContactPhoto ? await (baileys as any).getContactPhoto(userId, phone) : null
+      res.json({ data: { url } })
+    } catch (err) {
+      res.status(500).json({ error: err instanceof Error ? err.message : 'Internal' })
+    }
+  })
+
   router.get('/state', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const userId = req.user!.userId
