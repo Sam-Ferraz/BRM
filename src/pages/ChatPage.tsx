@@ -668,25 +668,30 @@ function WhatsAppConnectDialog({
               </div>
             </div>
           ) : (
-            // Não conectado — duas abas: Cloud API (recomendado) e Baileys (legado)
-            <Tabs defaultValue="cloud_api" className="w-full">
+            // Nao conectado — 2 opcoes:
+            //  1) WhatsApp Web (Baileys): parear com QR code, funciona hoje
+            //  2) Cloud API (Meta): oficial, requer aprovacao da Meta
+            <Tabs defaultValue="baileys" className="w-full">
               <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="baileys">
+                  <span className="flex items-center gap-1.5">
+                    WhatsApp Web
+                    <Badge variant="secondary" className="text-[10px] h-4 px-1">Rápido</Badge>
+                  </span>
+                </TabsTrigger>
                 <TabsTrigger value="cloud_api">Cloud API (Meta)</TabsTrigger>
-                <TabsTrigger value="baileys">WhatsApp Web</TabsTrigger>
               </TabsList>
 
-              {/* Cloud API */}
-              <TabsContent value="cloud_api" className="space-y-3 pt-4">
-                <CloudApiForm
-                  onSaved={() => {
-                    onSaved()
-                  }}
-                />
-              </TabsContent>
-
-              {/* Baileys (legado) */}
+              {/* Baileys (WhatsApp Web via QR) — padrao pra ativacao imediata */}
               <TabsContent value="baileys" className="space-y-3 pt-4">
-                <p className="text-xs text-muted-foreground">{t('whatsappConnectHelp')}</p>
+                <div className="rounded-md border bg-muted/30 p-3 text-xs space-y-1">
+                  <p className="font-medium">Conectar seu WhatsApp em 3 passos:</p>
+                  <ol className="list-decimal pl-4 space-y-0.5 text-muted-foreground">
+                    <li>Abra o WhatsApp no seu celular</li>
+                    <li>Toque em <strong>Configurações → Aparelhos conectados → Conectar aparelho</strong></li>
+                    <li>Aponte a câmera pro QR code abaixo</li>
+                  </ol>
+                </div>
                 {providerState.status === 'pending_qr' && providerState.qrCode ? (
                   <div className="flex flex-col items-center gap-3 py-2">
                     <img
@@ -695,7 +700,7 @@ function WhatsAppConnectDialog({
                       className="w-60 h-60 border rounded"
                     />
                     <p className="text-xs text-muted-foreground text-center max-w-[300px]">
-                      {t('scanQrInstructions')}
+                      Aguardando leitura… assim que escanear, a conexão é automática.
                     </p>
                   </div>
                 ) : (
@@ -703,11 +708,29 @@ function WhatsAppConnectDialog({
                     <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
                     <p className="text-xs text-muted-foreground">
                       {starting || providerState.status === 'idle'
-                        ? t('startingWhatsapp')
-                        : t('connectingWhatsapp')}
+                        ? 'Preparando o QR code…'
+                        : 'Conectando ao WhatsApp…'}
                     </p>
                   </div>
                 )}
+                <div className="text-[11px] text-muted-foreground border-t pt-2">
+                  <strong>Dica:</strong> mantenha o celular ligado com internet. Se cair, as
+                  mensagens ficam pendentes no WhatsApp e chegam automaticamente quando
+                  reconectar — nenhum histórico se perde (fica no banco do BRM).
+                </div>
+              </TabsContent>
+
+              {/* Cloud API (Meta oficial — requer aprovacao) */}
+              <TabsContent value="cloud_api" className="space-y-3 pt-4">
+                <div className="rounded-md border bg-amber-50 border-amber-200 p-2 text-[11px] text-amber-900">
+                  Requer aprovação da Meta (2-5 dias) + número comercial próprio.
+                  Use enquanto isso a aba <strong>WhatsApp Web</strong> ao lado.
+                </div>
+                <CloudApiForm
+                  onSaved={() => {
+                    onSaved()
+                  }}
+                />
               </TabsContent>
             </Tabs>
           )}

@@ -86,13 +86,18 @@ export class WhatsAppSessionRepository extends BaseRepository {
   ): Promise<WhatsAppSession> {
     const client = await this.getClient()
     try {
+      // Seta provider='baileys' porque este metodo interno so e chamado pelo
+      // BaileysProvider ao completar o pareamento por QR. Sem isso, o
+      // MultiWhatsAppProvider rotearia envios subsequentes pro CloudApi por
+      // default e falhariam com "whatsapp_not_connected".
       const result = await client.query(
-        `INSERT INTO whatsapp_sessions (account_id, user_id, phone_number, display_name, status, connected_at)
-         VALUES ((SELECT account_id FROM users WHERE id = $1), $1, $2, $3, 'connected', CURRENT_TIMESTAMP)
+        `INSERT INTO whatsapp_sessions (account_id, user_id, phone_number, display_name, status, provider, connected_at)
+         VALUES ((SELECT account_id FROM users WHERE id = $1), $1, $2, $3, 'connected', 'baileys', CURRENT_TIMESTAMP)
          ON CONFLICT (user_id) DO UPDATE
            SET phone_number = EXCLUDED.phone_number,
                display_name = EXCLUDED.display_name,
                status = 'connected',
+               provider = 'baileys',
                connected_at = CURRENT_TIMESTAMP,
                updated_at = CURRENT_TIMESTAMP
          RETURNING *`,
