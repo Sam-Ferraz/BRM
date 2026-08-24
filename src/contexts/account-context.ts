@@ -36,6 +36,11 @@ export interface AccountCustomConfig {
       position?: number
     }
   }
+  // API pública pra integrar BRM com o site da imobiliária
+  site_api?: {
+    api_key?: string
+    generated_at?: string
+  }
 }
 
 export interface Account {

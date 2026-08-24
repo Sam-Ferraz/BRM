@@ -13,6 +13,7 @@ import { TimezoneSelector } from "@/components/timezone-selector"
 import { api, type GoogleCalendarStatus } from "@/lib/api-client"
 import { useToast } from "@/hooks/use-toast"
 import { ImportLeadsCard } from "@/components/import-leads-card"
+import { SiteApiCard } from "@/components/site-api-card"
 
 export default function ConfigPage() {
   const { t } = useTranslation()
@@ -150,6 +151,9 @@ export default function ConfigPage() {
 
           {/* Importações (admin) — importar leads via CSV pro funil Sem atendimento */}
           {isAdmin && <ImportLeadsCard />}
+
+          {/* API de integração com site institucional (admin) */}
+          {isAdmin && <SiteApiCard />}
 
           {/* Administração — só admin */}
           {isAdmin && (

@@ -34,6 +34,65 @@ export function createAccountRoutes(service: AccountService): Router {
     }
   })
 
+  /**
+   * GET /me/site-api-key — retorna a API key da account (só admin).
+   * Se ainda não gerou, retorna null.
+   */
+  router.get('/me/site-api-key', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      if (req.user!.role !== 'admin') {
+        res.status(403).json({ error: 'Apenas admin' })
+        return
+      }
+      const account = await service.getById(req.user!.accountId)
+      const siteApi = (account?.custom_config as any)?.site_api || {}
+      res.json({
+        data: {
+          api_key: siteApi.api_key || null,
+          generated_at: siteApi.generated_at || null,
+        },
+      })
+    } catch (err) {
+      console.error('Error fetching site api key:', err)
+      res.status(500).json({ error: 'Internal server error' })
+    }
+  })
+
+  /**
+   * POST /me/site-api-key — gera ou regenera API key (só admin).
+   * Retorna a nova key.
+   */
+  router.post('/me/site-api-key', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      if (req.user!.role !== 'admin') {
+        res.status(403).json({ error: 'Apenas admin' })
+        return
+      }
+      const account = await service.getById(req.user!.accountId)
+      if (!account) {
+        res.status(404).json({ error: 'Account não encontrada' })
+        return
+      }
+      // Gera key aleatória: 48 chars hex (24 bytes). Prefixo brm_ pra
+      // facilitar identificação em logs/CI.
+      const crypto = await import('crypto')
+      const rand = crypto.randomBytes(24).toString('hex')
+      const newKey = `brm_${rand}`
+      const nextConfig: any = {
+        ...(account.custom_config || {}),
+        site_api: {
+          api_key: newKey,
+          generated_at: new Date().toISOString(),
+        },
+      }
+      await service.updateCustomConfig(req.user!.accountId, nextConfig)
+      res.json({ data: { api_key: newKey, generated_at: nextConfig.site_api.generated_at } })
+    } catch (err) {
+      console.error('Error generating site api key:', err)
+      res.status(500).json({ error: 'Internal server error' })
+    }
+  })
+
   router.patch('/me/config', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       if (req.user!.role !== 'admin') {

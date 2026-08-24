@@ -63,6 +63,7 @@ import { createDealLabelRoutes, createDealLabelAssignmentRoutes } from './routes
 import { DealLabelRepository } from './repositories/deal-label-repository.js'
 import { createClientRoutes } from './routes/client-routes.js'
 import { createProductRoutes } from './routes/product-routes.js'
+import { createPublicApiRoutes } from './routes/public-api-routes.js'
 import { createAppointmentRoutes } from './routes/appointment-routes.js'
 import { createSalesAgendaRoutes } from './routes/sales-agenda-routes.js'
 import { createFollowUpRoutes } from './routes/followup-routes.js'
@@ -331,6 +332,11 @@ app.use('/api/user-mgmt', createUserManagementRoutes(userManagementService, perm
   const accountRepository = new AccountRepository()
   const accountService = new AccountService(accountRepository, userRepository, passwordTokenRepository, emailService)
   app.use('/api/accounts', createAccountRoutes(accountService))
+
+  // API pública pro site institucional puxar imóveis (autentica por
+  // X-BRM-API-Key gerada em Configurações). Compartilha o accountRepository
+  // pra descobrir account pela key sem depender do JWT do BRM.
+  app.use('/api/public', createPublicApiRoutes(accountRepository, productRepository))
 }
 {
   // Cupons de desconto — super-admin gerencia, LP valida antes do checkout.

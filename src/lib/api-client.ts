@@ -133,6 +133,10 @@ export interface AccountCustomConfigLike {
       position?: number
     }
   }
+  site_api?: {
+    api_key?: string
+    generated_at?: string
+  }
 }
 export interface Account {
   id: number
@@ -1404,6 +1408,12 @@ export const api = {
     },
     delete: async (id: number): Promise<{ data: { deleted: boolean } }> => {
       return apiClient.delete(`/accounts/${id}`)
+    },
+    getSiteApiKey: async (): Promise<{ data: { api_key: string | null; generated_at: string | null } }> => {
+      return apiClient.get('/accounts/me/site-api-key')
+    },
+    generateSiteApiKey: async (): Promise<{ data: { api_key: string; generated_at: string } }> => {
+      return apiClient.post('/accounts/me/site-api-key', {})
     },
   },
 
