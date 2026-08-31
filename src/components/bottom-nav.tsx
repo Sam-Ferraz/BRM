@@ -181,10 +181,10 @@ export function BottomNav() {
     if (count <= 0) return null
     return (
       <span
-        className="absolute -top-2 -right-3 min-w-[20px] h-[20px] px-1 rounded-full text-white text-[11px] font-semibold flex items-center justify-center leading-none ring-2 ring-card"
+        className="absolute -top-2 -right-3 min-w-[20px] h-[20px] px-1.5 rounded-full text-white text-[11px] font-semibold flex items-center justify-center leading-none ring-2 ring-card whitespace-nowrap"
         style={{ backgroundColor: "#0c343d" }}
       >
-        {count > 99 ? "99+" : count}
+        {count}
       </span>
     )
   }
@@ -302,7 +302,7 @@ export function BottomNav() {
                               className="min-w-[20px] h-[20px] px-1 rounded-full text-white text-[10px] font-semibold flex items-center justify-center leading-none"
                               style={{ backgroundColor: "#0c343d" }}
                             >
-                              {count > 99 ? "99+" : count}
+                              {count}
                             </span>
                           )}
                         </button>
