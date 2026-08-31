@@ -31,7 +31,7 @@ export const DEFAULT_COLUMNS: DefaultColumn[] = [
   { key: "no_service",     label: "Sem atendimento", headerHex: "#f1f5f9" },
   { key: "service",        label: "Atendimento",     headerHex: "#dbeafe" },
   { key: "visit_foreseen", label: "Agendamento",     headerHex: "#fef3c7" },
-  { key: "visit_done",     label: "Apresentação",    headerHex: "#ffedd5" },
+  { key: "visit_done",     label: "Visita",    headerHex: "#ffedd5" },
   { key: "proposal",       label: "Proposta",        headerHex: "#f3e8ff" },
   { key: "contract",       label: "Contrato",        headerHex: "#e0e7ff" },
   { key: "sold",           label: "Vendido",         headerHex: "#dcfce7" },

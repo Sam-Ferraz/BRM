@@ -73,7 +73,7 @@ const PHASES: PhaseColumn[] = [
   },
   {
     key: "visit_done",
-    label: "Apresentação",
+    label: "Visita",
     statuses: ["visit_done_cold", "visit_done_mild", "visit_done_warm"],
     hasTemperature: true,
     headerColor: "bg-orange-100 text-orange-900 border-orange-300",

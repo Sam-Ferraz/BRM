@@ -82,7 +82,7 @@ const MODULES: ModuleItem[] = [
 const STATUS_LABEL: Record<string, string> = {
   service_cold: "Atendimento", service_mild: "Atendimento", service_warm: "Atendimento",
   visit_foreseen_cold: "Agendamento", visit_foreseen_mild: "Agendamento", visit_foreseen_warm: "Agendamento",
-  visit_done_cold: "Apresentação", visit_done_mild: "Apresentação", visit_done_warm: "Apresentação",
+  visit_done_cold: "Visita", visit_done_mild: "Visita", visit_done_warm: "Visita",
   proposal: "Proposta", contract: "Contrato", sold: "Vendido",
   discarded_no_profile: "Descartado", discarded_no_interest: "Descartado",
   discarded_competitor: "Descartado", discarded_error: "Descartado",
@@ -323,7 +323,7 @@ export default function HomePage() {
               <SelectItem value="all">Todos os status</SelectItem>
               <SelectItem value="Atendimento">Atendimento</SelectItem>
               <SelectItem value="Agendamento">Agendamento</SelectItem>
-              <SelectItem value="Apresentação">Apresentação</SelectItem>
+              <SelectItem value="Visita">Visita</SelectItem>
               <SelectItem value="Proposta">Proposta</SelectItem>
               <SelectItem value="Contrato">Contrato</SelectItem>
               <SelectItem value="Vendido">Vendido</SelectItem>
