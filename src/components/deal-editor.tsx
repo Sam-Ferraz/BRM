@@ -373,7 +373,7 @@ export function DealEditor({
               onClick={() => setNewAppointmentOpen(true)}
             >
               <Plus className="w-4 h-4 mr-1.5" />
-              Novo atendimento
+              Registrar atendimento
             </Button>
             {/* Chat WhatsApp — abre wa.me em nova aba */}
             <Button
