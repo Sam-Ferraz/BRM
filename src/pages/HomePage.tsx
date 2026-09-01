@@ -566,14 +566,10 @@ function NewRecordMenu({ floating }: { floating?: boolean }) {
           </svg>
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-48">
+      <DropdownMenuContent align="end" className="w-52">
         <DropdownMenuItem onClick={() => navigate("/deals?new=true")}>
           <Briefcase className="w-4 h-4 mr-2" />
           Novo negócio
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => navigate("/appointments?new=true")}>
-          <HeadphonesIcon className="w-4 h-4 mr-2" />
-          Novo atendimento
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => navigate("/products?new=true")}>
           <Package className="w-4 h-4 mr-2" />
@@ -582,6 +578,10 @@ function NewRecordMenu({ floating }: { floating?: boolean }) {
         <DropdownMenuItem onClick={() => navigate("/clients?new=true")}>
           <Users className="w-4 h-4 mr-2" />
           Novo cliente
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => navigate("/appointments?new=true")}>
+          <HeadphonesIcon className="w-4 h-4 mr-2" />
+          Registrar atendimento
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
