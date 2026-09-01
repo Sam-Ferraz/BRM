@@ -336,7 +336,7 @@ export default function HomePage() {
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Buscar cliente, imóvel, telefone..."
+                placeholder="Buscar negócio, cliente, imóvel..."
                 className="pl-8 h-9"
               />
             </div>
