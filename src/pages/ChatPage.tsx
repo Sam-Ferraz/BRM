@@ -17,6 +17,13 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu"
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -36,6 +43,9 @@ import {
   Unlink,
   UserCircle2,
   Paperclip,
+  MoreVertical,
+  RotateCw,
+  Trash2,
 } from "lucide-react"
 import {
   api,
@@ -398,6 +408,33 @@ export default function ChatPage() {
     }
   }
 
+  const handleDeleteMessage = async (messageId: number) => {
+    try {
+      await api.chat.deleteMessage(messageId)
+      setMessages((prev) => prev.filter((m) => m.id !== messageId))
+    } catch (error) {
+      toast({
+        title: t("error"),
+        description: error instanceof Error ? error.message : "Erro ao excluir mensagem",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleResendMessage = async (messageId: number) => {
+    try {
+      const { data } = await api.chat.resendMessage(messageId)
+      setMessages((prev) => [...prev, data])
+      if (selectedId) fetchConversation(selectedId)
+    } catch (error) {
+      toast({
+        title: t("error"),
+        description: error instanceof Error ? error.message : "Erro ao reenviar mensagem",
+        variant: "destructive",
+      })
+    }
+  }
+
   const formatTime = (iso?: string | null): string => {
     if (!iso) return ""
     try {
@@ -729,7 +766,35 @@ export default function ChatPage() {
                                 </span>
                               </div>
                             )}
-                            <div className={`flex ${isOutbound ? "justify-end" : "justify-start"}`}>
+                            <div className={`flex ${isOutbound ? "justify-end" : "justify-start"} group`}>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <button
+                                    className={`self-center mr-1 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-muted ${isOutbound ? "order-first" : "order-last ml-1 mr-0"}`}
+                                    aria-label="Opções da mensagem"
+                                  >
+                                    <MoreVertical className="w-4 h-4 text-muted-foreground" />
+                                  </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align={isOutbound ? "end" : "start"} className="w-40">
+                                  {isOutbound && (m.status === "failed" || m.status === "sent") && (
+                                    <>
+                                      <DropdownMenuItem onClick={() => handleResendMessage(m.id)}>
+                                        <RotateCw className="w-4 h-4 mr-2" />
+                                        Reenviar
+                                      </DropdownMenuItem>
+                                      <DropdownMenuSeparator />
+                                    </>
+                                  )}
+                                  <DropdownMenuItem
+                                    onClick={() => handleDeleteMessage(m.id)}
+                                    className="text-red-600 focus:text-red-600"
+                                  >
+                                    <Trash2 className="w-4 h-4 mr-2" />
+                                    Excluir
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                               <div
                                 className={`max-w-[70%] rounded-lg px-3 py-2 shadow-sm ${
                                   isOutbound

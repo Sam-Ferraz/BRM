@@ -201,6 +201,64 @@ export function createChatRoutes(chatService: ChatService): Router {
     }
   })
 
+  // Apaga uma mensagem individual (qualquer status). Nao apaga do WhatsApp
+  // — so do BRM. Usado no menu de contexto da bolha da msg.
+  router.delete('/messages/:id', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const id = parseInt(req.params.id)
+      const accountId = req.user!.accountId
+      const viewer = { userId: req.user!.userId, role: req.user!.role }
+      const result = await chatService.deleteMessage(accountId, id, viewer)
+      res.json(result)
+    } catch (error) {
+      if (error instanceof Error && error.message === 'Message not found') {
+        res.status(404).json({ error: 'Message not found' })
+        return
+      }
+      if (error instanceof Error && error.message === 'forbidden') {
+        res.status(403).json({ error: 'forbidden' })
+        return
+      }
+      if (error instanceof Error) {
+        console.error('Error deleting message:', error)
+        res.status(500).json({ error: error.message })
+        return
+      }
+      res.status(500).json({ error: 'Internal server error' })
+    }
+  })
+
+  // Reenvia uma msg outbound (tipica: failed). Cria uma msg nova com o
+  // mesmo conteudo — a antiga fica no historico.
+  router.post('/messages/:id/resend', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const id = parseInt(req.params.id)
+      const accountId = req.user!.accountId
+      const viewer = { userId: req.user!.userId, role: req.user!.role }
+      const result = await chatService.resendMessage(accountId, id, viewer)
+      res.json({ data: result })
+    } catch (error) {
+      if (error instanceof Error && error.message === 'Message not found') {
+        res.status(404).json({ error: 'Message not found' })
+        return
+      }
+      if (error instanceof Error && error.message === 'forbidden') {
+        res.status(403).json({ error: 'forbidden' })
+        return
+      }
+      if (error instanceof Error && error.message === 'whatsapp_not_connected') {
+        res.status(409).json({ error: 'whatsapp_not_connected' })
+        return
+      }
+      if (error instanceof Error) {
+        console.error('Error resending message:', error)
+        res.status(500).json({ error: error.message })
+        return
+      }
+      res.status(500).json({ error: 'Internal server error' })
+    }
+  })
+
   // Endpoint de simulação — recebe uma mensagem entrante como se fosse o
   // webhook do provedor real. Útil para teste local enquanto não há provider.
   // Em produção este endpoint seria substituído pelo handler do webhook.

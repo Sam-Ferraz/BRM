@@ -69,6 +69,49 @@ export class ChatService {
     return { conversation: refreshed, messages }
   }
 
+  /**
+   * Apaga uma msg (qualquer status). Nao apaga do WhatsApp — so do BRM.
+   */
+  async deleteMessage(
+    accountId: number,
+    messageId: number,
+    viewer: { userId: number; role: string },
+  ): Promise<{ deleted: boolean; conversation_id: number | null }> {
+    const msg = await this.messageRepository.findById(accountId, messageId)
+    if (!msg) throw new Error('Message not found')
+    const conv = await this.conversationRepository.findById(accountId, msg.conversation_id)
+    if (!conv) throw new Error('Conversation not found')
+    this.assertCanView(conv.owner_user_id, viewer)
+    const deleted = await this.messageRepository.deleteById(accountId, messageId)
+    return { deleted, conversation_id: msg.conversation_id }
+  }
+
+  /**
+   * Reenvia uma msg outbound (tipicamente uma 'failed'). Nao modifica a antiga
+   * — cria uma nova com o mesmo conteudo pra o WhatsApp gerar um novo
+   * providerMessageId. A antiga fica no historico (usuario pode apagar
+   * manualmente se quiser).
+   */
+  async resendMessage(
+    accountId: number,
+    messageId: number,
+    viewer: { userId: number; role: string },
+  ): Promise<Message> {
+    const msg = await this.messageRepository.findById(accountId, messageId)
+    if (!msg) throw new Error('Message not found')
+    if (msg.direction !== 'outbound') throw new Error('cannot resend inbound message')
+    const conv = await this.conversationRepository.findById(accountId, msg.conversation_id)
+    if (!conv) throw new Error('Conversation not found')
+    this.assertCanView(conv.owner_user_id, viewer)
+    return this.sendMessageInternal(
+      accountId,
+      conv.id,
+      conv.owner_user_id,
+      conv.contact_phone,
+      msg.content,
+    )
+  }
+
   async deleteConversation(
     accountId: number,
     id: number,

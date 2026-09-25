@@ -1553,6 +1553,15 @@ export const api = {
       }
       return res.json()
     },
+    deleteConversation: async (conversationId: number): Promise<{ deleted: boolean }> => {
+      return apiClient.delete<{ deleted: boolean }>(`/chat/conversations/${conversationId}`)
+    },
+    deleteMessage: async (messageId: number): Promise<{ deleted: boolean; conversation_id: number | null }> => {
+      return apiClient.delete<{ deleted: boolean; conversation_id: number | null }>(`/chat/messages/${messageId}`)
+    },
+    resendMessage: async (messageId: number): Promise<{ data: Message }> => {
+      return apiClient.post<{ data: Message }>(`/chat/messages/${messageId}/resend`, {})
+    },
     // Endpoint stub para simular entrada de mensagem enquanto não há provedor real.
     simulateInbound: async (input: {
       owner_user_id?: number
