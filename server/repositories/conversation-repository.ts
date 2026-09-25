@@ -18,6 +18,10 @@ export class ConversationRepository extends BaseRepository {
         params.push(ownerUserId)
       }
 
+      // INNER JOIN LATERAL com clients: so retorna conversas cujo telefone
+      // ou client_id bate com algum Cliente cadastrado da mesma account.
+      // Match faz strip de tudo que nao e digito (evita mismatch por +,
+      // espacos, parenteses). Preferencia por client_id (link explicito).
       const query = `
         SELECT
           c.*,
@@ -26,8 +30,24 @@ export class ConversationRepository extends BaseRepository {
           lm.content        AS last_message_preview,
           lm.direction      AS last_message_direction
         FROM conversations c
-        LEFT JOIN clients cl ON c.client_id = cl.id
-        LEFT JOIN users   u  ON c.owner_user_id = u.id
+        INNER JOIN LATERAL (
+          SELECT id, name
+          FROM clients cli
+          WHERE cli.account_id = c.account_id
+            AND (
+              cli.id = c.client_id
+              OR (
+                cli.phone IS NOT NULL
+                AND cli.phone <> ''
+                AND c.contact_phone IS NOT NULL
+                AND c.contact_phone <> ''
+                AND REGEXP_REPLACE(cli.phone, '[^0-9]', '', 'g') = REGEXP_REPLACE(c.contact_phone, '[^0-9]', '', 'g')
+              )
+            )
+          ORDER BY (cli.id = c.client_id) DESC NULLS LAST
+          LIMIT 1
+        ) cl ON TRUE
+        LEFT JOIN users u ON c.owner_user_id = u.id
         LEFT JOIN LATERAL (
           SELECT content, direction
           FROM messages

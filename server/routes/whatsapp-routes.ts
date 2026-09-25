@@ -38,10 +38,13 @@ export function createWhatsAppRoutes(
       const accountId = req.user!.accountId
       const userId = req.user!.userId
       const session = await whatsappService.getSession(accountId, userId)
-      // Debug: exibe presença/ausência dos campos Cloud API sem vazar os valores.
-      // Ajuda a diagnosticar quando o toast diz "conectado" mas o provider
-      // acusa whatsapp_not_connected (indica que phone_number_id ou access_token
-      // estão null no banco — geralmente porque foi conectado via Baileys).
+      // Health check REAL do socket Baileys em memoria — status no banco fica
+      // 'connected' mesmo se o socket morreu por perda de conexao. Sem esse
+      // check, o badge verde do frontend mente. Se socket_alive=false o
+      // frontend deve mostrar amarelo/'Reconectando' e chamar /start.
+      const runtimeDebug = (baileys as any).getDebug ? (baileys as any).getDebug(userId) : null
+      const socketAlive = runtimeDebug?.socket_alive === true
+      const runtimeStatus = runtimeDebug?.status ?? null
       const debug = {
         viewer_user_id: userId,
         viewer_account_id: accountId,
@@ -50,6 +53,11 @@ export function createWhatsAppRoutes(
         ids_match: !!session && (session as any).user_id === userId,
         provider: (session as any)?.provider ?? null,
         status: (session as any)?.status ?? null,
+        // Estado real do socket Baileys em memoria (mais confiavel que status
+        // do banco pra provider='baileys'). Pra cloud_api, socket_alive
+        // sempre e false — a Cloud API nao mantem socket persistente.
+        socket_alive: socketAlive,
+        runtime_status: runtimeStatus,
         has_phone_number_id: !!(session as any)?.phone_number_id,
         has_access_token: !!(session as any)?.access_token,
         has_app_secret: !!(session as any)?.app_secret,

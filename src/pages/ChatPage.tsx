@@ -86,11 +86,18 @@ export default function ChatPage() {
   // tentou e nao tem foto (privacidade ou contato sem foto).
   const [contactPhotos, setContactPhotos] = useState<Record<string, string | null>>({})
 
-  // Carrega sessão WhatsApp do usuário logado
+  // socket_alive vem do backend (BaileysProvider.getDebug) — indica se o
+  // socket Baileys esta VIVO em memoria (nao so 'connected' no banco). Se
+  // false apesar do status='connected', mostramos 'Sincronizando…' no badge
+  // e disparamos reconexao via POST /start.
+  const [socketAlive, setSocketAlive] = useState<boolean | null>(null)
+
+  // Carrega sessão WhatsApp do usuário logado + status real do socket
   const fetchSession = useCallback(async () => {
     try {
       const result = await api.whatsapp.getSession()
       setSession(result.data)
+      setSocketAlive(result.debug?.socket_alive ?? null)
     } catch (error) {
       console.error("Error fetching whatsapp session:", error)
     } finally {
@@ -137,6 +144,35 @@ export default function ChatPage() {
     fetchSession()
     fetchConversations()
   }, [fetchSession, fetchConversations])
+
+  // Polling: a cada 15s refetch de conversas + status da sessao. Garante
+  // que msgs novas aparecem sem F5 e que badge reflete estado real do
+  // socket. Se socket morreu mas status no banco continua 'connected',
+  // tenta reconectar automaticamente chamando /start.
+  useEffect(() => {
+    const id = setInterval(async () => {
+      try {
+        await Promise.all([fetchConversations(), fetchSession()])
+      } catch {
+        /* silencioso — proximo tick tenta de novo */
+      }
+    }, 15000)
+    return () => clearInterval(id)
+  }, [fetchConversations, fetchSession])
+
+  // Auto-reconexao: se a sessao esta 'connected' no banco mas o socket
+  // Baileys nao esta vivo em memoria, dispara /start pra recriar o socket.
+  // Sem loop infinito: reconecta so 1 vez a cada 60s por seguranca.
+  const lastReconnectRef = useRef<number>(0)
+  useEffect(() => {
+    if (session?.provider !== 'baileys') return
+    if (session?.status !== 'connected') return
+    if (socketAlive !== false) return
+    const now = Date.now()
+    if (now - lastReconnectRef.current < 60000) return
+    lastReconnectRef.current = now
+    api.whatsapp.start().catch(() => undefined)
+  }, [session?.status, session?.provider, socketAlive])
 
   // Admin: carrega lista de corretores pro filtro. Feito uma vez ao montar.
   useEffect(() => {
@@ -317,26 +353,31 @@ export default function ChatPage() {
               </Link>
             </Button>
             <div className="flex items-center gap-2">
-              {/* Estado da conexão */}
-              {sessionLoaded && (
-                <Badge
-                  className={
-                    isConnected
-                      ? "bg-emerald-500 hover:bg-emerald-500 text-white border-0"
-                      : "bg-slate-400 hover:bg-slate-400 text-white border-0"
-                  }
-                >
-                  {isConnected ? (
-                    <>
-                      <LinkIcon className="w-3 h-3 mr-1" /> {session?.phone_number}
-                    </>
-                  ) : (
-                    <>
-                      <Unlink className="w-3 h-3 mr-1" /> {t("whatsappNotConnected")}
-                    </>
-                  )}
-                </Badge>
-              )}
+              {/* Estado da conexao: 3 estados.
+                  - Verde: connected E (cloud_api OU socket vivo pro Baileys)
+                  - Amarelo: connected mas socket Baileys morto (sincronizando)
+                  - Cinza: nao conectado */}
+              {sessionLoaded && (() => {
+                const usingBaileys = session?.provider === 'baileys'
+                const reallyOnline = isConnected && (!usingBaileys || socketAlive === true)
+                const syncingBaileys = isConnected && usingBaileys && socketAlive === false
+                const badgeCls = reallyOnline
+                  ? "bg-emerald-500 hover:bg-emerald-500 text-white border-0"
+                  : syncingBaileys
+                    ? "bg-amber-500 hover:bg-amber-500 text-white border-0"
+                    : "bg-slate-400 hover:bg-slate-400 text-white border-0"
+                return (
+                  <Badge className={badgeCls} title={syncingBaileys ? "Reconectando o WhatsApp Web…" : undefined}>
+                    {reallyOnline ? (
+                      <><LinkIcon className="w-3 h-3 mr-1" /> {session?.phone_number}</>
+                    ) : syncingBaileys ? (
+                      <><LinkIcon className="w-3 h-3 mr-1 animate-pulse" /> Sincronizando…</>
+                    ) : (
+                      <><Unlink className="w-3 h-3 mr-1" /> {t("whatsappNotConnected")}</>
+                    )}
+                  </Badge>
+                )
+              })()}
               <Button variant="outline" size="sm" onClick={() => setIsConnectOpen(true)}>
                 {isConnected ? t("manageWhatsapp") : t("connectWhatsapp")}
               </Button>
