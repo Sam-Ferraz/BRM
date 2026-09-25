@@ -487,7 +487,24 @@ class BaileysSession {
       // deduplica por provider_message_id.
       const fromMe = !!msg.key?.fromMe
 
-      const fromPhone = extractPhoneFromJid(remoteJid)
+      // LID Migration do WhatsApp (2024+): remoteJid pode vir como
+      // 'XXXXXX@lid' (Local ID, opaco) em vez do phone number normal
+      // '55XXX@s.whatsapp.net'. Se salvarmos o LID como contact_phone,
+      // vira conversa duplicada e o filtro por cliente cadastrado nao bate.
+      // Baileys expoe o phone number real em msg.key.senderPn (versoes
+      // recentes) ou msg.key.remoteJidAlt. Preferimos esses, com fallback
+      // pro remoteJid original.
+      const senderPn: string | undefined = msg.key?.senderPn
+      const remoteJidAlt: string | undefined = msg.key?.remoteJidAlt
+      const jidForPhone = senderPn || remoteJidAlt || remoteJid
+      const fromPhone = extractPhoneFromJid(jidForPhone)
+      if (remoteJid.endsWith('@lid') && parent) {
+        parent.logEvent(
+          this.ownerUserId,
+          'lid_detected',
+          `remoteJid=${remoteJid} senderPn=${senderPn ?? 'none'} remoteJidAlt=${remoteJidAlt ?? 'none'} resolved=${fromPhone}`
+        )
+      }
       const fromName: string | null = msg.pushName || null
       const providerMessageId: string | null = msg.key?.id ?? null
 
