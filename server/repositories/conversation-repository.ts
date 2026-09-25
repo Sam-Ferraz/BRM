@@ -189,9 +189,29 @@ export class ConversationRepository extends BaseRepository {
     const client = await this.getClient()
     try {
       const params: any[] = [accountId]
-      let query = 'SELECT COALESCE(SUM(unread_count), 0) AS total FROM conversations WHERE account_id = $1'
+      // Mesmo filtro do findAll: so conta conversas cujo contato bate com
+      // algum cliente cadastrado (por client_id ou telefone normalizado).
+      // Sem isso o badge do bottom-nav mostrava contagem inflada de
+      // conversas nao-cadastradas que nao aparecem na lista.
+      let query = `
+        SELECT COALESCE(SUM(c.unread_count), 0) AS total
+        FROM conversations c
+        WHERE c.account_id = $1
+          AND EXISTS (
+            SELECT 1 FROM clients cli
+            WHERE cli.account_id = c.account_id
+              AND (
+                cli.id = c.client_id
+                OR (
+                  cli.phone IS NOT NULL AND cli.phone <> ''
+                  AND c.contact_phone IS NOT NULL AND c.contact_phone <> ''
+                  AND REGEXP_REPLACE(cli.phone, '[^0-9]', '', 'g') = REGEXP_REPLACE(c.contact_phone, '[^0-9]', '', 'g')
+                )
+              )
+          )
+      `
       if (ownerUserId !== undefined) {
-        query += ' AND owner_user_id = $2'
+        query += ' AND c.owner_user_id = $2'
         params.push(ownerUserId)
       }
       const result = await client.query(query, params)
