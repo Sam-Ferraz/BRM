@@ -41,7 +41,23 @@ export class ConversationRepository extends BaseRepository {
                 AND cli.phone <> ''
                 AND c.contact_phone IS NOT NULL
                 AND c.contact_phone <> ''
-                AND REGEXP_REPLACE(cli.phone, '[^0-9]', '', 'g') = REGEXP_REPLACE(c.contact_phone, '[^0-9]', '', 'g')
+                AND (
+                  -- Match direto (mesmos digitos)
+                  REGEXP_REPLACE(cli.phone, '[^0-9]', '', 'g') = REGEXP_REPLACE(c.contact_phone, '[^0-9]', '', 'g')
+                  -- OU celular BR com/sem o 9 apos DDD (13 dig vs 12 dig)
+                  OR (
+                    LENGTH(REGEXP_REPLACE(cli.phone, '[^0-9]', '', 'g')) = 13
+                    AND LENGTH(REGEXP_REPLACE(c.contact_phone, '[^0-9]', '', 'g')) = 12
+                    AND SUBSTRING(REGEXP_REPLACE(cli.phone, '[^0-9]', '', 'g'), 1, 4) = SUBSTRING(REGEXP_REPLACE(c.contact_phone, '[^0-9]', '', 'g'), 1, 4)
+                    AND SUBSTRING(REGEXP_REPLACE(cli.phone, '[^0-9]', '', 'g'), 6) = SUBSTRING(REGEXP_REPLACE(c.contact_phone, '[^0-9]', '', 'g'), 5)
+                  )
+                  OR (
+                    LENGTH(REGEXP_REPLACE(cli.phone, '[^0-9]', '', 'g')) = 12
+                    AND LENGTH(REGEXP_REPLACE(c.contact_phone, '[^0-9]', '', 'g')) = 13
+                    AND SUBSTRING(REGEXP_REPLACE(cli.phone, '[^0-9]', '', 'g'), 1, 4) = SUBSTRING(REGEXP_REPLACE(c.contact_phone, '[^0-9]', '', 'g'), 1, 4)
+                    AND SUBSTRING(REGEXP_REPLACE(cli.phone, '[^0-9]', '', 'g'), 5) = SUBSTRING(REGEXP_REPLACE(c.contact_phone, '[^0-9]', '', 'g'), 6)
+                  )
+                )
               )
             )
           ORDER BY (cli.id = c.client_id) DESC NULLS LAST
@@ -107,16 +123,26 @@ export class ConversationRepository extends BaseRepository {
         return existing.rows[0]
       }
 
-      // Match com Cliente do CRM por telefone — compara só dígitos para
-      // ignorar formatação (+55, espaços, parênteses, hifens). Restrito
-      // à mesma account pra não vazar cliente de outro tenant.
+      // Match com Cliente do CRM por telefone — compara só dígitos ignorando
+      // formatacao (+55, espacos, parenteses, hifens). Tambem considera
+      // celular BR com/sem o 9 apos DDD (13 dig vs 12 dig — WhatsApp usa
+      // wa_id sem o 9, mas cliente pode estar cadastrado com).
       const normalized = contactPhone.replace(/\D/g, '')
+      // Gera variantes pra procurar: original + com/sem o 9 se for BR celular
+      const variants: string[] = [normalized]
+      if (normalized.length === 13 && normalized.startsWith('55')) {
+        // BR com 9 → adiciona sem 9 (12 dig)
+        variants.push(normalized.slice(0, 4) + normalized.slice(5))
+      } else if (normalized.length === 12 && normalized.startsWith('55')) {
+        // BR sem 9 → adiciona com 9 (13 dig)
+        variants.push(normalized.slice(0, 4) + '9' + normalized.slice(4))
+      }
       const clientLookup = await client.query(
         `SELECT id, name FROM clients
          WHERE account_id = $1
-           AND regexp_replace(COALESCE(phone, ''), '\\D', '', 'g') = $2
+           AND regexp_replace(COALESCE(phone, ''), '\\D', '', 'g') = ANY($2)
          LIMIT 1`,
-        [accountId, normalized]
+        [accountId, variants]
       )
       const clientId = clientLookup.rows[0]?.id ?? null
       const clientName = clientLookup.rows[0]?.name ?? null
@@ -205,7 +231,23 @@ export class ConversationRepository extends BaseRepository {
                 OR (
                   cli.phone IS NOT NULL AND cli.phone <> ''
                   AND c.contact_phone IS NOT NULL AND c.contact_phone <> ''
-                  AND REGEXP_REPLACE(cli.phone, '[^0-9]', '', 'g') = REGEXP_REPLACE(c.contact_phone, '[^0-9]', '', 'g')
+                  AND (
+                  -- Match direto (mesmos digitos)
+                  REGEXP_REPLACE(cli.phone, '[^0-9]', '', 'g') = REGEXP_REPLACE(c.contact_phone, '[^0-9]', '', 'g')
+                  -- OU celular BR com/sem o 9 apos DDD (13 dig vs 12 dig)
+                  OR (
+                    LENGTH(REGEXP_REPLACE(cli.phone, '[^0-9]', '', 'g')) = 13
+                    AND LENGTH(REGEXP_REPLACE(c.contact_phone, '[^0-9]', '', 'g')) = 12
+                    AND SUBSTRING(REGEXP_REPLACE(cli.phone, '[^0-9]', '', 'g'), 1, 4) = SUBSTRING(REGEXP_REPLACE(c.contact_phone, '[^0-9]', '', 'g'), 1, 4)
+                    AND SUBSTRING(REGEXP_REPLACE(cli.phone, '[^0-9]', '', 'g'), 6) = SUBSTRING(REGEXP_REPLACE(c.contact_phone, '[^0-9]', '', 'g'), 5)
+                  )
+                  OR (
+                    LENGTH(REGEXP_REPLACE(cli.phone, '[^0-9]', '', 'g')) = 12
+                    AND LENGTH(REGEXP_REPLACE(c.contact_phone, '[^0-9]', '', 'g')) = 13
+                    AND SUBSTRING(REGEXP_REPLACE(cli.phone, '[^0-9]', '', 'g'), 1, 4) = SUBSTRING(REGEXP_REPLACE(c.contact_phone, '[^0-9]', '', 'g'), 1, 4)
+                    AND SUBSTRING(REGEXP_REPLACE(cli.phone, '[^0-9]', '', 'g'), 5) = SUBSTRING(REGEXP_REPLACE(c.contact_phone, '[^0-9]', '', 'g'), 6)
+                  )
+                )
                 )
               )
           )
