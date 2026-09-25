@@ -112,39 +112,58 @@ export default function ChatPage() {
     }
   }, [])
 
-  // Carrega lista de conversas
+  // Carrega lista de conversas. Compara JSON antes de setState pra evitar
+  // re-render inutil (que causava "piscar" no polling de 3s).
+  const conversationsSignatureRef = useRef<string>("")
+  const isFirstConversationsLoadRef = useRef<boolean>(true)
   const fetchConversations = useCallback(async () => {
     try {
-      setConversationsLoading(true)
+      if (isFirstConversationsLoadRef.current) setConversationsLoading(true)
       const result = await api.chat.listConversations()
-      setConversations(result.data)
+      const sig = JSON.stringify(result.data.map((c: any) => [c.id, c.last_message_at, c.unread_count, c.last_message_preview]))
+      if (sig !== conversationsSignatureRef.current) {
+        conversationsSignatureRef.current = sig
+        setConversations(result.data)
+      }
     } catch (error) {
-      toast({
-        title: t("error"),
-        description: t("chatLoadError"),
-        variant: "destructive",
-      })
-    } finally {
-      setConversationsLoading(false)
-    }
-  }, [toast, t])
-
-  // Carrega histórico de uma conversa
-  const fetchConversation = useCallback(
-    async (id: number) => {
-      try {
-        const result = await api.chat.getConversation(id)
-        setCurrentConversation(result.conversation)
-        setMessages(result.messages)
-      } catch (error) {
+      if (isFirstConversationsLoadRef.current) {
         toast({
           title: t("error"),
           description: t("chatLoadError"),
           variant: "destructive",
         })
       }
+    } finally {
+      if (isFirstConversationsLoadRef.current) {
+        setConversationsLoading(false)
+        isFirstConversationsLoadRef.current = false
+      }
+    }
+  }, [toast, t])
+
+  // Carrega histórico. Compara IDs+status das msgs antes de setState pra
+  // evitar re-render inutil (causava "piscar" no polling).
+  const messagesSignatureRef = useRef<string>("")
+  const fetchConversation = useCallback(
+    async (id: number) => {
+      try {
+        const result = await api.chat.getConversation(id)
+        setCurrentConversation((prev) => {
+          if (prev?.id === result.conversation.id && prev.last_message_at === result.conversation.last_message_at && prev.unread_count === result.conversation.unread_count) {
+            return prev
+          }
+          return result.conversation
+        })
+        const msgSig = JSON.stringify(result.messages.map((m: any) => [m.id, m.status, m.content?.length || 0]))
+        if (msgSig !== messagesSignatureRef.current) {
+          messagesSignatureRef.current = msgSig
+          setMessages(result.messages)
+        }
+      } catch (error) {
+        // Silencioso no polling — nao spamma toast a cada tick
+      }
     },
-    [toast, t]
+    []
   )
 
   useEffect(() => {
@@ -804,7 +823,7 @@ export default function ChatPage() {
                       size="sm"
                       variant="outline"
                       onClick={() => fileInputRef.current?.click()}
-                      disabled={!isConnected || sending}
+                      disabled={sending}
                       title="Anexar imagem, audio, video ou documento"
                     >
                       <Paperclip className="w-4 h-4" />
@@ -821,13 +840,13 @@ export default function ChatPage() {
                       }}
                       placeholder={t("typeAMessage")}
                       className="flex-1 resize-none min-h-[40px] max-h-[120px]"
-                      disabled={!isConnected || sending}
+                      disabled={sending}
                     />
                     <Button
                       type="button"
                       size="sm"
                       onClick={handleSendMessage}
-                      disabled={!draft.trim() || !isConnected || sending}
+                      disabled={!draft.trim() || sending}
                     >
                       <Send className="w-4 h-4" />
                     </Button>
