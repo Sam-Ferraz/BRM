@@ -1518,6 +1518,12 @@ export const api = {
     }): Promise<{ conversation: ConversationWithDetails; message: Message }> => {
       return apiClient.post<{ conversation: ConversationWithDetails; message: Message }>('/chat/conversations', input)
     },
+    openConversation: async (input: {
+      contact_phone: string
+      contact_name?: string | null
+    }): Promise<{ conversation: ConversationWithDetails }> => {
+      return apiClient.post<{ conversation: ConversationWithDetails }>('/chat/conversations/open', input)
+    },
     sendMessage: async (conversationId: number, content: string): Promise<{ data: Message }> => {
       return apiClient.post<{ data: Message }>(`/chat/conversations/${conversationId}/messages`, { content })
     },

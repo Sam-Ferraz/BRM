@@ -55,6 +55,26 @@ export function createChatRoutes(chatService: ChatService): Router {
     }
   })
 
+  // Abre (ou cria) uma conversa vazia com o contato — sem enviar msg.
+  // Usado pela aba Contatos: usuario clica num cliente e ja abre o chat.
+  // Nao exige WhatsApp conectado.
+  router.post('/conversations/open', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const accountId = req.user!.accountId
+      const viewer = { userId: req.user!.userId, role: req.user!.role }
+      const { contact_phone, contact_name } = req.body
+      const result = await chatService.openConversation(accountId, viewer, contact_phone, contact_name ?? null)
+      res.json(result)
+    } catch (error) {
+      if (error instanceof Error && error.message === 'contact_phone is required') {
+        res.status(400).json({ error: error.message })
+        return
+      }
+      console.error('Error opening conversation:', error)
+      res.status(500).json({ error: error instanceof Error ? error.message : 'Internal server error' })
+    }
+  })
+
   // Inicia uma nova conversa (ou reutiliza existente para o mesmo contato)
   // e já envia a primeira mensagem.
   router.post('/conversations', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {

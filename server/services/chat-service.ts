@@ -85,6 +85,29 @@ export class ChatService {
    * Cria conversa nova (ou recupera a existente para o mesmo contato) e envia
    * mensagem. Usado quando o vendedor inicia conversa do zero.
    */
+  /**
+   * Abre (ou cria) uma conversa vazia com o contato — usado quando o
+   * usuario clica num contato da aba Contatos pra abrir o chat sem
+   * enviar mensagem inicial. Nao exige WhatsApp conectado.
+   */
+  async openConversation(
+    accountId: number,
+    viewer: { userId: number; role: string },
+    contactPhone: string,
+    contactName: string | null,
+  ): Promise<{ conversation: ConversationWithDetails }> {
+    if (!contactPhone) throw new Error('contact_phone is required')
+    const ownerUserId = viewer.userId
+    const conversation = await this.conversationRepository.findOrCreate(
+      accountId,
+      ownerUserId,
+      contactPhone,
+      contactName,
+    )
+    const enriched = await this.conversationRepository.findById(accountId, conversation.id)
+    return { conversation: enriched! }
+  }
+
   async startConversation(
     accountId: number,
     viewer: { userId: number; role: string },

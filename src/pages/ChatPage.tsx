@@ -291,17 +291,27 @@ export default function ChatPage() {
     if (!cli.phone) return
     setOpeningContactId(cli.id)
     try {
-      // Se ja existe conversa com esse telefone, seleciona. Senao inicia nova.
-      const existing = conversations.find(
-        (conv) => conv.contact_phone.replace(/\D/g, "") === cli.phone!.replace(/\D/g, ""),
-      )
+      // Se ja existe conversa com esse telefone (normalizado com/sem 9),
+      // seleciona. Senao usa openConversation que cria conversa vazia
+      // (nao exige WhatsApp conectado — corretor pode ver historico
+      // mesmo offline e escrever quando reconectar).
+      const digits = cli.phone.replace(/\D/g, "")
+      const withNine = digits.length === 12 && digits.startsWith("55")
+        ? digits.slice(0, 4) + "9" + digits.slice(4)
+        : digits
+      const withoutNine = digits.length === 13 && digits.startsWith("55") && digits[4] === "9"
+        ? digits.slice(0, 4) + digits.slice(5)
+        : digits
+      const existing = conversations.find((conv) => {
+        const c = conv.contact_phone.replace(/\D/g, "")
+        return c === digits || c === withNine || c === withoutNine
+      })
       if (existing) {
         setSelectedId(existing.id)
       } else {
-        const res = await api.chat.startConversation({
+        const res = await api.chat.openConversation({
           contact_phone: cli.phone,
           contact_name: cli.name,
-          message: "",
         })
         await fetchConversations()
         setSelectedId(res.conversation.id)
@@ -533,8 +543,8 @@ export default function ChatPage() {
                         key={cli.id}
                         type="button"
                         onClick={() => handleOpenContactChat(cli)}
-                        disabled={!cli.phone || !isConnected || openingContactId === cli.id}
-                        title={!cli.phone ? "Cliente sem telefone" : !isConnected ? "WhatsApp desconectado" : "Abrir conversa"}
+                        disabled={!cli.phone || openingContactId === cli.id}
+                        title={!cli.phone ? "Cliente sem telefone" : "Abrir conversa"}
                         className="w-full text-left p-3 flex items-start gap-3 border-b hover:bg-muted/60 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                       >
                         <Avatar className="w-9 h-9 shrink-0">
