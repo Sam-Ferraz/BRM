@@ -21,6 +21,16 @@ import { WhatsAppSessionRepository } from '../repositories/index.js'
  * Callback chamado pelo provider quando uma mensagem entrante é recebida.
  * O server/index.ts conecta isso ao ChatService.receiveMessage.
  */
+/**
+ * Callback pra atualizacoes de status de mensagens outbound.
+ * Baileys emite via messages.update quando a msg vira 2 ticks (delivered)
+ * ou 2 azuis (read). Sem isso, o BRM fica preso no 1 tick pra sempre.
+ */
+export type MessageStatusHandler = (input: {
+  providerMessageId: string
+  status: 'delivered' | 'read' | 'failed'
+}) => Promise<unknown>
+
 export type IncomingMessageHandler = (input: {
   ownerUserId: number
   fromPhone: string
@@ -63,6 +73,7 @@ export type IncomingMessageHandler = (input: {
 export class BaileysWhatsAppProvider implements WhatsAppProvider {
   private sessions = new Map<number, BaileysSession>()
   private incoming: IncomingMessageHandler
+  private statusHandler: MessageStatusHandler | null
   private sessionRepository: WhatsAppSessionRepository
   private authDir: string
   // Metricas em memoria pra endpoint de debug
@@ -70,15 +81,22 @@ export class BaileysWhatsAppProvider implements WhatsAppProvider {
 
   constructor(opts: {
     incoming: IncomingMessageHandler
+    statusUpdate?: MessageStatusHandler
     sessionRepository: WhatsAppSessionRepository
     authDir?: string
   }) {
     this.incoming = opts.incoming
+    this.statusHandler = opts.statusUpdate ?? null
     this.sessionRepository = opts.sessionRepository
     this.authDir = opts.authDir ?? path.resolve('./auth/whatsapp')
     // Registra a instancia globalmente pra o handleMessages da BaileysSession
     // conseguir loggar eventos no debugLog do provider
     ;(BaileysWhatsAppProvider as any).__lastInstance = this
+  }
+
+  onStatusUpdate(providerMessageId: string, status: 'delivered' | 'read' | 'failed'): Promise<unknown> | undefined {
+    if (!this.statusHandler) return undefined
+    return this.statusHandler({ providerMessageId, status })
   }
 
   logEvent(userId: number, event: string, detail?: string): void {
@@ -147,7 +165,7 @@ export class BaileysWhatsAppProvider implements WhatsAppProvider {
       // Já temos uma sessão ativa/em andamento; só devolve o estado atual.
       return session.state
     }
-    session = new BaileysSession(ownerUserId, this.authDir, this.incoming, this.sessionRepository)
+    session = new BaileysSession(ownerUserId, this.authDir, this.incoming, this.sessionRepository, this.statusHandler)
     this.sessions.set(ownerUserId, session)
     await session.connect()
     return session.state
@@ -250,7 +268,7 @@ export class BaileysWhatsAppProvider implements WhatsAppProvider {
   private async ensureConnected(ownerUserId: number): Promise<BaileysSession> {
     let session = this.sessions.get(ownerUserId)
     if (!session || session.state.status !== 'connected') {
-      session = new BaileysSession(ownerUserId, this.authDir, this.incoming, this.sessionRepository)
+      session = new BaileysSession(ownerUserId, this.authDir, this.incoming, this.sessionRepository, this.statusHandler)
       this.sessions.set(ownerUserId, session)
       await session.connect()
     }
@@ -271,6 +289,7 @@ class BaileysSession {
   private ownerUserId: number
   private authDir: string
   private incoming: IncomingMessageHandler
+  private statusHandler: MessageStatusHandler | null
   private sessionRepository: WhatsAppSessionRepository
   private reconnectAttempt = 0
 
@@ -278,11 +297,13 @@ class BaileysSession {
     ownerUserId: number,
     authDirRoot: string,
     incoming: IncomingMessageHandler,
-    sessionRepository: WhatsAppSessionRepository
+    sessionRepository: WhatsAppSessionRepository,
+    statusHandler: MessageStatusHandler | null = null,
   ) {
     this.ownerUserId = ownerUserId
     this.authDir = path.join(authDirRoot, String(ownerUserId))
     this.incoming = incoming
+    this.statusHandler = statusHandler
     this.sessionRepository = sessionRepository
   }
 
@@ -350,6 +371,10 @@ class BaileysSession {
     sock.ev.on('creds.update', saveCreds)
     sock.ev.on('connection.update', (update) => this.handleConnectionUpdate(update))
     sock.ev.on('messages.upsert', (m) => this.handleMessages(m))
+    // messages.update = eventos de mudanca de status (delivered=2 ticks,
+    // read=2 azuis). Sem esse listener, msgs outbound ficam pra sempre
+    // com 1 tick no BRM mesmo tendo sido entregues.
+    sock.ev.on('messages.update', (updates) => this.handleMessageUpdates(updates))
     // Eventos de chamada (voz/video). Baileys nao permite atender — so
     // notifica quando alguem liga. Persistimos como 'call_missed' pro
     // corretor ver que teve uma tentativa de ligacao.
@@ -511,6 +536,37 @@ class BaileysSession {
       } catch (error) {
         console.error('[Baileys] Erro persistindo mensagem entrante:', error)
         if (parent) parent.logEvent(this.ownerUserId, 'error', String(error).slice(0, 200))
+      }
+    }
+  }
+
+  /**
+   * Handler de messages.update. Baileys emite quando uma msg outbound muda
+   * de estado no WhatsApp. Os codigos de status sao:
+   *   1 = PENDING        (aguardando envio)
+   *   2 = SERVER_ACK     (1 tick — servidor WA recebeu)
+   *   3 = DELIVERY_ACK   (2 ticks — celular destino recebeu)
+   *   4 = READ           (2 ticks azuis — destinatario abriu)
+   *   5 = PLAYED         (audio ouvido)
+   *   0 = ERROR
+   * Mapeamos: 3 -> 'delivered', 4/5 -> 'read', 0 -> 'failed'.
+   * Codigos <=2 sao ignorados (msg ja e criada como 'sent' no chat-service).
+   */
+  private async handleMessageUpdates(updates: any[]): Promise<void> {
+    if (!this.statusHandler) return
+    for (const update of updates || []) {
+      const providerMessageId = update?.key?.id
+      const statusCode = update?.update?.status
+      if (!providerMessageId || typeof statusCode !== 'number') continue
+      let mapped: 'delivered' | 'read' | 'failed' | null = null
+      if (statusCode === 0) mapped = 'failed'
+      else if (statusCode === 3) mapped = 'delivered'
+      else if (statusCode === 4 || statusCode === 5) mapped = 'read'
+      if (!mapped) continue
+      try {
+        await this.statusHandler({ providerMessageId, status: mapped })
+      } catch (err) {
+        console.error('[Baileys] Erro atualizando status:', err)
       }
     }
   }

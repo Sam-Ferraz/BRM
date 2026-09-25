@@ -250,6 +250,14 @@ const incomingHandler = async (input: Parameters<NonNullable<ChatService['receiv
   if (!chatServiceRef) return
   return chatServiceRef.receiveMessage(input)
 }
+// Callback pra updates de status (delivered=2 ticks, read=azul) vindos do
+// Baileys via messages.update. Sem isso, msg outbound fica pra sempre em
+// 1 tick no BRM.
+const statusUpdateHandler = async (input: { providerMessageId: string; status: 'delivered' | 'read' | 'failed' }) => {
+  await messageRepository.updateStatusByProviderMessageId(input.providerMessageId, input.status).catch((err) => {
+    console.error('[Status] Erro atualizando status da msg:', err)
+  })
+}
 
 // Provider agora e SEMPRE MultiWhatsAppProvider (que delega por sessao),
 // exceto se WHATSAPP_PROVIDER=stub for setado (usado em testes unitarios).
@@ -263,6 +271,7 @@ const providerKind = process.env.WHATSAPP_PROVIDER === 'stub' ? 'stub' : 'multi'
 // pra garantir fluxo QR mesmo quando a sessao ja esta como provider='cloud_api').
 const baileysProviderSingleton = new BaileysWhatsAppProvider({
   incoming: incomingHandler,
+  statusUpdate: statusUpdateHandler,
   sessionRepository: whatsappSessionRepository,
 })
 const whatsappProvider =

@@ -67,6 +67,33 @@ export class MessageRepository extends BaseRepository {
     }
   }
 
+  /**
+   * Atualiza status de uma msg outbound pelo provider_message_id.
+   * Usado quando o Baileys emite messages.update (delivered=2 ticks, read=azul).
+   * Nao restringe por account porque o provider_message_id e do WhatsApp
+   * (unico global) — o provider nao conhece accountId em memoria.
+   */
+  async updateStatusByProviderMessageId(providerMessageId: string, status: MessageStatus): Promise<boolean> {
+    const client = await this.getClient()
+    try {
+      const result = await client.query(
+        `UPDATE messages SET status = $1
+         WHERE provider_message_id = $2
+           AND direction = 'outbound'
+           AND (
+             -- so avanca o status (sent -> delivered -> read), nunca regride
+             (status = 'sent' AND $1 IN ('delivered','read','failed'))
+             OR (status = 'delivered' AND $1 IN ('read','failed'))
+           )
+         RETURNING id`,
+        [status, providerMessageId],
+      )
+      return result.rows.length > 0
+    } finally {
+      this.releaseClient(client)
+    }
+  }
+
   async create(
     accountId: number,
     input: {
