@@ -257,8 +257,31 @@ class BaileysSession {
       version,
       auth: state,
       printQRInTerminal: false,
-      browser: ['BRM', 'Chrome', '1.0'],
-      // syncFullHistory: false (default) — só pega mensagens novas, não o histórico todo
+      // Browser 'Desktop' com nome fixo — o WhatsApp Web trata sockets
+      // Desktop com priorizacao mais alta e menos frequencia de kick por
+      // idle, comportamento mais estavel pra longo prazo (comparado a
+      // 'Chrome' generico).
+      browser: ['BRM Desktop', 'Desktop', '1.0.0'],
+      // KeepAlive agressivo (25s) — evita que o WhatsApp derrube o socket
+      // por idle. Default do Baileys e 30s. Reduzimos pra dar margem.
+      keepAliveIntervalMs: 25_000,
+      // Timeout maior pra conectar em redes lentas ou com jitter
+      connectTimeoutMs: 60_000,
+      // Query timeout maior — algumas operacoes (list chats iniciais)
+      // demoram em contas com muitas conversas
+      defaultQueryTimeoutMs: 60_000,
+      // Marca online ao conectar — WhatsApp entrega mensagens pendentes
+      // imediatamente (msgs que ficaram esperando enquanto o socket
+      // estava offline)
+      markOnlineOnConnect: true,
+      // Nao pega historico completo (so mensagens novas apos conectar).
+      // Mensagens que chegaram enquanto o socket estava offline sao
+      // enviadas pelo WhatsApp assim que reconectar (comportamento
+      // padrao do WhatsApp Web).
+      syncFullHistory: false,
+      // Nao emite eventos das mensagens que o proprio user mandou pelo
+      // celular (evita dupla-contagem)
+      emitOwnEvents: false,
     })
     console.log(`[Baileys] socket criado user=${this.ownerUserId}`)
     this.sock = sock
@@ -336,11 +359,22 @@ class BaileysSession {
       )
       this.setStatus(shouldReconnect ? 'connecting' : 'disconnected')
 
-      if (shouldReconnect && this.reconnectAttempt < 5) {
+      if (shouldReconnect) {
+        // Reconexao INFINITA com backoff exponencial (cap 30s). WhatsApp
+        // Web no navegador tenta reconectar indefinidamente enquanto o
+        // dispositivo estiver logado — replicamos esse comportamento.
+        // Sequencia de delays: 1.5s, 3s, 6s, 12s, 24s, 30s, 30s, 30s...
         this.reconnectAttempt++
-        setTimeout(() => this.connect().catch(console.error), 1500 * this.reconnectAttempt)
-      } else if (!shouldReconnect) {
-        // Logout do dispositivo — limpa auth e exige novo QR
+        const delay = Math.min(30_000, 1500 * Math.pow(2, Math.min(this.reconnectAttempt - 1, 5)))
+        console.log(`[Baileys] reagendando reconexao user=${this.ownerUserId} tentativa=${this.reconnectAttempt} delay=${delay}ms`)
+        setTimeout(() => {
+          this.connect().catch((err) =>
+            console.error(`[Baileys] falha na reconexao user=${this.ownerUserId}:`, err),
+          )
+        }, delay)
+      } else {
+        // Logout do dispositivo (usuario desconectou pelo celular ou
+        // apagou o pareamento) — limpa auth e exige novo QR
         // Provider não conhece accountId — variante interna (rule 9).
         await this.sessionRepository.updateStatusInternal(this.ownerUserId, 'disconnected').catch(() => undefined)
       }

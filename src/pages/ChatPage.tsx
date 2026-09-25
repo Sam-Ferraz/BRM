@@ -174,6 +174,21 @@ export default function ChatPage() {
     api.whatsapp.start().catch(() => undefined)
   }, [session?.status, session?.provider, socketAlive])
 
+  // Sync agressivo ao reconectar: detecta transicao amarelo→verde
+  // (socketAlive false → true) e faz refresh imediato de conversas +
+  // conversa aberta. Sem esperar o proximo tick de 15s do polling —
+  // mensagens que chegaram durante o offline aparecem no ato.
+  const prevSocketAliveRef = useRef<boolean | null>(null)
+  useEffect(() => {
+    const prev = prevSocketAliveRef.current
+    prevSocketAliveRef.current = socketAlive
+    if (prev === false && socketAlive === true) {
+      console.log('[Chat] Socket reconectado — sincronizando conversas…')
+      fetchConversations()
+      if (selectedId !== null) fetchConversation(selectedId)
+    }
+  }, [socketAlive, fetchConversations, fetchConversation, selectedId])
+
   // Admin: carrega lista de corretores pro filtro. Feito uma vez ao montar.
   useEffect(() => {
     if (user?.role !== "admin") return
