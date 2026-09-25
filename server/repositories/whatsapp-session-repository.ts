@@ -123,6 +123,26 @@ export class WhatsAppSessionRepository extends BaseRepository {
   }
 
   /**
+   * Boot do backend: qualquer sessao que ficou marcada 'connected' de uma
+   * execucao anterior nao vale mais — o socket Baileys esta em memoria e
+   * some quando o processo cai. Marcamos como 'disconnected' pra o badge
+   * do frontend virar cinza ate o socket reconectar de verdade. Se
+   * continuassemos deixando 'connected', o corretor tentaria enviar e
+   * receberia whatsapp_not_connected sem entender por que.
+   */
+  async resetStaleConnectedSessions(): Promise<number> {
+    const client = await this.getClient()
+    try {
+      const result = await client.query(
+        "UPDATE whatsapp_sessions SET status = 'disconnected', updated_at = CURRENT_TIMESTAMP WHERE status IN ('connected','pending_qr','connecting') RETURNING id"
+      )
+      return result.rows.length
+    } finally {
+      this.releaseClient(client)
+    }
+  }
+
+  /**
    * INTERNO/GLOBAL (rule 9): providers atualizam status sem conhecer accountId.
    * user_id é UNIQUE globalmente, então update por user_id sozinho é correto.
    */

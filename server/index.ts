@@ -365,6 +365,19 @@ app.use((error: Error, req: express.Request, res: express.Response, next: expres
   res.status(500).json({ error: 'Erro interno do servidor' })
 })
 
+// Zera sessoes 'connected' orfas do processo anterior. Ao reiniciar o backend
+// o Map<userId, BaileysSession> em memoria comeca vazio — se deixassemos o
+// banco com status='connected', o badge do frontend mentiria e todo send
+// retornaria whatsapp_not_connected (o ensureConnected nao acha o socket
+// e o auth em disco pode nao estar valido). O corretor tem que reescanear
+// o QR pra o socket voltar; o badge cinza sinaliza isso claramente.
+whatsappSessionRepository
+  .resetStaleConnectedSessions()
+  .then((count) => {
+    if (count > 0) console.log(`⚡ ${count} sessao(oes) WhatsApp orfa(s) marcada(s) como disconnected`)
+  })
+  .catch((err) => console.error('Erro resetando sessoes WhatsApp orfas:', err))
+
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`)
   console.log(`📊 API available at http://localhost:${PORT}/api`)
