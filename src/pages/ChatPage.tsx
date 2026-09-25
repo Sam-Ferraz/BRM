@@ -66,6 +66,13 @@ export default function ChatPage() {
   const [conversations, setConversations] = useState<ConversationWithDetails[]>([])
   const [conversationsLoading, setConversationsLoading] = useState(true)
 
+  // Aba esquerda: Conversas (default) ou Contatos (lista de clientes CRM)
+  const [leftTab, setLeftTab] = useState<"conversations" | "contacts">("conversations")
+  const [contacts, setContacts] = useState<{ id: number; name: string; phone: string | null }[]>([])
+  const [contactsLoading, setContactsLoading] = useState(false)
+  const [contactsSearch, setContactsSearch] = useState("")
+  const [openingContactId, setOpeningContactId] = useState<number | null>(null)
+
   // Filtro por corretor (admin apenas). 'all' = todas as conversas de todos.
   const [ownerFilter, setOwnerFilter] = useState<string>("all")
   const [brokers, setBrokers] = useState<{ id: number; name: string }[]>([])
@@ -263,6 +270,54 @@ export default function ChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
 
+  // Fetch dos contatos (clientes CRM) quando abre a aba
+  useEffect(() => {
+    if (leftTab !== "contacts") return
+    setContactsLoading(true)
+    api.clients.getAll()
+      .then((r) => setContacts((r.data || []).map((c: any) => ({ id: c.id, name: c.name, phone: c.phone || null }))))
+      .catch(() => setContacts([]))
+      .finally(() => setContactsLoading(false))
+  }, [leftTab])
+
+  const filteredContacts = contactsSearch.trim()
+    ? contacts.filter((c) => {
+        const q = contactsSearch.toLowerCase()
+        return c.name.toLowerCase().includes(q) || (c.phone || "").includes(q)
+      })
+    : contacts
+
+  const handleOpenContactChat = async (cli: { id: number; name: string; phone: string | null }) => {
+    if (!cli.phone) return
+    setOpeningContactId(cli.id)
+    try {
+      // Se ja existe conversa com esse telefone, seleciona. Senao inicia nova.
+      const existing = conversations.find(
+        (conv) => conv.contact_phone.replace(/\D/g, "") === cli.phone!.replace(/\D/g, ""),
+      )
+      if (existing) {
+        setSelectedId(existing.id)
+      } else {
+        const res = await api.chat.startConversation({
+          contact_phone: cli.phone,
+          contact_name: cli.name,
+          message: "",
+        })
+        await fetchConversations()
+        setSelectedId(res.conversation.id)
+      }
+      setLeftTab("conversations")
+    } catch (err) {
+      toast({
+        title: "Erro",
+        description: err instanceof Error ? err.message : String(err),
+        variant: "destructive",
+      })
+    } finally {
+      setOpeningContactId(null)
+    }
+  }
+
   // Aplica filtro por corretor (admin). Corretor comum ja recebe so as
   // suas do backend, entao aqui e no-op pra ele.
   const filteredConversations =
@@ -448,11 +503,65 @@ export default function ChatPage() {
                   </Select>
                 </div>
               )}
-              <div className="shrink-0 p-3 border-b">
-                <p className="text-sm font-medium text-foreground">{t("conversations")}</p>
-              </div>
-              <div className="flex-1 overflow-y-auto min-h-0">
-                {conversationsLoading ? (
+              {/* Tabs Conversas / Contatos */}
+              <Tabs value={leftTab} onValueChange={(v) => setLeftTab(v as "conversations" | "contacts")} className="flex-1 flex flex-col min-h-0">
+                <TabsList className="shrink-0 grid grid-cols-2 rounded-none border-b">
+                  <TabsTrigger value="conversations" className="text-xs">Conversas</TabsTrigger>
+                  <TabsTrigger value="contacts" className="text-xs">Contatos</TabsTrigger>
+                </TabsList>
+
+                {/* Aba Contatos — lista todos os clientes do CRM. Clique
+                    inicia conversa (ou abre existente se ja houver). */}
+                <TabsContent value="contacts" className="flex-1 overflow-y-auto min-h-0 m-0">
+                  <div className="shrink-0 p-2 border-b">
+                    <Input
+                      value={contactsSearch}
+                      onChange={(e) => setContactsSearch(e.target.value)}
+                      placeholder="Buscar contato..."
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                  {contactsLoading ? (
+                    <div className="p-6 text-center text-sm text-muted-foreground">Carregando…</div>
+                  ) : filteredContacts.length === 0 ? (
+                    <div className="p-6 text-center text-sm text-muted-foreground">
+                      {contactsSearch ? "Nenhum contato encontrado" : "Nenhum cliente cadastrado"}
+                    </div>
+                  ) : (
+                    filteredContacts.map((cli) => (
+                      <button
+                        key={cli.id}
+                        type="button"
+                        onClick={() => handleOpenContactChat(cli)}
+                        disabled={!cli.phone || !isConnected || openingContactId === cli.id}
+                        title={!cli.phone ? "Cliente sem telefone" : !isConnected ? "WhatsApp desconectado" : "Abrir conversa"}
+                        className="w-full text-left p-3 flex items-start gap-3 border-b hover:bg-muted/60 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        <Avatar className="w-9 h-9 shrink-0">
+                          <AvatarFallback className="bg-emerald-100 text-emerald-700 text-xs">
+                            {getInitials(cli.name, cli.phone || undefined)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{cli.name}</p>
+                          {cli.phone && (
+                            <p className="text-[11px] text-muted-foreground truncate">{cli.phone}</p>
+                          )}
+                          {!cli.phone && (
+                            <p className="text-[11px] text-red-500 truncate">Sem telefone</p>
+                          )}
+                        </div>
+                        {openingContactId === cli.id && (
+                          <div className="w-3.5 h-3.5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin shrink-0 mt-1" />
+                        )}
+                      </button>
+                    ))
+                  )}
+                </TabsContent>
+
+                {/* Aba Conversas — comportamento atual */}
+                <TabsContent value="conversations" className="flex-1 overflow-y-auto min-h-0 m-0">
+                  {conversationsLoading ? (
                   <div className="p-6 text-center text-sm text-muted-foreground">
                     {t("loading")}…
                   </div>
@@ -516,7 +625,8 @@ export default function ChatPage() {
                     )
                   })
                 )}
-              </div>
+                </TabsContent>
+              </Tabs>
             </div>
 
             {/* === Coluna direita: janela de chat ===
