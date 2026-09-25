@@ -101,6 +101,28 @@ export class BaileysWhatsAppProvider implements WhatsAppProvider {
     }
   }
 
+  /**
+   * Pergunta ao servidor WhatsApp se o numero esta registrado (tem conta ativa).
+   * Retorna { exists, jid } — jid pode diferir do input (WA pode responder com
+   * ou sem o 9 do celular BR, dependendo de como o dono cadastrou).
+   * Uso: diagnostico de "mandei msg e nao chegou" — se exists=false, o problema
+   * e o destino nao existir; se exists=true e nao chegou, e o WA nao entregou
+   * (destino offline / bloqueou).
+   */
+  async checkNumberExists(userId: number, phone: string): Promise<{ exists: boolean; jid: string | null }> {
+    const session = this.sessions.get(userId)
+    if (!session?.sock) return { exists: false, jid: null }
+    const digits = phone.replace(/\D/g, '')
+    try {
+      const result = await session.sock.onWhatsApp(digits)
+      const hit = Array.isArray(result) ? result[0] : null
+      if (hit?.exists) return { exists: true, jid: hit.jid ?? null }
+      return { exists: false, jid: null }
+    } catch {
+      return { exists: false, jid: null }
+    }
+  }
+
   async getContactPhoto(userId: number, phone: string): Promise<string | null> {
     const session = this.sessions.get(userId)
     if (!session?.sock) return null

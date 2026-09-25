@@ -160,6 +160,50 @@ export function createWhatsAppRoutes(
     }
   })
 
+  // Verifica se um numero tem WhatsApp ativo. Query: ?phone=+5547999999999
+  // Retorna { exists: true/false, jid: string|null, tried_variants: string[] }.
+  // Testa tanto com o 9 quanto sem (celular BR) — WA aceita qualquer um dos
+  // dois no cadastro, se o dono nao ativou o "novo 9" ainda a versao com 9
+  // nao existe (ou vice-versa).
+  router.get('/check-number', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const userId = req.user!.userId
+      const phone = String(req.query.phone || '')
+      if (!phone) {
+        res.status(400).json({ error: 'phone is required' })
+        return
+      }
+      const digits = phone.replace(/\D/g, '')
+      const variants = new Set<string>([digits])
+      // Celular BR: 13 digitos = 55 + 2 DDD + 9 + 8 = com 9 na frente.
+      // 12 digitos = 55 + 2 DDD + 8 = sem 9. Gera os dois pra testar.
+      if (digits.startsWith('55') && digits.length === 13) {
+        // Remove o 9 apos o DDD: 55 + DD + 9 + XXXXXXXX -> 55 + DD + XXXXXXXX
+        variants.add(digits.slice(0, 4) + digits.slice(5))
+      } else if (digits.startsWith('55') && digits.length === 12) {
+        // Insere 9 apos o DDD: 55 + DD + XXXXXXXX -> 55 + DD + 9 + XXXXXXXX
+        variants.add(digits.slice(0, 4) + '9' + digits.slice(4))
+      }
+      const results: Array<{ variant: string; exists: boolean; jid: string | null }> = []
+      for (const v of variants) {
+        const check = (baileys as any).checkNumberExists
+          ? await (baileys as any).checkNumberExists(userId, v)
+          : { exists: false, jid: null }
+        results.push({ variant: v, ...check })
+      }
+      const hit = results.find((r) => r.exists)
+      res.json({
+        data: {
+          exists: !!hit,
+          jid: hit?.jid ?? null,
+          tried: results,
+        },
+      })
+    } catch (err) {
+      res.status(500).json({ error: err instanceof Error ? err.message : 'Internal' })
+    }
+  })
+
   router.get('/state', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const userId = req.user!.userId
