@@ -239,6 +239,9 @@ export class ChatService {
     // implicitamente pela extensao do arquivo — o frontend detecta e renderiza
     // image/audio/video adequadamente.
     mediaType?: 'image' | 'audio' | 'video' | 'document' | 'call_missed' | null
+    // Direcao: 'inbound' (default) = cliente pro corretor. 'outbound' =
+    // corretor mandou do celular (Baileys emitOwnEvents=true captura isso).
+    direction?: 'inbound' | 'outbound'
   }): Promise<Message> {
     if (!input.content) throw new Error('content is required')
 
@@ -255,12 +258,24 @@ export class ChatService {
       input.fromPhone,
       input.fromName ?? null
     )
+
+    // Deduplicacao: se essa msg ja foi salva (BRM enviou e agora Baileys
+    // reflete via emitOwnEvents), retorna a existente sem duplicar.
+    if (input.providerMessageId) {
+      const existing = await this.messageRepository.findByProviderMessageId(
+        accountId,
+        input.providerMessageId,
+      ).catch(() => null)
+      if (existing) return existing
+    }
+
+    const direction = input.direction ?? 'inbound'
     const message = await this.messageRepository.create(accountId, {
       conversation_id: conversation.id,
-      direction: 'inbound',
+      direction,
       content: input.content,
       media_url: input.mediaUrl ?? null,
-      status: 'received',
+      status: direction === 'outbound' ? 'sent' : 'received',
       provider_message_id: input.providerMessageId ?? null,
     })
     await this.conversationRepository.touchLastMessage(accountId, conversation.id, 'inbound')

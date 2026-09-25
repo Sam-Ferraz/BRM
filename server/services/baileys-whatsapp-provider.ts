@@ -38,6 +38,11 @@ export type IncomingMessageHandler = (input: {
    * como renderizar (image tag, audio player, badge de ligacao).
    */
   mediaType?: 'image' | 'audio' | 'video' | 'document' | 'call_missed' | null
+  /**
+   * 'inbound' (default) = mensagem do cliente pro corretor
+   * 'outbound' = corretor mandou do proprio celular (fromMe=true)
+   */
+  direction?: 'inbound' | 'outbound'
 }) => Promise<unknown>
 
 /**
@@ -279,9 +284,11 @@ class BaileysSession {
       // enviadas pelo WhatsApp assim que reconectar (comportamento
       // padrao do WhatsApp Web).
       syncFullHistory: false,
-      // Nao emite eventos das mensagens que o proprio user mandou pelo
-      // celular (evita dupla-contagem)
-      emitOwnEvents: false,
+      // Emite eventos das mensagens que o proprio user mandou pelo celular —
+      // corretor envia direto do WhatsApp do celular e a mensagem aparece
+      // no BRM automaticamente. Duplicacao de msgs enviadas pelo BRM e
+      // filtrada por providerMessageId no handleMessages.
+      emitOwnEvents: true,
     })
     console.log(`[Baileys] socket criado user=${this.ownerUserId}`)
     this.sock = sock
@@ -382,22 +389,24 @@ class BaileysSession {
   }
 
   private async handleMessages({ messages, type }: any): Promise<void> {
-    // Log de tudo que chega pra facilitar debug — usa a instancia singleton
-    // do provider registrada no construtor (BaileysProvider.__lastInstance)
     const parent = (BaileysWhatsAppProvider as any).__lastInstance
     if (parent) parent.logEvent(this.ownerUserId, 'messages.upsert', `type=${type} count=${messages?.length || 0}`)
     if (type !== 'notify') return
     for (const msg of messages || []) {
-      // Ignora mensagens enviadas pelo próprio usuário e mensagens sem chave
-      if (!msg.message || msg.key?.fromMe) {
-        if (parent) parent.logEvent(this.ownerUserId, 'skip', `reason=${msg.key?.fromMe ? 'fromMe' : 'no_message'}`)
+      if (!msg.message) {
+        if (parent) parent.logEvent(this.ownerUserId, 'skip', 'reason=no_message')
         continue
       }
       const remoteJid: string | undefined = msg.key?.remoteJid
       if (!remoteJid || remoteJid.endsWith('@g.us')) {
         if (parent) parent.logEvent(this.ownerUserId, 'skip', `reason=group jid=${remoteJid}`)
-        continue // ignora grupos
+        continue
       }
+      // fromMe=true = corretor mandou do proprio celular. Registramos como
+      // outbound. Se a msg foi enviada via BRM (sendMessage), ela ja existe
+      // no banco com o mesmo providerMessageId — o chat-service.receiveMessage
+      // deduplica por provider_message_id.
+      const fromMe = !!msg.key?.fromMe
 
       const fromPhone = extractPhoneFromJid(remoteJid)
       const fromName: string | null = msg.pushName || null
@@ -442,8 +451,9 @@ class BaileysSession {
           providerMessageId,
           mediaUrl,
           mediaType: mediaInfo?.type ?? null,
+          direction: fromMe ? 'outbound' : 'inbound',
         })
-        if (parent) parent.logEvent(this.ownerUserId, 'persisted', `from=${fromPhone} content=${content.slice(0, 40)}`)
+        if (parent) parent.logEvent(this.ownerUserId, 'persisted', `${fromMe ? 'OUT' : 'IN'} from=${fromPhone} content=${content.slice(0, 40)}`)
       } catch (error) {
         console.error('[Baileys] Erro persistindo mensagem entrante:', error)
         if (parent) parent.logEvent(this.ownerUserId, 'error', String(error).slice(0, 200))

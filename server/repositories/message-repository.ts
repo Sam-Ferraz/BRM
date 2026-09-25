@@ -49,6 +49,24 @@ export class MessageRepository extends BaseRepository {
     }
   }
 
+  /**
+   * Busca msg pelo provider_message_id (dedup do Baileys emitOwnEvents:
+   * quando BRM envia via sendMessage, o Baileys reflete a msg de volta
+   * como fromMe=true — sem esse lookup, duplicaria).
+   */
+  async findByProviderMessageId(accountId: number, providerMessageId: string): Promise<Message | null> {
+    const client = await this.getClient()
+    try {
+      const result = await client.query(
+        'SELECT * FROM messages WHERE account_id = $1 AND provider_message_id = $2 LIMIT 1',
+        [accountId, providerMessageId],
+      )
+      return result.rows[0] ?? null
+    } finally {
+      this.releaseClient(client)
+    }
+  }
+
   async create(
     accountId: number,
     input: {

@@ -156,7 +156,7 @@ export default function ChatPage() {
       } catch {
         /* silencioso — proximo tick tenta de novo */
       }
-    }, 15000)
+    }, 4000)
     return () => clearInterval(id)
   }, [fetchConversations, fetchSession])
 
