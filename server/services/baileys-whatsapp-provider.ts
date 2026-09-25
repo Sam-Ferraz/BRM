@@ -180,9 +180,41 @@ export class BaileysWhatsAppProvider implements WhatsAppProvider {
     content: string
   }): Promise<SendMessageResult> {
     const session = await this.ensureConnected(input.ownerUserId)
-    const jid = toJid(input.to)
+    const jid = await this.resolveJid(session, input.to)
     const sent = await session.sock!.sendMessage(jid, { text: input.content })
     return { providerMessageId: sent?.key?.id ?? `baileys-${Date.now()}` }
+  }
+
+  /**
+   * Descobre o JID real do destino perguntando ao servidor WhatsApp via
+   * sock.onWhatsApp(). Motivo: celular BR tem duas formas (55 47 9 9617 0103
+   * com 9 ou 55 47 9617 0103 sem 9) — o dono registra apenas UMA delas no
+   * WhatsApp. Se o BRM manda pra variante errada, o WA aceita (1 tick) mas
+   * a msg vai pro vazio — o destino real nunca recebe.
+   *
+   * Estrategia: gera todas as variantes plausiveis, pergunta ao WA qual
+   * existe, usa o JID retornado. Se nenhuma variante existir, usa a original
+   * como fallback (falha silenciosa — msg fica em 1 tick, mas msg estava
+   * fadada mesmo).
+   */
+  private async resolveJid(session: BaileysSession, phone: string): Promise<string> {
+    const digits = phone.replace(/\D/g, '')
+    const variants = new Set<string>([digits])
+    if (digits.startsWith('55') && digits.length === 13) {
+      // Com 9 -> tenta tambem sem 9
+      variants.add(digits.slice(0, 4) + digits.slice(5))
+    } else if (digits.startsWith('55') && digits.length === 12) {
+      // Sem 9 -> tenta tambem com 9
+      variants.add(digits.slice(0, 4) + '9' + digits.slice(4))
+    }
+    try {
+      const results = await session.sock!.onWhatsApp(...Array.from(variants))
+      const hit = Array.isArray(results) ? results.find((r: any) => r?.exists) : null
+      if (hit?.jid) return hit.jid
+    } catch {
+      // ignora — fallback abaixo
+    }
+    return `${digits}@s.whatsapp.net`
   }
 
   async sendMedia(input: {
@@ -195,7 +227,7 @@ export class BaileysWhatsAppProvider implements WhatsAppProvider {
     kind: 'image' | 'audio' | 'video' | 'document'
   }): Promise<SendMessageResult> {
     const session = await this.ensureConnected(input.ownerUserId)
-    const jid = toJid(input.to)
+    const jid = await this.resolveJid(session, input.to)
     let payload: any
     if (input.kind === 'image') {
       payload = { image: input.buffer, mimetype: input.mimetype, caption: input.caption ?? undefined }
