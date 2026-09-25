@@ -149,16 +149,22 @@ export default function ChatPage() {
   // que msgs novas aparecem sem F5 e que badge reflete estado real do
   // socket. Se socket morreu mas status no banco continua 'connected',
   // tenta reconectar automaticamente chamando /start.
+  const selectedIdRef = useRef<number | null>(null)
+  useEffect(() => { selectedIdRef.current = selectedId }, [selectedId])
   useEffect(() => {
     const id = setInterval(async () => {
       try {
-        await Promise.all([fetchConversations(), fetchSession()])
+        const tasks: Promise<unknown>[] = [fetchConversations(), fetchSession()]
+        if (selectedIdRef.current !== null) {
+          tasks.push(fetchConversation(selectedIdRef.current))
+        }
+        await Promise.all(tasks)
       } catch {
         /* silencioso — proximo tick tenta de novo */
       }
-    }, 4000)
+    }, 3000)
     return () => clearInterval(id)
-  }, [fetchConversations, fetchSession])
+  }, [fetchConversations, fetchSession, fetchConversation])
 
   // Auto-reconexao: se a sessao esta 'connected' no banco mas o socket
   // Baileys nao esta vivo em memoria, dispara /start pra recriar o socket.
