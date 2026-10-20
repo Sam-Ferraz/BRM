@@ -197,30 +197,68 @@ interface DealsKanbanViewProps {
 
 export function DealsKanbanView({ deals, leads = [], onEdit, onStatusChange }: DealsKanbanViewProps) {
   const { t } = useTranslation()
-  const { account } = useAccount()
+  const { account, updateConfig } = useAccount()
+
+  // Lookup de onde cada deal foi "colocado" via drag numa coluna extra.
+  // Estrutura: { [deal_id]: extra_column_id }. Deal sem placement cai na
+  // coluna derivada do status (comportamento padrao).
+  const dealPlacements = useMemo<Record<number, string>>(() => {
+    const raw = (account?.custom_config as any)?.pipeline_deal_placements
+    return typeof raw === "object" && raw !== null ? raw : {}
+  }, [account?.custom_config])
 
   /**
-   * Aplica override do custom_config.pipeline_columns sobre PHASES:
-   * renomeia label, muda cor do header (via style inline), oculta e
-   * reordena. Se nao ha override, retorna PHASES intacto.
+   * Aplica override do custom_config.pipeline_columns sobre PHASES +
+   * concatena colunas extras do pipeline_extra_columns no final.
+   * Extras tem key='extra:<id>' pra nao colidir com phase.key de status.
    */
   const phasesToRender = useMemo(() => {
     const overrides = account?.custom_config?.pipeline_columns
-    if (!overrides) return PHASES.map((p) => ({ ...p, overrideColorHex: undefined as string | undefined }))
-    const withOverrides = PHASES.map((p, idx) => {
-      const ov = overrides[p.key] || {}
-      return {
-        ...p,
-        label: ov.label ?? p.label,
-        overrideColorHex: ov.color,
-        _hidden: ov.hidden ?? false,
-        _position: ov.position ?? idx,
-      }
-    })
-    return withOverrides
-      .filter((p) => !p._hidden)
-      .sort((a, b) => a._position - b._position)
-  }, [account?.custom_config?.pipeline_columns])
+    const base = overrides
+      ? PHASES.map((p, idx) => {
+          const ov = overrides[p.key] || {}
+          return {
+            ...p,
+            label: ov.label ?? p.label,
+            overrideColorHex: ov.color as string | undefined,
+            _hidden: ov.hidden ?? false,
+            _position: ov.position ?? idx,
+            _isExtra: false as boolean,
+            _extraId: null as string | null,
+          }
+        })
+      : PHASES.map((p, idx) => ({
+          ...p,
+          overrideColorHex: undefined as string | undefined,
+          _hidden: false,
+          _position: idx,
+          _isExtra: false as boolean,
+          _extraId: null as string | null,
+        }))
+
+    const extras = ((account?.custom_config as any)?.pipeline_extra_columns || []) as Array<{
+      id: string
+      label: string
+      color: string
+      hidden?: boolean
+    }>
+    const extraPhases = extras
+      .filter((e) => !e.hidden)
+      .map((e, idx) => ({
+        key: `extra:${e.id}`,
+        label: e.label,
+        headerColor: "",
+        overrideColorHex: e.color,
+        _hidden: false,
+        _position: PHASES.length + idx,
+        _isExtra: true,
+        _extraId: e.id,
+      })) as any
+
+    return [...base, ...extraPhases]
+      .filter((p: any) => !p._hidden)
+      .sort((a: any, b: any) => a._position - b._position)
+  }, [account?.custom_config])
   const [draggingId, setDraggingId] = useState<number | null>(null)
   const [dragOverPhase, setDragOverPhase] = useState<string | null>(null)
   // Se o usuário dropou num descartado, precisamos perguntar o motivo
@@ -312,8 +350,18 @@ export function DealsKanbanView({ deals, leads = [], onEdit, onStatusChange }: D
   }, [])
 
   const dealsByPhase = useMemo(() => {
+    // Mapa base inclui PHASES + chaves extra:<id>
     const map: Record<string, Deal[]> = Object.fromEntries(PHASES.map((p) => [p.key, []]))
+    const extras = ((account?.custom_config as any)?.pipeline_extra_columns || []) as Array<{ id: string }>
+    for (const e of extras) map[`extra:${e.id}`] = []
     for (const deal of deals) {
+      // Se o deal foi "colocado" numa coluna extra via drag, ele mora la
+      // ate alguem mover de volta pra uma coluna padrao.
+      const placedExtra = dealPlacements[deal.id]
+      if (placedExtra && map[`extra:${placedExtra}`]) {
+        map[`extra:${placedExtra}`].push(deal)
+        continue
+      }
       const phaseKey = STATUS_TO_PHASE[deal.status]
       if (phaseKey && map[phaseKey]) {
         map[phaseKey].push(deal)
@@ -333,7 +381,7 @@ export function DealsKanbanView({ deals, leads = [], onEdit, onStatusChange }: D
       })
     }
     return map
-  }, [deals])
+  }, [deals, dealPlacements, account?.custom_config])
 
   const handleDragStart = (dealId: number) => (e: React.DragEvent) => {
     setDraggingId(dealId)
@@ -353,7 +401,7 @@ export function DealsKanbanView({ deals, leads = [], onEdit, onStatusChange }: D
     if (dragOverPhase === phaseKey) setDragOverPhase(null)
   }
 
-  const handleDrop = (phase: PhaseColumn) => async (e: React.DragEvent) => {
+  const handleDrop = (phase: PhaseColumn | any) => async (e: React.DragEvent) => {
     e.preventDefault()
     setDragOverPhase(null)
     const dealId = parseInt(e.dataTransfer.getData("text/plain"))
@@ -362,6 +410,42 @@ export function DealsKanbanView({ deals, leads = [], onEdit, onStatusChange }: D
 
     const deal = deals.find((d) => d.id === dealId)
     if (!deal) return
+
+    // Drop numa coluna EXTRA: nao muda status do deal, so grava placement
+    // em custom_config.pipeline_deal_placements e deixa o useMemo decidir
+    // em qual coluna aparecer.
+    if ((phase as any)._isExtra && (phase as any)._extraId) {
+      const extraId = (phase as any)._extraId as string
+      const current = { ...dealPlacements }
+      if (current[deal.id] === extraId) return
+      current[deal.id] = extraId
+      const nextConfig = {
+        ...(account?.custom_config || {}),
+        pipeline_deal_placements: current,
+      }
+      try {
+        await updateConfig(nextConfig as any)
+      } catch (err) {
+        console.error("Erro salvando placement:", err)
+      }
+      return
+    }
+
+    // Drop numa coluna PADRAO: se o deal estava num placement extra, remove
+    // o placement E muda o status pra fase destino.
+    if (dealPlacements[deal.id]) {
+      const current = { ...dealPlacements }
+      delete current[deal.id]
+      const nextConfig = {
+        ...(account?.custom_config || {}),
+        pipeline_deal_placements: current,
+      }
+      try {
+        await updateConfig(nextConfig as any)
+      } catch (err) {
+        console.error("Erro limpando placement:", err)
+      }
+    }
 
     // Não faz nada se já está na mesma fase
     if (STATUS_TO_PHASE[deal.status] === phase.key) return
