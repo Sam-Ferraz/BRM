@@ -430,45 +430,12 @@ export function DealsKanbanView({ deals, leads = [], onEdit, onStatusChange }: D
         </div>
       )}
 
-      {/* Barra de percurso: pipeline visual mostrando distribuicao de deals
-          por fase, com largura proporcional ao count. Da uma leitura
-          instantanea de onde esta a massa (gargalo). Cor segue o header
-          da coluna (overrideColorHex ou cor padrao da fase). */}
-      {(() => {
-        const totalCount = phasesToRender.reduce((sum, p) => {
-          const isNoSvc = p.key === "no_service"
-          const n = isNoSvc
-            ? leads.filter((l) => l.status !== "aceito" && !l.deal_id).length
-            : (dealsByPhase[p.key] || []).length
-          return sum + n
-        }, 0)
-        if (totalCount === 0) return null
-        return (
-          <div className="mb-3">
-            <div className="flex items-center gap-0.5 h-6 rounded-md overflow-hidden border border-border bg-muted/30">
-              {phasesToRender.map((phase) => {
-                const isNoSvc = phase.key === "no_service"
-                const n = isNoSvc
-                  ? leads.filter((l) => l.status !== "aceito" && !l.deal_id).length
-                  : (dealsByPhase[phase.key] || []).length
-                if (n === 0) return null
-                const pct = (n / totalCount) * 100
-                const bg = phase.overrideColorHex || (phase as any).headerBg || "#e2e8f0"
-                return (
-                  <div
-                    key={phase.key}
-                    className="h-full flex items-center justify-center text-[11px] font-medium text-foreground/80 truncate px-1"
-                    style={{ width: `${pct}%`, backgroundColor: bg, minWidth: n > 0 ? "28px" : 0 }}
-                    title={`${phase.label}: ${n} (${pct.toFixed(0)}%)`}
-                  >
-                    {pct >= 8 ? `${phase.label} · ${n}` : n}
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )
-      })()}
+      {/* Barra de cursor do quadro — indicador simples da posicao do scroll
+          horizontal: trilho fino + thumb proporcional. Da pro usuario noticao
+          visual de "onde esta no quadro" quando ha muitas colunas. Puro
+          indicador, nao e interativo (clique/drag nao scrolla por enquanto). */}
+      <KanbanScrollCursor scrollRef={scrollRef} />
+
 
       <div
         ref={scrollRef}
@@ -712,5 +679,57 @@ function DealCard({ deal, isDragging, onDragStart, onDragEnd, onEdit, onMoveTo, 
         </div>
       )}
     </Card>
+  )
+}
+
+// ===========================================================================
+// KanbanScrollCursor — trilho + thumb que refletem a posicao do scroll
+// horizontal do container de colunas. Simples, visual, sem interacao.
+// ===========================================================================
+function KanbanScrollCursor({ scrollRef }: { scrollRef: React.RefObject<HTMLDivElement> }) {
+  const [metrics, setMetrics] = useState<{ thumbPct: number; leftPct: number; needsBar: boolean }>({
+    thumbPct: 100,
+    leftPct: 0,
+    needsBar: false,
+  })
+
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const update = () => {
+      const total = el.scrollWidth
+      const visible = el.clientWidth
+      if (total <= visible + 1) {
+        setMetrics({ thumbPct: 100, leftPct: 0, needsBar: false })
+        return
+      }
+      const thumbPct = (visible / total) * 100
+      const leftPct = (el.scrollLeft / total) * 100
+      setMetrics({ thumbPct, leftPct, needsBar: true })
+    }
+    update()
+    el.addEventListener("scroll", update, { passive: true })
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    window.addEventListener("resize", update)
+    return () => {
+      el.removeEventListener("scroll", update)
+      ro.disconnect()
+      window.removeEventListener("resize", update)
+    }
+  }, [scrollRef])
+
+  if (!metrics.needsBar) return null
+
+  return (
+    <div className="mb-3 h-1.5 w-full rounded-full bg-muted/50 overflow-hidden">
+      <div
+        className="h-full rounded-full bg-foreground/40 transition-[left,width] duration-75"
+        style={{
+          width: `${metrics.thumbPct}%`,
+          marginLeft: `${metrics.leftPct}%`,
+        }}
+      />
+    </div>
   )
 }
