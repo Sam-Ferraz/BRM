@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react"
-import { Link } from "react-router-dom"
+import { Link, useLocation, useNavigate } from "react-router-dom"
 import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -23,6 +23,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import {
   Select,
   SelectContent,
@@ -46,6 +47,10 @@ import {
   MoreVertical,
   RotateCw,
   Trash2,
+  Smile,
+  PhoneCall,
+  PhoneIncoming,
+  PhoneOutgoing,
 } from "lucide-react"
 import {
   api,
@@ -69,6 +74,8 @@ export default function ChatPage() {
   const { t, i18n } = useTranslation()
   const { toast } = useToast()
   const { user } = useAuth()
+  const location = useLocation()
+  const navigate = useNavigate()
 
   const [session, setSession] = useState<WhatsAppSession | null>(null)
   const [sessionLoaded, setSessionLoaded] = useState(false)
@@ -316,6 +323,26 @@ export default function ChatPage() {
       })
     : contacts
 
+  // Deeplink: /chat?phone=+5547...&name=Luan → abre/cria conversa com esse
+  // contato automaticamente. Usado pelo botao WhatsApp do deal-editor pra
+  // manter o atendimento dentro do BRM em vez de abrir wa.me externo.
+  // Dispara UMA vez por querystring, depois limpa a URL pra nao reabrir
+  // em refresh/navegacao interna.
+  const deeplinkHandledRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (conversationsLoading) return
+    const search = location.search
+    if (!search || deeplinkHandledRef.current === search) return
+    const params = new URLSearchParams(search)
+    const phone = params.get("phone")
+    const name = params.get("name") || ""
+    if (!phone) return
+    deeplinkHandledRef.current = search
+    const fakeCli = { id: -1, name: name || phone, phone }
+    handleOpenContactChat(fakeCli)
+    navigate("/chat", { replace: true })
+  }, [conversationsLoading, location.search, navigate])
+
   const handleOpenContactChat = async (cli: { id: number; name: string; phone: string | null }) => {
     if (!cli.phone) return
     setOpeningContactId(cli.id)
@@ -405,6 +432,67 @@ export default function ChatPage() {
       })
     } finally {
       setSending(false)
+    }
+  }
+
+  // Emoji picker state + biblioteca basica (sem dep externa — ~140 emojis
+   // populares categorizados; se precisar busca/full-set, trocar depois por
+   // emoji-picker-react ou @emoji-mart). Clique insere no cursor do textarea.
+  const [emojiOpen, setEmojiOpen] = useState(false)
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null)
+  const EMOJI_GROUPS: { label: string; emojis: string[] }[] = [
+    { label: "Rostos", emojis: ["😀","😃","😄","😁","😆","🥹","😅","😂","🤣","😊","😇","🙂","🙃","😉","😌","😍","🥰","😘","😗","😙","😚","😋","😛","😝","😜","🤪","🤨","🧐","🤓","😎","🥸","🤩","🥳","😏","😒","😞","😔","😟","😕","🙁","☹️","😣","😖","😫","😩","🥺","😢","😭","😤","😠","😡","🤬","🤯","😳","🥵","🥶","😱","😨","😰","😥","😓","🤗","🤔","🫡","🤭","🫢","🫣","🤫","🤥"] },
+    { label: "Gestos", emojis: ["👍","👎","👌","✌️","🤞","🫰","🤟","🤘","🤙","👈","👉","👆","👇","☝️","✋","🤚","🖐️","🖖","👋","🤝","👏","🙌","🙏","💪","🫶","❤️","🧡","💛","💚","💙","💜","🖤","🤍","🤎","💔","❣️","💕","💞","💓","💗","💖","💘","💝"] },
+    { label: "Objetos", emojis: ["🏠","🏢","🏘️","🏡","🔑","💰","💵","💳","📱","💻","⌨️","📞","☎️","📧","📅","📆","📍","📎","📝","✅","❌","⚠️","🚗","🚙","🚌","🚕","✈️","🛫","⏰","⏱️","🎉","🎊","🎁"] },
+  ]
+  const insertEmoji = (emoji: string) => {
+    const ta = textareaRef.current
+    if (!ta) {
+      setDraft((d) => d + emoji)
+      return
+    }
+    const start = ta.selectionStart ?? draft.length
+    const end = ta.selectionEnd ?? draft.length
+    const next = draft.slice(0, start) + emoji + draft.slice(end)
+    setDraft(next)
+    // reposiciona cursor depois do emoji inserido
+    requestAnimationFrame(() => {
+      ta.focus()
+      const pos = start + emoji.length
+      ta.setSelectionRange(pos, pos)
+    })
+  }
+
+  // Dialog de registro de ligacao
+  const [callLogOpen, setCallLogOpen] = useState(false)
+  const [callDirection, setCallDirection] = useState<"inbound" | "outbound">("outbound")
+  const [callDuration, setCallDuration] = useState<string>("")
+  const [callNotes, setCallNotes] = useState<string>("")
+  const [loggingCall, setLoggingCall] = useState(false)
+  const handleLogCall = async () => {
+    if (!selectedId) return
+    setLoggingCall(true)
+    try {
+      const duration = parseInt(callDuration)
+      const { data } = await api.chat.logCall(selectedId, {
+        direction: callDirection,
+        duration_minutes: isNaN(duration) ? null : duration,
+        notes: callNotes || null,
+      })
+      setMessages((prev) => [...prev, data])
+      setCallLogOpen(false)
+      setCallDuration("")
+      setCallNotes("")
+      setCallDirection("outbound")
+      if (selectedId) fetchConversation(selectedId)
+    } catch (error) {
+      toast({
+        title: t("error"),
+        description: error instanceof Error ? error.message : "Erro ao registrar ligação",
+        variant: "destructive",
+      })
+    } finally {
+      setLoggingCall(false)
     }
   }
 
@@ -893,7 +981,48 @@ export default function ChatPage() {
                     >
                       <Paperclip className="w-4 h-4" />
                     </Button>
+                    {/* Registro de ligacao — abre dialog, grava no historico sem enviar nada pro WA */}
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setCallLogOpen(true)}
+                      title="Registrar ligação"
+                    >
+                      <PhoneCall className="w-4 h-4" />
+                    </Button>
+                    {/* Emoji picker — insere no cursor do textarea */}
+                    <Popover open={emojiOpen} onOpenChange={setEmojiOpen}>
+                      <PopoverTrigger asChild>
+                        <Button type="button" size="sm" variant="outline" title="Inserir emoji">
+                          <Smile className="w-4 h-4" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent align="start" side="top" className="w-80 p-2 max-h-80 overflow-y-auto">
+                        <div className="space-y-3">
+                          {EMOJI_GROUPS.map((g) => (
+                            <div key={g.label}>
+                              <div className="text-[10px] uppercase text-muted-foreground mb-1 px-1">{g.label}</div>
+                              <div className="grid grid-cols-8 gap-0.5">
+                                {g.emojis.map((e, i) => (
+                                  <button
+                                    key={`${g.label}-${i}`}
+                                    type="button"
+                                    onClick={() => insertEmoji(e)}
+                                    className="text-xl leading-none p-1 rounded hover:bg-muted transition-colors"
+                                    aria-label={e}
+                                  >
+                                    {e}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
                     <Textarea
+                      ref={textareaRef}
                       rows={1}
                       value={draft}
                       onChange={(e) => setDraft(e.target.value)}
@@ -952,6 +1081,73 @@ export default function ChatPage() {
           fetchConversations()
         }}
       />
+
+      {/* Dialog de registro de ligacao — grava msg no historico sem enviar
+          nada pro WhatsApp (so BRM). Content prefixa 📞 pro frontend ja
+          renderizar com icone de telefone. */}
+      <Dialog open={callLogOpen} onOpenChange={setCallLogOpen}>
+        <DialogContent className="sm:max-w-[420px] max-h-[90vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Registrar ligação</DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto p-1 space-y-4">
+            <div className="space-y-2">
+              <Label>Tipo</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCallDirection("outbound")}
+                  className={`flex items-center justify-center gap-2 px-3 py-2 rounded border text-sm transition-colors ${
+                    callDirection === "outbound" ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-muted"
+                  }`}
+                >
+                  <PhoneOutgoing className="w-4 h-4" />
+                  Fiz ligação
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCallDirection("inbound")}
+                  className={`flex items-center justify-center gap-2 px-3 py-2 rounded border text-sm transition-colors ${
+                    callDirection === "inbound" ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-muted"
+                  }`}
+                >
+                  <PhoneIncoming className="w-4 h-4" />
+                  Recebi ligação
+                </button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="call-duration">Duração (minutos)</Label>
+              <Input
+                id="call-duration"
+                type="number"
+                min={0}
+                value={callDuration}
+                onChange={(e) => setCallDuration(e.target.value)}
+                placeholder="Ex: 5"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="call-notes">Notas (opcional)</Label>
+              <Textarea
+                id="call-notes"
+                rows={3}
+                value={callNotes}
+                onChange={(e) => setCallNotes(e.target.value)}
+                placeholder="O que foi conversado?"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setCallLogOpen(false)} disabled={loggingCall}>
+              Cancelar
+            </Button>
+            <Button type="button" onClick={handleLogCall} disabled={loggingCall}>
+              {loggingCall ? "Salvando…" : "Registrar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

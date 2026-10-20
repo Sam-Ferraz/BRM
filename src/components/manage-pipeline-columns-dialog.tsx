@@ -3,7 +3,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import { Eye, EyeOff, GripVertical } from "lucide-react"
+import { Eye, EyeOff, GripVertical, Plus, X } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useAccount } from "@/hooks/use-account"
 import { useToast } from "@/hooks/use-toast"
 
@@ -57,11 +58,21 @@ interface Draft {
   position: number
 }
 
+interface SubColumn {
+  id: string      // uuid local gerado no cliente
+  parent: string  // key da coluna pai (ex: 'service')
+  label: string
+}
+
 export function ManagePipelineColumnsDialog({ open, onOpenChange, onSaved }: Props) {
   const { account, updateConfig } = useAccount()
   const { toast } = useToast()
   const [drafts, setDrafts] = useState<Draft[]>([])
   const [saving, setSaving] = useState(false)
+  const [subcolumns, setSubcolumns] = useState<SubColumn[]>([])
+  const [showSubForm, setShowSubForm] = useState(false)
+  const [newSubParent, setNewSubParent] = useState<string>("")
+  const [newSubLabel, setNewSubLabel] = useState("")
 
   // Ao abrir, hidrata drafts com override atual OU defaults
   useEffect(() => {
@@ -79,7 +90,31 @@ export function ManagePipelineColumnsDialog({ open, onOpenChange, onSaved }: Pro
     })
     list.sort((a, b) => a.position - b.position)
     setDrafts(list)
+    const existingSubs = (account?.custom_config as any)?.pipeline_subcolumns as SubColumn[] | undefined
+    setSubcolumns(Array.isArray(existingSubs) ? existingSubs : [])
+    setShowSubForm(false)
+    setNewSubParent("")
+    setNewSubLabel("")
   }, [open, account])
+
+  const addSubColumn = () => {
+    const parent = newSubParent.trim()
+    const label = newSubLabel.trim()
+    if (!parent || !label) {
+      toast({ title: "Preencha coluna pai e nome", variant: "destructive" })
+      return
+    }
+    // id simples baseado em timestamp — Date.now ok no browser
+    const id = `sc_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
+    setSubcolumns((prev) => [...prev, { id, parent, label }])
+    setNewSubParent("")
+    setNewSubLabel("")
+    setShowSubForm(false)
+  }
+
+  const removeSubColumn = (id: string) => {
+    setSubcolumns((prev) => prev.filter((s) => s.id !== id))
+  }
 
   const move = (index: number, dir: -1 | 1) => {
     const target = index + dir
@@ -110,6 +145,7 @@ export function ManagePipelineColumnsDialog({ open, onOpenChange, onSaved }: Pro
       const nextConfig = {
         ...(account?.custom_config || {}),
         pipeline_columns: overrides,
+        pipeline_subcolumns: subcolumns,
       }
       await updateConfig(nextConfig)
       toast({ title: "Colunas atualizadas" })
@@ -132,7 +168,9 @@ export function ManagePipelineColumnsDialog({ open, onOpenChange, onSaved }: Pro
     try {
       const nextConfig = { ...(account?.custom_config || {}) }
       delete (nextConfig as any).pipeline_columns
+      delete (nextConfig as any).pipeline_subcolumns
       await updateConfig(nextConfig)
+      setSubcolumns([])
       toast({ title: "Colunas restauradas" })
       onSaved?.()
       onOpenChange(false)
@@ -151,7 +189,7 @@ export function ManagePipelineColumnsDialog({ open, onOpenChange, onSaved }: Pro
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[640px] max-h-[90vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>Gerenciar colunas do Kanban</DialogTitle>
+          <DialogTitle>Colunas do Quadro</DialogTitle>
         </DialogHeader>
         <div className="flex-1 overflow-y-auto p-1 space-y-2">
           <p className="text-xs text-muted-foreground">
@@ -226,10 +264,82 @@ export function ManagePipelineColumnsDialog({ open, onOpenChange, onSaved }: Pro
                 className="mt-1 px-3 py-2 rounded text-sm font-semibold border"
                 style={{ backgroundColor: d.color, opacity: d.hidden ? 0.4 : 1 }}
               >
-                Preview: {d.label || "(sem nome)"}
+                Prévia: {d.label || "(sem nome)"}
               </div>
             </div>
           ))}
+
+          {/* Sub-colunas: subdivisao dentro de uma coluna. Persistida em
+              custom_config.pipeline_subcolumns. Renderizacao visual no
+              Kanban sera entregue em PR separado — por ora, cadastro aqui. */}
+          <div className="mt-4 border-t pt-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-medium">Sub-colunas</Label>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => setShowSubForm((v) => !v)}
+                disabled={saving}
+              >
+                <Plus className="w-3.5 h-3.5 mr-1" />
+                Inserir sub-coluna
+              </Button>
+            </div>
+            {subcolumns.length === 0 && !showSubForm && (
+              <p className="text-xs text-muted-foreground">Nenhuma sub-coluna cadastrada.</p>
+            )}
+            {subcolumns.length > 0 && (
+              <ul className="space-y-1">
+                {subcolumns.map((sc) => {
+                  const parentLabel = drafts.find((d) => d.key === sc.parent)?.label || sc.parent
+                  return (
+                    <li key={sc.id} className="flex items-center gap-2 text-xs bg-muted/40 rounded px-2 py-1">
+                      <span className="font-medium">{sc.label}</span>
+                      <span className="text-muted-foreground">em</span>
+                      <span className="italic">{parentLabel}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeSubColumn(sc.id)}
+                        className="ml-auto text-muted-foreground hover:text-destructive"
+                        aria-label="Remover sub-coluna"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+            {showSubForm && (
+              <div className="grid grid-cols-[1fr_1fr_auto] gap-2 items-end">
+                <div>
+                  <Label className="text-xs">Coluna pai</Label>
+                  <Select value={newSubParent} onValueChange={setNewSubParent}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Escolha..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {drafts.filter((d) => !d.hidden).map((d) => (
+                        <SelectItem key={d.key} value={d.key}>{d.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs">Nome</Label>
+                  <Input
+                    value={newSubLabel}
+                    onChange={(e) => setNewSubLabel(e.target.value)}
+                    placeholder="Ex: Primeiro contato"
+                  />
+                </div>
+                <Button type="button" size="sm" onClick={addSubColumn}>
+                  Adicionar
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
         <DialogFooter className="gap-2">
           <Button variant="outline" onClick={reset} disabled={saving}>

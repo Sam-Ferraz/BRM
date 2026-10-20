@@ -1553,6 +1553,12 @@ export const api = {
       }
       return res.json()
     },
+    logCall: async (
+      conversationId: number,
+      input: { direction: 'inbound' | 'outbound'; duration_minutes?: number | null; notes?: string | null },
+    ): Promise<{ data: Message }> => {
+      return apiClient.post<{ data: Message }>(`/chat/conversations/${conversationId}/call-log`, input)
+    },
     deleteConversation: async (conversationId: number): Promise<{ deleted: boolean }> => {
       return apiClient.delete<{ deleted: boolean }>(`/chat/conversations/${conversationId}`)
     },

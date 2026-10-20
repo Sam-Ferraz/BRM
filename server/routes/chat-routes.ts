@@ -201,6 +201,41 @@ export function createChatRoutes(chatService: ChatService): Router {
     }
   })
 
+  // Registra ligacao manual na conversa (nao envia pro WhatsApp — so loga)
+  router.post('/conversations/:id/call-log', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const id = parseInt(req.params.id)
+      const accountId = req.user!.accountId
+      const viewer = { userId: req.user!.userId, role: req.user!.role }
+      const { direction, duration_minutes, notes } = req.body
+      if (direction !== 'inbound' && direction !== 'outbound') {
+        res.status(400).json({ error: "direction deve ser 'inbound' ou 'outbound'" })
+        return
+      }
+      const message = await chatService.logCall(accountId, id, viewer, {
+        direction,
+        duration_minutes: typeof duration_minutes === 'number' ? duration_minutes : null,
+        notes: typeof notes === 'string' ? notes : null,
+      })
+      res.json({ data: message })
+    } catch (error) {
+      if (error instanceof Error && error.message === 'Conversation not found') {
+        res.status(404).json({ error: 'Conversation not found' })
+        return
+      }
+      if (error instanceof Error && error.message === 'forbidden') {
+        res.status(403).json({ error: 'forbidden' })
+        return
+      }
+      if (error instanceof Error) {
+        console.error('Error logging call:', error)
+        res.status(500).json({ error: error.message })
+        return
+      }
+      res.status(500).json({ error: 'Internal server error' })
+    }
+  })
+
   // Apaga uma mensagem individual (qualquer status). Nao apaga do WhatsApp
   // — so do BRM. Usado no menu de contexto da bolha da msg.
   router.delete('/messages/:id', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {

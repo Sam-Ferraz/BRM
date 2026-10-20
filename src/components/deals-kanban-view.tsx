@@ -430,6 +430,46 @@ export function DealsKanbanView({ deals, leads = [], onEdit, onStatusChange }: D
         </div>
       )}
 
+      {/* Barra de percurso: pipeline visual mostrando distribuicao de deals
+          por fase, com largura proporcional ao count. Da uma leitura
+          instantanea de onde esta a massa (gargalo). Cor segue o header
+          da coluna (overrideColorHex ou cor padrao da fase). */}
+      {(() => {
+        const totalCount = phasesToRender.reduce((sum, p) => {
+          const isNoSvc = p.key === "no_service"
+          const n = isNoSvc
+            ? leads.filter((l) => l.status !== "aceito" && !l.deal_id).length
+            : (dealsByPhase[p.key] || []).length
+          return sum + n
+        }, 0)
+        if (totalCount === 0) return null
+        return (
+          <div className="mb-3">
+            <div className="flex items-center gap-0.5 h-6 rounded-md overflow-hidden border border-border bg-muted/30">
+              {phasesToRender.map((phase) => {
+                const isNoSvc = phase.key === "no_service"
+                const n = isNoSvc
+                  ? leads.filter((l) => l.status !== "aceito" && !l.deal_id).length
+                  : (dealsByPhase[phase.key] || []).length
+                if (n === 0) return null
+                const pct = (n / totalCount) * 100
+                const bg = phase.overrideColorHex || (phase as any).headerBg || "#e2e8f0"
+                return (
+                  <div
+                    key={phase.key}
+                    className="h-full flex items-center justify-center text-[11px] font-medium text-foreground/80 truncate px-1"
+                    style={{ width: `${pct}%`, backgroundColor: bg, minWidth: n > 0 ? "28px" : 0 }}
+                    title={`${phase.label}: ${n} (${pct.toFixed(0)}%)`}
+                  >
+                    {pct >= 8 ? `${phase.label} · ${n}` : n}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )
+      })()}
+
       <div
         ref={scrollRef}
         className="flex gap-3 overflow-x-auto pb-2 cursor-grab"

@@ -112,6 +112,42 @@ export class ChatService {
     )
   }
 
+  /**
+   * Registra uma ligacao manualmente numa conversa (nao envia nada pro
+   * WhatsApp — apenas cria msg no historico). Serve pra corretor logar
+   * ligacoes feitas/recebidas fora do canal. Formato: content prefixa
+   * '📞 ' que o frontend ja reconhece pra renderizar com icone de telefone.
+   */
+  async logCall(
+    accountId: number,
+    conversationId: number,
+    viewer: { userId: number; role: string },
+    input: { direction: 'inbound' | 'outbound'; duration_minutes?: number | null; notes?: string | null },
+  ): Promise<Message> {
+    const conv = await this.conversationRepository.findById(accountId, conversationId)
+    if (!conv) throw new Error('Conversation not found')
+    this.assertCanView(conv.owner_user_id, viewer)
+
+    const dir = input.direction === 'inbound' ? 'recebida' : 'realizada'
+    const parts = [`📞 Ligação ${dir}`]
+    if (input.duration_minutes && input.duration_minutes > 0) parts.push(`(${input.duration_minutes} min)`)
+    if (input.notes?.trim()) parts.push(`— ${input.notes.trim()}`)
+    const content = parts.join(' ')
+
+    const message = await this.messageRepository.create(accountId, {
+      conversation_id: conversationId,
+      direction: input.direction,
+      content,
+      // call log entra como 'sent' (outbound) ou 'received' (inbound) direto
+      status: input.direction === 'outbound' ? 'sent' : 'received',
+      provider_message_id: null,
+    })
+    await this.conversationRepository.touchLastMessage(accountId, conversationId, input.direction)
+    // Mesma regra de atendimento automatico das demais interacoes
+    await this.tryRegisterServiceFromConversation(accountId, conv)
+    return message
+  }
+
   async deleteConversation(
     accountId: number,
     id: number,

@@ -360,7 +360,7 @@ export default function DealsPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Briefcase className="w-5 h-5" />
-              {t('dealsTitle')}
+              {viewMode === "kanban" ? t('dealsKanbanTitle') : t('dealsTitle')}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">

@@ -15,6 +15,7 @@
  *   - defaultTab controla qual aba aparece primeiro (default: history)
  */
 import { useState, useEffect, useMemo } from "react"
+import { useNavigate } from "react-router-dom"
 import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -28,6 +29,7 @@ import { ProductSearch } from "@/components/product-search"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { DealAppointmentsTimeline } from "@/components/deal-appointments-timeline"
 import { AppointmentForm } from "@/components/forms/appointment-form"
+import { FollowUpForm } from "@/components/forms/followup-form"
 import { useToast } from "@/hooks/use-toast"
 import type { Deal, Client, Appointment } from "@/lib/api-client"
 import { api } from "@/lib/api-client"
@@ -58,9 +60,12 @@ export function DealEditor({
   onCancel,
 }: DealEditorProps) {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const currentTimezone = useTimezone()
   const { toast } = useToast()
   const [newAppointmentOpen, setNewAppointmentOpen] = useState(false)
+  const [newFollowUpOpen, setNewFollowUpOpen] = useState(false)
+  const [creatingFollowUp, setCreatingFollowUp] = useState(false)
   const [creatingAppointment, setCreatingAppointment] = useState(false)
   const [timelineReloadKey, setTimelineReloadKey] = useState(0)
   const currentDate = useMemo(() => getCurrentDateForForm(currentTimezone), [currentTimezone])
@@ -169,6 +174,33 @@ export function DealEditor({
       })
     } finally {
       setCreatingAppointment(false)
+    }
+  }
+
+  // Cria follow-up avulso dentro do contexto do negocio aberto. Nao vincula
+  // a atendimento especifico (appointment_id=null) — o FollowUpForm continua
+  // suportando esse caso (usa client_name como ancora).
+  const handleCreateFollowUpFromDeal = async (data: any) => {
+    setCreatingFollowUp(true)
+    try {
+      await api.followUps.create({
+        appointment_id: data.appointment_id ?? null,
+        client_name: data.client_name,
+        next_action: data.next_action,
+        next_action_date: data.next_action_date,
+        completed: !!data.completed,
+      })
+      toast({ title: "Follow-up registrado" })
+      setNewFollowUpOpen(false)
+      setTimelineReloadKey((k) => k + 1)
+    } catch (err) {
+      toast({
+        title: "Erro",
+        description: err instanceof Error ? err.message : "Falha ao criar follow-up",
+        variant: "destructive",
+      })
+    } finally {
+      setCreatingFollowUp(false)
     }
   }
 
@@ -375,21 +407,37 @@ export function DealEditor({
               <Plus className="w-4 h-4 mr-1.5" />
               Registrar atendimento
             </Button>
-            {/* Chat WhatsApp — abre wa.me em nova aba */}
+            {/* Novo follow-up — cria follow-up avulso vinculado ao cliente do deal */}
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={() => setNewFollowUpOpen(true)}
+            >
+              <Plus className="w-4 h-4 mr-1.5" />
+              Novo follow-up
+            </Button>
+            {/* Chat WhatsApp — abre a conversa do cliente dentro do modulo /chat
+                (antes abria wa.me externo; agora mantem o atendimento no BRM) */}
             <Button
               type="button"
               size="sm"
               variant="outline"
-              title={deal.client_phone ? `WhatsApp ${deal.client_phone}` : "Sem telefone cadastrado"}
+              title={deal.client_phone ? `Abrir chat com ${deal.client_phone}` : "Sem telefone cadastrado"}
               disabled={!deal.client_phone}
               onClick={() => {
                 if (!deal.client_phone) return
-                const digits = deal.client_phone.replace(/\D/g, "")
-                if (digits.length < 10) return
-                window.open(`https://wa.me/${digits}`, "_blank", "noopener,noreferrer")
+                const params = new URLSearchParams({
+                  phone: deal.client_phone,
+                  name: deal.client || "",
+                })
+                navigate(`/chat?${params.toString()}`)
               }}
             >
-              <MessageCircle className="w-4 h-4" />
+              {/* SVG oficial do WhatsApp em monocromatico — currentColor segue o text do Button */}
+              <svg viewBox="0 0 24 24" className="w-4 h-4" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M.057 24l1.687-6.163a11.867 11.867 0 0 1-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 0 1 8.413 3.488 11.824 11.824 0 0 1 3.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 0 1-5.688-1.448L.057 24zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
+              </svg>
             </Button>
             {/* Ligacao — abre discador do dispositivo (tel:) */}
             <Button
@@ -441,6 +489,18 @@ export function DealEditor({
           onSubmit={handleCreateAppointmentFromTimeline}
           loading={creatingAppointment}
           defaultDealId={deal.id}
+        />
+      )}
+
+      {deal && (
+        <FollowUpForm
+          open={newFollowUpOpen}
+          onOpenChange={setNewFollowUpOpen}
+          onSubmit={handleCreateFollowUpFromDeal}
+          loading={creatingFollowUp}
+          /* Passa um appointment sintetico so pra pre-preencher e travar o
+             cliente (o form usa Boolean(appointment) pra lockar o campo). */
+          appointment={{ client: deal.client } as any}
         />
       )}
     </>

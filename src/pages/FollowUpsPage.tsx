@@ -17,6 +17,7 @@ import {
 import { ArrowLeft, Plus, Pencil, Trash2, Search, CheckCircle2, Calendar, User, ClipboardCheck } from "lucide-react"
 import { api, type FollowUpWithDetails, type Deal } from "@/lib/api-client"
 import { FollowUpForm } from "@/components/forms/followup-form"
+import { DealForm } from "@/components/forms/deal-form"
 import { useToast } from "@/hooks/use-toast"
 import { format } from "date-fns"
 import { formatDateOnly } from "@/lib/datetime"
@@ -32,6 +33,11 @@ export default function FollowUpsPage() {
   const [statusFilter, setStatusFilter] = useState("open") // "open", "pending", "completed", "all"
   const [sortBy, setSortBy] = useState("next_action_date")
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc")
+  // Edicao de deal direto da lista "Negocios sem Follow-up" — clique no
+  // nome do cliente abre o DealForm pra editar sem precisar ir pra /deals.
+  const [editingDeal, setEditingDeal] = useState<Deal | undefined>()
+  const [isDealFormOpen, setIsDealFormOpen] = useState(false)
+  const [dealFormLoading, setDealFormLoading] = useState(false)
 
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingFollowUp, setEditingFollowUp] = useState<FollowUpWithDetails | undefined>()
@@ -419,7 +425,18 @@ export default function FollowUpsPage() {
                 <TableBody>
                   {dealsWithoutFollowUps.map((deal) => (
                     <TableRow key={deal.id}>
-                      <TableCell className="font-medium">{deal.client}</TableCell>
+                      <TableCell className="font-medium">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingDeal(deal)
+                            setIsDealFormOpen(true)
+                          }}
+                          className="text-left text-primary hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+                        >
+                          {deal.client}
+                        </button>
+                      </TableCell>
                       <TableCell>{formatCurrency(deal.gsv)}</TableCell>
                       <TableCell>
                         <Badge variant={
@@ -459,6 +476,35 @@ export default function FollowUpsPage() {
         }}
         onSubmit={editingFollowUp ? handleUpdate : handleCreate}
         loading={formLoading}
+      />
+
+      <DealForm
+        deal={editingDeal}
+        open={isDealFormOpen}
+        onOpenChange={(open) => {
+          setIsDealFormOpen(open)
+          if (!open) setEditingDeal(undefined)
+        }}
+        onSubmit={async (data) => {
+          if (!editingDeal) return
+          try {
+            setDealFormLoading(true)
+            await api.deals.update(editingDeal.id, data as Partial<Deal>)
+            toast({ title: t('success'), description: t('dealUpdatedSuccess') })
+            setIsDealFormOpen(false)
+            setEditingDeal(undefined)
+            fetchDeals()
+          } catch (error) {
+            toast({
+              title: t('error'),
+              description: error instanceof Error ? error.message : 'Erro ao atualizar',
+              variant: 'destructive',
+            })
+          } finally {
+            setDealFormLoading(false)
+          }
+        }}
+        loading={dealFormLoading}
       />
     </div>
   )
