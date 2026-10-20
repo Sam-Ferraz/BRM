@@ -228,3 +228,10 @@ textarea:focus-visible,
     color: black !important;
   }
 }
+
+/* Esconde a scrollbar nativa quando o container usa o KanbanScrollCursor
+   customizado no topo. Firefox e IE/Edge legado via inline style
+   (scrollbar-width: none, msOverflowStyle: none); WebKit via esta regra. */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}

@@ -439,7 +439,8 @@ export function DealsKanbanView({ deals, leads = [], onEdit, onStatusChange }: D
 
       <div
         ref={scrollRef}
-        className="flex gap-3 overflow-x-auto pb-2 cursor-grab"
+        className="flex gap-3 overflow-x-auto pb-2 cursor-grab hide-scrollbar"
+        style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         onMouseDown={handleScrollMouseDown}
         onMouseMove={handleScrollMouseMove}
         onMouseUp={stopScrollDrag}
@@ -684,9 +685,12 @@ function DealCard({ deal, isDragging, onDragStart, onDragEnd, onEdit, onMoveTo, 
 
 // ===========================================================================
 // KanbanScrollCursor — trilho + thumb que refletem a posicao do scroll
-// horizontal do container de colunas. Simples, visual, sem interacao.
+// horizontal do container de colunas E controlam o scroll (drag + click).
+// Substitui a scrollbar nativa (que fica escondida via classe hide-scrollbar).
 // ===========================================================================
 function KanbanScrollCursor({ scrollRef }: { scrollRef: React.RefObject<HTMLDivElement> }) {
+  const trackRef = useRef<HTMLDivElement | null>(null)
+  const dragRef = useRef<{ startX: number; startScrollLeft: number } | null>(null)
   const [metrics, setMetrics] = useState<{ thumbPct: number; leftPct: number; needsBar: boolean }>({
     thumbPct: 100,
     leftPct: 0,
@@ -719,15 +723,58 @@ function KanbanScrollCursor({ scrollRef }: { scrollRef: React.RefObject<HTMLDivE
     }
   }, [scrollRef])
 
+  // Drag no thumb: cada 1px arrastado no trilho = (total/trackWidth)px no scroll.
+  const onThumbMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const el = scrollRef.current
+    if (!el) return
+    dragRef.current = { startX: e.pageX, startScrollLeft: el.scrollLeft }
+    const onMove = (ev: MouseEvent) => {
+      const st = dragRef.current
+      const sEl = scrollRef.current
+      const tr = trackRef.current
+      if (!st || !sEl || !tr) return
+      const dx = ev.pageX - st.startX
+      const ratio = sEl.scrollWidth / tr.clientWidth
+      sEl.scrollLeft = st.startScrollLeft + dx * ratio
+    }
+    const onUp = () => {
+      dragRef.current = null
+      window.removeEventListener("mousemove", onMove)
+      window.removeEventListener("mouseup", onUp)
+    }
+    window.addEventListener("mousemove", onMove)
+    window.addEventListener("mouseup", onUp)
+  }
+
+  // Click no trilho (fora do thumb): pula pra posicao centralizando a janela
+  // visivel no ponto clicado.
+  const onTrackClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const el = scrollRef.current
+    const tr = trackRef.current
+    if (!el || !tr) return
+    const rect = tr.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const clickRatio = x / rect.width
+    const target = clickRatio * el.scrollWidth - el.clientWidth / 2
+    el.scrollTo({ left: Math.max(0, target), behavior: "smooth" })
+  }
+
   if (!metrics.needsBar) return null
 
   return (
-    <div className="mb-3 h-1.5 w-full rounded-full bg-muted/50 overflow-hidden">
+    <div
+      ref={trackRef}
+      onClick={onTrackClick}
+      className="mb-3 h-2 w-full rounded-full bg-muted/50 cursor-pointer relative"
+    >
       <div
-        className="h-full rounded-full bg-foreground/40 transition-[left,width] duration-75"
+        onMouseDown={onThumbMouseDown}
+        className="absolute top-0 h-full rounded-full bg-foreground/40 hover:bg-foreground/60 cursor-grab active:cursor-grabbing transition-colors"
         style={{
           width: `${metrics.thumbPct}%`,
-          marginLeft: `${metrics.leftPct}%`,
+          left: `${metrics.leftPct}%`,
         }}
       />
     </div>
