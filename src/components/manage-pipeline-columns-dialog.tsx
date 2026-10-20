@@ -64,6 +64,12 @@ interface SubColumn {
   label: string
 }
 
+interface ExtraColumn {
+  id: string      // uuid local gerado no cliente — serve como "status" interno
+  label: string
+  color: string
+}
+
 export function ManagePipelineColumnsDialog({ open, onOpenChange, onSaved }: Props) {
   const { account, updateConfig } = useAccount()
   const { toast } = useToast()
@@ -73,6 +79,10 @@ export function ManagePipelineColumnsDialog({ open, onOpenChange, onSaved }: Pro
   const [showSubForm, setShowSubForm] = useState(false)
   const [newSubParent, setNewSubParent] = useState<string>("")
   const [newSubLabel, setNewSubLabel] = useState("")
+  const [extraColumns, setExtraColumns] = useState<ExtraColumn[]>([])
+  const [showExtraForm, setShowExtraForm] = useState(false)
+  const [newExtraLabel, setNewExtraLabel] = useState("")
+  const [newExtraColor, setNewExtraColor] = useState<string>(PALETTE[0])
 
   // Ao abrir, hidrata drafts com override atual OU defaults
   useEffect(() => {
@@ -95,7 +105,29 @@ export function ManagePipelineColumnsDialog({ open, onOpenChange, onSaved }: Pro
     setShowSubForm(false)
     setNewSubParent("")
     setNewSubLabel("")
+    const existingExtras = (account?.custom_config as any)?.pipeline_extra_columns as ExtraColumn[] | undefined
+    setExtraColumns(Array.isArray(existingExtras) ? existingExtras : [])
+    setShowExtraForm(false)
+    setNewExtraLabel("")
+    setNewExtraColor(PALETTE[0])
   }, [open, account])
+
+  const addExtraColumn = () => {
+    const label = newExtraLabel.trim()
+    if (!label) {
+      toast({ title: "Informe o nome da coluna", variant: "destructive" })
+      return
+    }
+    const id = `ec_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
+    setExtraColumns((prev) => [...prev, { id, label, color: newExtraColor }])
+    setNewExtraLabel("")
+    setNewExtraColor(PALETTE[0])
+    setShowExtraForm(false)
+  }
+
+  const removeExtraColumn = (id: string) => {
+    setExtraColumns((prev) => prev.filter((c) => c.id !== id))
+  }
 
   const addSubColumn = () => {
     const parent = newSubParent.trim()
@@ -146,6 +178,7 @@ export function ManagePipelineColumnsDialog({ open, onOpenChange, onSaved }: Pro
         ...(account?.custom_config || {}),
         pipeline_columns: overrides,
         pipeline_subcolumns: subcolumns,
+        pipeline_extra_columns: extraColumns,
       }
       await updateConfig(nextConfig)
       toast({ title: "Colunas atualizadas" })
@@ -169,8 +202,10 @@ export function ManagePipelineColumnsDialog({ open, onOpenChange, onSaved }: Pro
       const nextConfig = { ...(account?.custom_config || {}) }
       delete (nextConfig as any).pipeline_columns
       delete (nextConfig as any).pipeline_subcolumns
+      delete (nextConfig as any).pipeline_extra_columns
       await updateConfig(nextConfig)
       setSubcolumns([])
+      setExtraColumns([])
       toast({ title: "Colunas restauradas" })
       onSaved?.()
       onOpenChange(false)
@@ -269,23 +304,72 @@ export function ManagePipelineColumnsDialog({ open, onOpenChange, onSaved }: Pro
             </div>
           ))}
 
+          {/* Colunas extras: colunas totalmente novas (fora do enum de status
+              padrao). Persistidas em custom_config.pipeline_extra_columns.
+              Renderizacao visual no Kanban sera entregue em PR separado. */}
+          <div className="mt-4 border-t pt-3 space-y-2">
+            <Label className="text-sm font-medium">Colunas extras</Label>
+            {extraColumns.length === 0 && !showExtraForm && (
+              <p className="text-xs text-muted-foreground">Nenhuma coluna extra cadastrada.</p>
+            )}
+            {extraColumns.length > 0 && (
+              <ul className="space-y-1">
+                {extraColumns.map((ec) => (
+                  <li key={ec.id} className="flex items-center gap-2 text-xs bg-muted/40 rounded px-2 py-1">
+                    <span
+                      className="inline-block w-3 h-3 rounded"
+                      style={{ backgroundColor: ec.color }}
+                    />
+                    <span className="font-medium">{ec.label}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeExtraColumn(ec.id)}
+                      className="ml-auto text-muted-foreground hover:text-destructive"
+                      aria-label="Remover coluna extra"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {showExtraForm && (
+              <div className="grid grid-cols-[1fr_auto_auto] gap-2 items-end">
+                <div>
+                  <Label className="text-xs">Nome</Label>
+                  <Input
+                    value={newExtraLabel}
+                    onChange={(e) => setNewExtraLabel(e.target.value)}
+                    placeholder="Ex: Backlog"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Cor</Label>
+                  <div className="flex gap-1 flex-wrap max-w-[160px]">
+                    {PALETTE.map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => setNewExtraColor(c)}
+                        className={`w-6 h-6 rounded border-2 transition-all ${newExtraColor === c ? "border-foreground scale-110" : "border-transparent"}`}
+                        style={{ backgroundColor: c }}
+                        aria-label={`Cor ${c}`}
+                      />
+                    ))}
+                  </div>
+                </div>
+                <Button type="button" size="sm" onClick={addExtraColumn}>
+                  Adicionar
+                </Button>
+              </div>
+            )}
+          </div>
+
           {/* Sub-colunas: subdivisao dentro de uma coluna. Persistida em
               custom_config.pipeline_subcolumns. Renderizacao visual no
-              Kanban sera entregue em PR separado — por ora, cadastro aqui. */}
+              Kanban sera entregue em PR separado. */}
           <div className="mt-4 border-t pt-3 space-y-2">
-            <div className="flex items-center justify-between">
-              <Label className="text-sm font-medium">Sub-colunas</Label>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => setShowSubForm((v) => !v)}
-                disabled={saving}
-              >
-                <Plus className="w-3.5 h-3.5 mr-1" />
-                Inserir sub-coluna
-              </Button>
-            </div>
+            <Label className="text-sm font-medium">Sub-colunas</Label>
             {subcolumns.length === 0 && !showSubForm && (
               <p className="text-xs text-muted-foreground">Nenhuma sub-coluna cadastrada.</p>
             )}
@@ -341,7 +425,29 @@ export function ManagePipelineColumnsDialog({ open, onOpenChange, onSaved }: Pro
             )}
           </div>
         </div>
-        <DialogFooter className="gap-2">
+        <DialogFooter className="gap-2 sm:justify-start">
+          {/* Botoes de criacao a esquerda (antes de "Restaurar padrao"),
+              conforme pedido do backlog. Clique toggla o form inline da
+              secao correspondente dentro do content. */}
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setShowExtraForm((v) => !v)}
+            disabled={saving}
+          >
+            <Plus className="w-4 h-4 mr-1" />
+            Nova coluna
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setShowSubForm((v) => !v)}
+            disabled={saving}
+          >
+            <Plus className="w-4 h-4 mr-1" />
+            Sub-coluna
+          </Button>
+          <div className="flex-1" />
           <Button variant="outline" onClick={reset} disabled={saving}>
             Restaurar padrao
           </Button>
