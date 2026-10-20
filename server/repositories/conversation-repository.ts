@@ -211,18 +211,21 @@ export class ConversationRepository extends BaseRepository {
    * touchLastMessage) e ele é zerado quando o corretor abre a conversa
    * (em markAsRead). Filtro obrigatório por account; filtro opcional por dono.
    */
-  async sumUnreadMessages(accountId: number, ownerUserId?: number): Promise<number> {
+  async countConversationsWithUnread(accountId: number, ownerUserId?: number): Promise<number> {
     const client = await this.getClient()
     try {
       const params: any[] = [accountId]
+      // Conta CONVERSAS distintas que tem pelo menos 1 msg nao respondida
+      // (unread_count > 0). O badge do bottom-nav deve refletir "quantas
+      // conversas precisam de atencao", nao soma de mensagens — se um
+      // cliente mandou 20 msgs seguidas, isso ainda e 1 conversa pendente.
       // Mesmo filtro do findAll: so conta conversas cujo contato bate com
       // algum cliente cadastrado (por client_id ou telefone normalizado).
-      // Sem isso o badge do bottom-nav mostrava contagem inflada de
-      // conversas nao-cadastradas que nao aparecem na lista.
       let query = `
-        SELECT COALESCE(SUM(c.unread_count), 0) AS total
+        SELECT COUNT(*) AS total
         FROM conversations c
         WHERE c.account_id = $1
+          AND c.unread_count > 0
           AND EXISTS (
             SELECT 1 FROM clients cli
             WHERE cli.account_id = c.account_id

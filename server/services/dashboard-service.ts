@@ -52,7 +52,7 @@ export class DashboardService {
       totalSalesAgenda,
       totalFollowUps,
       totalProposals,
-      unreadMessages,
+      unansweredConversations,
       unansweredCalls,
       leadCounts,
       totalShowcaseProducts,
@@ -66,7 +66,7 @@ export class DashboardService {
       this.salesAgendaRepository.getCount(accountId, userId),
       this.followUpRepository.getCount(accountId, userId),
       this.proposalRepository.getActiveCount(accountId, userId),
-      this.conversationRepository.sumUnreadMessages(accountId, userId),
+      this.conversationRepository.countConversationsWithUnread(accountId, userId),
       this.appointmentRepository.getCountUnansweredCalls(accountId, userId),
       this.leadRepository.getCountByStatus(accountId),
       this.productRepository.getShowcaseCount(accountId),
@@ -89,7 +89,7 @@ export class DashboardService {
       totalProposals,
       totalSales,
       totalContracts: totalActiveContracts,
-      pendingChatAndCalls: unreadMessages + unansweredCalls,
+      pendingChatAndCalls: unansweredConversations + unansweredCalls,
       newLeads: leadCounts.novo
     }
   }
