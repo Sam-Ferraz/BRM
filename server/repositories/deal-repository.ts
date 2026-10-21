@@ -397,7 +397,7 @@ export class DealRepository extends BaseRepository {
    *   - Só nos primeiros 8 dias desde origin_date (aceite na carteira)
    *   - Só se ainda não há nenhum atendimento RESPONDIDO (bilateral) — ou seja,
    *     o cliente ainda não retornou; ele continua "frio"
-   *   - E se a quantidade de tentativas (atendimentos NÃO respondidos) for
+   *   - E se a quantidade de tentativas (atendimentos NÃO realizados) for
    *     MENOR que a quantidade de dias em carteira. Ex: 4 dias na carteira,
    *     só 2 tentativas → precisa de cadência (deveria haver ≥4).
    *

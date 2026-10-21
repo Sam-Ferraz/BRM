@@ -440,7 +440,7 @@ export class ChatService {
    * Regra de métrica: cada conversa do WhatsApp gera 1 atendimento (type='chat',
    * origin='whatsapp') quando há interação bilateral (envio + recebimento)
    * dentro de uma janela de 24 horas. Se já existe atendimento criado pra essa
-   * conversa nas últimas 24h, NÃO cria outro — só marca como respondido se
+   * conversa nas últimas 24h, NÃO cria outro — só marca como realizado se
    * faltava resposta.
    *
    * Chamado após cada send/receive. Idempotente, falhas são silenciosas (log
@@ -450,7 +450,7 @@ export class ChatService {
    * Regra nova: QUALQUER interacao (msg inbound/outbound ou ligacao) numa
    * conversa dentro de um dia calendario (00:00-23:59 America/Sao_Paulo)
    * gera 1 unico atendimento. Se ja existe atendimento dessa conversa no
-   * mesmo dia, so garante que esta marcado como respondido. No dia
+   * mesmo dia, so garante que esta marcado como realizado. No dia
    * seguinte, uma nova interacao gera um novo atendimento.
    *
    * Elimina a necessidade do corretor registrar atendimento/ligacao

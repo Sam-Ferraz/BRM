@@ -150,7 +150,7 @@ export class AppointmentRepository extends BaseRepository {
   }
 
   /**
-   * Marca um atendimento como respondido. Usado quando o corretor envia a
+   * Marca um atendimento como realizado. Usado quando o corretor envia a
    * primeira resposta numa conversa (interação bilateral completa).
    * Filtra por account_id pra garantir que só marca atendimentos da account
    * informada (defesa em profundidade — o id sozinho não vaza tenant).

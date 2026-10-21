@@ -81,10 +81,10 @@ const formatCombinedAnalytics = (
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([date, v]) => ({
       date: formatDateForChart(date, t),
-      'Atendimentos respondidos': v.atendResp,
-      'Atendimentos não respondidos': v.atendNao,
-      'Visitas respondidas': v.apresResp,
-      'Visitas não respondidas': v.apresNao,
+      'Atendimentos realizados': v.atendResp,
+      'Atendimentos não realizados': v.atendNao,
+      'Visitas realizadas': v.apresResp,
+      'Visitas não realizadas': v.apresNao,
     }))
 }
 
@@ -403,17 +403,17 @@ export default function AnalyticsPage() {
               <ChartContainer
                 config={{
                   // Paleta com 2 tons proximos ao #0c343d (marca):
-                  //   ATENDIMENTOS  = teal escuro    #0c343d  (respondidos: base)
-                  //                   teal claro     #5a8792  (nao respondidos)
-                  //   APRESENTACOES = ambar escuro   #3d340c  (respondidas: hue shift)
-                  //                   ambar claro    #8d834a  (nao respondidas)
+                  //   ATENDIMENTOS  = teal escuro    #0c343d  (realizados: base)
+                  //                   teal claro     #5a8792  (nao realizados)
+                  //   VISITAS       = ambar escuro   #3d340c  (realizadas: hue shift)
+                  //                   ambar claro    #8d834a  (nao realizadas)
                   //
                   // Sao complementares no circulo cromatico e proximas em
                   // luminosidade — contraste natural sem cor gritante.
-                  'Atendimentos respondidos':      { label: 'Atendimentos respondidos',      color: '#0c343d' },
-                  'Atendimentos não respondidos':  { label: 'Atendimentos não respondidos',  color: '#5a8792' },
-                  'Visitas respondidas':    { label: 'Visitas respondidas',    color: '#999999' },
-                  'Visitas não respondidas': { label: 'Visitas não respondidas', color: '#d4d4d4' },
+                  'Atendimentos realizados':      { label: 'Atendimentos realizados',      color: '#0c343d' },
+                  'Atendimentos não realizados':  { label: 'Atendimentos não realizados',  color: '#5a8792' },
+                  'Visitas realizadas':    { label: 'Visitas realizadas',    color: '#999999' },
+                  'Visitas não realizadas': { label: 'Visitas não realizadas', color: '#d4d4d4' },
                 }}
                 className="h-[280px]"
               >
@@ -545,7 +545,7 @@ export default function AnalyticsPage() {
                       }}
                     />
                     <Bar
-                      dataKey="Atendimentos respondidos"
+                      dataKey="Atendimentos realizados"
                       fill="url(#atendRespGradient)"
                       radius={[4, 4, 0, 0]}
                       stroke="#0c343d"
@@ -553,14 +553,14 @@ export default function AnalyticsPage() {
                       maxBarSize={16}
                     >
                       <LabelList
-                        dataKey="Atendimentos respondidos"
+                        dataKey="Atendimentos realizados"
                         position="top"
                         style={{ fontSize: 10, fill: '#0c343d', fontWeight: 600 }}
                         formatter={(v: any) => (v && v > 0 ? v : '')}
                       />
                     </Bar>
                     <Bar
-                      dataKey="Atendimentos não respondidos"
+                      dataKey="Atendimentos não realizados"
                       fill="url(#atendNaoGradient)"
                       radius={[4, 4, 0, 0]}
                       stroke="#5a8792"
@@ -568,14 +568,14 @@ export default function AnalyticsPage() {
                       maxBarSize={16}
                     >
                       <LabelList
-                        dataKey="Atendimentos não respondidos"
+                        dataKey="Atendimentos não realizados"
                         position="top"
                         style={{ fontSize: 10, fill: '#0c343d', fontWeight: 600 }}
                         formatter={(v: any) => (v && v > 0 ? v : '')}
                       />
                     </Bar>
                     <Bar
-                      dataKey="Visitas respondidas"
+                      dataKey="Visitas realizadas"
                       fill="url(#apresRespGradient)"
                       radius={[4, 4, 0, 0]}
                       stroke="#999999"
@@ -583,14 +583,14 @@ export default function AnalyticsPage() {
                       maxBarSize={16}
                     >
                       <LabelList
-                        dataKey="Visitas respondidas"
+                        dataKey="Visitas realizadas"
                         position="top"
                         style={{ fontSize: 10, fill: '#525252', fontWeight: 600 }}
                         formatter={(v: any) => (v && v > 0 ? v : '')}
                       />
                     </Bar>
                     <Bar
-                      dataKey="Visitas não respondidas"
+                      dataKey="Visitas não realizadas"
                       fill="url(#apresNaoGradient)"
                       radius={[4, 4, 0, 0]}
                       stroke="#d4d4d4"
@@ -598,7 +598,7 @@ export default function AnalyticsPage() {
                       maxBarSize={16}
                     >
                       <LabelList
-                        dataKey="Visitas não respondidas"
+                        dataKey="Visitas não realizadas"
                         position="top"
                         style={{ fontSize: 10, fill: '#525252', fontWeight: 600 }}
                         formatter={(v: any) => (v && v > 0 ? v : '')}

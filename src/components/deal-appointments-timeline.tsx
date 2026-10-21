@@ -15,7 +15,7 @@ import { ptBR } from "date-fns/locale"
  * Cada item mostra:
  *   - Ícone colorido por tipo (chat/call/in_person/visit) na coluna esquerda
  *   - Data + hora formatadas em pt-BR
- *   - Badge de status (Respondido / Não respondido)
+ *   - Badge de status (Realizado / Não realizado)
  *   - Descrição do atendimento
  *   - Miniatura de player HTML5 se houver áudio anexado
  *
@@ -144,12 +144,12 @@ function TimelineItem({ appointment }: { appointment: Appointment }) {
             {appointment.answered ? (
               <Badge variant="outline" className="text-[10px] h-5 border-green-500 text-green-700 bg-green-50">
                 <CheckCircle2 className="w-3 h-3 mr-1" />
-                Respondido
+                Realizado
               </Badge>
             ) : (
               <Badge variant="outline" className="text-[10px] h-5 border-slate-300 text-slate-600 bg-slate-50">
                 <XCircle className="w-3 h-3 mr-1" />
-                Não respondido
+                Não realizado
               </Badge>
             )}
             {appointment.audio_url && (
