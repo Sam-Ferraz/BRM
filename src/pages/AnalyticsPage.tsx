@@ -33,9 +33,10 @@ const formatAppointmentAnalytics = (analytics: AppointmentAnalytics[], t: any) =
  * período (últimos 30 dias, últimos 7 etc), mesmo aqueles sem atendimento —
  * ajuda o usuário a enxergar a tendência e os "vazios" reais.
  *
- * "Apresentação" no contexto do BRM = visita presencial ao imóvel
- * (appointment type='visit'). Os demais tipos (chat, call, in_person)
- * são "atendimentos" pré-visita.
+ * "Visita" no contexto do BRM = visita presencial ao imóvel (appointment
+ * type='visit'). Os demais tipos (chat, call, in_person) são "atendimentos"
+ * pré-visita. Chaves internas de status ainda usam 'visit_done_*' por
+ * compatibilidade (renomear exigiria migration).
  */
 const formatCombinedAnalytics = (
   byType: AppointmentAnalyticsByType,
@@ -82,8 +83,8 @@ const formatCombinedAnalytics = (
       date: formatDateForChart(date, t),
       'Atendimentos respondidos': v.atendResp,
       'Atendimentos não respondidos': v.atendNao,
-      'Apresentações respondidas': v.apresResp,
-      'Apresentações não respondidas': v.apresNao,
+      'Visitas respondidas': v.apresResp,
+      'Visitas não respondidas': v.apresNao,
     }))
 }
 
@@ -147,7 +148,7 @@ export default function AnalyticsPage() {
   const [appointmentAnalytics, setAppointmentAnalytics] = useState<AppointmentAnalytics[]>([])
   const [appointmentAnalyticsByType, setAppointmentAnalyticsByType] = useState<AppointmentAnalyticsByType>({})
   const [funnelData, setFunnelData] = useState<DealFunnelStage[]>([])
-  // Ao lado do funil: 15 últimas propostas + 15 últimas apresentações (deals visit_done_*)
+  // Ao lado do funil: 15 últimas propostas + 15 últimas visitas (deals visit_done_*)
   const [lastProposals, setLastProposals] = useState<ProposalWithDetails[]>([])
   const [lastPresentations, setLastPresentations] = useState<Deal[]>([])
   const [initialLoading, setInitialLoading] = useState(true)
@@ -201,7 +202,7 @@ export default function AnalyticsPage() {
           ),
           // Últimas 15 propostas (ordenadas por data desc)
           api.proposals.getAll({ sortBy: 'proposal_date', sortOrder: 'desc' }),
-          // Todos os deals — filtramos as apresentações (visit_done_*) no frontend
+          // Todos os deals — filtramos as visitas (visit_done_*) no frontend
           // porque o backend só aceita status único e queremos os 3 variantes
           api.deals.getAll({ sortBy: 'updated_at', sortOrder: 'desc' }),
         ])
@@ -316,7 +317,7 @@ export default function AnalyticsPage() {
                 </CardContent>
               </Card>
 
-              {/* Coluna direita 1/3: Propostas + Últimas apresentações */}
+              {/* Coluna direita 1/3: Propostas + Últimas visitas */}
               <div className="lg:col-span-1 space-y-4">
                 <LastProposalsCard proposals={lastProposals} />
                 <LastPresentationsCard presentations={lastPresentations} />
@@ -390,12 +391,12 @@ export default function AnalyticsPage() {
             </Card>
           </div>
 
-            {/* Main Chart: Atendimento e Apresentações — 4 séries combinadas */}
+            {/* Main Chart: Atendimento e Visitas — 4 séries combinadas */}
             <Card className="w-full bg-gradient-to-br from-slate-50 to-white dark:from-slate-900/50 dark:to-slate-800/50 border-slate-200 dark:border-slate-700 dark:backdrop-blur-sm dark:bg-slate-900/80">
               <CardHeader className="pb-4 px-3 sm:px-6">
                 <CardTitle className="text-xl font-semibold text-foreground flex items-center gap-3">
                   <div className="w-2 h-8 rounded-full" style={{ backgroundColor: '#0c343d' }}></div>
-                  Atendimento &amp; Apresentações
+                  Atendimento &amp; Visitas
                 </CardTitle>
               </CardHeader>
             <CardContent className="pt-0 px-3 sm:px-6">
@@ -411,8 +412,8 @@ export default function AnalyticsPage() {
                   // luminosidade — contraste natural sem cor gritante.
                   'Atendimentos respondidos':      { label: 'Atendimentos respondidos',      color: '#0c343d' },
                   'Atendimentos não respondidos':  { label: 'Atendimentos não respondidos',  color: '#5a8792' },
-                  'Apresentações respondidas':    { label: 'Apresentações respondidas',    color: '#999999' },
-                  'Apresentações não respondidas': { label: 'Apresentações não respondidas', color: '#d4d4d4' },
+                  'Visitas respondidas':    { label: 'Visitas respondidas',    color: '#999999' },
+                  'Visitas não respondidas': { label: 'Visitas não respondidas', color: '#d4d4d4' },
                 }}
                 className="h-[280px]"
               >
@@ -444,7 +445,7 @@ export default function AnalyticsPage() {
                       </linearGradient>
                     </defs>
                     {/* Legenda customizada via content: mostra so 2 categorias
-                        (Atendimentos e Apresentacoes). O payload prop nao surtiu
+                        (Atendimentos e Visitas). O payload prop nao surtiu
                         efeito com esta versao do recharts, entao renderizo o HTML
                         direto com content. */}
                     <Legend
@@ -464,7 +465,7 @@ export default function AnalyticsPage() {
                               className="w-3 h-3 rounded-full inline-block"
                               style={{ backgroundColor: '#999999' }}
                             />
-                            <span className="font-medium text-foreground">Apresentações</span>
+                            <span className="font-medium text-foreground">Visitas</span>
                           </span>
                         </div>
                       )}
@@ -574,7 +575,7 @@ export default function AnalyticsPage() {
                       />
                     </Bar>
                     <Bar
-                      dataKey="Apresentações respondidas"
+                      dataKey="Visitas respondidas"
                       fill="url(#apresRespGradient)"
                       radius={[4, 4, 0, 0]}
                       stroke="#999999"
@@ -582,14 +583,14 @@ export default function AnalyticsPage() {
                       maxBarSize={16}
                     >
                       <LabelList
-                        dataKey="Apresentações respondidas"
+                        dataKey="Visitas respondidas"
                         position="top"
                         style={{ fontSize: 10, fill: '#525252', fontWeight: 600 }}
                         formatter={(v: any) => (v && v > 0 ? v : '')}
                       />
                     </Bar>
                     <Bar
-                      dataKey="Apresentações não respondidas"
+                      dataKey="Visitas não respondidas"
                       fill="url(#apresNaoGradient)"
                       radius={[4, 4, 0, 0]}
                       stroke="#d4d4d4"
@@ -597,7 +598,7 @@ export default function AnalyticsPage() {
                       maxBarSize={16}
                     >
                       <LabelList
-                        dataKey="Apresentações não respondidas"
+                        dataKey="Visitas não respondidas"
                         position="top"
                         style={{ fontSize: 10, fill: '#525252', fontWeight: 600 }}
                         formatter={(v: any) => (v && v > 0 ? v : '')}
@@ -609,8 +610,8 @@ export default function AnalyticsPage() {
             </CardContent>
           </Card>
 
-            {/* Card "Visitas" removido — Apresentações agora sao 2 series
-                dentro do grafico principal "Atendimento e Apresentacoes" acima. */}
+            {/* Card dedicado removido — Visitas agora sao 2 series dentro do
+                grafico principal "Atendimento e Visitas" acima. */}
           </section>
         </div>
       </div>
@@ -726,7 +727,7 @@ function LastPresentationsCard({ presentations }: { presentations: Deal[] }) {
       <CardHeader className="pb-3">
         <CardTitle className="text-base font-semibold flex items-center gap-2">
           <div className="w-1.5 h-6 bg-primary rounded-full" />
-          Últimas Apresentações
+          Últimas Visitas
           <span className="text-xs text-muted-foreground font-normal ml-1">
             ({presentations.length})
           </span>
@@ -735,7 +736,7 @@ function LastPresentationsCard({ presentations }: { presentations: Deal[] }) {
       <CardContent className="p-0">
         {presentations.length === 0 ? (
           <p className="text-xs text-muted-foreground text-center py-6 px-4">
-            Nenhuma apresentação ainda.
+            Nenhuma visita ainda.
           </p>
         ) : (
           <div className="divide-y divide-border max-h-[500px] overflow-y-auto">

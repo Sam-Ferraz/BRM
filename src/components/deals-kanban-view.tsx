@@ -19,9 +19,9 @@ import { useAccount } from "@/hooks/use-account"
  *
  * 16 status → 6 colunas de fase:
  *   Atendimento (service_*) | Agendamento (visit_foreseen_*) |
- *   Apresentação (visit_done_*) | Proposta | Vendido | Descartado
+ *   Visita (visit_done_*) | Proposta | Vendido | Descartado
  *
- * Fases com sub-temperatura (Atendimento, Agendamento, Apresentação)
+ * Fases com sub-temperatura (Atendimento, Agendamento, Visita)
  * mostram uma bolinha no card indicando frio/morno/quente. Ao arrastar entre
  * fases, tenta preservar a temperatura atual (ex: service_warm → visit_foreseen_warm).
  *

@@ -236,7 +236,7 @@ Campos: `id`, `client`, `value`, `status`, `date`, `description`.
 
 - Atendimento: `service_cold`, `service_mild`, `service_warm`
 - Agendamento: `visit_foreseen_cold`, `visit_foreseen_mild`, `visit_foreseen_warm` (chaves internas ainda usam "visit_foreseen" — renomear exigiria migration; UI mostra "Agendamento")
-- Apresentação: `visit_done_cold`, `visit_done_mild`, `visit_done_warm` (chaves internas ainda usam "visit_done" — renomear exigiria migration; UI mostra "Apresentação")
+- Visita: `visit_done_cold`, `visit_done_mild`, `visit_done_warm` (chaves internas ainda usam "visit_done" — renomear exigiria migration; UI mostra "Visita")
 - Proposta: `proposal`
 - Vendido: `sold`
 - Descartado: `discarded_no_profile`, `discarded_no_interest`, `discarded_competitor`, `discarded_error`

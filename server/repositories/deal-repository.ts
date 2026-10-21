@@ -353,7 +353,7 @@ export class DealRepository extends BaseRepository {
    *
    * Para cada origem devolve contagens em 4 estágios do funil:
    *   - service_count  → status IN (service_cold, service_mild, service_warm)
-   *   - visit_count    → visit_done_* (Apresentação — visita já realizada)
+   *   - visit_count    → visit_done_* (Visita — visita já realizada)
    *   - proposal_count → proposal
    *   - sale_count     → sold
    *
