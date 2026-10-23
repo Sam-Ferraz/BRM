@@ -49,6 +49,39 @@ export class MessageRepository extends BaseRepository {
     }
   }
 
+  /**
+   * Variante dia-calendario (00:00-23:59 na timezone informada, default
+   * America/Sao_Paulo). Usada pra regra de 1 atendimento por conversa por
+   * dia: so conta se houve inbound E outbound DENTRO do mesmo dia local.
+   * Diferente de hasBothDirectionsInWindow que usa janela deslizante de N
+   * horas pra tras — essa aqui respeita a virada do dia (23:59 do dia 1 +
+   * 00:01 do dia 2 NAO fecham o par).
+   */
+  async hasBothDirectionsToday(
+    accountId: number,
+    conversationId: number,
+    timezone = 'America/Sao_Paulo',
+  ): Promise<boolean> {
+    const c = await this.getClient()
+    try {
+      const result = await c.query(
+        `SELECT
+            BOOL_OR(direction = 'inbound')  AS has_inbound,
+            BOOL_OR(direction = 'outbound') AS has_outbound
+           FROM messages
+          WHERE conversation_id = $1
+            AND account_id = $2
+            AND (sent_at AT TIME ZONE 'UTC' AT TIME ZONE $3)::date
+                = (NOW() AT TIME ZONE 'UTC' AT TIME ZONE $3)::date`,
+        [conversationId, accountId, timezone],
+      )
+      const row = result.rows[0]
+      return Boolean(row?.has_inbound) && Boolean(row?.has_outbound)
+    } finally {
+      this.releaseClient(c)
+    }
+  }
+
   async findById(accountId: number, id: number): Promise<Message | null> {
     const client = await this.getClient()
     try {

@@ -459,25 +459,23 @@ export class ChatService {
   }
 
   /**
-   * Regra de métrica: cada conversa do WhatsApp gera 1 atendimento (type='chat',
-   * origin='whatsapp') quando há interação bilateral (envio + recebimento)
-   * dentro de uma janela de 24 horas. Se já existe atendimento criado pra essa
-   * conversa nas últimas 24h, NÃO cria outro — só marca como realizado se
-   * faltava resposta.
+   * Regra do atendimento (metrica do grafico Atendimentos & Visitas):
    *
-   * Chamado após cada send/receive. Idempotente, falhas são silenciosas (log
-   * só) — não devem quebrar o fluxo de mensagem.
-   */
-  /**
-   * Regra nova: QUALQUER interacao (msg inbound/outbound ou ligacao) numa
-   * conversa dentro de um dia calendario (00:00-23:59 America/Sao_Paulo)
-   * gera 1 unico atendimento. Se ja existe atendimento dessa conversa no
-   * mesmo dia, so garante que esta marcado como realizado. No dia
-   * seguinte, uma nova interacao gera um novo atendimento.
+   * 1 atendimento = 1 conversa que teve INTERACAO BILATERAL (ao menos 1 msg
+   * inbound E 1 msg outbound) dentro do mesmo DIA-CALENDARIO em
+   * America/Sao_Paulo (00:00-23:59). O numero de mensagens em cada direcao
+   * nao importa. Virada do dia reseta: 23:59 + 00:01 do dia seguinte NAO
+   * fecham o par.
    *
-   * Elimina a necessidade do corretor registrar atendimento/ligacao
-   * manualmente — o BRM contabiliza automaticamente pelas conversas do
-   * WhatsApp. Corretor so registra visita/proposta/contrato/venda.
+   * Chamado apos cada send/receive. Idempotente:
+   *  - Se ainda nao e bilateral no dia: retorna sem criar.
+   *  - Se e bilateral e ja existe atendimento da conversa no dia: so garante
+   *    que esta marcado como realizado (answered=true).
+   *  - Se e bilateral e nao existe: cria 1 atendimento tipo chat.
+   *
+   * Elimina a necessidade do corretor registrar atendimento manualmente —
+   * o BRM contabiliza automaticamente a partir das conversas WhatsApp.
+   * Falhas sao silenciosas (log) pra nao quebrar o fluxo de mensagem.
    */
   private async tryRegisterServiceFromConversation(
     accountId: number,
@@ -485,6 +483,12 @@ export class ChatService {
   ): Promise<void> {
     if (!this.appointmentRepository) return
     try {
+      // GATE: so conta atendimento se ja houve interacao bilateral HOJE
+      // (dia-calendario America/Sao_Paulo). Sem isso, uma unica msg
+      // (inbound OU outbound) virava atendimento — contagem inflada.
+      const bilateral = await this.messageRepository.hasBothDirectionsToday(accountId, conversation.id)
+      if (!bilateral) return
+
       const existing = await this.appointmentRepository.findChatOfConversationOnDay(
         accountId,
         conversation.id,
