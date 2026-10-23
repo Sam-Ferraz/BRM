@@ -226,7 +226,12 @@ export class GoogleCalendarService {
     })
     if (!res.ok) {
       const text = await res.text()
-      throw new Error(`Google calendarList falhou: ${res.status} ${text}`)
+      // Erros comuns:
+      // 403 PERMISSION_DENIED "Google Calendar API has not been used in project ..." = API nao habilitada no Google Cloud Console
+      // 403 insufficientPermissions = token sem scope calendar.readonly (reautorizar)
+      // 401 invalid_credentials = token expirado/revogado (deve ter sido tratado antes pelo refresh)
+      console.error('[Google] calendarList erro BODY:', text.slice(0, 1500))
+      throw new Error(`Google calendarList falhou: ${res.status} ${text.slice(0, 300)}`)
     }
     const data = (await res.json()) as { items?: GoogleCalendarListEntry[] }
     return (data.items || []).filter((cal) => {
