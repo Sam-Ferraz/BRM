@@ -12,7 +12,39 @@ export class ConversationRepository extends BaseRepository {
     const client = await this.getClient()
     try {
       const params: any[] = [accountId]
-      let where = 'WHERE c.account_id = $1'
+      let where = `WHERE c.account_id = $1
+        -- NOVO FILTRO: conversa so aparece se o contato tem um Deal
+        -- (negocio) criado — pedido explicito do produto. Match: ou por
+        -- telefone (deals.client_phone normalizado com variantes BR 12/13),
+        -- ou por nome via cliente linkado (LOWER+TRIM pra case-insensitive).
+        AND EXISTS (
+          SELECT 1 FROM deals d
+          WHERE d.account_id = c.account_id
+            AND (
+              -- (A) match por nome via cliente linkado pelo LATERAL cl
+              LOWER(TRIM(d.client)) = LOWER(TRIM(cl.name))
+              -- (B) OU match por telefone direto deal <-> conversation
+              OR (
+                d.client_phone IS NOT NULL AND d.client_phone <> ''
+                AND c.contact_phone IS NOT NULL AND c.contact_phone <> ''
+                AND (
+                  REGEXP_REPLACE(d.client_phone, '[^0-9]', '', 'g') = REGEXP_REPLACE(c.contact_phone, '[^0-9]', '', 'g')
+                  OR (
+                    LENGTH(REGEXP_REPLACE(d.client_phone, '[^0-9]', '', 'g')) = 13
+                    AND LENGTH(REGEXP_REPLACE(c.contact_phone, '[^0-9]', '', 'g')) = 12
+                    AND SUBSTRING(REGEXP_REPLACE(d.client_phone, '[^0-9]', '', 'g'), 1, 4) = SUBSTRING(REGEXP_REPLACE(c.contact_phone, '[^0-9]', '', 'g'), 1, 4)
+                    AND SUBSTRING(REGEXP_REPLACE(d.client_phone, '[^0-9]', '', 'g'), 6) = SUBSTRING(REGEXP_REPLACE(c.contact_phone, '[^0-9]', '', 'g'), 5)
+                  )
+                  OR (
+                    LENGTH(REGEXP_REPLACE(d.client_phone, '[^0-9]', '', 'g')) = 12
+                    AND LENGTH(REGEXP_REPLACE(c.contact_phone, '[^0-9]', '', 'g')) = 13
+                    AND SUBSTRING(REGEXP_REPLACE(d.client_phone, '[^0-9]', '', 'g'), 1, 4) = SUBSTRING(REGEXP_REPLACE(c.contact_phone, '[^0-9]', '', 'g'), 1, 4)
+                    AND SUBSTRING(REGEXP_REPLACE(d.client_phone, '[^0-9]', '', 'g'), 5) = SUBSTRING(REGEXP_REPLACE(c.contact_phone, '[^0-9]', '', 'g'), 6)
+                  )
+                )
+              )
+            )
+        )`
       if (ownerUserId !== undefined) {
         where += ' AND c.owner_user_id = $2'
         params.push(ownerUserId)
@@ -226,31 +258,59 @@ export class ConversationRepository extends BaseRepository {
         FROM conversations c
         WHERE c.account_id = $1
           AND c.unread_count > 0
+          -- NOVO FILTRO: conta so conversas cujo contato tem Deal criado.
+          -- Match por telefone (variantes BR 12/13) OU por nome via cliente.
           AND EXISTS (
-            SELECT 1 FROM clients cli
-            WHERE cli.account_id = c.account_id
+            SELECT 1 FROM deals d2
+            WHERE d2.account_id = c.account_id
               AND (
-                cli.id = c.client_id
-                OR (
-                  cli.phone IS NOT NULL AND cli.phone <> ''
+                -- (A) match por telefone direto deal <-> conversation
+                (
+                  d2.client_phone IS NOT NULL AND d2.client_phone <> ''
                   AND c.contact_phone IS NOT NULL AND c.contact_phone <> ''
                   AND (
-                  -- Match direto (mesmos digitos)
-                  REGEXP_REPLACE(cli.phone, '[^0-9]', '', 'g') = REGEXP_REPLACE(c.contact_phone, '[^0-9]', '', 'g')
-                  -- OU celular BR com/sem o 9 apos DDD (13 dig vs 12 dig)
-                  OR (
-                    LENGTH(REGEXP_REPLACE(cli.phone, '[^0-9]', '', 'g')) = 13
-                    AND LENGTH(REGEXP_REPLACE(c.contact_phone, '[^0-9]', '', 'g')) = 12
-                    AND SUBSTRING(REGEXP_REPLACE(cli.phone, '[^0-9]', '', 'g'), 1, 4) = SUBSTRING(REGEXP_REPLACE(c.contact_phone, '[^0-9]', '', 'g'), 1, 4)
-                    AND SUBSTRING(REGEXP_REPLACE(cli.phone, '[^0-9]', '', 'g'), 6) = SUBSTRING(REGEXP_REPLACE(c.contact_phone, '[^0-9]', '', 'g'), 5)
-                  )
-                  OR (
-                    LENGTH(REGEXP_REPLACE(cli.phone, '[^0-9]', '', 'g')) = 12
-                    AND LENGTH(REGEXP_REPLACE(c.contact_phone, '[^0-9]', '', 'g')) = 13
-                    AND SUBSTRING(REGEXP_REPLACE(cli.phone, '[^0-9]', '', 'g'), 1, 4) = SUBSTRING(REGEXP_REPLACE(c.contact_phone, '[^0-9]', '', 'g'), 1, 4)
-                    AND SUBSTRING(REGEXP_REPLACE(cli.phone, '[^0-9]', '', 'g'), 5) = SUBSTRING(REGEXP_REPLACE(c.contact_phone, '[^0-9]', '', 'g'), 6)
+                    REGEXP_REPLACE(d2.client_phone, '[^0-9]', '', 'g') = REGEXP_REPLACE(c.contact_phone, '[^0-9]', '', 'g')
+                    OR (
+                      LENGTH(REGEXP_REPLACE(d2.client_phone, '[^0-9]', '', 'g')) = 13
+                      AND LENGTH(REGEXP_REPLACE(c.contact_phone, '[^0-9]', '', 'g')) = 12
+                      AND SUBSTRING(REGEXP_REPLACE(d2.client_phone, '[^0-9]', '', 'g'), 1, 4) = SUBSTRING(REGEXP_REPLACE(c.contact_phone, '[^0-9]', '', 'g'), 1, 4)
+                      AND SUBSTRING(REGEXP_REPLACE(d2.client_phone, '[^0-9]', '', 'g'), 6) = SUBSTRING(REGEXP_REPLACE(c.contact_phone, '[^0-9]', '', 'g'), 5)
+                    )
+                    OR (
+                      LENGTH(REGEXP_REPLACE(d2.client_phone, '[^0-9]', '', 'g')) = 12
+                      AND LENGTH(REGEXP_REPLACE(c.contact_phone, '[^0-9]', '', 'g')) = 13
+                      AND SUBSTRING(REGEXP_REPLACE(d2.client_phone, '[^0-9]', '', 'g'), 1, 4) = SUBSTRING(REGEXP_REPLACE(c.contact_phone, '[^0-9]', '', 'g'), 1, 4)
+                      AND SUBSTRING(REGEXP_REPLACE(d2.client_phone, '[^0-9]', '', 'g'), 5) = SUBSTRING(REGEXP_REPLACE(c.contact_phone, '[^0-9]', '', 'g'), 6)
+                    )
                   )
                 )
+                -- (B) OU match por nome via qualquer cliente da account
+                OR LOWER(TRIM(d2.client)) IN (
+                  SELECT LOWER(TRIM(cli2.name))
+                  FROM clients cli2
+                  WHERE cli2.account_id = c.account_id
+                    AND (
+                      cli2.id = c.client_id
+                      OR (
+                        cli2.phone IS NOT NULL AND cli2.phone <> ''
+                        AND c.contact_phone IS NOT NULL AND c.contact_phone <> ''
+                        AND (
+                          REGEXP_REPLACE(cli2.phone, '[^0-9]', '', 'g') = REGEXP_REPLACE(c.contact_phone, '[^0-9]', '', 'g')
+                          OR (
+                            LENGTH(REGEXP_REPLACE(cli2.phone, '[^0-9]', '', 'g')) = 13
+                            AND LENGTH(REGEXP_REPLACE(c.contact_phone, '[^0-9]', '', 'g')) = 12
+                            AND SUBSTRING(REGEXP_REPLACE(cli2.phone, '[^0-9]', '', 'g'), 1, 4) = SUBSTRING(REGEXP_REPLACE(c.contact_phone, '[^0-9]', '', 'g'), 1, 4)
+                            AND SUBSTRING(REGEXP_REPLACE(cli2.phone, '[^0-9]', '', 'g'), 6) = SUBSTRING(REGEXP_REPLACE(c.contact_phone, '[^0-9]', '', 'g'), 5)
+                          )
+                          OR (
+                            LENGTH(REGEXP_REPLACE(cli2.phone, '[^0-9]', '', 'g')) = 12
+                            AND LENGTH(REGEXP_REPLACE(c.contact_phone, '[^0-9]', '', 'g')) = 13
+                            AND SUBSTRING(REGEXP_REPLACE(cli2.phone, '[^0-9]', '', 'g'), 1, 4) = SUBSTRING(REGEXP_REPLACE(c.contact_phone, '[^0-9]', '', 'g'), 1, 4)
+                            AND SUBSTRING(REGEXP_REPLACE(cli2.phone, '[^0-9]', '', 'g'), 5) = SUBSTRING(REGEXP_REPLACE(c.contact_phone, '[^0-9]', '', 'g'), 6)
+                          )
+                        )
+                      )
+                    )
                 )
               )
           )
