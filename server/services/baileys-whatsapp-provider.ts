@@ -460,7 +460,14 @@ class BaileysSession {
         }, delay)
       } else {
         // Logout do dispositivo (usuario desconectou pelo celular ou
-        // apagou o pareamento) — limpa auth e exige novo QR
+        // apagou o pareamento) — limpa auth em disco pra evitar loop de
+        // "creds mortos" na proxima tentativa de conectar. Sem este rm,
+        // startSession() carrega credenciais invalidadas, WhatsApp emite
+        // outro loggedOut imediato, QR nunca e gerado — loop silencioso.
+        console.log(`[Baileys] loggedOut user=${this.ownerUserId}: apagando authDir ${this.authDir}`)
+        await fs.rm(this.authDir, { recursive: true, force: true }).catch((err) => {
+          console.error(`[Baileys] falha ao limpar authDir user=${this.ownerUserId}:`, err)
+        })
         // Provider não conhece accountId — variante interna (rule 9).
         await this.sessionRepository.updateStatusInternal(this.ownerUserId, 'disconnected').catch(() => undefined)
       }
@@ -470,7 +477,13 @@ class BaileysSession {
   private async handleMessages({ messages, type }: any): Promise<void> {
     const parent = (BaileysWhatsAppProvider as any).__lastInstance
     if (parent) parent.logEvent(this.ownerUserId, 'messages.upsert', `type=${type} count=${messages?.length || 0}`)
-    if (type !== 'notify') return
+    // Aceita 'notify' (msgs em tempo real) E 'append' (backlog offline entregue
+    // apos reconectar o celular). Sem 'append', msgs que chegaram durante o
+    // socket desconectado sao silenciosamente perdidas. Dedup por
+    // provider_message_id em chat-service.receiveMessage protege contra
+    // duplicatas caso o Baileys reentregue uma msg ja processada.
+    // 'prepend' (historico via syncFullHistory) continua rejeitado por default.
+    if (type !== 'notify' && type !== 'append') return
     for (const msg of messages || []) {
       if (!msg.message) {
         if (parent) parent.logEvent(this.ownerUserId, 'skip', 'reason=no_message')
