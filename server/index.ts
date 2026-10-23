@@ -51,6 +51,7 @@ import {
   PermissionService
 } from './services/index.js'
 import { StubWhatsAppProvider } from './services/whatsapp-provider.js'
+import { ChatEventBus } from './services/chat-event-bus.js'
 import { BaileysWhatsAppProvider } from './services/baileys-whatsapp-provider.js'
 import { CloudApiWhatsAppProvider } from './services/cloud-api-whatsapp-provider.js'
 import { MultiWhatsAppProvider } from './services/multi-whatsapp-provider.js'
@@ -287,12 +288,18 @@ const whatsappProvider =
       )
 
 const whatsappService = new WhatsAppService(whatsappSessionRepository)
+// ChatEventBus — barramento de push em tempo real pros subscribers SSE do
+// endpoint GET /api/chat/events. ChatService emite nos pontos relevantes
+// (receiveMessage, sendMessage, markAsRead); frontend conectado via
+// EventSource invalida a lista/mensagens sem precisar esperar o polling 3s.
+const chatEventBus = new ChatEventBus()
 const chatService = new ChatService(
   conversationRepository,
   messageRepository,
   whatsappSessionRepository,
   whatsappProvider,
-  appointmentRepository
+  appointmentRepository,
+  chatEventBus,
 )
 chatServiceRef = chatService
 
@@ -322,7 +329,7 @@ app.use('/api/sales-agenda', createSalesAgendaRoutes(salesAgendaService))
 app.use('/api/follow-ups', createFollowUpRoutes(followUpService))
 app.use('/api/proposals', createProposalRoutes(proposalService))
 app.use('/api/whatsapp', createWhatsAppRoutes(whatsappService, whatsappProvider, whatsappSessionRepository, baileysProviderSingleton))
-app.use('/api/chat', createChatRoutes(chatService))
+app.use('/api/chat', createChatRoutes(chatService, chatEventBus))
 app.use('/api/leads', createLeadRoutes(leadService, leadSourceRepository))
 app.use('/api/sales', createSaleRoutes(saleService))
 app.use('/api/calendar', createCalendarRoutes(calendarEventService))

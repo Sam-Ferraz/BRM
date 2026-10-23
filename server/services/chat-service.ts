@@ -10,6 +10,7 @@ import {
   ApiResponse,
 } from '../types/index.js'
 import { WhatsAppProvider } from './whatsapp-provider.js'
+import { ChatEventBus } from './chat-event-bus.js'
 
 /**
  * ChatService — orquestra conversas e mensagens.
@@ -33,19 +34,31 @@ export class ChatService {
   private sessionRepository: WhatsAppSessionRepository
   private appointmentRepository: AppointmentRepository | null
   private whatsappProvider: WhatsAppProvider
+  private eventBus: ChatEventBus | null = null
 
   constructor(
     conversationRepository: ConversationRepository,
     messageRepository: MessageRepository,
     sessionRepository: WhatsAppSessionRepository,
     whatsappProvider: WhatsAppProvider,
-    appointmentRepository?: AppointmentRepository
+    appointmentRepository?: AppointmentRepository,
+    eventBus?: ChatEventBus,
   ) {
     this.conversationRepository = conversationRepository
     this.messageRepository = messageRepository
     this.sessionRepository = sessionRepository
     this.appointmentRepository = appointmentRepository ?? null
     this.whatsappProvider = whatsappProvider
+    this.eventBus = eventBus ?? null
+  }
+
+  /** Helper interno: emite se o bus foi injetado. Nao quebra fluxo se null. */
+  private emitEvent(ev: Parameters<NonNullable<ChatService['eventBus']>['emit']>[0]): void {
+    try {
+      this.eventBus?.emit(ev)
+    } catch (err) {
+      console.error('[ChatService] erro emitindo evento:', err)
+    }
   }
 
   async listConversations(accountId: number, viewer: { userId: number; role: string }): Promise<ApiResponse<ConversationWithDetails[]>> {
@@ -63,6 +76,8 @@ export class ChatService {
     if (!existing) throw new Error('Conversation not found')
     this.assertCanView(existing.owner_user_id, viewer)
     await this.conversationRepository.markAsRead(accountId, id)
+    // Emite 'read' pra invalidar badges em outros clientes SSE da mesma account
+    this.emitEvent({ kind: 'read', accountId, ownerUserId: existing.owner_user_id, conversationId: id })
     // Re-busca para devolver o estado já com unread_count zerado.
     const refreshed = (await this.conversationRepository.findById(accountId, id))!
     const messages = await this.messageRepository.findByConversation(accountId, id)
@@ -313,6 +328,9 @@ export class ChatService {
       provider_message_id: providerMessageId,
     })
     await this.conversationRepository.touchLastMessage(accountId, conversationId, 'outbound')
+    // Push real-time: notifica SSE subscribers que ha msg nova (midia outbound)
+    const conv = await this.conversationRepository.findById(accountId, conversationId)
+    if (conv) this.emitEvent({ kind: 'message', accountId, ownerUserId: conv.owner_user_id, conversationId })
     if (providerError) throw providerError
     return message
   }
@@ -381,6 +399,8 @@ export class ChatService {
       provider_message_id: input.providerMessageId ?? null,
     })
     await this.conversationRepository.touchLastMessage(accountId, conversation.id, 'inbound')
+    // Push real-time: notifica SSE subscribers que ha msg nova nessa conversa
+    this.emitEvent({ kind: 'message', accountId, ownerUserId: conversation.owner_user_id, conversationId: conversation.id })
     // Pode ter completado interação bilateral (já houve outbound antes nas 24h).
     await this.tryRegisterServiceFromConversation(accountId, conversation)
     return message
@@ -425,6 +445,8 @@ export class ChatService {
       provider_message_id: providerMessageId,
     })
     await this.conversationRepository.touchLastMessage(accountId, conversationId, 'outbound')
+    // Push real-time: notifica SSE subscribers que ha msg nova (texto outbound)
+    this.emitEvent({ kind: 'message', accountId, ownerUserId, conversationId })
     // Propaga o erro real do provider (Cloud API 400/401/etc) pro handler HTTP,
     // que devolve pro toast do BRM. A mensagem fica salva com status='failed'
     // pra ficar registro visual, mas o toast avisa o motivo (ex: destinatário

@@ -1,6 +1,8 @@
-import { Response, Router } from 'express'
+import { Request, Response, Router } from 'express'
+import jwt from 'jsonwebtoken'
 import multer from 'multer'
 import { ChatService } from '../services/index.js'
+import { ChatEventBus } from '../services/chat-event-bus.js'
 import { authenticateToken, requireAccount, AuthenticatedRequest } from '../middleware/auth.js'
 
 // Upload de midia pro WhatsApp (imagem/audio/video/documento). Memory storage
@@ -17,8 +19,71 @@ const mediaUpload = multer({
  * Visão corretor: apenas as suas. A regra mora no ChatService.
  * Todas as rotas exigem accountId no token (multi-tenancy).
  */
-export function createChatRoutes(chatService: ChatService): Router {
+export function createChatRoutes(chatService: ChatService, eventBus?: ChatEventBus): Router {
   const router = Router()
+
+  // --------------------------------------------------------------------------
+  // GET /events — Server-Sent Events pra push real-time ao /chat.
+  // EventSource nativo NAO envia headers, so query params — por isso o token
+  // vem como ?token=xxx (JWT validado inline, sem passar pelo authenticateToken).
+  // Em producao atras do nginx, exige `proxy_buffering off` e
+  // `proxy_cache off` pra o chunk nao ficar preso no buffer.
+  // --------------------------------------------------------------------------
+  router.get('/events', async (req: Request, res: Response): Promise<void> => {
+    if (!eventBus) {
+      res.status(503).json({ error: 'event bus unavailable' })
+      return
+    }
+    const token = String(req.query.token || '')
+    if (!token) {
+      res.status(401).json({ error: 'token required' })
+      return
+    }
+    let decoded: { userId: number; role: string; accountId?: number }
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET!) as any
+    } catch {
+      res.status(403).json({ error: 'invalid token' })
+      return
+    }
+    if (!decoded.accountId) {
+      res.status(401).json({ error: 'token obsoleto' })
+      return
+    }
+
+    // SSE headers
+    res.setHeader('Content-Type', 'text/event-stream')
+    res.setHeader('Cache-Control', 'no-cache, no-transform')
+    res.setHeader('Connection', 'keep-alive')
+    res.setHeader('X-Accel-Buffering', 'no') // desliga buffering do nginx (reinforce)
+    res.flushHeaders?.()
+
+    // Primeiro evento = handshake (frontend sabe que conectou)
+    res.write(`event: ready\ndata: {}\n\n`)
+
+    // Admin recebe tudo da account (ownerUserId=null); corretor so os eventos dele
+    const filter = {
+      accountId: decoded.accountId,
+      ownerUserId: decoded.role === 'admin' ? null : decoded.userId,
+    }
+    const unsubscribe = eventBus.subscribe(filter, (ev) => {
+      try {
+        res.write(`event: ${ev.kind}\ndata: ${JSON.stringify(ev)}\n\n`)
+      } catch {
+        // write pode falhar se cliente desconectou; cleanup pelo close
+      }
+    })
+
+    // Keep-alive comment a cada 25s pra evitar que proxy derrube idle
+    const keepAlive = setInterval(() => {
+      try { res.write(`: keepalive ${Date.now()}\n\n`) } catch { /* ignore */ }
+    }, 25_000)
+
+    req.on('close', () => {
+      clearInterval(keepAlive)
+      unsubscribe()
+    })
+  })
 
   // Lista de conversas (com último preview já enriquecido)
   router.get('/conversations', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {

@@ -188,13 +188,51 @@ export default function ChatPage() {
     fetchConversations()
   }, [fetchSession, fetchConversations])
 
-  // Polling: a cada 15s refetch de conversas + status da sessao. Garante
-  // que msgs novas aparecem sem F5 e que badge reflete estado real do
-  // socket. Se socket morreu mas status no banco continua 'connected',
-  // tenta reconectar automaticamente chamando /start.
+  // SSE (Server-Sent Events) pra push real-time: ChatService emite 'message',
+  // 'conversation' e 'read' no backend; aqui reagimos sem esperar o polling.
+  // Fallback: se SSE nao conectar em 5s, mantemos polling de 3s (status
+  // inicial). Se SSE conecta, polling vira safety-net de 30s.
   const selectedIdRef = useRef<number | null>(null)
   useEffect(() => { selectedIdRef.current = selectedId }, [selectedId])
+
+  const [sseConnected, setSseConnected] = useState(false)
   useEffect(() => {
+    const token = localStorage.getItem('token')
+    if (!token) return
+    const url = `/api/chat/events?token=${encodeURIComponent(token)}`
+    let es: EventSource | null = null
+    try {
+      es = new EventSource(url)
+    } catch {
+      return
+    }
+    const refreshAll = () => {
+      fetchConversations().catch(() => undefined)
+      if (selectedIdRef.current !== null) {
+        fetchConversation(selectedIdRef.current).catch(() => undefined)
+      }
+    }
+    es.addEventListener('ready', () => setSseConnected(true))
+    es.addEventListener('message', refreshAll)
+    es.addEventListener('conversation', refreshAll)
+    // 'read' so afeta badges/unread_count — refetch da lista basta
+    es.addEventListener('read', () => { fetchConversations().catch(() => undefined) })
+    es.onerror = () => {
+      // Mantem conectado=false enquanto o browser tenta reconectar automaticamente
+      setSseConnected(false)
+    }
+    return () => {
+      try { es?.close() } catch { /* ignore */ }
+      setSseConnected(false)
+    }
+  }, [fetchConversations, fetchConversation])
+
+  // Polling: sempre roda, mas em cadencia variavel.
+  //  - SSE conectado => polling de 30s (safety-net pra badge/socket health)
+  //  - SSE off (fallback) => polling de 3s como antes
+  // Garante que badge do socket + msgs aparecem sem F5 mesmo sem SSE.
+  useEffect(() => {
+    const intervalMs = sseConnected ? 30_000 : 3_000
     const id = setInterval(async () => {
       try {
         const tasks: Promise<unknown>[] = [fetchConversations(), fetchSession()]
@@ -205,9 +243,9 @@ export default function ChatPage() {
       } catch {
         /* silencioso — proximo tick tenta de novo */
       }
-    }, 3000)
+    }, intervalMs)
     return () => clearInterval(id)
-  }, [fetchConversations, fetchSession, fetchConversation])
+  }, [fetchConversations, fetchSession, fetchConversation, sseConnected])
 
   // Auto-reconexao: se a sessao esta 'connected' no banco mas o socket
   // Baileys nao esta vivo em memoria, dispara /start pra recriar o socket.
