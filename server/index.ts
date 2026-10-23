@@ -382,8 +382,34 @@ app.use((error: Error, req: express.Request, res: express.Response, next: expres
 // o QR pra o socket voltar; o badge cinza sinaliza isso claramente.
 whatsappSessionRepository
   .resetStaleConnectedSessions()
-  .then((count) => {
+  .then(async (count) => {
     if (count > 0) console.log(`⚡ ${count} sessao(oes) WhatsApp orfa(s) marcada(s) como disconnected`)
+    // Auto-resume: tenta re-subir os sockets Baileys das sessoes que
+    // estavam ativas antes do restart, reusando o auth em disco. Sem isso,
+    // apos cada deploy o corretor precisava clicar "Conectar" manualmente.
+    // Concorrencia 3 + delay 2s entre batches pra nao saturar o WhatsApp
+    // (que pode detectar flood de connects do mesmo IP como abuse).
+    try {
+      const userIds = await whatsappSessionRepository.findBaileysUserIdsToResume(60)
+      if (userIds.length === 0) return
+      console.log(`🔁 Auto-resume: ${userIds.length} sessao(oes) Baileys pra tentar reconectar`)
+      const BATCH = 3
+      const DELAY_MS = 2000
+      for (let i = 0; i < userIds.length; i += BATCH) {
+        const batch = userIds.slice(i, i + BATCH)
+        await Promise.allSettled(
+          batch.map((userId) =>
+            baileysProviderSingleton
+              .startSession(userId)
+              .then((state) => console.log(`🔁 Auto-resume user=${userId} status=${state.status}`))
+              .catch((err) => console.error(`🔁 Auto-resume user=${userId} falhou:`, err instanceof Error ? err.message : err)),
+          ),
+        )
+        if (i + BATCH < userIds.length) await new Promise((r) => setTimeout(r, DELAY_MS))
+      }
+    } catch (err) {
+      console.error('Erro no auto-resume de sessoes Baileys:', err)
+    }
   })
   .catch((err) => console.error('Erro resetando sessoes WhatsApp orfas:', err))
 

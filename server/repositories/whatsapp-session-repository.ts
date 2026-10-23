@@ -143,6 +143,30 @@ export class WhatsAppSessionRepository extends BaseRepository {
   }
 
   /**
+   * Boot: lista user_ids de sessoes Baileys que estavam ativas antes do
+   * restart pra o server tentar re-subir os sockets automaticamente,
+   * reaproveitando o auth state em disco. Chamado DEPOIS de
+   * resetStaleConnectedSessions (que marca tudo disconnected); por isso
+   * usamos a janela de updated_at recente pra pegar essas que acabaram
+   * de ser resetadas.
+   */
+  async findBaileysUserIdsToResume(withinSeconds = 30): Promise<number[]> {
+    const client = await this.getClient()
+    try {
+      const result = await client.query(
+        `SELECT user_id FROM whatsapp_sessions
+         WHERE provider = 'baileys'
+           AND status = 'disconnected'
+           AND updated_at > NOW() - ($1 || ' seconds')::INTERVAL`,
+        [String(withinSeconds)],
+      )
+      return result.rows.map((r: any) => Number(r.user_id))
+    } finally {
+      this.releaseClient(client)
+    }
+  }
+
+  /**
    * INTERNO/GLOBAL (rule 9): providers atualizam status sem conhecer accountId.
    * user_id é UNIQUE globalmente, então update por user_id sozinho é correto.
    */
