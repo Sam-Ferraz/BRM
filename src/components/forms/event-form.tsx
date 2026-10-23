@@ -123,12 +123,21 @@ export function EventForm({ open, onOpenChange, eventId, initialDate, onSaved }:
 
     setLoading(true)
     try {
+      // CRITICAL: enviar o datetime-local RAW (sem toISOString) pra evitar o
+      // offset de +3h. Fluxo pretendido:
+      //   input "10:00" -> payload "2026-10-23T10:00:00" (naive, sem Z) ->
+      //   backend grava literal como TIMESTAMP -> getAgenda retorna
+      //   "2026-10-23 10:00:00" via ::text -> parseISO no frontend le como
+      //   local -> format "HH:mm" exibe 10:00.
+      // Antes: new Date(startAt).toISOString() convertia 10:00 SP pra
+      // 13:00 UTC, backend gravava literal 13:00, UI mostrava 13:00 (+3h).
+      const normalizeLocal = (s: string) => (s.length === 16 ? `${s}:00` : s)
       const payload: Partial<CalendarEvent> = {
         title: title.trim(),
         description: description.trim() || undefined,
         location: location.trim() || undefined,
-        start_at: new Date(startAt).toISOString(),
-        end_at: endAt ? new Date(endAt).toISOString() : undefined,
+        start_at: normalizeLocal(startAt),
+        end_at: endAt ? normalizeLocal(endAt) : undefined,
         all_day: allDay,
         color,
         status,

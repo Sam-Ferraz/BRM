@@ -253,14 +253,21 @@ export class GoogleCalendarService {
     to: Date
   ): Promise<AgendaItem[]> {
     const token = await this.getValidAccessToken(accountId, userId)
-    if (!token) return []
+    if (!token) {
+      console.warn(`[Google] user=${userId} account=${accountId}: sem token/conexao. Agenda nao agregara eventos Google. User precisa conectar em /settings.`)
+      return []
+    }
 
     let calendars: GoogleCalendarListEntry[]
     try {
       calendars = await this.listVisibleCalendars(token)
+      console.log(`[Google] user=${userId}: ${calendars.length} calendario(s) visivel(is):`, calendars.map(c => c.summary || c.id).join(', '))
     } catch (err) {
       console.error('[Google] Falha ao listar calendários:', err)
       return []
+    }
+    if (calendars.length === 0) {
+      console.warn(`[Google] user=${userId}: NENHUM calendario visivel. Verifique selected=true em calendar.google.com/calendar/u/0/r/settings`)
     }
 
     const params = new URLSearchParams({
@@ -285,7 +292,9 @@ export class GoogleCalendarService {
             return [] as AgendaItem[]
           }
           const data = (await res.json()) as { items?: GoogleApiEvent[] }
-          return this.mapEventsToAgendaItems(data.items || [], userId, cal)
+          const items = data.items || []
+          console.log(`[Google] user=${userId} calendario="${cal.summary || cal.id}" range=${from.toISOString()}..${to.toISOString()}: ${items.length} evento(s)`)
+          return this.mapEventsToAgendaItems(items, userId, cal)
         } catch (err) {
           console.error(`[Google] Erro ao buscar eventos de "${cal.summary}":`, err)
           return [] as AgendaItem[]
