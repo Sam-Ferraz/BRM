@@ -212,27 +212,96 @@ export default function ChatPage() {
         fetchConversation(selectedIdRef.current).catch(() => undefined)
       }
     }
-    es.addEventListener('ready', () => setSseConnected(true))
-    es.addEventListener('message', refreshAll)
-    es.addEventListener('conversation', refreshAll)
-    // 'read' so afeta badges/unread_count — refetch da lista basta
-    es.addEventListener('read', () => { fetchConversations().catch(() => undefined) })
+    // Debounce: bursts de append pos-reconexao disparariam N refetches
+    // sequenciais; colapsa em 1 refetch depois de 50ms de silencio.
+    let refreshTimer: number | null = null
+    const refreshDebounced = () => {
+      if (refreshTimer !== null) window.clearTimeout(refreshTimer)
+      refreshTimer = window.setTimeout(() => { refreshTimer = null; refreshAll() }, 50)
+    }
+
+    // Payload rico: append direto na UI sem refetch quando o evento ja
+    // traz a Message e o patch da Conversation. Elimina 2 round-trips.
+    const applyMessageEvent = (data: any) => {
+      const msg = data?.message
+      const patch = data?.conversationPatch
+      const convId = data?.conversationId
+      if (msg && typeof convId === 'number') {
+        // Append na lista de msgs se a conversa aberta e a mesma
+        if (selectedIdRef.current === convId) {
+          setMessages((prev) => {
+            // Dedup por id (SSE pode chegar antes OU depois do refetch)
+            if (prev.some((m) => m.id === msg.id)) return prev
+            return [...prev, msg]
+          })
+        }
+        // Patch na lista de conversas (last_message_at/preview/direction/unread)
+        if (patch) {
+          setConversations((prev) =>
+            prev.map((c) =>
+              c.id === convId
+                ? {
+                    ...c,
+                    last_message_at: patch.last_message_at ?? c.last_message_at,
+                    last_message_preview: patch.last_message_preview ?? c.last_message_preview,
+                    last_message_direction: patch.last_message_direction ?? c.last_message_direction,
+                    unread_count: patch.unread_count ?? c.unread_count,
+                  }
+                : c,
+            ),
+          )
+        }
+        return true
+      }
+      return false
+    }
+
+    es.addEventListener('ready', () => {
+      setSseConnected(true)
+      // Pre-fetch no connect/reconnect: garante que backlog acumulado
+      // durante janela offline aparece imediatamente.
+      refreshAll()
+    })
+    es.addEventListener('message', (ev: MessageEvent) => {
+      try {
+        const data = JSON.parse(ev.data)
+        if (applyMessageEvent(data)) return
+      } catch { /* ignore parse */ }
+      // Payload sem rich data (ou falhou) => fallback debounced refetch
+      refreshDebounced()
+    })
+    es.addEventListener('conversation', refreshDebounced)
+    es.addEventListener('read', (ev: MessageEvent) => {
+      try {
+        const data = JSON.parse(ev.data)
+        if (typeof data?.conversationId === 'number') {
+          setConversations((prev) =>
+            prev.map((c) => (c.id === data.conversationId ? { ...c, unread_count: 0 } : c)),
+          )
+          return
+        }
+      } catch { /* ignore parse */ }
+      // Fallback (sem payload)
+      fetchConversations().catch(() => undefined)
+    })
     es.onerror = () => {
       // Mantem conectado=false enquanto o browser tenta reconectar automaticamente
       setSseConnected(false)
     }
     return () => {
+      if (refreshTimer !== null) window.clearTimeout(refreshTimer)
       try { es?.close() } catch { /* ignore */ }
       setSseConnected(false)
     }
   }, [fetchConversations, fetchConversation])
 
   // Polling: sempre roda, mas em cadencia variavel.
-  //  - SSE conectado => polling de 30s (safety-net pra badge/socket health)
-  //  - SSE off (fallback) => polling de 3s como antes
+  //  - SSE conectado => polling de 60s (safety-net; payload rico elimina
+  //    necessidade de refetch frequente)
+  //  - SSE off (fallback) => polling de 1s (menor latencia percebida)
   // Garante que badge do socket + msgs aparecem sem F5 mesmo sem SSE.
   useEffect(() => {
-    const intervalMs = sseConnected ? 30_000 : 3_000
+    const intervalMs = sseConnected ? 60_000 : 1_000
     const id = setInterval(async () => {
       try {
         const tasks: Promise<unknown>[] = [fetchConversations(), fetchSession()]

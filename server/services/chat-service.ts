@@ -76,8 +76,15 @@ export class ChatService {
     if (!existing) throw new Error('Conversation not found')
     this.assertCanView(existing.owner_user_id, viewer)
     await this.conversationRepository.markAsRead(accountId, id)
-    // Emite 'read' pra invalidar badges em outros clientes SSE da mesma account
-    this.emitEvent({ kind: 'read', accountId, ownerUserId: existing.owner_user_id, conversationId: id })
+    // Emite 'read' com patch (unread zerado) pra outros clientes SSE
+    // atualizarem o badge sem precisar refetch da lista de conversas
+    this.emitEvent({
+      kind: 'read',
+      accountId,
+      ownerUserId: existing.owner_user_id,
+      conversationId: id,
+      conversationPatch: { unread_count: 0 },
+    })
     // Re-busca para devolver o estado já com unread_count zerado.
     const refreshed = (await this.conversationRepository.findById(accountId, id))!
     const messages = await this.messageRepository.findByConversation(accountId, id)
@@ -328,9 +335,23 @@ export class ChatService {
       provider_message_id: providerMessageId,
     })
     await this.conversationRepository.touchLastMessage(accountId, conversationId, 'outbound')
-    // Push real-time: notifica SSE subscribers que ha msg nova (midia outbound)
+    // Push real-time com payload rico: SSE ja leva a Message pra UI dar
+    // append direto sem refetch; conversationPatch leva campos atualizados
+    // pra lista de conversas re-renderizar sem listConversations.
     const conv = await this.conversationRepository.findById(accountId, conversationId)
-    if (conv) this.emitEvent({ kind: 'message', accountId, ownerUserId: conv.owner_user_id, conversationId })
+    if (conv) this.emitEvent({
+      kind: 'message',
+      accountId,
+      ownerUserId: conv.owner_user_id,
+      conversationId,
+      message,
+      conversationPatch: {
+        last_message_at: message.sent_at ? new Date(message.sent_at).toISOString() : null,
+        last_message_preview: message.content ?? null,
+        last_message_direction: 'outbound',
+        unread_count: conv.unread_count ?? 0,
+      },
+    })
     if (providerError) throw providerError
     return message
   }
@@ -399,8 +420,21 @@ export class ChatService {
       provider_message_id: input.providerMessageId ?? null,
     })
     await this.conversationRepository.touchLastMessage(accountId, conversation.id, 'inbound')
-    // Push real-time: notifica SSE subscribers que ha msg nova nessa conversa
-    this.emitEvent({ kind: 'message', accountId, ownerUserId: conversation.owner_user_id, conversationId: conversation.id })
+    // Push real-time com payload rico (ver comentario na midia outbound)
+    this.emitEvent({
+      kind: 'message',
+      accountId,
+      ownerUserId: conversation.owner_user_id,
+      conversationId: conversation.id,
+      message,
+      conversationPatch: {
+        last_message_at: message.sent_at ? new Date(message.sent_at).toISOString() : null,
+        last_message_preview: message.content ?? null,
+        last_message_direction: direction === 'outbound' ? 'outbound' : 'inbound',
+        // Inbound incrementa unread, outbound (fromMe do emitOwnEvents) nao
+        unread_count: direction === 'outbound' ? conversation.unread_count ?? 0 : (conversation.unread_count ?? 0) + 1,
+      },
+    })
     // Pode ter completado interação bilateral (já houve outbound antes nas 24h).
     await this.tryRegisterServiceFromConversation(accountId, conversation)
     return message
@@ -445,8 +479,20 @@ export class ChatService {
       provider_message_id: providerMessageId,
     })
     await this.conversationRepository.touchLastMessage(accountId, conversationId, 'outbound')
-    // Push real-time: notifica SSE subscribers que ha msg nova (texto outbound)
-    this.emitEvent({ kind: 'message', accountId, ownerUserId, conversationId })
+    // Push real-time com payload rico (ver comentario na midia outbound)
+    this.emitEvent({
+      kind: 'message',
+      accountId,
+      ownerUserId,
+      conversationId,
+      message,
+      conversationPatch: {
+        last_message_at: message.sent_at ? new Date(message.sent_at).toISOString() : null,
+        last_message_preview: message.content ?? null,
+        last_message_direction: 'outbound',
+        // Outbound nao mexe no unread do destinatario; preserva o atual
+      },
+    })
     // Propaga o erro real do provider (Cloud API 400/401/etc) pro handler HTTP,
     // que devolve pro toast do BRM. A mensagem fica salva com status='failed'
     // pra ficar registro visual, mas o toast avisa o motivo (ex: destinatário

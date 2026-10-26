@@ -51,11 +51,14 @@ export function createChatRoutes(chatService: ChatService, eventBus?: ChatEventB
       return
     }
 
-    // SSE headers
-    res.setHeader('Content-Type', 'text/event-stream')
-    res.setHeader('Cache-Control', 'no-cache, no-transform')
+    // SSE headers — explicitos pra desativar buffering em qualquer proxy
+    // (nginx, Cloudflare, CloudFront, etc). text/event-stream + no-transform
+    // sao criticos pra evitar reescrita de chunks.
+    res.setHeader('Content-Type', 'text/event-stream; charset=utf-8')
+    res.setHeader('Cache-Control', 'no-cache, no-store, no-transform, must-revalidate')
+    res.setHeader('Pragma', 'no-cache')
     res.setHeader('Connection', 'keep-alive')
-    res.setHeader('X-Accel-Buffering', 'no') // desliga buffering do nginx (reinforce)
+    res.setHeader('X-Accel-Buffering', 'no') // nginx: desativa proxy_buffering
     res.flushHeaders?.()
 
     // Primeiro evento = handshake (frontend sabe que conectou)
@@ -74,10 +77,12 @@ export function createChatRoutes(chatService: ChatService, eventBus?: ChatEventB
       }
     })
 
-    // Keep-alive comment a cada 25s pra evitar que proxy derrube idle
+    // Keep-alive comment a cada 15s pra evitar que proxy derrube idle
+    // (nginx default proxy_read_timeout = 60s; Cloudflare = 100s; 15s da
+    // margem segura mesmo em config conservadora de proxy intermediario)
     const keepAlive = setInterval(() => {
       try { res.write(`: keepalive ${Date.now()}\n\n`) } catch { /* ignore */ }
-    }, 25_000)
+    }, 15_000)
 
     req.on('close', () => {
       clearInterval(keepAlive)
