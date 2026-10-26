@@ -1024,8 +1024,16 @@ export default function ChatPage() {
                       type="button"
                       size="sm"
                       variant="outline"
-                      onClick={() => setCallLogOpen(true)}
-                      title="Registrar ligação"
+                      onClick={() => {
+                        const phone = currentConversation?.contact_phone
+                        if (!phone) return
+                        const digits = phone.replace(/\D/g, "")
+                        if (digits.length < 10) return
+                        // Abre o discador do dispositivo (celular/softphone)
+                        window.location.href = `tel:+${digits}`
+                      }}
+                      disabled={!currentConversation?.contact_phone}
+                      title={currentConversation?.contact_phone ? `Ligar para ${currentConversation.contact_phone}` : "Sem telefone"}
                     >
                       <PhoneCall className="w-4 h-4" />
                     </Button>
