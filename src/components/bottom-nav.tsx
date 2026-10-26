@@ -89,6 +89,10 @@ const NAV: NavEntry[] = [
   { kind: "link", label: "Config.", icon: Settings, path: "/settings" },
 ]
 
+// Cache leve (sessao do browser): evita re-fetch imediato ao remontar o
+// componente em navegacoes rapidas. E INVALIDADO quando qualquer tela
+// dispara window.dispatchEvent('brm:refresh-stats') — ChatPage faz isso
+// no SSE 'message'/'read' pra o badge do /chat refletir unread em tempo real.
 let statsCache: DashboardStats | null = null
 
 /** Soma contadores de um grupo (usado como badge do grupo). */
@@ -112,17 +116,28 @@ export function BottomNav() {
   const [canScrollRight, setCanScrollRight] = useState(false)
 
   useEffect(() => {
-    if (statsCache) return
     let cancelled = false
-    api.dashboard.getStats()
-      .then((data) => {
-        if (cancelled) return
-        statsCache = data
-        setStats(data)
-      })
-      .catch((err) => console.warn("[BottomNav] falha ao buscar stats:", err))
+    const fetchStats = () => {
+      api.dashboard.getStats()
+        .then((data) => {
+          if (cancelled) return
+          statsCache = data
+          setStats(data)
+        })
+        .catch((err) => console.warn("[BottomNav] falha ao buscar stats:", err))
+    }
+    // Monta: usa cache se tem, senao busca
+    if (statsCache) setStats(statsCache)
+    else fetchStats()
+    // Escuta eventos de invalidacao (ex: ChatPage emite quando chega SSE)
+    const onRefresh = () => fetchStats()
+    window.addEventListener("brm:refresh-stats", onRefresh)
+    // Polling leve de 30s como safety net
+    const interval = window.setInterval(fetchStats, 30_000)
     return () => {
       cancelled = true
+      window.removeEventListener("brm:refresh-stats", onRefresh)
+      window.clearInterval(interval)
     }
   }, [])
 

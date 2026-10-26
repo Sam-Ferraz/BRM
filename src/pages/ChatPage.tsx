@@ -262,15 +262,19 @@ export default function ChatPage() {
       // durante janela offline aparece imediatamente.
       refreshAll()
     })
+    // Invalida o cache do bottom-nav pra o badge do Chat refletir unread
+    // em tempo real (sem esperar o polling de 30s do bottom-nav)
+    const invalidateStats = () => window.dispatchEvent(new Event("brm:refresh-stats"))
     es.addEventListener('message', (ev: MessageEvent) => {
       try {
         const data = JSON.parse(ev.data)
-        if (applyMessageEvent(data)) return
+        if (applyMessageEvent(data)) { invalidateStats(); return }
       } catch { /* ignore parse */ }
       // Payload sem rich data (ou falhou) => fallback debounced refetch
       refreshDebounced()
+      invalidateStats()
     })
-    es.addEventListener('conversation', refreshDebounced)
+    es.addEventListener('conversation', () => { refreshDebounced(); invalidateStats() })
     es.addEventListener('read', (ev: MessageEvent) => {
       try {
         const data = JSON.parse(ev.data)
@@ -278,11 +282,13 @@ export default function ChatPage() {
           setConversations((prev) =>
             prev.map((c) => (c.id === data.conversationId ? { ...c, unread_count: 0 } : c)),
           )
+          invalidateStats()
           return
         }
       } catch { /* ignore parse */ }
       // Fallback (sem payload)
       fetchConversations().catch(() => undefined)
+      invalidateStats()
     })
     es.onerror = () => {
       // Mantem conectado=false enquanto o browser tenta reconectar automaticamente
