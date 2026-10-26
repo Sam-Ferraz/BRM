@@ -146,29 +146,35 @@ export class ConversationRepository extends BaseRepository {
   ): Promise<Conversation> {
     const client = await this.getClient()
     try {
-      // Tenta achar conversa existente primeiro (dentro da account)
+      // Gera variantes BR com/sem o 9 pra evitar criar conversa duplicada
+      // quando o Baileys entrega msg com formato diferente do cadastrado.
+      // Baileys as vezes envia wa_id sem o 9 (12 dig), outras com o 9 (13 dig).
+      const normalized = contactPhone.replace(/\D/g, '')
+      const variants: string[] = [normalized]
+      if (normalized.length === 13 && normalized.startsWith('55')) {
+        variants.push(normalized.slice(0, 4) + normalized.slice(5))
+      } else if (normalized.length === 12 && normalized.startsWith('55')) {
+        variants.push(normalized.slice(0, 4) + '9' + normalized.slice(4))
+      }
+
+      // Tenta achar conversa existente comparando SOMENTE OS DIGITOS do
+      // contact_phone contra as variantes (antes era match literal — gap
+      // que causava duplicatas: id 140 com '+5547997500009' + id 144 com
+      // '+554797500009' pra mesma pessoa).
       const existing = await client.query(
-        'SELECT * FROM conversations WHERE account_id = $1 AND owner_user_id = $2 AND contact_phone = $3',
-        [accountId, ownerUserId, contactPhone]
+        `SELECT * FROM conversations
+          WHERE account_id = $1
+            AND owner_user_id = $2
+            AND regexp_replace(contact_phone, '\\D', '', 'g') = ANY($3::text[])
+          LIMIT 1`,
+        [accountId, ownerUserId, variants]
       )
       if (existing.rows.length > 0) {
         return existing.rows[0]
       }
 
       // Match com Cliente do CRM por telefone — compara só dígitos ignorando
-      // formatacao (+55, espacos, parenteses, hifens). Tambem considera
-      // celular BR com/sem o 9 apos DDD (13 dig vs 12 dig — WhatsApp usa
-      // wa_id sem o 9, mas cliente pode estar cadastrado com).
-      const normalized = contactPhone.replace(/\D/g, '')
-      // Gera variantes pra procurar: original + com/sem o 9 se for BR celular
-      const variants: string[] = [normalized]
-      if (normalized.length === 13 && normalized.startsWith('55')) {
-        // BR com 9 → adiciona sem 9 (12 dig)
-        variants.push(normalized.slice(0, 4) + normalized.slice(5))
-      } else if (normalized.length === 12 && normalized.startsWith('55')) {
-        // BR sem 9 → adiciona com 9 (13 dig)
-        variants.push(normalized.slice(0, 4) + '9' + normalized.slice(4))
-      }
+      // formatacao. Mesmas variantes.
       const clientLookup = await client.query(
         `SELECT id, name FROM clients
          WHERE account_id = $1
