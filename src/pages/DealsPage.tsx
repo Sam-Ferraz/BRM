@@ -119,7 +119,7 @@ export default function DealsPage() {
   useEffect(() => {
     if (searchParams.get('new') === 'true') {
       setIsFormOpen(true)
-      setEditingNegocio(undefined)
+      setEditingDeal(undefined)
       // Remove the query parameter after opening
       const newParams = new URLSearchParams(searchParams)
       newParams.delete('new')
