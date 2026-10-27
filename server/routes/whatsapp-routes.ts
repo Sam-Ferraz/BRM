@@ -160,6 +160,28 @@ export function createWhatsAppRoutes(
     }
   })
 
+  // Presenca do contato: online/offline/digitando/visto por ultimo.
+  // Baileys so emite presence apos subscribePresence — essa rota faz o
+  // subscribe (idempotente) e devolve o cache atual. Frontend deve chamar
+  // periodicamente (10-15s) quando o usuario tem conversa aberta.
+  // Resposta: { state: 'available'|'unavailable'|'composing'|'recording'|'unknown', lastSeen?: number (unix seconds) }
+  router.get('/presence', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const userId = req.user!.userId
+      const phone = String(req.query.phone || '')
+      if (!phone) {
+        res.status(400).json({ error: 'phone is required' })
+        return
+      }
+      const data = (baileys as any).getPresence
+        ? await (baileys as any).getPresence(userId, phone)
+        : null
+      res.json({ data: data ?? { state: 'unknown' } })
+    } catch (err) {
+      res.status(500).json({ error: err instanceof Error ? err.message : 'Internal' })
+    }
+  })
+
   // Verifica se um numero tem WhatsApp ativo. Query: ?phone=+5547999999999
   // Retorna { exists: true/false, jid: string|null, tried_variants: string[] }.
   // Testa tanto com o 9 quanto sem (celular BR) — WA aceita qualquer um dos

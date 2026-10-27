@@ -78,6 +78,12 @@ export class BaileysWhatsAppProvider implements WhatsAppProvider {
   private authDir: string
   // Metricas em memoria pra endpoint de debug
   public debugLog: Array<{ at: string; userId: number; event: string; detail?: string }> = []
+  // Cache de presenca em memoria por userId+phone-normalized.
+  //   state: available=online, unavailable=offline, composing=digitando,
+  //          recording=gravando audio, paused=parou de digitar
+  //   lastSeen: timestamp Unix em segundos (opcional, so quando o WhatsApp
+  //             do contato permite — depende das configuracoes de privacidade)
+  public presences = new Map<string, { state: string; lastSeen?: number; at: number }>()
 
   constructor(opts: {
     incoming: IncomingMessageHandler
@@ -139,6 +145,25 @@ export class BaileysWhatsAppProvider implements WhatsAppProvider {
     } catch {
       return { exists: false, jid: null }
     }
+  }
+
+  /**
+   * Assina presenca do contato e devolve o estado atual conhecido.
+   * Chamado pelo endpoint GET /api/whatsapp/presence quando o corretor
+   * abre uma conversa — Baileys so emite presence.update apos subscribe.
+   */
+  async getPresence(userId: number, phone: string): Promise<{ state: string; lastSeen?: number } | null> {
+    const session = this.sessions.get(userId)
+    if (!session?.sock) return null
+    await session.subscribePresenceInternal(phone)
+    const digits = (phone || '').replace(/\D/g, '')
+    if (!digits) return null
+    const cached = this.presences.get(`${userId}:${digits}`)
+    if (!cached) return { state: 'unknown' }
+    // Nao devolve dados muito velhos (>10min indica que Baileys parou de
+    // emitir — contato pode ter apagado o BRM dos aparelhos vinculados).
+    if (Date.now() - cached.at > 10 * 60 * 1000) return { state: 'unknown' }
+    return { state: cached.state, lastSeen: cached.lastSeen }
   }
 
   async getContactPhoto(userId: number, phone: string): Promise<string | null> {
@@ -379,6 +404,45 @@ class BaileysSession {
     // notifica quando alguem liga. Persistimos como 'call_missed' pro
     // corretor ver que teve uma tentativa de ligacao.
     sock.ev.on('call', (calls) => this.handleCalls(calls))
+    // Presenca (online/digitando/visto por ultimo). Baileys so emite se
+    // o contato nao tiver bloqueado "Status" nas configuracoes de privacidade.
+    sock.ev.on('presence.update', (upd: any) => this.handlePresenceUpdate(upd))
+  }
+
+  /**
+   * Processa evento de presenca do WhatsApp. Guarda em memoria no provider
+   * singleton (via (BaileysWhatsAppProvider as any).__lastInstance) pra o
+   * endpoint HTTP consultar sem round-trip ao WhatsApp.
+   */
+  private handlePresenceUpdate(upd: any): void {
+    const parent = (BaileysWhatsAppProvider as any).__lastInstance as BaileysWhatsAppProvider | undefined
+    if (!parent) return
+    const id = upd?.id as string | undefined
+    const presences = upd?.presences as Record<string, { lastKnownPresence?: string; lastSeen?: number }> | undefined
+    if (!id || !presences) return
+    for (const [participantJid, p] of Object.entries(presences)) {
+      const digits = (participantJid.split('@')[0] || '').replace(/\D/g, '')
+      if (!digits) continue
+      const key = `${this.ownerUserId}:${digits}`
+      parent.presences.set(key, {
+        state: p.lastKnownPresence || 'unavailable',
+        lastSeen: p.lastSeen,
+        at: Date.now(),
+      })
+    }
+  }
+
+  /**
+   * Assina presenca de um contato (precisa pra Baileys comecar a receber
+   * presence.update desse JID). Chamado pelo endpoint HTTP sempre que o
+   * frontend abrir uma conversa.
+   */
+  async subscribePresenceInternal(phone: string): Promise<void> {
+    if (!this.sock) return
+    const digits = (phone || '').replace(/\D/g, '')
+    if (!digits) return
+    const jid = `${digits}@s.whatsapp.net`
+    try { await this.sock.presenceSubscribe(jid) } catch { /* ignore */ }
   }
 
   async disconnect(): Promise<void> {
@@ -492,6 +556,22 @@ class BaileysSession {
       const remoteJid: string | undefined = msg.key?.remoteJid
       if (!remoteJid || remoteJid.endsWith('@g.us')) {
         if (parent) parent.logEvent(this.ownerUserId, 'skip', `reason=group jid=${remoteJid}`)
+        continue
+      }
+      // Pula posts de status do WhatsApp (publicados via Status/Stories).
+      // Chegam com remoteJid = 'status@broadcast' e poluem a lista de
+      // conversas se persistidos. Nao sao msgs direcionadas a ninguem.
+      if (remoteJid === 'status@broadcast' || remoteJid.endsWith('@broadcast')) {
+        if (parent) parent.logEvent(this.ownerUserId, 'skip', `reason=status_broadcast jid=${remoteJid}`)
+        continue
+      }
+      // Pula protocol/reaction/pollUpdate messages — nao sao msgs humanas,
+      // sao eventos de sync (protocolo WhatsApp, reacoes, votos em enquete).
+      // Se persistidos, aparecem como balao vazio ou lixo na conversa.
+      const m = msg.message
+      if (m?.protocolMessage || m?.reactionMessage || m?.pollUpdateMessage
+          || m?.senderKeyDistributionMessage || m?.messageContextInfo && Object.keys(m).length === 1) {
+        if (parent) parent.logEvent(this.ownerUserId, 'skip', `reason=protocol_or_reaction`)
         continue
       }
       // fromMe=true = corretor mandou do proprio celular. Registramos como

@@ -109,6 +109,10 @@ export default function ChatPage() {
   // uma conversa aparece na lista. Undefined = ainda nao tentou, null =
   // tentou e nao tem foto (privacidade ou contato sem foto).
   const [contactPhotos, setContactPhotos] = useState<Record<string, string | null>>({})
+  // Presenca do contato da conversa aberta: online/offline/digitando/visto por ultimo.
+  // Depende das configs de privacidade do contato — se bloqueou "Visto por ultimo",
+  // state='unknown' (ocultamos a linha).
+  const [contactPresence, setContactPresence] = useState<{ state: string; lastSeen?: number } | null>(null)
 
   // socket_alive vem do backend (BaileysProvider.getDebug) — indica se o
   // socket Baileys esta VIVO em memoria (nao so 'connected' no banco). Se
@@ -636,6 +640,49 @@ export default function ChatPage() {
     }
   }
 
+  // Presenca: poll a cada 15s quando ha conversa aberta. Baileys so emite
+  // presence.update depois do subscribe — o GET dispara o subscribe no
+  // backend se ainda nao foi feito.
+  useEffect(() => {
+    const phone = currentConversation?.contact_phone
+    if (!phone) {
+      setContactPresence(null)
+      return
+    }
+    let cancelled = false
+    const tick = () => {
+      api.whatsapp.getPresence(phone)
+        .then((r) => { if (!cancelled) setContactPresence(r.data) })
+        .catch(() => { if (!cancelled) setContactPresence(null) })
+    }
+    tick()
+    const id = window.setInterval(tick, 15_000)
+    return () => { cancelled = true; window.clearInterval(id) }
+  }, [currentConversation?.contact_phone])
+
+  // Label estilo WhatsApp: "online" / "digitando..." / "gravando audio..." /
+  // "visto por ultimo hoje as HH:mm" / "visto por ultimo em DD/MM as HH:mm".
+  // Retorna null quando nao ha info util pra mostrar.
+  const presenceLabel = (p: { state: string; lastSeen?: number } | null): string | null => {
+    if (!p) return null
+    if (p.state === 'composing') return 'digitando...'
+    if (p.state === 'recording') return 'gravando audio...'
+    if (p.state === 'available') return 'online'
+    if (p.lastSeen && p.lastSeen > 0) {
+      const d = new Date(p.lastSeen * 1000)
+      const now = new Date()
+      const sameDay = d.toDateString() === now.toDateString()
+      const yesterday = new Date(now.getTime() - 86_400_000)
+      const isYesterday = d.toDateString() === yesterday.toDateString()
+      const hhmm = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+      if (sameDay) return `visto por ultimo hoje as ${hhmm}`
+      if (isYesterday) return `visto por ultimo ontem as ${hhmm}`
+      const ddmm = d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+      return `visto por ultimo em ${ddmm} as ${hhmm}`
+    }
+    return null
+  }
+
   const formatTime = (iso?: string | null): string => {
     if (!iso) return ""
     try {
@@ -926,6 +973,18 @@ export default function ChatPage() {
                           currentConversation.contact_name ||
                           currentConversation.contact_phone}
                       </p>
+                      {/* Linha 1 abaixo do nome: presenca (online/digitando/visto) estilo WhatsApp */}
+                      {(() => {
+                        const label = presenceLabel(contactPresence)
+                        if (!label) return null
+                        const isLive = contactPresence?.state === 'composing' || contactPresence?.state === 'recording'
+                        const isOnline = contactPresence?.state === 'available'
+                        return (
+                          <p className={`text-xs truncate ${isOnline || isLive ? 'text-emerald-600 font-medium' : 'text-muted-foreground'}`}>
+                            {label}
+                          </p>
+                        )
+                      })()}
                       <p className="text-xs text-muted-foreground flex items-center gap-1">
                         <Phone className="w-3 h-3" />
                         {currentConversation.contact_phone}
@@ -1014,10 +1073,21 @@ export default function ChatPage() {
                                   const isAudio = ext && ["ogg", "mp3", "m4a", "webm", "wav"].includes(ext)
                                   const isVideo = ext && ["mp4", "mov", "webm"].includes(ext)
                                   if (isCall) {
+                                    // Card estilo WhatsApp Web: icone circular + label "Ligacao de voz" + sub-texto status
+                                    const isVideo = m.content?.toLowerCase().includes("video")
                                     return (
-                                      <div className="flex items-center gap-2 py-1">
-                                        <span className="text-lg">📞</span>
-                                        <p className="text-sm whitespace-pre-wrap break-words">{m.content.replace(/^📞\s*/, "")}</p>
+                                      <div className="flex items-center gap-3 py-1 min-w-[200px]">
+                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isOutbound ? "bg-white/20" : "bg-slate-100"}`}>
+                                          <Phone className={`w-5 h-5 ${isOutbound ? "text-white" : "text-slate-600"}`} />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                          <div className={`text-sm font-medium ${isOutbound ? "text-white" : "text-slate-900"}`}>
+                                            {isVideo ? "Videochamada" : "Ligacao de voz"}
+                                          </div>
+                                          <div className={`text-xs ${isOutbound ? "text-white/70" : "text-slate-500"}`}>
+                                            Nao atendida
+                                          </div>
+                                        </div>
                                       </div>
                                     )
                                   }

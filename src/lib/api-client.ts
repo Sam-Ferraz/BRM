@@ -1472,6 +1472,9 @@ export const api = {
     getContactPhoto: async (phone: string): Promise<{ data: { url: string | null } }> => {
       return apiClient.get(`/whatsapp/contact-photo?phone=${encodeURIComponent(phone)}`)
     },
+    getPresence: async (phone: string): Promise<{ data: { state: string; lastSeen?: number } }> => {
+      return apiClient.get(`/whatsapp/presence?phone=${encodeURIComponent(phone)}`)
+    },
     getSession: async (): Promise<{ data: WhatsAppSession | null; debug?: { socket_alive?: boolean; runtime_status?: string | null; provider?: string | null } }> => {
       return apiClient.get<{ data: WhatsAppSession | null; debug?: any }>('/whatsapp/session')
     },
