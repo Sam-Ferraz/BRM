@@ -2,6 +2,45 @@ import { BaseRepository } from './base-repository.js'
 import { Deal, DealFunnelStage, QueryFilters } from '../types/index.js'
 
 export class DealRepository extends BaseRepository {
+  /**
+   * Checa se existe ao menos 1 Deal na account cujo cliente bate com o
+   * telefone OU nome do contato de uma conversa. Match considera variantes
+   * BR 12/13 (com/sem 9) no telefone e LOWER+TRIM no nome.
+   *
+   * Usado pela regra de atendimento auto: so conta atendimento se o
+   * contato ja esta no funil (tem negocio criado).
+   */
+  async hasDealForContact(accountId: number, contactPhone: string, contactName?: string | null): Promise<boolean> {
+    const client = await this.getClient()
+    try {
+      const digits = (contactPhone || '').replace(/\D/g, '')
+      // Variantes BR: 13 dig <-> 12 dig (com/sem 9 apos DDD)
+      const variants: string[] = [digits]
+      if (digits.length === 13 && digits.startsWith('55')) {
+        variants.push(digits.slice(0, 4) + digits.slice(5))
+      } else if (digits.length === 12 && digits.startsWith('55')) {
+        variants.push(digits.slice(0, 4) + '9' + digits.slice(4))
+      }
+      const nameNormalized = (contactName || '').trim().toLowerCase()
+      const result = await client.query(
+        `SELECT 1 FROM deals d
+         WHERE d.account_id = $1
+           AND (
+             -- (A) match por telefone normalizado (variantes BR)
+             (d.client_phone IS NOT NULL AND d.client_phone <> ''
+              AND REGEXP_REPLACE(d.client_phone, '[^0-9]', '', 'g') = ANY($2::text[]))
+             -- (B) OU match por nome exato (case-insensitive, trim)
+             OR ($3 <> '' AND LOWER(TRIM(d.client)) = $3)
+           )
+         LIMIT 1`,
+        [accountId, variants, nameNormalized],
+      )
+      return result.rows.length > 0
+    } finally {
+      this.releaseClient(client)
+    }
+  }
+
   async findAll(accountId: number, filters: QueryFilters = {}, userId?: number): Promise<Deal[]> {
     const client = await this.getClient()
     try {

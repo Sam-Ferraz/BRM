@@ -300,6 +300,7 @@ const chatService = new ChatService(
   whatsappProvider,
   appointmentRepository,
   chatEventBus,
+  dealRepository,
 )
 chatServiceRef = chatService
 

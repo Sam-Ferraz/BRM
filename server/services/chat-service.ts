@@ -3,6 +3,7 @@ import {
   MessageRepository,
   WhatsAppSessionRepository,
   AppointmentRepository,
+  DealRepository,
 } from '../repositories/index.js'
 import {
   ConversationWithDetails,
@@ -33,6 +34,7 @@ export class ChatService {
   private messageRepository: MessageRepository
   private sessionRepository: WhatsAppSessionRepository
   private appointmentRepository: AppointmentRepository | null
+  private dealRepository: DealRepository | null = null
   private whatsappProvider: WhatsAppProvider
   private eventBus: ChatEventBus | null = null
 
@@ -43,6 +45,7 @@ export class ChatService {
     whatsappProvider: WhatsAppProvider,
     appointmentRepository?: AppointmentRepository,
     eventBus?: ChatEventBus,
+    dealRepository?: DealRepository,
   ) {
     this.conversationRepository = conversationRepository
     this.messageRepository = messageRepository
@@ -50,6 +53,7 @@ export class ChatService {
     this.appointmentRepository = appointmentRepository ?? null
     this.whatsappProvider = whatsappProvider
     this.eventBus = eventBus ?? null
+    this.dealRepository = dealRepository ?? null
   }
 
   /** Helper interno: emite se o bus foi injetado. Nao quebra fluxo se null. */
@@ -529,11 +533,23 @@ export class ChatService {
   ): Promise<void> {
     if (!this.appointmentRepository) return
     try {
-      // GATE: so conta atendimento se ja houve interacao bilateral HOJE
-      // (dia-calendario America/Sao_Paulo). Sem isso, uma unica msg
-      // (inbound OU outbound) virava atendimento — contagem inflada.
+      // GATE 1: so conta atendimento se ja houve interacao bilateral HOJE
+      // (dia-calendario America/Sao_Paulo).
       const bilateral = await this.messageRepository.hasBothDirectionsToday(accountId, conversation.id)
       if (!bilateral) return
+
+      // GATE 2: contato precisa ter pelo menos 1 Deal (negocio) na account.
+      // Match por telefone (variantes BR 12/13) OU por nome exato (case/trim).
+      // Sem isso, conversas de leads/contatos aleatorios ainda contariam
+      // atendimento apesar do /chat ja filtrar — metrica deve bater com UI.
+      if (this.dealRepository) {
+        const hasDeal = await this.dealRepository.hasDealForContact(
+          accountId,
+          conversation.contact_phone,
+          conversation.contact_name,
+        )
+        if (!hasDeal) return
+      }
 
       const existing = await this.appointmentRepository.findChatOfConversationOnDay(
         accountId,
