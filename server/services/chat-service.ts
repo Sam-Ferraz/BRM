@@ -148,29 +148,66 @@ export class ChatService {
     accountId: number,
     conversationId: number,
     viewer: { userId: number; role: string },
-    input: { direction: 'inbound' | 'outbound'; duration_minutes?: number | null; notes?: string | null },
+    input: {
+      direction: 'inbound' | 'outbound'
+      answered?: boolean
+      // Preferencial: segundos (precisao pra regra >2s = atendimento).
+      // duration_minutes mantido pra compatibilidade; se vier, converte.
+      duration_sec?: number | null
+      duration_minutes?: number | null
+      notes?: string | null
+    },
   ): Promise<Message> {
     const conv = await this.conversationRepository.findById(accountId, conversationId)
     if (!conv) throw new Error('Conversation not found')
     this.assertCanView(conv.owner_user_id, viewer)
 
-    const dir = input.direction === 'inbound' ? 'recebida' : 'realizada'
-    const parts = [`📞 Ligação ${dir}`]
-    if (input.duration_minutes && input.duration_minutes > 0) parts.push(`(${input.duration_minutes} min)`)
-    if (input.notes?.trim()) parts.push(`— ${input.notes.trim()}`)
-    const content = parts.join(' ')
+    // Normaliza duracao em segundos
+    let durationSec = typeof input.duration_sec === 'number' ? input.duration_sec : null
+    if (durationSec === null && typeof input.duration_minutes === 'number') {
+      durationSec = Math.round(input.duration_minutes * 60)
+    }
+    const answered = input.answered ?? ((durationSec ?? 0) > 0)
+
+    // Classifica conforme a regra do produto:
+    //   nao atendida            -> call_missed
+    //   atendida duracao <= 2s  -> call_short
+    //   atendida duracao > 2s   -> call_answered (vira atendimento)
+    let callType: 'call_missed' | 'call_short' | 'call_answered'
+    let statusLabel: string
+    if (!answered) {
+      callType = 'call_missed'
+      statusLabel = 'Nao atendida'
+    } else if ((durationSec ?? 0) <= 2) {
+      callType = 'call_short'
+      statusLabel = `Atendida ${durationSec ?? 0}s`
+    } else {
+      callType = 'call_answered'
+      const sec = durationSec ?? 0
+      const min = Math.floor(sec / 60)
+      const rem = sec % 60
+      statusLabel = min > 0 ? `${min}min ${rem}s` : `${rem}s`
+    }
+
+    // Formato do content igual ao Baileys handleCalls, pro frontend render
+    // como card ("📞 Tipo — Status"). Direction afeta so o alinhamento da bolha.
+    const tipo = input.direction === 'outbound' ? 'Ligacao de voz' : 'Ligacao de voz recebida'
+    const base = `📞 ${tipo} — ${statusLabel}`
+    const content = input.notes?.trim() ? `${base} · ${input.notes.trim()}` : base
 
     const message = await this.messageRepository.create(accountId, {
       conversation_id: conversationId,
       direction: input.direction,
       content,
-      // call log entra como 'sent' (outbound) ou 'received' (inbound) direto
       status: input.direction === 'outbound' ? 'sent' : 'received',
       provider_message_id: null,
     })
     await this.conversationRepository.touchLastMessage(accountId, conversationId, input.direction)
-    // Mesma regra de atendimento automatico das demais interacoes
-    await this.tryRegisterServiceFromConversation(accountId, conv)
+
+    // Regra de atendimento: so ligacao atendida >2s dispara callTrigger
+    // (pula gate de bilateral). Gate de Deal continua valendo.
+    const callTrigger = callType === 'call_answered'
+    await this.tryRegisterServiceFromConversation(accountId, conv, callTrigger)
     return message
   }
 

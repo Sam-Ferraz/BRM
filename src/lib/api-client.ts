@@ -1558,7 +1558,13 @@ export const api = {
     },
     logCall: async (
       conversationId: number,
-      input: { direction: 'inbound' | 'outbound'; duration_minutes?: number | null; notes?: string | null },
+      input: {
+        direction: 'inbound' | 'outbound'
+        answered?: boolean
+        duration_sec?: number | null
+        duration_minutes?: number | null
+        notes?: string | null
+      },
     ): Promise<{ data: Message }> => {
       return apiClient.post<{ data: Message }>(`/chat/conversations/${conversationId}/call-log`, input)
     },

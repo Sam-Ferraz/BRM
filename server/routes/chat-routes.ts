@@ -277,13 +277,15 @@ export function createChatRoutes(chatService: ChatService, eventBus?: ChatEventB
       const id = parseInt(req.params.id)
       const accountId = req.user!.accountId
       const viewer = { userId: req.user!.userId, role: req.user!.role }
-      const { direction, duration_minutes, notes } = req.body
+      const { direction, answered, duration_sec, duration_minutes, notes } = req.body
       if (direction !== 'inbound' && direction !== 'outbound') {
         res.status(400).json({ error: "direction deve ser 'inbound' ou 'outbound'" })
         return
       }
       const message = await chatService.logCall(accountId, id, viewer, {
         direction,
+        answered: typeof answered === 'boolean' ? answered : undefined,
+        duration_sec: typeof duration_sec === 'number' ? duration_sec : null,
         duration_minutes: typeof duration_minutes === 'number' ? duration_minutes : null,
         notes: typeof notes === 'string' ? notes : null,
       })

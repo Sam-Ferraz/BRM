@@ -583,7 +583,9 @@ export default function ChatPage() {
   // Dialog de registro de ligacao
   const [callLogOpen, setCallLogOpen] = useState(false)
   const [callDirection, setCallDirection] = useState<"inbound" | "outbound">("outbound")
+  // Duracao em SEGUNDOS (regra: >2s conta atendimento). Default vazio = nao atendida.
   const [callDuration, setCallDuration] = useState<string>("")
+  const [callAnswered, setCallAnswered] = useState<boolean>(true)
   const [callNotes, setCallNotes] = useState<string>("")
   const [loggingCall, setLoggingCall] = useState(false)
   const handleLogCall = async () => {
@@ -593,7 +595,8 @@ export default function ChatPage() {
       const duration = parseInt(callDuration)
       const { data } = await api.chat.logCall(selectedId, {
         direction: callDirection,
-        duration_minutes: isNaN(duration) ? null : duration,
+        answered: callAnswered,
+        duration_sec: callAnswered && !isNaN(duration) ? duration : null,
         notes: callNotes || null,
       })
       setMessages((prev) => [...prev, data])
@@ -601,6 +604,7 @@ export default function ChatPage() {
       setCallDuration("")
       setCallNotes("")
       setCallDirection("outbound")
+      setCallAnswered(true)
       if (selectedId) fetchConversation(selectedId)
     } catch (error) {
       toast({
@@ -1190,11 +1194,17 @@ export default function ChatPage() {
                         if (!phone) return
                         const digits = phone.replace(/\D/g, "")
                         if (digits.length < 10) return
-                        // Abre o discador do dispositivo (celular/softphone)
-                        window.location.href = `tel:+${digits}`
+                        // Abre discador (celular/softphone) + abre dialog pra registrar
+                        // o resultado da ligacao (Baileys nao captura outbound).
+                        try { window.open(`tel:+${digits}`, "_self") } catch { /* ignore */ }
+                        setCallDirection("outbound")
+                        setCallAnswered(true)
+                        setCallDuration("")
+                        setCallNotes("")
+                        setCallLogOpen(true)
                       }}
                       disabled={!currentConversation?.contact_phone}
-                      title={currentConversation?.contact_phone ? `Ligar para ${currentConversation.contact_phone}` : "Sem telefone"}
+                      title={currentConversation?.contact_phone ? `Ligar para ${currentConversation.contact_phone} + registrar` : "Sem telefone"}
                     >
                       <PhoneCall className="w-4 h-4" />
                     </Button>
@@ -1324,16 +1334,44 @@ export default function ChatPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="call-duration">Duração (minutos)</Label>
-              <Input
-                id="call-duration"
-                type="number"
-                min={0}
-                value={callDuration}
-                onChange={(e) => setCallDuration(e.target.value)}
-                placeholder="Ex: 5"
-              />
+              <Label>Resultado</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCallAnswered(true)}
+                  className={`flex items-center justify-center gap-2 px-3 py-2 rounded border text-sm transition-colors ${
+                    callAnswered ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-border hover:bg-muted"
+                  }`}
+                >
+                  ✅ Atendida
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCallAnswered(false)}
+                  className={`flex items-center justify-center gap-2 px-3 py-2 rounded border text-sm transition-colors ${
+                    !callAnswered ? "border-red-500 bg-red-50 text-red-700" : "border-border hover:bg-muted"
+                  }`}
+                >
+                  ❌ Não atendida
+                </button>
+              </div>
             </div>
+            {callAnswered && (
+              <div className="space-y-2">
+                <Label htmlFor="call-duration">Duração (segundos)</Label>
+                <Input
+                  id="call-duration"
+                  type="number"
+                  min={0}
+                  value={callDuration}
+                  onChange={(e) => setCallDuration(e.target.value)}
+                  placeholder="Ex: 180 (3 minutos)"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Ligação com mais de 2 segundos conta como 1 atendimento no gráfico (se o contato tem Deal cadastrado).
+                </p>
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="call-notes">Notas (opcional)</Label>
               <Textarea
