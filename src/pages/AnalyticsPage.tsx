@@ -481,8 +481,16 @@ export default function AnalyticsPage() {
                       dataKey="date"
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                      tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
                       tickMargin={8}
+                      // interval={0} forca TODOS os dias a aparecerem; sem isso
+                      // Recharts auto-oculta labels intermediarias e "Ontem"
+                      // (dia anterior a Hoje) nao aparece. angle+textAnchor+height
+                      // rotacionam labels pra caberem mesmo em range de 30+ dias.
+                      interval={0}
+                      angle={-35}
+                      textAnchor="end"
+                      height={55}
                     />
                     <YAxis
                       axisLine={false}
