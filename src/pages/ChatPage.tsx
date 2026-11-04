@@ -1073,19 +1073,35 @@ export default function ChatPage() {
                                   const isAudio = ext && ["ogg", "mp3", "m4a", "webm", "wav"].includes(ext)
                                   const isVideo = ext && ["mp4", "mov", "webm"].includes(ext)
                                   if (isCall) {
-                                    // Card estilo WhatsApp Web: icone circular + label "Ligacao de voz" + sub-texto status
-                                    const isVideo = m.content?.toLowerCase().includes("video")
+                                    // Card estilo WhatsApp Web. O content tem formato
+                                    // "📞 <Tipo> — <status>" (ex: "📞 Ligação de voz — 2min 15s").
+                                    // Extraimos tipo + status pra exibir separados.
+                                    const raw = m.content.replace(/^📞\s*/, "")
+                                    const [tipo, ...statusParts] = raw.split("—").map((s: string) => s.trim())
+                                    const status = statusParts.join(" — ") || "Nao atendida"
+                                    const isMissed = /nao atendida/i.test(status)
+                                    // Cor do ícone: vermelho pra nao atendida (alerta), verde pra atendida
+                                    const iconBg = isOutbound
+                                      ? "bg-white/20"
+                                      : isMissed
+                                      ? "bg-red-50"
+                                      : "bg-emerald-50"
+                                    const iconColor = isOutbound
+                                      ? "text-white"
+                                      : isMissed
+                                      ? "text-red-600"
+                                      : "text-emerald-600"
                                     return (
-                                      <div className="flex items-center gap-3 py-1 min-w-[200px]">
-                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isOutbound ? "bg-white/20" : "bg-slate-100"}`}>
-                                          <Phone className={`w-5 h-5 ${isOutbound ? "text-white" : "text-slate-600"}`} />
+                                      <div className="flex items-center gap-3 py-1 min-w-[220px]">
+                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${iconBg}`}>
+                                          <Phone className={`w-5 h-5 ${iconColor}`} />
                                         </div>
                                         <div className="flex-1 min-w-0">
                                           <div className={`text-sm font-medium ${isOutbound ? "text-white" : "text-slate-900"}`}>
-                                            {isVideo ? "Videochamada" : "Ligacao de voz"}
+                                            {tipo || "Ligacao"}
                                           </div>
                                           <div className={`text-xs ${isOutbound ? "text-white/70" : "text-slate-500"}`}>
-                                            Nao atendida
+                                            {status}
                                           </div>
                                         </div>
                                       </div>

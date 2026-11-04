@@ -47,7 +47,13 @@ export type IncomingMessageHandler = (input: {
    * Tipo semantico da mensagem — usado pelo frontend pra decidir
    * como renderizar (image tag, audio player, badge de ligacao).
    */
-  mediaType?: 'image' | 'audio' | 'video' | 'document' | 'call_missed' | null
+  mediaType?: 'image' | 'audio' | 'video' | 'document' | 'call_missed' | 'call_answered' | 'call_short' | null
+  /**
+   * Metadata adicional da ligacao (quando mediaType e call_*):
+   * duracao em segundos. Usado pela regra de atendimento auto — so
+   * ligacao >2s conta.
+   */
+  callDurationSec?: number | null
   /**
    * 'inbound' (default) = mensagem do cliente pro corretor
    * 'outbound' = corretor mandou do proprio celular (fromMe=true)
@@ -317,6 +323,19 @@ class BaileysSession {
   private statusHandler: MessageStatusHandler | null
   private sessionRepository: WhatsAppSessionRepository
   private reconnectAttempt = 0
+  /**
+   * State de ligacoes em andamento. Baileys emite varios eventos por call
+   * (offer, accept, timeout, reject, terminate) com o mesmo call.id —
+   * precisamos rastrear ate o fim pra calcular duracao e decidir se virou
+   * atendimento. Limpamos entradas antigas (>5min) pra nao vazar.
+   */
+  private callsInFlight = new Map<string, {
+    offerAt: number
+    acceptAt?: number
+    remoteJid: string
+    isVideo: boolean
+    persisted: boolean
+  }>()
 
   constructor(
     ownerUserId: number,
@@ -682,31 +701,97 @@ class BaileysSession {
   }
 
   /**
-   * Handler de eventos de ligacao. Baileys emite 'call' quando alguem esta
-   * ligando pro numero pareado. Nao conseguimos atender — persistimos como
-   * mensagem 'call_missed' pro corretor ver e retornar a ligacao pelo app.
+   * Handler de eventos de ligacao. Baileys emite SEQUENCIA de eventos
+   * por call com o mesmo call.id:
+   *   offer     -> tocou (sempre primeiro)
+   *   accept    -> atendida (opcional — so se alguem atendeu)
+   *   terminate -> encerrada (quase sempre vem; marca o fim)
+   *   timeout   -> ninguem atendeu em X seg
+   *   reject    -> recusada
+   *
+   * Regras do produto:
+   *   - Nao atendida (sem accept): media_type = 'call_missed'
+   *   - Atendida com duracao <= 2s: media_type = 'call_short'
+   *   - Atendida com duracao > 2s:  media_type = 'call_answered'
+   *                                 + CONTA como 1 atendimento do dia
+   *
+   * Pra calcular duracao, guardamos offerAt/acceptAt em memoria por
+   * call.id. Quando chega terminate/timeout/reject, persistimos a msg
+   * (ou atualizamos se ja foi persistida parcialmente). Limpeza de
+   * entradas orfas (nunca receberam terminate) roda no proprio handler.
    */
   private async handleCalls(calls: any[]): Promise<void> {
+    const now = Date.now()
+    // Limpa calls orfas antigas (>5min sem terminate)
+    for (const [id, c] of this.callsInFlight) {
+      if (now - c.offerAt > 5 * 60_000) this.callsInFlight.delete(id)
+    }
+
     for (const call of calls || []) {
-      // Baileys emite varios status ('offer', 'accept', 'timeout', 'reject').
-      // Persistimos apenas o 'offer' (chegada da ligacao) pra nao duplicar.
-      if (call.status !== 'offer') continue
+      const callId = call.id as string | undefined
       const remoteJid: string | undefined = call.from
-      if (!remoteJid || remoteJid.endsWith('@g.us')) continue
-      const fromPhone = extractPhoneFromJid(remoteJid)
-      const kind = call.isVideo ? 'Videochamada' : 'Ligacao'
-      try {
-        await this.incoming({
-          ownerUserId: this.ownerUserId,
-          fromPhone: fromPhone || remoteJid,
-          fromName: null,
-          content: `📞 ${kind} recebida (nao atendida no BRM — retorne pelo WhatsApp)`,
-          providerMessageId: call.id ?? `call-${Date.now()}`,
-          mediaUrl: null,
-          mediaType: 'call_missed',
+      const status = call.status as string | undefined
+      if (!callId || !remoteJid || remoteJid.endsWith('@g.us')) continue
+
+      // OFFER: guarda state (ainda nao persiste; aguarda terminate pra saber tipo)
+      if (status === 'offer') {
+        this.callsInFlight.set(callId, {
+          offerAt: now,
+          remoteJid,
+          isVideo: !!call.isVideo,
+          persisted: false,
         })
-      } catch (err) {
-        console.error('[Baileys] Erro persistindo evento de call:', err)
+        continue
+      }
+      // ACCEPT: marca timestamp de atendimento
+      if (status === 'accept') {
+        const existing = this.callsInFlight.get(callId)
+        if (existing) existing.acceptAt = now
+        continue
+      }
+      // TERMINATE / TIMEOUT / REJECT: calcula duracao e persiste a msg
+      if (status === 'terminate' || status === 'timeout' || status === 'reject') {
+        const tracked = this.callsInFlight.get(callId)
+        this.callsInFlight.delete(callId)
+        // Se nao temos offer tracked (restart do server, etc), ainda assim
+        // tentamos persistir como missed usando dados do evento atual.
+        const isVideo = tracked?.isVideo ?? !!call.isVideo
+        const acceptAt = tracked?.acceptAt
+        const durationSec = acceptAt ? Math.round((now - acceptAt) / 1000) : 0
+        const wasAnswered = !!acceptAt && durationSec > 0
+
+        let mediaType: 'call_missed' | 'call_short' | 'call_answered'
+        let label: string
+        if (!wasAnswered) {
+          mediaType = 'call_missed'
+          label = 'Nao atendida'
+        } else if (durationSec <= 2) {
+          mediaType = 'call_short'
+          label = `Atendida ${durationSec}s`
+        } else {
+          mediaType = 'call_answered'
+          const min = Math.floor(durationSec / 60)
+          const sec = durationSec % 60
+          label = min > 0 ? `${min}min ${sec}s` : `${sec}s`
+        }
+
+        const fromPhone = extractPhoneFromJid(remoteJid)
+        const kind = isVideo ? 'Videochamada' : 'Ligacao de voz'
+        try {
+          await this.incoming({
+            ownerUserId: this.ownerUserId,
+            fromPhone: fromPhone || remoteJid,
+            fromName: null,
+            content: `📞 ${kind} — ${label}`,
+            providerMessageId: callId,
+            mediaUrl: null,
+            mediaType,
+            callDurationSec: wasAnswered ? durationSec : null,
+          })
+        } catch (err) {
+          console.error('[Baileys] Erro persistindo evento de call:', err)
+        }
+        continue
       }
     }
   }

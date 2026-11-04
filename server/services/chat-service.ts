@@ -383,7 +383,10 @@ export class ChatService {
     // Tipo semantico. O schema atual so tem media_url, entao guardamos o tipo
     // implicitamente pela extensao do arquivo — o frontend detecta e renderiza
     // image/audio/video adequadamente.
-    mediaType?: 'image' | 'audio' | 'video' | 'document' | 'call_missed' | null
+    mediaType?: 'image' | 'audio' | 'video' | 'document' | 'call_missed' | 'call_answered' | 'call_short' | null
+    // Duracao em segundos pra ligacoes atendidas. Usado pra decidir se
+    // conta atendimento (> 2s) ou nao (<= 2s / nao atendida).
+    callDurationSec?: number | null
     // Direcao: 'inbound' (default) = cliente pro corretor. 'outbound' =
     // corretor mandou do celular (Baileys emitOwnEvents=true captura isso).
     direction?: 'inbound' | 'outbound'
@@ -440,7 +443,9 @@ export class ChatService {
       },
     })
     // Pode ter completado interação bilateral (já houve outbound antes nas 24h).
-    await this.tryRegisterServiceFromConversation(accountId, conversation)
+    // OU: pode ser ligacao atendida >2s (conta como atendimento por si so).
+    const callTrigger = input.mediaType === 'call_answered' && (input.callDurationSec ?? 0) > 2
+    await this.tryRegisterServiceFromConversation(accountId, conversation, callTrigger)
     return message
   }
 
@@ -529,19 +534,24 @@ export class ChatService {
    */
   private async tryRegisterServiceFromConversation(
     accountId: number,
-    conversation: { id: number; owner_user_id: number; contact_name?: string | null; contact_phone: string }
+    conversation: { id: number; owner_user_id: number; contact_name?: string | null; contact_phone: string },
+    // Quando true, pula o gate de bilateral — a propria ligacao atendida
+    // (>2s) ja e evidencia suficiente de interacao real. Gate de Deal
+    // continua valendo.
+    callTrigger = false,
   ): Promise<void> {
     if (!this.appointmentRepository) return
     try {
-      // GATE 1: so conta atendimento se ja houve interacao bilateral HOJE
-      // (dia-calendario America/Sao_Paulo).
-      const bilateral = await this.messageRepository.hasBothDirectionsToday(accountId, conversation.id)
-      if (!bilateral) return
+      // GATE 1: bilateral HOJE (dia-calendario SP) — a nao ser que a
+      // chamada seja um callTrigger (ligacao atendida >2s substitui).
+      if (!callTrigger) {
+        const bilateral = await this.messageRepository.hasBothDirectionsToday(accountId, conversation.id)
+        if (!bilateral) return
+      }
 
       // GATE 2: contato precisa ter pelo menos 1 Deal (negocio) na account.
-      // Match por telefone (variantes BR 12/13) OU por nome exato (case/trim).
-      // Sem isso, conversas de leads/contatos aleatorios ainda contariam
-      // atendimento apesar do /chat ja filtrar — metrica deve bater com UI.
+      // Sempre aplicado (inclusive pra callTrigger) pra manter consistencia
+      // com o filtro do /chat.
       if (this.dealRepository) {
         const hasDeal = await this.dealRepository.hasDealForContact(
           accountId,
