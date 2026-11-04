@@ -584,10 +584,21 @@ class BaileysSession {
         if (parent) parent.logEvent(this.ownerUserId, 'skip', `reason=status_broadcast jid=${remoteJid}`)
         continue
       }
+      const m = msg.message
+      // Ligacao (inbound OU outbound) — WhatsApp envia como msg especial
+      // via callLogMesssage (sim, 3 's' — typo no protocol oficial).
+      // Essa e a UNICA forma confiavel de capturar ligacoes feitas pelo
+      // proprio celular pareado (sock.ev.on('call') so emite inbound
+      // e mesmo assim inconsistente). Processado AQUI antes do filtro de
+      // protocol pra nao ser descartado.
+      const callLog = m?.callLogMesssage || (m as any)?.callLogMessage
+      if (callLog) {
+        await this.handleCallLogMessage(msg, callLog, !!msg.key?.fromMe)
+        continue
+      }
       // Pula protocol/reaction/pollUpdate messages — nao sao msgs humanas,
       // sao eventos de sync (protocolo WhatsApp, reacoes, votos em enquete).
       // Se persistidos, aparecem como balao vazio ou lixo na conversa.
-      const m = msg.message
       if (m?.protocolMessage || m?.reactionMessage || m?.pollUpdateMessage
           || m?.senderKeyDistributionMessage || m?.messageContextInfo && Object.keys(m).length === 1) {
         if (parent) parent.logEvent(this.ownerUserId, 'skip', `reason=protocol_or_reaction`)
@@ -720,6 +731,78 @@ class BaileysSession {
    * (ou atualizamos se ja foi persistida parcialmente). Limpeza de
    * entradas orfas (nunca receberam terminate) roda no proprio handler.
    */
+  /**
+   * Processa callLogMesssage — mensagem especial que o WhatsApp envia via
+   * messages.upsert quando uma ligacao (voz/video, inbound/outbound) acontece.
+   * E o unico jeito confiavel de capturar ligacoes outbound (o evento 'call'
+   * do sock.ev so emite inbound e mesmo assim inconsistente).
+   *
+   * callLogMesssage traz:
+   *   - isVideo: bool
+   *   - callOutcome: 0=CONNECTED, 1=MISSED, 2=FAILED, 3=REJECTED,
+   *                  4=ACCEPTED_ELSEWHERE, 5=ONGOING, 6/7=SILENCED_*
+   *   - durationSecs: int (segundos exatos)
+   */
+  private async handleCallLogMessage(msg: any, callLog: any, fromMe: boolean): Promise<void> {
+    const remoteJid: string | undefined = msg.key?.remoteJid
+    if (!remoteJid || remoteJid.endsWith('@g.us') || remoteJid === 'status@broadcast') return
+    const senderPn: string | undefined = msg.key?.senderPn
+    const remoteJidAlt: string | undefined = msg.key?.remoteJidAlt
+    const jidForPhone = senderPn || remoteJidAlt || remoteJid
+    const fromPhone = extractPhoneFromJid(jidForPhone)
+    if (!fromPhone) return
+
+    // Normaliza enum (pode vir como number ou string dependendo da versao)
+    const outcome = typeof callLog.callOutcome === 'number'
+      ? callLog.callOutcome
+      : parseInt(String(callLog.callOutcome ?? 1), 10)
+    // Long -> number
+    const rawDur = callLog.durationSecs
+    const durationSec = typeof rawDur === 'number'
+      ? rawDur
+      : (rawDur && typeof rawDur.toNumber === 'function' ? rawDur.toNumber() : parseInt(String(rawDur ?? 0), 10))
+    const isVideo = !!callLog.isVideo
+
+    // Classifica
+    let mediaType: 'call_missed' | 'call_short' | 'call_answered'
+    let statusLabel: string
+    const wasConnected = outcome === 0 // CONNECTED
+    if (!wasConnected) {
+      // MISSED, FAILED, REJECTED, ACCEPTED_ELSEWHERE, SILENCED_* — tudo vira missed
+      mediaType = 'call_missed'
+      statusLabel = fromMe ? 'Nao atendida' : 'Perdida'
+    } else if (durationSec <= 2) {
+      mediaType = 'call_short'
+      statusLabel = `Atendida ${durationSec}s`
+    } else {
+      mediaType = 'call_answered'
+      const min = Math.floor(durationSec / 60)
+      const sec = durationSec % 60
+      statusLabel = min > 0 ? `${min}min ${sec}s` : `${sec}s`
+    }
+
+    const tipo = isVideo ? 'Videochamada' : 'Ligacao de voz'
+    const content = `📞 ${tipo} — ${statusLabel}`
+    const providerMessageId = msg.key?.id ?? null
+
+    try {
+      await this.incoming({
+        ownerUserId: this.ownerUserId,
+        fromPhone,
+        fromName: msg.pushName || null,
+        content,
+        providerMessageId,
+        mediaUrl: null,
+        mediaType,
+        callDurationSec: wasConnected ? durationSec : null,
+        // Direcao: fromMe=true = corretor ligou pro cliente; fromMe=false = cliente ligou pro corretor
+        direction: fromMe ? 'outbound' : 'inbound',
+      })
+    } catch (err) {
+      console.error('[Baileys] Erro persistindo callLogMesssage:', err)
+    }
+  }
+
   private async handleCalls(calls: any[]): Promise<void> {
     const now = Date.now()
     // Limpa calls orfas antigas (>5min sem terminate)

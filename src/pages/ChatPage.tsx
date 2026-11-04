@@ -1194,17 +1194,15 @@ export default function ChatPage() {
                         if (!phone) return
                         const digits = phone.replace(/\D/g, "")
                         if (digits.length < 10) return
-                        // Abre discador (celular/softphone) + abre dialog pra registrar
-                        // o resultado da ligacao (Baileys nao captura outbound).
-                        try { window.open(`tel:+${digits}`, "_self") } catch { /* ignore */ }
-                        setCallDirection("outbound")
-                        setCallAnswered(true)
-                        setCallDuration("")
-                        setCallNotes("")
-                        setCallLogOpen(true)
+                        // Abre so o discador. O registro da ligacao e automatico —
+                        // quando o corretor liga pelo WhatsApp, o proprio WhatsApp
+                        // envia um callLogMesssage via messages.upsert que o backend
+                        // ja processa e cria o card na conversa (ver
+                        // baileys-whatsapp-provider.handleCallLogMessage).
+                        window.location.href = `tel:+${digits}`
                       }}
                       disabled={!currentConversation?.contact_phone}
-                      title={currentConversation?.contact_phone ? `Ligar para ${currentConversation.contact_phone} + registrar` : "Sem telefone"}
+                      title={currentConversation?.contact_phone ? `Ligar para ${currentConversation.contact_phone}` : "Sem telefone"}
                     >
                       <PhoneCall className="w-4 h-4" />
                     </Button>
