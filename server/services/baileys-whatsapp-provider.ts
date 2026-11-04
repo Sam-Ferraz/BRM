@@ -569,7 +569,14 @@ class BaileysSession {
     if (type !== 'notify' && type !== 'append') return
     for (const msg of messages || []) {
       if (!msg.message) {
-        if (parent) parent.logEvent(this.ownerUserId, 'skip', 'reason=no_message')
+        // Algumas versoes do Baileys entregam metadata de call com msg.message=null
+        // (vem em msg.messageStubType ou direto em msg). Logar keys + stubType pra
+        // nao descartar silenciosamente ligacoes que chegam em shape inesperado.
+        if (parent) parent.logEvent(
+          this.ownerUserId,
+          'skip',
+          `reason=no_message keys=${Object.keys(msg).join(',')} stubType=${msg.messageStubType ?? 'none'}`
+        )
         continue
       }
       const remoteJid: string | undefined = msg.key?.remoteJid
@@ -585,6 +592,13 @@ class BaileysSession {
         continue
       }
       const m = msg.message
+      // Log 1-linha das keys do payload — se Baileys renomear callLogMesssage
+      // num upgrade futuro do WAProto, vemos aqui sem precisar instrumentar.
+      if (parent) parent.logEvent(
+        this.ownerUserId,
+        'msg_shape',
+        `keys=${Object.keys(m).join(',')} fromMe=${!!msg.key?.fromMe}`
+      )
       // Ligacao (inbound OU outbound) — WhatsApp envia como msg especial
       // via callLogMesssage (sim, 3 's' — typo no protocol oficial).
       // Essa e a UNICA forma confiavel de capturar ligacoes feitas pelo
@@ -593,6 +607,11 @@ class BaileysSession {
       // protocol pra nao ser descartado.
       const callLog = m?.callLogMesssage || (m as any)?.callLogMessage
       if (callLog) {
+        if (parent) parent.logEvent(
+          this.ownerUserId,
+          'call_log_detected',
+          `remoteJid=${msg.key?.remoteJid} fromMe=${!!msg.key?.fromMe} outcome=${callLog.callOutcome} durationSecs=${callLog.durationSecs} isVideo=${!!callLog.isVideo}`
+        )
         await this.handleCallLogMessage(msg, callLog, !!msg.key?.fromMe)
         continue
       }
@@ -744,13 +763,20 @@ class BaileysSession {
    *   - durationSecs: int (segundos exatos)
    */
   private async handleCallLogMessage(msg: any, callLog: any, fromMe: boolean): Promise<void> {
+    const parent = (BaileysWhatsAppProvider as any).__lastInstance as BaileysWhatsAppProvider | undefined
     const remoteJid: string | undefined = msg.key?.remoteJid
-    if (!remoteJid || remoteJid.endsWith('@g.us') || remoteJid === 'status@broadcast') return
+    if (!remoteJid || remoteJid.endsWith('@g.us') || remoteJid === 'status@broadcast') {
+      if (parent) parent.logEvent(this.ownerUserId, 'call_log_skip', `reason=invalid_jid jid=${remoteJid}`)
+      return
+    }
     const senderPn: string | undefined = msg.key?.senderPn
     const remoteJidAlt: string | undefined = msg.key?.remoteJidAlt
     const jidForPhone = senderPn || remoteJidAlt || remoteJid
     const fromPhone = extractPhoneFromJid(jidForPhone)
-    if (!fromPhone) return
+    if (!fromPhone) {
+      if (parent) parent.logEvent(this.ownerUserId, 'call_log_skip', `reason=no_phone jid=${jidForPhone}`)
+      return
+    }
 
     // Normaliza enum (pode vir como number ou string dependendo da versao)
     const outcome = typeof callLog.callOutcome === 'number'
@@ -798,12 +824,19 @@ class BaileysSession {
         // Direcao: fromMe=true = corretor ligou pro cliente; fromMe=false = cliente ligou pro corretor
         direction: fromMe ? 'outbound' : 'inbound',
       })
+      if (parent) parent.logEvent(
+        this.ownerUserId,
+        'call_log_persisted',
+        `phone=${fromPhone} mediaType=${mediaType} durationSec=${durationSec} direction=${fromMe ? 'outbound' : 'inbound'}`
+      )
     } catch (err) {
       console.error('[Baileys] Erro persistindo callLogMesssage:', err)
+      if (parent) parent.logEvent(this.ownerUserId, 'call_log_error', String((err as Error)?.message || err))
     }
   }
 
   private async handleCalls(calls: any[]): Promise<void> {
+    const parent = (BaileysWhatsAppProvider as any).__lastInstance as BaileysWhatsAppProvider | undefined
     const now = Date.now()
     // Limpa calls orfas antigas (>5min sem terminate)
     for (const [id, c] of this.callsInFlight) {
@@ -814,6 +847,11 @@ class BaileysSession {
       const callId = call.id as string | undefined
       const remoteJid: string | undefined = call.from
       const status = call.status as string | undefined
+      if (parent) parent.logEvent(
+        this.ownerUserId,
+        'call_event',
+        `status=${status} id=${callId} from=${remoteJid} isVideo=${!!call.isVideo} offline=${!!call.offline}`
+      )
       if (!callId || !remoteJid || remoteJid.endsWith('@g.us')) continue
 
       // OFFER: guarda state (ainda nao persiste; aguarda terminate pra saber tipo)
@@ -870,9 +908,17 @@ class BaileysSession {
             mediaUrl: null,
             mediaType,
             callDurationSec: wasAnswered ? durationSec : null,
+            // sock.ev.on('call') so emite INBOUND no Baileys 7.x
+            direction: 'inbound',
           })
+          if (parent) parent.logEvent(
+            this.ownerUserId,
+            'call_persisted_via_ev',
+            `phone=${fromPhone} mediaType=${mediaType} durationSec=${durationSec} status=${status}`
+          )
         } catch (err) {
           console.error('[Baileys] Erro persistindo evento de call:', err)
+          if (parent) parent.logEvent(this.ownerUserId, 'call_ev_error', String((err as Error)?.message || err))
         }
         continue
       }
