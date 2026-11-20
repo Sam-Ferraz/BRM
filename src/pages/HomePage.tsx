@@ -18,7 +18,7 @@ import { Link, useNavigate } from "react-router-dom"
 import {
   Briefcase, Users, Package, HeadphonesIcon, ClipboardCheck, FileSignature, FileCheck2,
   Key, MessageCircle, Inbox, Store, BarChart3, CalendarDays, Search,
-  Menu, ArrowLeft, Home as HomeIcon, Plus, List, LayoutGrid,
+  Menu, ArrowLeft, Home as HomeIcon, Plus, List, LayoutGrid, Phone,
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -385,19 +385,70 @@ export default function HomePage() {
                     isSelected && "bg-accent",
                   )}
                 >
-                  {/* Avatar circular — cor da marca #0c343d, iniciais do cliente em branco */}
-                  <button
-                    type="button"
-                    className="shrink-0 w-11 h-11 rounded-full flex items-center justify-center text-white font-semibold text-sm transition-transform hover:scale-110 cursor-pointer"
-                    style={{ backgroundColor: "#0c343d" }}
-                    title={deal.client_phone ? `Abrir WhatsApp de ${deal.client}` : "Sem telefone cadastrado"}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      if (deal.client_phone) openWhatsApp(deal.client_phone)
-                    }}
+                  {/* Avatar circular com menu de contato. Clique mostra 3 opcoes:
+                      Ligacao (tel: do chip), WhatsApp (externo wa.me) e Chat
+                      (abre a conversa no modulo /chat do BRM). O <span> wrapper
+                      com stopPropagation impede que o click selecione o deal
+                      antes do menu abrir. Antes era window.open direto que
+                      no Safari mobile abria tela em branco em vez do WhatsApp. */}
+                  <span
+                    className="shrink-0"
+                    onClick={(e) => e.stopPropagation()}
+                    onPointerDown={(e) => e.stopPropagation()}
                   >
-                    {getInitials(deal.client)}
-                  </button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button
+                          type="button"
+                          className="w-11 h-11 rounded-full flex items-center justify-center text-white font-semibold text-sm transition-transform hover:scale-110 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+                          style={{ backgroundColor: "#0c343d" }}
+                          title={deal.client_phone ? `Contato com ${deal.client}` : "Sem telefone cadastrado"}
+                          disabled={!deal.client_phone}
+                        >
+                          {getInitials(deal.client)}
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" className="w-48">
+                        <DropdownMenuItem asChild>
+                          <a
+                            href={deal.client_phone ? `tel:+${toWhatsAppNumber(deal.client_phone)}` : "#"}
+                            className="flex items-center gap-2 cursor-pointer"
+                          >
+                            <Phone className="w-4 h-4 text-blue-600" />
+                            <span>Ligação</span>
+                          </a>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <a
+                            href={deal.client_phone ? `https://wa.me/${toWhatsAppNumber(deal.client_phone)}` : "#"}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 cursor-pointer"
+                          >
+                            {/* SVG WhatsApp oficial em verde pra diferenciar do chat interno */}
+                            <svg viewBox="0 0 24 24" className="w-4 h-4 text-green-600" fill="currentColor" aria-hidden="true">
+                              <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.42a8.225 8.225 0 0 1 2.41 5.83c0 4.54-3.7 8.23-8.24 8.23-1.48 0-2.93-.39-4.19-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.264 8.264 0 0 1-1.26-4.38c.01-4.54 3.7-8.24 8.25-8.24M8.53 7.33c-.16 0-.43.06-.66.31-.22.25-.87.86-.87 2.07 0 1.22.89 2.39 1 2.56.14.17 1.76 2.67 4.25 3.73.59.27 1.05.42 1.41.53.59.19 1.13.16 1.56.1.48-.07 1.46-.6 1.67-1.18.21-.58.21-1.07.15-1.18-.07-.1-.23-.16-.48-.27-.25-.14-1.47-.74-1.69-.82-.23-.08-.37-.12-.56.12-.16.25-.64.81-.78.97-.15.17-.29.19-.53.07-.26-.13-1.06-.39-2-1.23-.74-.66-1.23-1.47-1.38-1.72-.12-.24-.01-.39.11-.5.11-.11.26-.29.37-.44.13-.14.17-.25.25-.41.08-.17.04-.31-.02-.43-.06-.11-.56-1.35-.77-1.84-.2-.48-.4-.42-.56-.43-.14 0-.3-.01-.47-.01z" />
+                            </svg>
+                            <span>WhatsApp</span>
+                          </a>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            if (!deal.client_phone) return
+                            const params = new URLSearchParams({
+                              phone: deal.client_phone,
+                              name: deal.client || "",
+                            })
+                            navigate(`/chat?${params.toString()}`)
+                          }}
+                          className="flex items-center gap-2 cursor-pointer"
+                        >
+                          <MessageCircle className="w-4 h-4" style={{ color: "#0c343d" }} />
+                          <span>Chat BRM</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </span>
 
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-2 mb-1">
