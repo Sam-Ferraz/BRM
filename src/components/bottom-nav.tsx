@@ -84,7 +84,7 @@ const NAV: NavEntry[] = [
     ],
   },
   { kind: "link", label: "Chat", icon: MessageCircle, path: "/chat", countKey: "pendingChatAndCalls" },
-  { kind: "link", label: "Config.", icon: Settings, path: "/settings" },
+  { kind: "link", label: "Configurações", icon: Settings, path: "/settings" },
 ]
 
 // Cache leve (sessao do browser): evita re-fetch imediato ao remontar o
