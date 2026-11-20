@@ -43,45 +43,17 @@ export default function DealsPage() {
   // Etiquetas (estilo Trello): CRUD + filtro por selecionadas
   const [labels, setLabels] = useState<DealLabel[]>([])
   const [selectedLabelIds, setSelectedLabelIds] = useState<Set<number>>(new Set())
-  // Etiquetas de SISTEMA: Frio/Morno/Quente aparecem sempre no topo da lista
-  // de etiquetas. Ao selecionar, filtram os deals pelo sufixo da temperatura
-  // no status (service_cold, etc). IDs negativos (unicos) pra nao colidir com
-  // etiquetas custom do banco. Nome/cor/oculto podem ser customizados pelo
-  // usuario — como nao ha coluna no banco pra isso, persiste em localStorage
-  // por account (chave inclui user.id) pra nao vazar entre contas.
-  const SYSTEM_LABELS_DEFAULTS: DealLabel[] = [
-    { id: -1, name: 'Frio', color: '#3b82f6' } as DealLabel,
-    { id: -2, name: 'Morno', color: '#f59e0b' } as DealLabel,
-    { id: -3, name: 'Quente', color: '#ef4444' } as DealLabel,
+  // Etiquetas-semente: Frio/Morno/Quente sao criadas automaticamente no
+  // banco da conta no primeiro load (se nao existirem com esses nomes). Depois
+  // disso, se comportam exatamente como qualquer etiqueta custom — podem ser
+  // editadas, excluidas, atribuidas a deals via DealLabelsInline. Removi a
+  // versao anterior com ids negativos virtuais pq o usuario quer que elas
+  // possam ser atribuidas aos deals igual a "TEste".
+  const SEED_LABELS: Array<{ name: string; color: string }> = [
+    { name: 'Frio', color: '#3b82f6' },
+    { name: 'Morno', color: '#f59e0b' },
+    { name: 'Quente', color: '#ef4444' },
   ]
-  const isSystemLabel = (id: number) => id < 0
-  const SYSTEM_LABEL_TO_SUFFIX: Record<number, 'cold' | 'mild' | 'warm'> = {
-    [-1]: 'cold',
-    [-2]: 'mild',
-    [-3]: 'warm',
-  }
-  type SystemLabelOverride = { name?: string; color?: string; hidden?: boolean }
-  const systemLabelsStorageKey = `deals:systemLabelOverrides:${user?.id ?? 'anon'}`
-  const [systemLabelOverrides, setSystemLabelOverrides] = useState<Record<number, SystemLabelOverride>>(() => {
-    try {
-      const stored = localStorage.getItem(`deals:systemLabelOverrides:${user?.id ?? 'anon'}`)
-      return stored ? JSON.parse(stored) : {}
-    } catch { return {} }
-  })
-  useEffect(() => {
-    try {
-      localStorage.setItem(systemLabelsStorageKey, JSON.stringify(systemLabelOverrides))
-    } catch { /* quota exceeded — ignora */ }
-  }, [systemLabelOverrides, systemLabelsStorageKey])
-  // Lista efetiva das system labels depois de aplicar overrides do usuario
-  // (nome / cor customizados) e esconder as que ele excluiu.
-  const SYSTEM_LABELS: DealLabel[] = SYSTEM_LABELS_DEFAULTS
-    .filter((lb) => !systemLabelOverrides[lb.id]?.hidden)
-    .map((lb) => ({
-      ...lb,
-      name: systemLabelOverrides[lb.id]?.name ?? lb.name,
-      color: systemLabelOverrides[lb.id]?.color ?? lb.color,
-    }))
   const [newLabelName, setNewLabelName] = useState("")
   const [newLabelColor, setNewLabelColor] = useState("#0c343d")
   const [labelsOpen, setLabelsOpen] = useState(false)
@@ -108,18 +80,6 @@ export default function DealsPage() {
   //               ok      = client_origin='online_lead' AND NOT overdue;
   //               na      = client_origin !== 'online_lead' (sem análise).
   const filteredDeals = deals.filter((d) => {
-    // Filtro por etiqueta de SISTEMA (Frio/Morno/Quente) — compara sufixo do
-    // status. Se o usuario selecionou pelo menos uma system label, o deal tem
-    // que bater com pelo menos uma delas (OR). Etiquetas custom (ids positivos)
-    // ainda nao filtram pq o campo label_ids nao vem no Deal — selecao fica
-    // visual mas nao aplica.
-    const selectedSystemSuffixes = Array.from(selectedLabelIds)
-      .filter(isSystemLabel)
-      .map((id) => SYSTEM_LABEL_TO_SUFFIX[id])
-      .filter(Boolean)
-    if (selectedSystemSuffixes.length > 0) {
-      if (!selectedSystemSuffixes.some((sfx) => d.status.endsWith(`_${sfx}`))) return false
-    }
     // Filtro por cadencia (client-side, usa o Set fetchado)
     if (cadenceFilter === "all") return true
     const isOverdue = cadenceOverdueSet.has(d.id)
@@ -204,14 +164,40 @@ export default function DealsPage() {
     fetchDeals()
   }, [fetchDeals])
 
-  // Carrega etiquetas da account uma vez ao montar. Falha silenciosa —
-  // se falhar, o Popover mostra "Nenhuma etiqueta ainda" e o CRUD ainda
-  // funciona pra criar novas.
+  // Carrega etiquetas da account uma vez ao montar. Se as 3 etiquetas-semente
+  // (Frio/Morno/Quente) nao existirem, cria elas automaticamente no banco —
+  // depois disso, se comportam como qualquer etiqueta custom (podem ser
+  // editadas, excluidas, atribuidas a deals via DealLabelsInline).
   useEffect(() => {
+    let cancelled = false
     api.dealLabels
       .list()
-      .then((r) => setLabels(r.data || []))
+      .then(async (r) => {
+        const existing = r.data || []
+        if (cancelled) return
+        // Normaliza nomes pra evitar duplicar em case-sensitive diferente.
+        const existingNames = new Set(existing.map((l) => l.name.trim().toLowerCase()))
+        const toCreate = SEED_LABELS.filter((s) => !existingNames.has(s.name.toLowerCase()))
+        if (toCreate.length === 0) {
+          setLabels(existing)
+          return
+        }
+        // Cria as faltantes em paralelo. Falha silenciosa por item — se falhar
+        // seed, a etiqueta so nao aparece desta vez, mas tenta de novo no proximo
+        // load.
+        const created = await Promise.all(
+          toCreate.map((s) =>
+            api.dealLabels.create(s).then((res) => res.data).catch(() => null)
+          )
+        )
+        if (cancelled) return
+        const all = [...existing, ...created.filter((x): x is DealLabel => !!x)]
+        setLabels(all.sort((a, b) => a.name.localeCompare(b.name)))
+      })
       .catch(() => setLabels([]))
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   // Fetch de cadência: uma chamada só, cache local. Roda no mount e sempre que
@@ -456,7 +442,7 @@ export default function DealsPage() {
                       ) : (
                         <span className="flex items-center gap-1 min-w-0">
                           <span className="flex items-center gap-0.5 shrink-0">
-                            {[...SYSTEM_LABELS, ...labels]
+                            {labels
                               .filter((lb) => selectedLabelIds.has(lb.id))
                               .slice(0, 4)
                               .map((lb) => (
@@ -470,7 +456,7 @@ export default function DealsPage() {
                           </span>
                           <span className="truncate text-xs text-muted-foreground">
                             {selectedLabelIds.size === 1
-                              ? [...SYSTEM_LABELS, ...labels].find((lb) => selectedLabelIds.has(lb.id))?.name
+                              ? labels.find((lb) => selectedLabelIds.has(lb.id))?.name
                               : `${selectedLabelIds.size} selecionadas`}
                           </span>
                         </span>
@@ -482,136 +468,6 @@ export default function DealsPage() {
                 <PopoverContent align="end" className="w-72 p-3 space-y-2">
                   <div className="text-sm font-medium text-foreground">Etiquetas</div>
                   <div className="space-y-1 max-h-48 overflow-y-auto">
-                    {/* Etiquetas de SISTEMA (Frio/Morno/Quente) — tem editar/excluir
-                        tambem. Save persiste em localStorage via setSystemLabelOverrides;
-                        delete marca hidden=true (nao apaga de verdade — permite
-                        restaurar depois via "Restaurar etiquetas de sistema" abaixo) */}
-                    {SYSTEM_LABELS.map((lb) => {
-                      const isSelected = selectedLabelIds.has(lb.id)
-                      const isEditing = editingLabelId === lb.id
-                      if (isEditing) {
-                        return (
-                          <div key={lb.id} className="rounded border p-2 space-y-2 bg-muted/40">
-                            <Input
-                              value={editingName}
-                              onChange={(e) => setEditingName(e.target.value)}
-                              className="h-7 text-sm"
-                              autoFocus
-                            />
-                            <div className="flex items-center gap-1.5">
-                              {LABEL_COLORS.map((c) => (
-                                <button
-                                  key={c}
-                                  type="button"
-                                  onClick={() => setEditingColor(c)}
-                                  className={`w-5 h-5 rounded-full border-2 transition-all ${
-                                    editingColor === c ? "border-foreground scale-110" : "border-transparent"
-                                  }`}
-                                  style={{ backgroundColor: c }}
-                                />
-                              ))}
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Button
-                                size="sm"
-                                className="h-7 text-xs flex-1"
-                                onClick={() => {
-                                  const name = editingName.trim()
-                                  if (!name) return
-                                  setSystemLabelOverrides((prev) => ({
-                                    ...prev,
-                                    [lb.id]: { ...prev[lb.id], name, color: editingColor },
-                                  }))
-                                  setEditingLabelId(null)
-                                }}
-                              >
-                                Salvar
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-7 text-xs"
-                                onClick={() => setEditingLabelId(null)}
-                              >
-                                Cancelar
-                              </Button>
-                            </div>
-                          </div>
-                        )
-                      }
-                      return (
-                        <div
-                          key={lb.id}
-                          className="flex items-center gap-1 rounded px-1 py-1 hover:bg-accent"
-                        >
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSelectedLabelIds((prev) => {
-                                const next = new Set(prev)
-                                if (next.has(lb.id)) next.delete(lb.id)
-                                else next.add(lb.id)
-                                return next
-                              })
-                            }}
-                            className="flex-1 flex items-center gap-2 text-left text-sm px-1 py-0.5"
-                          >
-                            <span
-                              className="inline-block w-5 h-3 rounded"
-                              style={{ backgroundColor: lb.color }}
-                            />
-                            <span className="flex-1 truncate">{lb.name}</span>
-                            {isSelected && <Check className="w-3.5 h-3.5 text-primary" />}
-                          </button>
-                          <button
-                            type="button"
-                            title="Editar etiqueta"
-                            onClick={() => {
-                              setEditingLabelId(lb.id)
-                              setEditingName(lb.name)
-                              setEditingColor(lb.color)
-                            }}
-                            className="p-1 rounded hover:bg-muted hover:text-foreground text-muted-foreground transition-colors"
-                          >
-                            <Pencil className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            title="Ocultar etiqueta"
-                            onClick={() => {
-                              if (!confirm(`Ocultar etiqueta "${lb.name}"?`)) return
-                              setSystemLabelOverrides((prev) => ({
-                                ...prev,
-                                [lb.id]: { ...prev[lb.id], hidden: true },
-                              }))
-                              setSelectedLabelIds((prev) => {
-                                const next = new Set(prev)
-                                next.delete(lb.id)
-                                return next
-                              })
-                            }}
-                            className="p-1 rounded hover:bg-red-50 hover:text-red-600 text-muted-foreground transition-colors"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      )
-                    })}
-                    {/* Se o usuario ocultou alguma das 3 system labels, oferece
-                        um botao pra restaurar — nao fica preso sem conseguir
-                        voltar ao estado padrao. */}
-                    {SYSTEM_LABELS.length < SYSTEM_LABELS_DEFAULTS.length && (
-                      <button
-                        type="button"
-                        onClick={() => setSystemLabelOverrides({})}
-                        className="w-full text-xs text-muted-foreground hover:text-foreground py-1 underline underline-offset-2"
-                      >
-                        Restaurar etiquetas de sistema
-                      </button>
-                    )}
-                    {labels.length > 0 && (
-                      <div className="border-t my-1" />
-                    )}
                     {labels.map((lb) => {
                       const isSelected = selectedLabelIds.has(lb.id)
                       const isEditing = editingLabelId === lb.id
