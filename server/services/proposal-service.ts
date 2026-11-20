@@ -1,35 +1,18 @@
 import { ProposalRepository, DealRepository } from '../repositories/index.js'
 import { Proposal, ProposalWithDetails, QueryFilters, ApiResponse, ProposalStatus } from '../types/index.js'
-import { SaleService } from './sale-service.js'
-import { ContractService } from './contract-service.js'
 
 const VALID_STATUSES: ProposalStatus[] = ['pending', 'accepted', 'rejected', 'counter_proposal', 'expired']
 
 export class ProposalService {
   private proposalRepository: ProposalRepository
   private dealRepository: DealRepository
-  // Opcional pra evitar dependência circular durante construção em testes.
-  // Setados via setters em server/index.ts.
-  private saleService: SaleService | null
-  private contractService: ContractService | null
 
   constructor(
     proposalRepository: ProposalRepository,
-    dealRepository: DealRepository,
-    saleService?: SaleService
+    dealRepository: DealRepository
   ) {
     this.proposalRepository = proposalRepository
     this.dealRepository = dealRepository
-    this.saleService = saleService ?? null
-    this.contractService = null
-  }
-
-  setSaleService(saleService: SaleService): void {
-    this.saleService = saleService
-  }
-
-  setContractService(contractService: ContractService): void {
-    this.contractService = contractService
   }
 
   /**
@@ -45,24 +28,6 @@ export class ProposalService {
     } catch (error) {
       console.error('Error syncing deal gsv from accepted proposal:', error)
       // Don't fail the proposal write because of the side-effect sync — log and continue.
-    }
-  }
-
-  /**
-   * Quando proposta vira 'accepted', cria automaticamente um Contrato com
-   * status 'pending_docs'. Antes ia direto pra Sale — agora passa pelo
-   * módulo Contrato (corretor anexa docs → jurídico revisa → gestor aprova
-   * → só então nasce a Sale).
-   *
-   * Best-effort: erro aqui só é logado, não derruba o write da proposta.
-   */
-  private async autoCreateContractIfAccepted(accountId: number, proposal: Proposal): Promise<void> {
-    if (proposal.status !== 'accepted') return
-    if (!this.contractService) return
-    try {
-      await this.contractService.createFromAcceptedProposal(accountId, proposal.id)
-    } catch (error) {
-      console.error('Error auto-creating contract from accepted proposal:', error)
     }
   }
 
@@ -119,7 +84,6 @@ export class ProposalService {
       const created = await this.proposalRepository.create(accountId, data)
       await this.syncDealGsvIfAccepted(accountId, created)
       await this.syncDealPropertyIfProvided(accountId, created.deal_id, propertyName)
-      await this.autoCreateContractIfAccepted(accountId, created)
 
       return created
     } catch (error) {
@@ -145,7 +109,6 @@ export class ProposalService {
       if (!updated) throw new Error('Proposal not found')
       await this.syncDealGsvIfAccepted(accountId, updated)
       await this.syncDealPropertyIfProvided(accountId, updated.deal_id, propertyName)
-      await this.autoCreateContractIfAccepted(accountId, updated)
       return updated
     } catch (error) {
       if (error instanceof Error && (error.message === 'Proposal not found' || error.message === 'invalid status' || error.message === 'proposal_value must be greater than zero')) {

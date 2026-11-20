@@ -71,8 +71,6 @@ const MODULES: ModuleItem[] = [
   { path: "/chat",         label: "Chat",         icon: MessageCircle,  countKey: "pendingChatAndCalls" },
   { path: "/leads",        label: "Leads",        icon: Inbox,          countKey: "newLeads" },
   { path: "/proposals",    label: "Propostas",    icon: FileSignature,  countKey: "totalProposals" },
-  { path: "/contracts",    label: "Contratos",    icon: FileCheck2,     countKey: "totalContracts" },
-  { path: "/sales",        label: "Vendas",       icon: Key,            countKey: "totalSales" },
   { path: "/clients",      label: "Clientes",     icon: Users,          countKey: "totalClients" },
   { path: "/products",     label: "Imóveis",      icon: Package,        countKey: "totalProducts" },
   { path: "/sales-agenda", label: "Vitrine",      icon: Store,          countKey: "totalShowcaseProducts" },

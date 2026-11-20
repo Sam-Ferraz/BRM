@@ -50,8 +50,6 @@ const NAV: NavEntry[] = [
     // Ordem "de baixo pra cima": Negócios aparece no topo do popover,
     // Vendas mais próximo do widget (base do popover).
     children: [
-      { label: "Vendas",      path: "/sales",        icon: Key,            countKey: "totalSales" },
-      { label: "Contratos",   path: "/contracts",    icon: FileCheck2,     countKey: "totalContracts" },
       { label: "Propostas",   path: "/proposals",    icon: FileSignature,  countKey: "totalProposals" },
       { label: "Follow-ups",  path: "/follow-ups",   icon: ClipboardCheck, countKey: "totalFollowUps" },
       { label: "Atendimentos", path: "/appointments", icon: HeadphonesIcon, countKey: "totalAppointments" },

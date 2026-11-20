@@ -1,4 +1,4 @@
-import { DealRepository, ClientRepository, ProductRepository, AppointmentRepository, SalesAgendaRepository, FollowUpRepository, ProposalRepository, ConversationRepository, LeadRepository, SaleRepository, ContractRepository } from '../repositories/index.js'
+import { DealRepository, ClientRepository, ProductRepository, AppointmentRepository, SalesAgendaRepository, FollowUpRepository, ProposalRepository, ConversationRepository, LeadRepository } from '../repositories/index.js'
 import { DashboardStats } from '../types/index.js'
 
 export class DashboardService {
@@ -11,8 +11,6 @@ export class DashboardService {
   private proposalRepository: ProposalRepository
   private conversationRepository: ConversationRepository
   private leadRepository: LeadRepository
-  private saleRepository: SaleRepository
-  private contractRepository: ContractRepository
 
   constructor(
     dealRepository: DealRepository,
@@ -23,9 +21,7 @@ export class DashboardService {
     followUpRepository: FollowUpRepository,
     proposalRepository: ProposalRepository,
     conversationRepository: ConversationRepository,
-    leadRepository: LeadRepository,
-    saleRepository: SaleRepository,
-    contractRepository: ContractRepository
+    leadRepository: LeadRepository
   ) {
     this.dealRepository = dealRepository
     this.clientRepository = clientRepository
@@ -36,8 +32,6 @@ export class DashboardService {
     this.proposalRepository = proposalRepository
     this.conversationRepository = conversationRepository
     this.leadRepository = leadRepository
-    this.saleRepository = saleRepository
-    this.contractRepository = contractRepository
   }
 
   // Multi-tenancy: recebe accountId + userId. accountId isola por empresa;
@@ -56,8 +50,6 @@ export class DashboardService {
       unansweredCalls,
       leadCounts,
       totalShowcaseProducts,
-      totalSales,
-      contractCounts,
     ] = await Promise.all([
       this.dealRepository.getActiveCount(accountId, userId),
       this.clientRepository.getCount(accountId),
@@ -70,13 +62,7 @@ export class DashboardService {
       this.appointmentRepository.getCountUnansweredCalls(accountId, userId),
       this.leadRepository.getCountByStatus(accountId),
       this.productRepository.getShowcaseCount(accountId),
-      this.saleRepository.getCount(accountId),
-      this.contractRepository.getCountByStatus(accountId, userId),
     ])
-
-    const totalActiveContracts = Object.entries(contractCounts)
-      .filter(([status]) => status !== 'approved')
-      .reduce((sum, [, n]) => sum + n, 0)
 
     return {
       totalDeals: activeDealsCount,
@@ -87,8 +73,6 @@ export class DashboardService {
       totalShowcaseProducts,
       totalFollowUps,
       totalProposals,
-      totalSales,
-      totalContracts: totalActiveContracts,
       pendingChatAndCalls: unansweredConversations + unansweredCalls,
       newLeads: leadCounts.novo
     }

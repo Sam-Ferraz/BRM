@@ -407,104 +407,9 @@ export interface ProposalWithDetails extends Proposal {
   deal_property_price?: string | number | null  // preço do imóvel via JOIN com products
 }
 
-// ---------------------------------------------------------------------------
-// Módulo Contrato (etapa entre Proposta e Venda)
-// ---------------------------------------------------------------------------
-
-export type ContractStatus =
-  | 'pending_docs'       // corretor precisa anexar documentos
-  | 'awaiting_legal'     // jurídico precisa revisar
-  | 'legal_rejected'     // jurídico rejeitou, volta pro corretor
-  | 'awaiting_manager'   // gestor precisa aprovar tudo
-  | 'manager_rejected'   // gestor pediu ajustes
-  | 'approved'           // aprovado, Sale criada
-
-export type ContractDocumentType = 'client_doc' | 'contract'
-
-export interface Contract {
-  id: number
-  deal_id: number
-  proposal_id: number
-  user_id: number                              // corretor responsável
-  status: ContractStatus
-  final_value?: string | number | null
-  signed_at?: string | null
-  legal_notes?: string | null
-  manager_notes?: string | null
-  legal_reviewed_by?: number | null
-  legal_reviewed_at?: string | null
-  manager_reviewed_by?: number | null
-  manager_reviewed_at?: string | null
-  created_at?: string
-  updated_at?: string
-}
-
-export interface ContractDocument {
-  id: number
-  contract_id: number
-  uploader_id: number
-  doc_type: ContractDocumentType
-  filename: string
-  file_url: string
-  file_size?: number | null
-  mime_type?: string | null
-  display_order: number
-  notes?: string | null
-  created_at?: string
-}
-
-export interface ContractWithDetails extends Contract {
-  // Vindos de JOINs pra economizar N+1 na listagem
-  deal_client?: string
-  deal_property_name?: string | null
-  broker_name?: string          // corretor (user_id)
-  legal_reviewer_name?: string | null
-  manager_reviewer_name?: string | null
-  proposal_value?: string | number
-  documents_count?: number      // total (client_doc + contract)
-  contract_files_count?: number // só 'contract' — se >= 1 tem contrato anexado
-}
-
-// ---------------------------------------------------------------------------
-// Módulo Vendas
-// ---------------------------------------------------------------------------
-
-export type SaleStatus = 'pending_approval' | 'approved' | 'rejected'
-
-export interface Sale {
-  id: number
-  proposal_id: number
-  deal_id: number
-  seller_user_id: number
-  sale_date?: string | null
-  contract_url?: string | null
-  contract_filename?: string | null
-  status: SaleStatus
-  approved_by_user_id?: number | null
-  approved_at?: Date | string | null
-  approval_notes?: string | null
-  last_modified_by_user_id?: number | null
-  last_modified_at?: Date | string | null
-  created_at?: Date
-  updated_at?: Date
-}
-
-export interface SaleWithDetails extends Sale {
-  last_modifier_name?: string | null
-  // Vindos do JOIN com deals, products, users e proposals
-  deal_client?: string
-  deal_property_name?: string | null
-  deal_property_price?: string | number | null
-  seller_name?: string
-  approver_name?: string | null
-  proposal_value?: string | number | null
-  proposal_date?: string | null
-  proposal_validity_date?: string | null
-  proposal_payment_condition?: string | null
-  proposal_vgv?: string | number | null
-  proposal_vgc?: string | number | null
-  proposal_intermediation_rate?: string | number | null
-}
+// Modulos Contratos e Vendas removidos na V1 — workflow de aprovacao
+// engessado (Jurídico/Gestor/Aprovação) saiu do produto. Voltam depois
+// como pacotes opcionais ativaveis por conta.
 
 // ---------------------------------------------------------------------------
 // Módulo Chat (WhatsApp)
@@ -627,10 +532,6 @@ export interface DashboardStats {
   totalShowcaseProducts: number
   totalFollowUps: number
   totalProposals: number
-  // Total de vendas (todos os status)
-  totalSales: number
-  // Contratos em andamento (todos exceto approved, que ja virou Sale)
-  totalContracts: number
   // Pendências de comunicação: conversas não respondidas + ligações não atendidas
   pendingChatAndCalls: number
   // Leads aguardando triagem (status='novo')

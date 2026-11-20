@@ -221,62 +221,9 @@ export interface UserPermissionsView {
   }[]
 }
 
-// ---------------------------------------------------------------------------
-// Módulo Contrato (entre Proposta e Venda)
-// ---------------------------------------------------------------------------
-
-export type ContractStatus =
-  | 'pending_docs'
-  | 'awaiting_legal'
-  | 'legal_rejected'
-  | 'awaiting_manager'
-  | 'manager_rejected'
-  | 'approved'
-
-export type ContractDocumentType = 'client_doc' | 'contract'
-
-export interface Contract {
-  id: number
-  deal_id: number
-  proposal_id: number
-  user_id: number
-  status: ContractStatus
-  final_value?: string | number | null
-  signed_at?: string | null
-  legal_notes?: string | null
-  manager_notes?: string | null
-  legal_reviewed_by?: number | null
-  legal_reviewed_at?: string | null
-  manager_reviewed_by?: number | null
-  manager_reviewed_at?: string | null
-  created_at?: string
-  updated_at?: string
-}
-
-export interface ContractDocument {
-  id: number
-  contract_id: number
-  uploader_id: number
-  doc_type: ContractDocumentType
-  filename: string
-  file_url: string
-  file_size?: number | null
-  mime_type?: string | null
-  display_order: number
-  notes?: string | null
-  created_at?: string
-}
-
-export interface ContractWithDetails extends Contract {
-  deal_client?: string
-  deal_property_name?: string | null
-  broker_name?: string
-  legal_reviewer_name?: string | null
-  manager_reviewer_name?: string | null
-  proposal_value?: string | number
-  documents_count?: number
-  contract_files_count?: number
-}
+// Modulos Contratos e Vendas removidos na V1 — workflow de aprovacao
+// engessado (Juridico/Gestor/Aprovacao) saiu do produto. Voltam depois como
+// pacotes opcionais ativaveis por conta.
 
 export interface Deal {
   id: number
@@ -501,46 +448,6 @@ export interface ProposalWithDetails extends Proposal {
 }
 
 // ---------------------------------------------------------------------------
-// Módulo Vendas
-// ---------------------------------------------------------------------------
-
-export type SaleStatus = 'pending_approval' | 'approved' | 'rejected'
-
-export interface Sale {
-  id: number
-  proposal_id: number
-  deal_id: number
-  seller_user_id: number
-  sale_date?: string | null
-  contract_url?: string | null
-  contract_filename?: string | null
-  status: SaleStatus
-  approved_by_user_id?: number | null
-  approved_at?: string | null
-  approval_notes?: string | null
-  last_modified_by_user_id?: number | null
-  last_modified_at?: string | null
-  created_at?: string
-  updated_at?: string
-}
-
-export interface SaleWithDetails extends Sale {
-  last_modifier_name?: string | null
-  deal_client?: string
-  deal_property_name?: string | null
-  deal_property_price?: string | number | null
-  seller_name?: string
-  approver_name?: string | null
-  proposal_value?: string | number | null
-  proposal_date?: string | null
-  proposal_validity_date?: string | null
-  proposal_payment_condition?: string | null
-  proposal_vgv?: string | number | null
-  proposal_vgc?: string | number | null
-  proposal_intermediation_rate?: string | number | null
-}
-
-// ---------------------------------------------------------------------------
 // Módulo Chat (WhatsApp)
 // ---------------------------------------------------------------------------
 
@@ -670,14 +577,11 @@ export interface DashboardStats {
   totalProducts: number
   totalAppointments: number
   totalSalesAgenda: number
+
   // Imóveis visíveis na Vitrine (available_for_sale = true)
   totalShowcaseProducts: number
   totalFollowUps: number
   totalProposals: number
-  // Total de vendas (todos os status)
-  totalSales: number
-  // Contratos em andamento (todos exceto approved, que virou Sale)
-  totalContracts: number
   // Conversas não respondidas + ligações não atendidas
   pendingChatAndCalls: number
   // Leads aguardando triagem (status='novo')
@@ -1156,66 +1060,6 @@ export const api = {
     },
   },
 
-  // Sales — vendas (nascem automaticamente de propostas aceitas)
-  sales: {
-    getAll: async (filters?: {
-      status?: SaleStatus | 'all'
-      search?: string
-      createdFrom?: string
-      createdTo?: string
-    }): Promise<ApiResponse<SaleWithDetails>> => {
-      const params = new URLSearchParams()
-      if (filters?.status) params.append('status', filters.status)
-      if (filters?.search) params.append('search', filters.search)
-      if (filters?.createdFrom) params.append('createdFrom', filters.createdFrom)
-      if (filters?.createdTo) params.append('createdTo', filters.createdTo)
-      const query = params.toString()
-      return apiClient.get<ApiResponse<SaleWithDetails>>(`/sales${query ? `?${query}` : ''}`)
-    },
-
-    getById: async (id: number): Promise<SaleWithDetails> => {
-      return apiClient.get<SaleWithDetails>(`/sales/${id}`)
-    },
-
-    // Atualiza apenas os campos editáveis (sale_date). Pra upload de contrato
-    // usar uploadContract(). Pra aprovar/rejeitar usar approve()/reject().
-    update: async (id: number, data: { sale_date?: string | null }): Promise<Sale> => {
-      return apiClient.patch<Sale>(`/sales/${id}`, data)
-    },
-
-    uploadContract: async (id: number, file: File): Promise<Sale> => {
-      const formData = new FormData()
-      formData.append('contract', file)
-      // Não usa apiClient.post diretamente porque ele força Content-Type JSON
-      // (formData precisa de multipart). Pega o token manualmente.
-      const token = localStorage.getItem('auth-token')
-      const headers: Record<string, string> = {}
-      if (token) headers['Authorization'] = `Bearer ${token}`
-      const response = await fetch(`/api/sales/${id}/contract`, {
-        method: 'POST',
-        headers,
-        body: formData,
-      })
-      if (!response.ok) {
-        const errorBody = await response.json().catch(() => ({}))
-        throw new Error(errorBody.error || `Upload failed: ${response.status}`)
-      }
-      return response.json()
-    },
-
-    approve: async (id: number, notes?: string | null): Promise<SaleWithDetails> => {
-      return apiClient.post<SaleWithDetails>(`/sales/${id}/approve`, { notes: notes ?? null })
-    },
-
-    reject: async (id: number, notes?: string | null): Promise<SaleWithDetails> => {
-      return apiClient.post<SaleWithDetails>(`/sales/${id}/reject`, { notes: notes ?? null })
-    },
-
-    delete: async (id: number): Promise<{ success: boolean }> => {
-      return apiClient.delete<{ success: boolean }>(`/sales/${id}`)
-    },
-  },
-
   // Agenda — compromissos manuais + follow-ups em aberto
   calendar: {
     getAgenda: async (filters?: {
@@ -1249,96 +1093,6 @@ export const api = {
     },
     deleteEvent: async (id: number): Promise<{ success: boolean }> => {
       return apiClient.delete<{ success: boolean }>(`/calendar/events/${id}`)
-    },
-  },
-
-  // Módulo Contrato — etapa entre Proposta e Venda
-  contracts: {
-    list: async (filters?: {
-      status?: ContractStatus | 'all'
-      search?: string
-      viewAll?: boolean
-    }): Promise<ApiResponse<ContractWithDetails>> => {
-      const params = new URLSearchParams()
-      if (filters?.status) params.append('status', filters.status)
-      if (filters?.search) params.append('search', filters.search)
-      if (filters?.viewAll) params.append('viewAll', '1')
-      const q = params.toString()
-      return apiClient.get<ApiResponse<ContractWithDetails>>(`/contracts${q ? `?${q}` : ''}`)
-    },
-
-    getById: async (id: number): Promise<{ data: ContractWithDetails }> => {
-      return apiClient.get<{ data: ContractWithDetails }>(`/contracts/${id}`)
-    },
-
-    getCounts: async (viewAll?: boolean): Promise<{ data: Record<ContractStatus, number> }> => {
-      return apiClient.get<{ data: Record<ContractStatus, number> }>(
-        `/contracts/counts${viewAll ? '?viewAll=1' : ''}`
-      )
-    },
-
-    listDocuments: async (id: number): Promise<{ data: ContractDocument[] }> => {
-      return apiClient.get<{ data: ContractDocument[] }>(`/contracts/${id}/documents`)
-    },
-
-    /**
-     * Upload de documento — usa FormData porque o multer do backend espera
-     * multipart/form-data com campo "file". doc_type default é 'client_doc'.
-     */
-    uploadDocument: async (
-      contractId: number,
-      file: File,
-      docType: ContractDocumentType = 'client_doc',
-      notes?: string
-    ): Promise<{ data: ContractDocument }> => {
-      const form = new FormData()
-      form.append('file', file)
-      form.append('doc_type', docType)
-      if (notes) form.append('notes', notes)
-      const token = localStorage.getItem('auth-token')
-      const res = await fetch(`/api/contracts/${contractId}/documents`, {
-        method: 'POST',
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-        body: form,
-      })
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}))
-        throw new Error(body.error || `HTTP ${res.status}`)
-      }
-      return res.json()
-    },
-
-    deleteDocument: async (contractId: number, documentId: number): Promise<{ success: boolean }> => {
-      return apiClient.delete<{ success: boolean }>(
-        `/contracts/${contractId}/documents/${documentId}`
-      )
-    },
-
-    submitToLegal: async (id: number): Promise<{ data: Contract }> => {
-      return apiClient.post<{ data: Contract }>(`/contracts/${id}/submit-legal`, {})
-    },
-
-    resubmitToLegal: async (id: number): Promise<{ data: Contract }> => {
-      return apiClient.post<{ data: Contract }>(`/contracts/${id}/resubmit-legal`, {})
-    },
-
-    legalApprove: async (id: number, notes?: string): Promise<{ data: Contract }> => {
-      return apiClient.post<{ data: Contract }>(`/contracts/${id}/legal-approve`, { notes })
-    },
-
-    legalReject: async (id: number, notes: string): Promise<{ data: Contract }> => {
-      return apiClient.post<{ data: Contract }>(`/contracts/${id}/legal-reject`, { notes })
-    },
-
-    managerApprove: async (
-      id: number,
-      input?: { notes?: string; final_value?: string | number }
-    ): Promise<{ data: Contract }> => {
-      return apiClient.post<{ data: Contract }>(`/contracts/${id}/manager-approve`, input || {})
-    },
-
-    managerReject: async (id: number, notes: string): Promise<{ data: Contract }> => {
-      return apiClient.post<{ data: Contract }>(`/contracts/${id}/manager-reject`, { notes })
     },
   },
 
