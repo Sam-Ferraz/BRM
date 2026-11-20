@@ -43,17 +43,6 @@ export default function DealsPage() {
   // Etiquetas (estilo Trello): CRUD + filtro por selecionadas
   const [labels, setLabels] = useState<DealLabel[]>([])
   const [selectedLabelIds, setSelectedLabelIds] = useState<Set<number>>(new Set())
-  // Etiquetas-semente: Frio/Morno/Quente sao criadas automaticamente no
-  // banco da conta no primeiro load (se nao existirem com esses nomes). Depois
-  // disso, se comportam exatamente como qualquer etiqueta custom — podem ser
-  // editadas, excluidas, atribuidas a deals via DealLabelsInline. Removi a
-  // versao anterior com ids negativos virtuais pq o usuario quer que elas
-  // possam ser atribuidas aos deals igual a "TEste".
-  const SEED_LABELS: Array<{ name: string; color: string }> = [
-    { name: 'Frio', color: '#3b82f6' },
-    { name: 'Morno', color: '#f59e0b' },
-    { name: 'Quente', color: '#ef4444' },
-  ]
   const [newLabelName, setNewLabelName] = useState("")
   const [newLabelColor, setNewLabelColor] = useState("#0c343d")
   const [labelsOpen, setLabelsOpen] = useState(false)
@@ -164,40 +153,12 @@ export default function DealsPage() {
     fetchDeals()
   }, [fetchDeals])
 
-  // Carrega etiquetas da account uma vez ao montar. Se as 3 etiquetas-semente
-  // (Frio/Morno/Quente) nao existirem, cria elas automaticamente no banco —
-  // depois disso, se comportam como qualquer etiqueta custom (podem ser
-  // editadas, excluidas, atribuidas a deals via DealLabelsInline).
+  // Carrega etiquetas da account uma vez ao montar.
   useEffect(() => {
-    let cancelled = false
     api.dealLabels
       .list()
-      .then(async (r) => {
-        const existing = r.data || []
-        if (cancelled) return
-        // Normaliza nomes pra evitar duplicar em case-sensitive diferente.
-        const existingNames = new Set(existing.map((l) => l.name.trim().toLowerCase()))
-        const toCreate = SEED_LABELS.filter((s) => !existingNames.has(s.name.toLowerCase()))
-        if (toCreate.length === 0) {
-          setLabels(existing)
-          return
-        }
-        // Cria as faltantes em paralelo. Falha silenciosa por item — se falhar
-        // seed, a etiqueta so nao aparece desta vez, mas tenta de novo no proximo
-        // load.
-        const created = await Promise.all(
-          toCreate.map((s) =>
-            api.dealLabels.create(s).then((res) => res.data).catch(() => null)
-          )
-        )
-        if (cancelled) return
-        const all = [...existing, ...created.filter((x): x is DealLabel => !!x)]
-        setLabels(all.sort((a, b) => a.name.localeCompare(b.name)))
-      })
+      .then((r) => setLabels(r.data || []))
       .catch(() => setLabels([]))
-    return () => {
-      cancelled = true
-    }
   }, [])
 
   // Fetch de cadência: uma chamada só, cache local. Roda no mount e sempre que
