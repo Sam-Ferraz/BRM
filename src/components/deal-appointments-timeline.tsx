@@ -162,6 +162,18 @@ function TimelineItem({ appointment }: { appointment: Appointment }) {
           <span className="text-xs text-muted-foreground shrink-0">{formattedDate}</span>
         </div>
 
+        {/* Em itens de visita, mostra qual imovel foi apresentado logo abaixo
+            dos badges — da contexto imediato antes de ler a descricao livre. */}
+        {appointment.type === "visit" && appointment.property_name && (
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Home className="w-3 h-3 shrink-0" />
+            <span>
+              Imóvel apresentado:{" "}
+              <span className="font-medium text-foreground">{appointment.property_name}</span>
+            </span>
+          </div>
+        )}
+
         {appointment.description ? (
           <p className="text-sm text-foreground whitespace-pre-wrap">{appointment.description}</p>
         ) : (
