@@ -30,7 +30,7 @@ import { api } from "@/lib/api-client"
  */
 
 const ORIGIN_LABELS: Record<string, string> = {
-  online_lead: "Lead Online",
+  online_lead: "Marketing - Anúncios",
   own_portfolio: "Portfólio Próprio",
   duty_shift: "Plantão",
   referral: "Indicação",

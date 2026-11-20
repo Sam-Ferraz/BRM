@@ -271,7 +271,7 @@ export function DealEditor({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="online_lead">{t("clientOriginOnlineLead")}</SelectItem>
+              <SelectItem value="online_lead">{t("onlineLead")}</SelectItem>
               <SelectItem value="own_portfolio">{t("clientOriginOwnPortfolio")}</SelectItem>
               <SelectItem value="duty_shift">{t("clientOriginDutyShift")}</SelectItem>
               <SelectItem value="referral">{t("clientOriginReferral")}</SelectItem>

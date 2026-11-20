@@ -562,7 +562,7 @@ const resources = {
       // Form Labels and Fields
       address: 'Endereço',
       origin: 'Origem',
-      onlineLead: 'Lead Online',
+      onlineLead: 'Marketing - Anúncios',
       ownPortfolio: 'Carteira Própria',
       dutyShift: 'Plantão',
       referral: 'Indicação',
@@ -1128,7 +1128,7 @@ const resources = {
       // Form Labels and Fields
       address: 'Address',
       origin: 'Origin',
-      onlineLead: 'Online Lead',
+      onlineLead: 'Marketing - Ads',
       ownPortfolio: 'Own Portfolio',
       dutyShift: 'Duty Shift',
       referral: 'Referral',
@@ -1693,7 +1693,7 @@ const resources = {
       // Form Labels and Fields
       address: 'Dirección',
       origin: 'Origen',
-      onlineLead: 'Lead Online',
+      onlineLead: 'Marketing - Anuncios',
       ownPortfolio: 'Cartera Propia',
       dutyShift: 'Guardia',
       referral: 'Referencia',
