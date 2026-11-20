@@ -23,7 +23,17 @@ export interface DealOption {
   client: string
   client_phone?: string
   property_name?: string
+  description?: string | null
   status: string
+}
+
+/**
+ * Trunca o nome do cliente em 15 caracteres com ".." no final, pra deixar
+ * espaco no dropdown pro titulo do negocio. Nomes curtos ficam intactos.
+ */
+function truncateName(name: string, limit = 15): string {
+  if (!name) return ""
+  return name.length > limit ? name.slice(0, limit) + ".." : name
 }
 
 interface DealCodeSearchProps {
@@ -79,6 +89,7 @@ export function DealCodeSearch({
             client: found.client,
             client_phone: found.client_phone,
             property_name: found.property_name,
+            description: found.description,
             status: found.status,
           }
           setSelectedDeal(option)
@@ -119,6 +130,7 @@ export function DealCodeSearch({
           client: d.client,
           client_phone: d.client_phone,
           property_name: d.property_name,
+          description: d.description,
           status: d.status,
         })),
       )
@@ -166,8 +178,8 @@ export function DealCodeSearch({
       <div className={cn("flex items-center gap-2 rounded-md border bg-muted/40 px-3 py-2", className)}>
         <span className="font-mono text-sm font-semibold">{formatDealCode(selectedDeal.id)}</span>
         <span className="text-sm text-muted-foreground truncate flex-1">
-          {selectedDeal.client}
-          {selectedDeal.property_name ? ` — ${selectedDeal.property_name}` : ""}
+          {truncateName(selectedDeal.client)}
+          {selectedDeal.description ? ` - ${selectedDeal.description}` : ""}
         </span>
         <button
           type="button"
@@ -212,9 +224,9 @@ export function DealCodeSearch({
                 {formatDealCode(opt.id)}
               </span>
               <span className="truncate flex-1">
-                {opt.client}
-                {opt.property_name ? (
-                  <span className="text-muted-foreground"> — {opt.property_name}</span>
+                {truncateName(opt.client)}
+                {opt.description ? (
+                  <span className="text-muted-foreground"> - {opt.description}</span>
                 ) : null}
               </span>
             </button>
