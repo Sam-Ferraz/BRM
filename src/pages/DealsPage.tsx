@@ -375,13 +375,13 @@ export default function DealsPage() {
                   }}
                 />
               )}
-              <Button onClick={() => setIsFormOpen(true)}>
+              <Button size="sm" onClick={() => setIsFormOpen(true)}>
                 <Plus className="w-4 h-4 mr-2" />
                 {t('newDeal')}
               </Button>
               {/* Botao 'Novo funil' so no kanban — fora dele e irrelevante. */}
               {viewMode === 'kanban' && (
-                <Button variant="outline" onClick={() => setNewPipelineOpen(true)}>
+                <Button size="sm" variant="outline" onClick={() => setNewPipelineOpen(true)}>
                   <Plus className="w-4 h-4 mr-2" />
                   Novo funil
                 </Button>
