@@ -206,6 +206,9 @@ export interface Product {
   status?: ProductStatus
   user_id?: number
   has_thumbnail?: boolean
+  // Empreendimento (type='enterprise') pode ter unidades filhas; cada unidade
+  // e um Product normal apontando pra ele via parent_product_id.
+  parent_product_id?: number | null
   created_at?: Date
   updated_at?: Date
 }
@@ -674,4 +677,8 @@ export interface QueryFilters {
   // Filtro por Negócio vinculado — usado pela Timeline no modal do Deal
   // pra listar só os atendimentos daquele Negócio.
   dealId?: number
+  // Filtro por Empreendimento pai — usado pela listagem de unidades filhas
+  // dentro do ProductForm. `null` filtra "só standalone/pai"; undefined
+  // significa "todos" (comportamento global, inclui unidades e pais).
+  parentProductId?: number | null
 }

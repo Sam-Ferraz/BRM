@@ -17,6 +17,7 @@ import { api, type Product, type ProductImage, type ProductStatus } from "@/lib/
 import { useMobileDetection } from "@/lib/mobile-utils"
 import { useToast } from "@/hooks/use-toast"
 import { PropertyCodeBadge } from "@/components/property-code-badge"
+import { EnterpriseUnitsManager } from "@/components/enterprise-units-manager"
 
 interface ProductFormProps {
   product?: Product
@@ -26,21 +27,28 @@ interface ProductFormProps {
   onSubmit: (data: Omit<Product, "id"> | Partial<Product>) => void | Promise<void> | Promise<Product | void>
   loading?: boolean
   onProductUpdated?: (product: Product) => void
+  /**
+   * Se setado, este imovel sera criado como UNIDADE de um Empreendimento
+   * (parent_product_id = X). Usado pelo EnterpriseUnitsManager no fluxo
+   * de "+ Nova unidade" dentro do form de um empreendimento.
+   */
+  parentProductId?: number | null
 }
 
-export function ProductForm({ product, initialName, open, onOpenChange, onSubmit, loading, onProductUpdated }: ProductFormProps) {
+export function ProductForm({ product, initialName, open, onOpenChange, onSubmit, loading, onProductUpdated, parentProductId }: ProductFormProps) {
   const { t } = useTranslation()
   const isMobile = useMobileDetection()
   const { toast } = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  type PropertyTypeValue = 'apartment' | 'house' | 'penthouse' | 'land' | 'studio' | 'flat'
+  type PropertyTypeValue = 'apartment' | 'house' | 'penthouse' | 'land' | 'studio' | 'flat' | 'enterprise'
   type PropertyCategoryValue = 'off-plan' | 'completed'
 
   const propertyTypeOptions: { value: PropertyTypeValue; label: string }[] = [
     { value: 'apartment', label: t('propertyTypeApartment') },
     { value: 'house', label: t('propertyTypeHouse') },
     { value: 'penthouse', label: t('propertyTypePenthouse') },
+    { value: 'enterprise', label: t('propertyTypeEnterprise') },
     { value: 'land', label: t('propertyTypeLand') },
     { value: 'studio', label: t('propertyTypeStudio') },
     { value: 'flat', label: t('propertyTypeFlat') },
@@ -249,16 +257,23 @@ export function ProductForm({ product, initialName, open, onOpenChange, onSubmit
     e.preventDefault()
     e.stopPropagation()
 
+    // parent_product_id: anexa no payload se o form foi aberto como "nova unidade"
+    // de um empreendimento OU se esta editando uma unidade existente (preserva).
+    const payload = {
+      ...formData,
+      parent_product_id: parentProductId ?? product?.parent_product_id ?? null,
+    }
+
     // Modo edição: fluxo original (upload de fotos é imediato)
     if (product || pendingFiles.length === 0) {
-      onSubmit(formData)
+      onSubmit(payload)
       return
     }
 
     // Modo novo COM fotos pendentes: precisa do id retornado pelo onSubmit
     try {
       setImageUploading(true)
-      const created = await onSubmit(formData)
+      const created = await onSubmit(payload)
       if (created && typeof created === 'object' && 'id' in created) {
         try {
           await api.products.uploadMultipleImages(created.id, pendingFiles)
@@ -595,6 +610,14 @@ export function ProductForm({ product, initialName, open, onOpenChange, onSubmit
                     </div>
                   )}
                 </div>
+              )}
+
+              {/* Gerenciador de unidades filhas — so aparece se este imovel
+                  for Empreendimento JA SALVO (precisa de product.id como
+                  parent). Modo criacao: usuario salva primeiro, depois reabre
+                  pra adicionar unidades. */}
+              {product && formData.type === 'enterprise' && (
+                <EnterpriseUnitsManager enterpriseId={product.id} />
               )}
 
             </form>

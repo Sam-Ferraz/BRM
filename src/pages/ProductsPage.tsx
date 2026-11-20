@@ -173,6 +173,7 @@ export default function ProductsPage() {
     apartment: 'propertyTypeApartment',
     house: 'propertyTypeHouse',
     penthouse: 'propertyTypePenthouse',
+    enterprise: 'propertyTypeEnterprise',
     land: 'propertyTypeLand',
     studio: 'propertyTypeStudio',
     flat: 'propertyTypeFlat',

@@ -5,7 +5,7 @@ export class ProductRepository extends BaseRepository {
   async findAll(accountId: number, filters: QueryFilters = {}): Promise<Product[]> {
     const client = await this.getClient()
     try {
-      const { search, type, category, sortBy, sortOrder } = filters
+      const { search, type, category, sortBy, sortOrder, parentProductId } = filters
       let query = `
         SELECT
           p.*,
@@ -36,6 +36,20 @@ export class ProductRepository extends BaseRepository {
         query += ` AND p.category = $${paramCount}`
         params.push(category)
         paramCount++
+      }
+
+      // Filtro por empreendimento pai — usado pra listar unidades de um
+      // Empreendimento. `null` explicito significa "so standalone/pai" (sem
+      // pai); undefined/ausente significa "todos" (pais + filhos misturados,
+      // comportamento legado pra listagens globais).
+      if (parentProductId !== undefined) {
+        if (parentProductId === null) {
+          query += ` AND p.parent_product_id IS NULL`
+        } else {
+          query += ` AND p.parent_product_id = $${paramCount}`
+          params.push(parentProductId)
+          paramCount++
+        }
       }
 
       if (sortBy) {
@@ -88,8 +102,8 @@ export class ProductRepository extends BaseRepository {
           bedrooms, suites, parking_spots, bathrooms,
           total_area, private_area, condo_fee,
           address, neighborhood, city, state, country,
-          available_for_sale, status, user_id
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27) RETURNING *`,
+          available_for_sale, status, user_id, parent_product_id
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28) RETURNING *`,
         [
           accountId,
           product.name, product.price, product.type, product.category, product.description,
@@ -98,7 +112,7 @@ export class ProductRepository extends BaseRepository {
           product.bedrooms || null, product.suites || null, product.parking_spots || null, product.bathrooms || null,
           product.total_area || null, product.private_area || null, product.condo_fee || null,
           product.address || null, product.neighborhood || null, product.city || null, product.state || null, product.country || 'Brasil',
-          availableValue, statusValue, product.user_id || null
+          availableValue, statusValue, product.user_id || null, product.parent_product_id || null
         ]
       )
       return result.rows[0]
@@ -127,8 +141,9 @@ export class ProductRepository extends BaseRepository {
           total_area = $16, private_area = $17, condo_fee = $18,
           address = $19, neighborhood = $20, city = $21, state = $22, country = $23,
           available_for_sale = $24, status = $25, user_id = $26,
+          parent_product_id = $27,
           updated_at = CURRENT_TIMESTAMP
-        WHERE id = $27 AND account_id = $28 RETURNING *`,
+        WHERE id = $28 AND account_id = $29 RETURNING *`,
         [
           product.name, product.price, product.type, product.category, product.description,
           product.capture_date || null, product.capturer || null, product.payment_condition || null,
@@ -136,7 +151,9 @@ export class ProductRepository extends BaseRepository {
           product.bedrooms || null, product.suites || null, product.parking_spots || null, product.bathrooms || null,
           product.total_area || null, product.private_area || null, product.condo_fee || null,
           product.address || null, product.neighborhood || null, product.city || null, product.state || null, product.country || 'Brasil',
-          availableValue, statusValue, product.user_id || null, id, accountId
+          availableValue, statusValue, product.user_id || null,
+          product.parent_product_id || null,
+          id, accountId
         ]
       )
       return result.rows.length > 0 ? result.rows[0] : null

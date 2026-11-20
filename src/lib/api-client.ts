@@ -358,6 +358,9 @@ export interface Product {
   images?: ProductImage[]
   thumbnail?: ProductImage
   has_thumbnail: boolean
+  // Empreendimento (type='enterprise') pode ter unidades filhas. Cada unidade
+  // e um Product normal cujo parent_product_id aponta pro empreendimento pai.
+  parent_product_id?: number | null
   created_at?: string
   updated_at?: string
 }
@@ -818,6 +821,11 @@ export const api = {
       category?: string
       sortBy?: string
       sortOrder?: "asc" | "desc"
+      /**
+       * null -> so pais/standalone (sem parent); numero -> so unidades do
+       * empreendimento com aquele id; undefined -> todos (comportamento legado).
+       */
+      parentProductId?: number | null
     }): Promise<ApiResponse<Product>> => {
       const params = new URLSearchParams()
       if (filters?.search) params.append('search', filters.search)
@@ -825,7 +833,10 @@ export const api = {
       if (filters?.category) params.append('category', filters.category)
       if (filters?.sortBy) params.append('sortBy', filters.sortBy)
       if (filters?.sortOrder) params.append('sortOrder', filters.sortOrder)
-      
+      if (filters?.parentProductId !== undefined) {
+        params.append('parentProductId', filters.parentProductId === null ? 'null' : String(filters.parentProductId))
+      }
+
       const query = params.toString()
       return apiClient.get<ApiResponse<Product>>(`/products${query ? `?${query}` : ''}`)
     },

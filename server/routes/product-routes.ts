@@ -102,12 +102,22 @@ export function createProductRoutes(
   router.get('/', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const accountId = req.user!.accountId
+      // parentProductId: 'null' explicito filtra so pais/standalone; numero
+      // filtra unidades de um empreendimento especifico; ausente = todos.
+      let parentProductId: number | null | undefined = undefined
+      if (req.query.parentProductId !== undefined) {
+        parentProductId = req.query.parentProductId === 'null'
+          ? null
+          : parseInt(req.query.parentProductId as string, 10)
+      }
+
       const filters = {
         search: req.query.search as string,
         type: req.query.type as string,
         category: req.query.category as string,
         sortBy: req.query.sortBy as string,
-        sortOrder: req.query.sortOrder as 'asc' | 'desc'
+        sortOrder: req.query.sortOrder as 'asc' | 'desc',
+        parentProductId,
       }
 
       const result = await productService.getAllProducts(accountId, filters)

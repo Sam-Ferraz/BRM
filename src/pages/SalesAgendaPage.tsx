@@ -41,6 +41,7 @@ const PROPERTY_TYPES = [
   { value: "apartment", labelKey: "propertyTypeApartment" },
   { value: "house", labelKey: "propertyTypeHouse" },
   { value: "penthouse", labelKey: "propertyTypePenthouse" },
+  { value: "enterprise", labelKey: "propertyTypeEnterprise" },
   { value: "land", labelKey: "propertyTypeLand" },
   { value: "studio", labelKey: "propertyTypeStudio" },
   { value: "flat", labelKey: "propertyTypeFlat" },
