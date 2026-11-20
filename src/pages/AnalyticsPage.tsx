@@ -57,6 +57,12 @@ const formatCombinedAnalytics = (
       if (type === 'visit') {
         cur.apresResp += answered
         cur.apresNao += notAnswered
+        // Regra de negocio (pedido do usuario): visita REALIZADA tambem conta
+        // como atendimento realizado (visita e um tipo de atendimento mais
+        // avancado — nao ha como ter visita sem atendimento previo). "Nao
+        // realizada" fica so na barra de Visitas, pq uma visita que nao
+        // aconteceu nao implica atendimento feito.
+        cur.atendResp += answered
       } else {
         cur.atendResp += answered
         cur.atendNao += notAnswered
