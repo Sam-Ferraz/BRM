@@ -161,6 +161,23 @@ export interface Deal {
   property_name?: string | null
   status: 'service' | 'visit_foreseen' | 'visit_done' | 'proposal' | 'contract' | 'sold' | 'discarded_no_profile' | 'discarded_no_interest' | 'discarded_competitor' | 'discarded_error'
   user_id: number
+  // Funil (pipeline) ao qual o deal pertence. Opcional pra compat com
+  // codigo antigo; a migration de seed garante que deals existentes caem
+  // no funil 'Principal' da conta.
+  pipeline_id?: number | null
+  created_at?: Date
+  updated_at?: Date
+}
+
+// Multiplos funis por conta (Vendas, Locacao, Lancamento, etc).
+export interface Pipeline {
+  id: number
+  account_id: number
+  name: string
+  color: string
+  position: number
+  is_default: boolean
+  custom_config: Record<string, any>
   created_at?: Date
   updated_at?: Date
 }
@@ -582,4 +599,7 @@ export interface QueryFilters {
   // dentro do ProductForm. `null` filtra "só standalone/pai"; undefined
   // significa "todos" (comportamento global, inclui unidades e pais).
   parentProductId?: number | null
+  // Filtro por funil (multi-pipeline). Kanban carrega so os deals do
+  // funil ativo.
+  pipelineId?: number
 }

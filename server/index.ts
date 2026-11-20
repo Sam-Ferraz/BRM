@@ -24,7 +24,8 @@ import {
   CalendarEventRepository,
   GoogleCalendarRepository,
   ManagedUserRepository,
-  PermissionRepository
+  PermissionRepository,
+  PipelineRepository
 } from './repositories/index.js'
 
 // Import services
@@ -44,7 +45,8 @@ import {
   CalendarEventService,
   GoogleCalendarService,
   UserManagementService,
-  PermissionService
+  PermissionService,
+  PipelineService
 } from './services/index.js'
 import { StubWhatsAppProvider } from './services/whatsapp-provider.js'
 import { ChatEventBus } from './services/chat-event-bus.js'
@@ -84,6 +86,7 @@ import { createWhatsAppWebhookRoutes } from './routes/whatsapp-webhook-routes.js
 import { createCalendarRoutes } from './routes/calendar-routes.js'
 import { createGoogleCalendarRoutes } from './routes/google-calendar-routes.js'
 import { createUserManagementRoutes } from './routes/user-management-routes.js'
+import { createPipelineRoutes } from './routes/pipeline-routes.js'
 
 dotenv.config()
 
@@ -185,6 +188,7 @@ const calendarEventRepository = new CalendarEventRepository()
 const googleCalendarRepository = new GoogleCalendarRepository()
 const managedUserRepository = new ManagedUserRepository()
 const permissionRepository = new PermissionRepository()
+const pipelineRepository = new PipelineRepository()
 
 // Initialize services with dependency injection
 const authService = new AuthService(userRepository)
@@ -208,6 +212,7 @@ const followUpService = new FollowUpService(followUpRepository)
 const proposalService = new ProposalService(proposalRepository, dealRepository)
 const userManagementService = new UserManagementService(managedUserRepository)
 const permissionService = new PermissionService(permissionRepository)
+const pipelineService = new PipelineService(pipelineRepository)
 const googleCalendarService = new GoogleCalendarService(googleCalendarRepository)
 const calendarEventService = new CalendarEventService(calendarEventRepository, googleCalendarService)
 
@@ -314,6 +319,7 @@ app.use('/api/leads', createLeadRoutes(leadService, leadSourceRepository))
 app.use('/api/calendar', createCalendarRoutes(calendarEventService))
 app.use('/api/google-calendar', createGoogleCalendarRoutes(googleCalendarService))
 app.use('/api/user-mgmt', createUserManagementRoutes(userManagementService, permissionService))
+app.use('/api/pipelines', createPipelineRoutes(pipelineService))
 {
   // Esteira de leads — CRUD das esteiras (a integração com escalação em
   // tempo real vem em iteração posterior).

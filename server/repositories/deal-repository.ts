@@ -44,7 +44,7 @@ export class DealRepository extends BaseRepository {
   async findAll(accountId: number, filters: QueryFilters = {}, userId?: number): Promise<Deal[]> {
     const client = await this.getClient()
     try {
-      const { search, status, sortBy, sortOrder } = filters
+      const { search, status, sortBy, sortOrder, pipelineId } = filters as any
       let query = 'SELECT * FROM deals WHERE account_id = $1'
       const params: any[] = [accountId]
       let paramCount = 2
@@ -66,6 +66,15 @@ export class DealRepository extends BaseRepository {
       if (status && status !== 'Todos') {
         query += ` AND status = $${paramCount}`
         params.push(status)
+        paramCount++
+      }
+
+      // Filtro por funil (pipeline). Multi-pipeline: kanban carrega so
+      // os deals do funil ativo. Se nao passar pipelineId, retorna todos
+      // (comportamento legado pra queries que nao foram atualizadas).
+      if (pipelineId != null) {
+        query += ` AND pipeline_id = $${paramCount}`
+        params.push(pipelineId)
         paramCount++
       }
 
@@ -91,6 +100,16 @@ export class DealRepository extends BaseRepository {
   async create(accountId: number, deal: Omit<Deal, 'id' | 'created_at' | 'updated_at'>): Promise<Deal> {
     const client = await this.getClient()
     try {
+      // Se nao veio pipeline_id, cai no funil default (is_default=true) da
+      // conta — mantem compat com codigo antigo que ainda nao passa pipeline.
+      let resolvedPipelineId: number | null = deal.pipeline_id ?? null
+      if (resolvedPipelineId == null) {
+        const def = await client.query(
+          'SELECT id FROM pipelines WHERE account_id = $1 AND is_default = TRUE LIMIT 1',
+          [accountId]
+        )
+        resolvedPipelineId = def.rows[0]?.id ?? null
+      }
       const result = await client.query(
         `INSERT INTO deals (
           account_id,
@@ -105,8 +124,9 @@ export class DealRepository extends BaseRepository {
           gsv,
           property_name,
           status,
-          user_id
-        ) VALUES ($1, $2, $3::date, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *`,
+          user_id,
+          pipeline_id
+        ) VALUES ($1, $2, $3::date, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *`,
         [
           accountId,
           deal.client,
@@ -121,6 +141,7 @@ export class DealRepository extends BaseRepository {
           deal.property_name || null,
           deal.status,
           deal.user_id,
+          resolvedPipelineId,
         ]
       )
       return result.rows[0]

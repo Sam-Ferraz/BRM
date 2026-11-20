@@ -21,7 +21,9 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { ArrowLeft, Plus, Pencil, Trash2, Search, Briefcase, List, LayoutGrid, ArrowUpDown, Tags, X, Check, Columns3 } from "lucide-react"
-import { api, type Deal, type LeadWithDetails, type DealLabel } from "@/lib/api-client"
+import { api, type Deal, type LeadWithDetails, type DealLabel, type Pipeline } from "@/lib/api-client"
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
 import { DealForm } from "@/components/forms/deal-form"
 import { DealsKanbanView } from "@/components/deals-kanban-view"
@@ -40,6 +42,20 @@ export default function DealsPage() {
   const [deals, setDeals] = useState<Deal[]>([])
   const [leads, setLeads] = useState<LeadWithDetails[]>([])
   const [loading, setLoading] = useState(true)
+  // Funis (multi-pipeline): lista de funis + funil ativo + modal de criacao.
+  // activePipelineId persistido em localStorage pra manter a selecao entre
+  // reloads.
+  const [pipelines, setPipelines] = useState<Pipeline[]>([])
+  const [activePipelineId, setActivePipelineId] = useState<number | null>(() => {
+    const stored = typeof window !== 'undefined' ? localStorage.getItem('deals:activePipelineId') : null
+    return stored ? parseInt(stored, 10) : null
+  })
+  useEffect(() => {
+    if (activePipelineId != null) localStorage.setItem('deals:activePipelineId', String(activePipelineId))
+  }, [activePipelineId])
+  const [newPipelineOpen, setNewPipelineOpen] = useState(false)
+  const [newPipelineName, setNewPipelineName] = useState("")
+  const [creatingPipeline, setCreatingPipeline] = useState(false)
   // Etiquetas (estilo Trello): CRUD + filtro por selecionadas
   const [labels, setLabels] = useState<DealLabel[]>([])
   const [selectedLabelIds, setSelectedLabelIds] = useState<Set<number>>(new Set())
@@ -119,10 +135,27 @@ export default function DealsPage() {
     }
   }, [searchParams, setSearchParams])
 
+  // Carrega funis uma vez ao montar. Se activePipelineId nao esta setado
+  // ou nao bate com nenhum dos funis carregados, cai no is_default.
+  useEffect(() => {
+    api.pipelines
+      .list()
+      .then((r) => {
+        const list = r.data || []
+        setPipelines(list)
+        setActivePipelineId((prev) => {
+          if (prev != null && list.some((p) => p.id === prev)) return prev
+          return list.find((p) => p.is_default)?.id ?? list[0]?.id ?? null
+        })
+      })
+      .catch(() => setPipelines([]))
+  }, [])
+
   const fetchDeals = useCallback(async () => {
     try {
       setLoading(true)
       const filters: any = {}
+      if (activePipelineId != null) filters.pipelineId = activePipelineId
       
       if (searchTerm) filters.search = searchTerm
       if (sortBy) {
@@ -147,7 +180,7 @@ export default function DealsPage() {
     } finally {
       setLoading(false)
     }
-  }, [searchTerm, sortBy, sortOrder, toast, t])
+  }, [searchTerm, sortBy, sortOrder, activePipelineId, toast, t])
 
   useEffect(() => {
     fetchDeals()
@@ -319,13 +352,100 @@ export default function DealsPage() {
                 {t('backButton')}
               </Link>
             </Button>
-            <Button onClick={() => setIsFormOpen(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              {t('newDeal')}
-            </Button>
+            <div className="flex items-center gap-2">
+              {/* Seletor de funil ativo — so aparece no modo kanban (e onde
+                  faz sentido alternar entre funis visualmente). */}
+              {viewMode === 'kanban' && pipelines.length > 0 && (
+                <Select
+                  value={activePipelineId != null ? String(activePipelineId) : ''}
+                  onValueChange={(v) => setActivePipelineId(parseInt(v, 10))}
+                >
+                  <SelectTrigger className="w-[180px] h-9">
+                    <SelectValue placeholder="Funil" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {pipelines.map((p) => (
+                      <SelectItem key={p.id} value={String(p.id)}>
+                        {p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              <Button onClick={() => setIsFormOpen(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                {t('newDeal')}
+              </Button>
+              {/* Botao 'Novo funil' so no kanban — fora dele e irrelevante. */}
+              {viewMode === 'kanban' && (
+                <Button variant="outline" onClick={() => setNewPipelineOpen(true)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Novo funil
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </header>
+
+      {/* Modal de criacao de funil novo */}
+      <Dialog open={newPipelineOpen} onOpenChange={setNewPipelineOpen}>
+        <DialogContent className="sm:max-w-[420px] max-h-[90vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Novo funil</DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault()
+              const name = newPipelineName.trim()
+              if (!name) return
+              setCreatingPipeline(true)
+              try {
+                const { data } = await api.pipelines.create({ name })
+                setPipelines((prev) => [...prev, data].sort((a, b) => a.position - b.position || a.id - b.id))
+                setActivePipelineId(data.id)
+                setNewPipelineName("")
+                setNewPipelineOpen(false)
+                toast({ title: 'Funil criado' })
+              } catch (err) {
+                toast({
+                  title: 'Erro',
+                  description: err instanceof Error ? err.message : 'Falha ao criar funil',
+                  variant: 'destructive',
+                })
+              } finally {
+                setCreatingPipeline(false)
+              }
+            }}
+            className="flex-1 flex flex-col min-h-0 space-y-4"
+          >
+            <div className="flex-1 overflow-y-auto p-1 space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="pipeline-name">Nome do funil</Label>
+                <Input
+                  id="pipeline-name"
+                  autoFocus
+                  value={newPipelineName}
+                  onChange={(e) => setNewPipelineName(e.target.value)}
+                  placeholder="Ex: Locação, Lançamento, Carteira avulsa"
+                  maxLength={100}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Depois de criado, você pode arrastar deals entre funis pelo menu de ações do card.
+                </p>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setNewPipelineOpen(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={creatingPipeline || !newPipelineName.trim()}>
+                {creatingPipeline ? 'Criando...' : 'Criar funil'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Card>

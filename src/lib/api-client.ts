@@ -239,6 +239,19 @@ export interface Deal {
   gsv: string
   property_name?: string
   status: 'service' | 'visit_foreseen' | 'visit_done' | 'proposal' | 'contract' | 'sold' | 'discarded_no_profile' | 'discarded_no_interest' | 'discarded_competitor' | 'discarded_error'
+  /** Funil ao qual o deal pertence (multi-pipeline). Default: funil 'Principal' da conta. */
+  pipeline_id?: number | null
+}
+
+export interface Pipeline {
+  id: number
+  name: string
+  color: string
+  position: number
+  is_default: boolean
+  custom_config?: Record<string, any>
+  created_at?: string
+  updated_at?: string
 }
 
 export interface Client {
@@ -622,13 +635,14 @@ export const api = {
 
   // Deals
   deals: {
-    getAll: async (filters?: { search?: string; status?: string; sortBy?: string; sortOrder?: "asc" | "desc" }): Promise<ApiResponse<Deal>> => {
+    getAll: async (filters?: { search?: string; status?: string; sortBy?: string; sortOrder?: "asc" | "desc"; pipelineId?: number }): Promise<ApiResponse<Deal>> => {
       const params = new URLSearchParams()
       if (filters?.search) params.append('search', filters.search)
       if (filters?.status) params.append('status', filters.status)
       if (filters?.sortBy) params.append('sortBy', filters.sortBy)
       if (filters?.sortOrder) params.append('sortOrder', filters.sortOrder)
-      
+      if (filters?.pipelineId != null) params.append('pipelineId', String(filters.pipelineId))
+
       const query = params.toString()
       return apiClient.get<ApiResponse<Deal>>(`/deals${query ? `?${query}` : ''}`)
     },
@@ -1406,6 +1420,22 @@ export const api = {
       delete: async (id: number): Promise<{ success: boolean }> => {
         return apiClient.delete<{ success: boolean }>(`/leads/sources/${id}`)
       },
+    },
+  },
+
+  // Funis (multi-pipeline)
+  pipelines: {
+    list: async (): Promise<ApiResponse<Pipeline>> => {
+      return apiClient.get<ApiResponse<Pipeline>>('/pipelines')
+    },
+    create: async (input: { name: string; color?: string; is_default?: boolean }): Promise<{ data: Pipeline }> => {
+      return apiClient.post<{ data: Pipeline }>('/pipelines', input)
+    },
+    update: async (id: number, input: Partial<{ name: string; color: string; position: number; is_default: boolean }>): Promise<{ data: Pipeline }> => {
+      return apiClient.put<{ data: Pipeline }>(`/pipelines/${id}`, input)
+    },
+    delete: async (id: number): Promise<{ success: boolean }> => {
+      return apiClient.delete<{ success: boolean }>(`/pipelines/${id}`)
     },
   },
 
