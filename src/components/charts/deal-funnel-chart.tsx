@@ -11,22 +11,52 @@ interface DealFunnelChartProps {
 }
 
 /**
- * Order in which funnel stages are rendered (top → bottom).
- * `discarded_*` statuses are intentionally NOT in this list; they
- * are rendered separately as side cards below the funnel.
+ * Grupos agregados do funil (top → bottom). Cada grupo agrega os 3 nivs
+ * de temperatura (quente/morno/frio) em uma unica fatia — o usuario pediu
+ * pra nao separar por temperatura no funil (regra: a temperatura e uso
+ * tatico do corretor, mas no funil o que importa e a fase do negocio).
+ *
+ * `discarded_*` statuses continuam fora do funil — aparecem como cards
+ * laterais abaixo.
  */
-const FUNNEL_ORDER: string[] = [
-  'service_warm',
-  'service_mild',
-  'service_cold',
-  'visit_foreseen_warm',
-  'visit_foreseen_mild',
-  'visit_foreseen_cold',
-  'visit_done_warm',
-  'visit_done_mild',
-  'visit_done_cold',
-  'proposal',
-  'sold',
+interface FunnelGroup {
+  key: string
+  label: string
+  statuses: string[]
+  color: string
+}
+
+const FUNNEL_GROUPS: FunnelGroup[] = [
+  {
+    key: 'service',
+    label: 'Atendimento',
+    statuses: ['service_warm', 'service_mild', 'service_cold'],
+    color: '#0c343d',
+  },
+  {
+    key: 'visit_foreseen',
+    label: 'Agendamento',
+    statuses: ['visit_foreseen_warm', 'visit_foreseen_mild', 'visit_foreseen_cold'],
+    color: '#2a5766',
+  },
+  {
+    key: 'visit_done',
+    label: 'Visita',
+    statuses: ['visit_done_warm', 'visit_done_mild', 'visit_done_cold'],
+    color: '#567b87',
+  },
+  {
+    key: 'proposal',
+    label: 'Proposta',
+    statuses: ['proposal'],
+    color: '#6366f1',
+  },
+  {
+    key: 'sold',
+    label: 'Vendido',
+    statuses: ['sold'],
+    color: '#10b981',
+  },
 ]
 
 const DISCARDED_ORDER: string[] = [
@@ -35,28 +65,6 @@ const DISCARDED_ORDER: string[] = [
   'discarded_competitor',
   'discarded_error',
 ]
-
-/**
- * Color for each stage. Temperature: warm = red-orange, mild = amber, cold = sky-blue.
- * Proposal = indigo; Sold = emerald. Discarded = slate (used in side cards).
- */
-const STAGE_COLOR: Record<string, string> = {
-  // Paleta monocromatica da marca: 3 tons de #0c343d pra Quente/Morno/Frio.
-  // Todas as fases com temperatura compartilham essa escala pra criar
-  // um visual coeso e institucional em vez de cores primarias saturadas.
-  service_warm: '#0c343d',          // primary (base)
-  service_mild: '#2a5766',          // clareado
-  service_cold: '#567b87',          // ainda mais claro
-  visit_foreseen_warm: '#0c343d',
-  visit_foreseen_mild: '#2a5766',
-  visit_foreseen_cold: '#567b87',
-  visit_done_warm: '#0c343d',
-  visit_done_mild: '#2a5766',
-  visit_done_cold: '#567b87',
-  // Estagios finais mantidos com cor propria pra destaque visual do desfecho
-  proposal: '#6366f1',              // indigo-500
-  sold: '#10b981',                  // emerald-500
-}
 
 export function DealFunnelChart({ data }: DealFunnelChartProps) {
   const { t } = useTranslation()
@@ -71,13 +79,15 @@ export function DealFunnelChart({ data }: DealFunnelChartProps) {
   }, [data])
 
   const funnelStages = useMemo(
-    () => FUNNEL_ORDER.map(status => ({
-      status,
-      count: countByStatus.get(status) ?? 0,
-      label: t(`dealStatus_${status}`),
-      color: STAGE_COLOR[status] ?? '#64748b',
+    () => FUNNEL_GROUPS.map(group => ({
+      status: group.key,
+      // Soma os counts de todos os sub-status do grupo (ex: Atendimento
+      // soma service_warm + service_mild + service_cold).
+      count: group.statuses.reduce((sum, s) => sum + (countByStatus.get(s) ?? 0), 0),
+      label: group.label,
+      color: group.color,
     })),
-    [countByStatus, t]
+    [countByStatus]
   )
 
   const discardedStages = useMemo(
