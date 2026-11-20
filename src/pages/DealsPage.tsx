@@ -403,24 +403,25 @@ export default function DealsPage() {
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Card>
+        {(() => {
+          // Tinting suave do Card com a cor do funil ativo. ~6% de opacidade
+          // (1 digito hex = /16, usamos '0f' = 15/256 ≈ 6%) pra ser percepitivel
+          // mas nao agressivo. So em modo kanban — na lista, fundo padrao.
+          const active = viewMode === 'kanban' ? pipelines.find((p) => p.id === activePipelineId) : null
+          const tintColor = active?.color || null
+          return (
+        <Card style={tintColor ? { backgroundColor: `${tintColor}0f` } : undefined}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               {viewMode === 'kanban' ? (
-                (() => {
-                  const active = pipelines.find((p) => p.id === activePipelineId)
-                  // Barra vertical fina e discreta na cor da marca — padrao
-                  // usado em outros headers do sistema (ex: Analytics).
-                  return (
-                    <>
-                      <span
-                        className="w-1 h-5 rounded-full shrink-0"
-                        style={{ backgroundColor: '#0c343d' }}
-                      />
-                      <span>{active?.name || t('dealsKanbanTitle')}</span>
-                    </>
-                  )
-                })()
+                <>
+                  {/* Barra vertical fina na cor do funil ativo */}
+                  <span
+                    className="w-1 h-5 rounded-full shrink-0"
+                    style={{ backgroundColor: tintColor || '#0c343d' }}
+                  />
+                  <span>{active?.name || t('dealsKanbanTitle')}</span>
+                </>
               ) : (
                 <>
                   <Briefcase className="w-5 h-5" />
@@ -845,6 +846,8 @@ export default function DealsPage() {
             )}
           </CardContent>
         </Card>
+          )
+        })()}
       </div>
 
       <DealForm
