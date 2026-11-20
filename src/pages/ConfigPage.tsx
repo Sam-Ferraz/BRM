@@ -18,19 +18,19 @@ import { useAuth } from "@/hooks/use-auth"
 /**
  * ConfigPage — hub de Configuracoes.
  *
- * Layout clean: um unico grid de widgets. Cada widget tem icone + nome +
- * descricao curta e navega pra sub-pagina com os detalhes daquele tema.
- * Mantem tudo acessivel sem poluir a tela principal com forms longos.
+ * Layout clean: grid de widgets soltos (sem container externo). Cada widget
+ * tem icone + nome e navega pra sub-pagina com os detalhes daquele tema.
  *
- * Widgets visiveis dependem da role:
- *   - Todos: Aparencia, Google Calendar
+ * Visibilidade por role:
+ *   - Todos: Aparencia, Google Agenda
  *   - Admin: + Usuarios, Permissoes, Esteiras de Leads, Integracoes
- *   - Super-admin (account 1): + Contas cliente, Cupons
+ *   - Super-admin (conta BRM, account_id=1): + Contas cliente, Cupons
+ *     Esses dois sao de uso INTERNO da empresa BRM para administrar
+ *     contas-cliente e cupons da LP — nenhum cliente ve.
  */
 interface Widget {
   key: string
   label: string
-  description: string
   icon: typeof Settings
   to: string
   iconBg: string
@@ -48,18 +48,15 @@ export default function ConfigPage() {
     {
       key: 'appearance',
       label: 'Aparência',
-      description: 'Tema, idioma, fuso horário e navegação',
       icon: Palette,
       to: '/settings/appearance',
-
       iconBg: 'bg-indigo-100 dark:bg-indigo-950/40',
       iconColor: 'text-indigo-700 dark:text-indigo-300',
       visible: true,
     },
     {
       key: 'google-calendar',
-      label: 'Google Calendar',
-      description: 'Sincronize seus eventos pessoais na Agenda',
+      label: 'Google Agenda',
       icon: Calendar,
       to: '/settings/google-calendar',
       iconBg: 'bg-blue-100 dark:bg-blue-950/40',
@@ -69,7 +66,6 @@ export default function ConfigPage() {
     {
       key: 'users',
       label: 'Usuários',
-      description: 'Criar, editar e desativar usuários da equipe',
       icon: UsersIcon,
       to: '/settings/users',
       iconBg: 'bg-emerald-100 dark:bg-emerald-950/40',
@@ -79,7 +75,6 @@ export default function ConfigPage() {
     {
       key: 'permissions',
       label: 'Permissões',
-      description: 'Matriz de rotinas por tipo de usuário',
       icon: Shield,
       to: '/settings/permissions',
       iconBg: 'bg-amber-100 dark:bg-amber-950/40',
@@ -89,7 +84,6 @@ export default function ConfigPage() {
     {
       key: 'lead-pipelines',
       label: 'Esteiras de Leads',
-      description: 'Horários, corretores e escalação por timeout',
       icon: RouteIcon,
       to: '/settings/lead-pipelines',
       iconBg: 'bg-violet-100 dark:bg-violet-950/40',
@@ -99,7 +93,6 @@ export default function ConfigPage() {
     {
       key: 'integrations',
       label: 'Integrações',
-      description: 'Import de leads (CSV) e API do site institucional',
       icon: Link2,
       to: '/settings/integrations',
       iconBg: 'bg-teal-100 dark:bg-teal-950/40',
@@ -109,7 +102,6 @@ export default function ConfigPage() {
     {
       key: 'accounts',
       label: 'Contas cliente',
-      description: 'Provisionar novas empresas + gerenciar planos',
       icon: Building2,
       to: '/admin/accounts',
       iconBg: 'bg-orange-100 dark:bg-orange-950/40',
@@ -118,8 +110,7 @@ export default function ConfigPage() {
     },
     {
       key: 'coupons',
-      label: 'Cupons de desconto',
-      description: 'Códigos que a LP aceita antes do checkout',
+      label: 'Cupons',
       icon: Tag,
       to: '/admin/coupons',
       iconBg: 'bg-rose-100 dark:bg-rose-950/40',
@@ -159,19 +150,14 @@ export default function ConfigPage() {
                 <Link
                   key={w.key}
                   to={w.to}
-                  className="group rounded-lg border border-border bg-card p-4 flex items-start gap-3 hover:border-primary/50 hover:shadow-sm transition-all"
+                  className="group rounded-lg border border-border bg-card p-4 flex items-center gap-3 hover:border-primary/50 hover:shadow-sm transition-all"
                 >
                   <div className={`shrink-0 p-2.5 rounded-lg ${w.iconBg}`}>
                     <Icon className={`w-5 h-5 ${w.iconColor}`} />
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
-                      {w.label}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
-                      {w.description}
-                    </p>
-                  </div>
+                  <p className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors truncate">
+                    {w.label}
+                  </p>
                 </Link>
               )
             })}
