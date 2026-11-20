@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import { Eye, EyeOff, GripVertical, Plus, X } from "lucide-react"
+import { Eye, EyeOff, GripVertical, Plus, Trash2, X } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useAccount } from "@/hooks/use-account"
 import { useToast } from "@/hooks/use-toast"
@@ -278,6 +278,14 @@ export function ManagePipelineColumnsDialog({ open, onOpenChange, onSaved }: Pro
               onLabelChange={(v) => patchDraft(index, { label: v })}
               onColorChange={(v) => patchDraft(index, { color: v })}
               onToggleHidden={() => patchDraft(index, { hidden: !d.hidden })}
+              // Colunas padrao nao podem ser removidas do codigo (as fases
+              // sao hardcoded pelo enum de status), mas o usuario pode
+              // 'excluir' no sentido de ocultar permanentemente — equivalente
+              // a hidden=true, com confirmacao.
+              onRemove={() => {
+                if (!confirm(`Excluir a coluna "${d.label}"? Ela deixa de aparecer no quadro. Voce pode restaurar via "Restaurar padrao".`)) return
+                patchDraft(index, { hidden: true })
+              }}
               draggable
               onDragStart={onDragStartItem("default", index)}
               onDragOver={onDragOverItem}
@@ -490,9 +498,9 @@ function ColumnCard({
             type="button"
             onClick={onRemove}
             className="p-2 rounded border border-muted hover:bg-destructive/10 hover:text-destructive transition-colors"
-            title="Remover coluna extra"
+            title="Excluir coluna"
           >
-            <X className="w-4 h-4" />
+            <Trash2 className="w-4 h-4" />
           </button>
         )}
       </div>
