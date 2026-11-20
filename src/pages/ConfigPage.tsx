@@ -1,6 +1,5 @@
 import { useTranslation } from "react-i18next"
 import { Link } from "react-router-dom"
-import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import {
   ArrowLeft,
@@ -153,32 +152,30 @@ export default function ConfigPage() {
             {t('settings')}
           </h1>
 
-          <Card className="p-4 sm:p-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {visibleWidgets.map((w) => {
-                const Icon = w.icon
-                return (
-                  <Link
-                    key={w.key}
-                    to={w.to}
-                    className="group rounded-lg border border-border bg-card p-4 flex items-start gap-3 hover:border-primary/50 hover:shadow-sm transition-all"
-                  >
-                    <div className={`shrink-0 p-2.5 rounded-lg ${w.iconBg}`}>
-                      <Icon className={`w-5 h-5 ${w.iconColor}`} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
-                        {w.label}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
-                        {w.description}
-                      </p>
-                    </div>
-                  </Link>
-                )
-              })}
-            </div>
-          </Card>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {visibleWidgets.map((w) => {
+              const Icon = w.icon
+              return (
+                <Link
+                  key={w.key}
+                  to={w.to}
+                  className="group rounded-lg border border-border bg-card p-4 flex items-start gap-3 hover:border-primary/50 hover:shadow-sm transition-all"
+                >
+                  <div className={`shrink-0 p-2.5 rounded-lg ${w.iconBg}`}>
+                    <Icon className={`w-5 h-5 ${w.iconColor}`} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
+                      {w.label}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                      {w.description}
+                    </p>
+                  </div>
+                </Link>
+              )
+            })}
+          </div>
         </div>
       </div>
     </div>
