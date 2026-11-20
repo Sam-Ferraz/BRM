@@ -323,7 +323,7 @@ const resources = {
       
       // Deals Page
       dealsTitle: 'Negócios',
-      dealsKanbanTitle: 'Quadro de Negócios',
+      dealsKanbanTitle: 'Funil de Negócios',
       dealsManagement: 'Gestão de Negócios',
       newDeal: 'Novo Negócio',
       searchDeals: 'Buscar negócios...',
@@ -892,7 +892,7 @@ const resources = {
       
       // Deals Page
       dealsTitle: 'Deals',
-      dealsKanbanTitle: 'Deals Board',
+      dealsKanbanTitle: 'Deals Funnel',
       dealsManagement: 'Deals Management',
       newDeal: 'New Deal',
       searchDeals: 'Search deals...',
@@ -1460,7 +1460,7 @@ const resources = {
       
       // Deals Page
       dealsTitle: 'Negocios',
-      dealsKanbanTitle: 'Tablero de Negocios',
+      dealsKanbanTitle: 'Embudo de Negocios',
       dealsManagement: 'Gestión de Negocios',
       newDeal: 'Nuevo Negocio',
       searchDeals: 'Buscar negocios...',

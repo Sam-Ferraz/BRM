@@ -405,11 +405,11 @@ export default function DealsPage() {
               </div>
               {/* Filtro por Cadência (client-side, usa o Set fetchado) */}
               <Select value={cadenceFilter} onValueChange={(v) => setCadenceFilter(v as typeof cadenceFilter)}>
-                <SelectTrigger className="w-[170px]">
-                  <SelectValue placeholder="Cadência" />
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Cadência inicial" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Cadência: Todas</SelectItem>
+                  <SelectItem value="all">Cadência inicial: Todas</SelectItem>
                   <SelectItem value="overdue">
                     <span className="inline-flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-red-500" /> Atrasada
