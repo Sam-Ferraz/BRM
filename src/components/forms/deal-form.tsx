@@ -17,7 +17,9 @@ import { DealCodeBadge } from "@/components/deal-code-badge"
 import { DealLabelsInline } from "@/components/deal-labels-inline"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { DealAppointmentsTimeline } from "@/components/deal-appointments-timeline"
+import { DealFollowUpsList } from "@/components/deal-followups-list"
 import { AppointmentForm } from "@/components/forms/appointment-form"
+import { FollowUpForm } from "@/components/forms/followup-form"
 import { useToast } from "@/hooks/use-toast"
 import type { Deal, Client, Appointment } from "@/lib/api-client"
 import { api } from "@/lib/api-client"
@@ -41,7 +43,10 @@ export function DealForm({ deal, open, onOpenChange, onSubmit, loading }: DealFo
   // Sub-modal pra "Novo atendimento" a partir da Timeline
   const [newAppointmentOpen, setNewAppointmentOpen] = useState(false)
   const [creatingAppointment, setCreatingAppointment] = useState(false)
-  // Incrementa pra forçar re-fetch da Timeline após criar novo atendimento
+  // Sub-modal pra "Novo follow-up" a partir da aba Follow-up
+  const [newFollowUpOpen, setNewFollowUpOpen] = useState(false)
+  const [creatingFollowUp, setCreatingFollowUp] = useState(false)
+  // Incrementa pra forçar re-fetch da Timeline e da lista de follow-ups após criar novo atendimento/follow-up
   const [timelineReloadKey, setTimelineReloadKey] = useState(0)
   const currentDate = useMemo(() => getCurrentDateForForm(currentTimezone), [currentTimezone])
   type ClientOriginValue = Exclude<Deal['client_origin'], null | undefined>
@@ -234,6 +239,33 @@ export function DealForm({ deal, open, onOpenChange, onSubmit, loading }: DealFo
       })
     } finally {
       setCreatingAppointment(false)
+    }
+  }
+
+  // Handler pra criar follow-up avulso a partir da aba "Follow-up". Nao vincula
+  // a atendimento especifico (appointment_id=null) — ancora via client_name
+  // pra aparecer na listagem filtrada por dealId no backend.
+  const handleCreateFollowUpFromDeal = async (data: any) => {
+    setCreatingFollowUp(true)
+    try {
+      await api.followUps.create({
+        appointment_id: data.appointment_id ?? null,
+        client_name: data.client_name,
+        next_action: data.next_action,
+        next_action_date: data.next_action_date,
+        completed: !!data.completed,
+      })
+      toast({ title: "Follow-up registrado" })
+      setNewFollowUpOpen(false)
+      setTimelineReloadKey((k) => k + 1)
+    } catch (err) {
+      toast({
+        title: "Erro",
+        description: err instanceof Error ? err.message : "Falha ao criar follow-up",
+        variant: "destructive",
+      })
+    } finally {
+      setCreatingFollowUp(false)
     }
   }
 
@@ -439,6 +471,7 @@ export function DealForm({ deal, open, onOpenChange, onSubmit, loading }: DealFo
           <Tabs defaultValue="info" className="flex-1 flex flex-col min-h-0">
             <TabsList className="w-full">
               <TabsTrigger value="info" className="flex-1">Informações</TabsTrigger>
+              <TabsTrigger value="followup" className="flex-1">Follow-up</TabsTrigger>
               <TabsTrigger value="history" className="flex-1">Histórico de atendimento</TabsTrigger>
             </TabsList>
             <TabsContent
@@ -446,6 +479,16 @@ export function DealForm({ deal, open, onOpenChange, onSubmit, loading }: DealFo
               className="flex-1 min-h-0 mt-2 data-[state=inactive]:hidden flex flex-col"
             >
               {formContent}
+            </TabsContent>
+            <TabsContent
+              value="followup"
+              className="flex-1 min-h-0 mt-2 data-[state=inactive]:hidden overflow-hidden flex flex-col"
+            >
+              <DealFollowUpsList
+                dealId={deal.id}
+                onAddFollowUp={() => setNewFollowUpOpen(true)}
+                reloadKey={timelineReloadKey}
+              />
             </TabsContent>
             <TabsContent
               value="history"
@@ -476,6 +519,18 @@ export function DealForm({ deal, open, onOpenChange, onSubmit, loading }: DealFo
         onSubmit={handleCreateAppointmentFromTimeline}
         loading={creatingAppointment}
         defaultDealId={deal.id}
+      />
+    )}
+
+    {/* Sub-modal de novo follow-up avulso — pre-preenche o cliente do deal */}
+    {deal && (
+      <FollowUpForm
+        open={newFollowUpOpen}
+        onOpenChange={setNewFollowUpOpen}
+        onSubmit={handleCreateFollowUpFromDeal}
+        loading={creatingFollowUp}
+        /* appointment sintetico so pra lockar o cliente no form */
+        appointment={{ client: deal.client } as any}
       />
     )}
     </>

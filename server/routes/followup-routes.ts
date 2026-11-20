@@ -12,7 +12,11 @@ export function createFollowUpRoutes(followUpService: FollowUpService): Router {
       const filters = {
         search: req.query.search as string,
         sortBy: req.query.sortBy as string,
-        sortOrder: req.query.sortOrder as 'asc' | 'desc'
+        sortOrder: req.query.sortOrder as 'asc' | 'desc',
+        // dealId opcional — a aba "Follow-up" no drawer do Deal usa isso
+        // pra filtrar follow-ups daquele negocio (via appointment OU avulso
+        // com mesmo client_name).
+        dealId: req.query.dealId ? parseInt(req.query.dealId as string, 10) : undefined,
       }
 
       const result = await followUpService.getAllFollowUps(accountId, filters, userId)

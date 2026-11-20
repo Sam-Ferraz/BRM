@@ -7,7 +7,7 @@ export class FollowUpRepository extends BaseRepository {
     try {
       await client.query('SET TIMEZONE = \'UTC\'')
 
-      const { search, sortBy, sortOrder } = filters
+      const { search, sortBy, sortOrder, dealId } = filters
       let query = `
         SELECT
           f.*,
@@ -35,6 +35,22 @@ export class FollowUpRepository extends BaseRepository {
       if (userId) {
         query += ` AND f.user_id = $${paramCount}`
         params.push(userId)
+        paramCount++
+      }
+
+      // Filtro por Negocio vinculado — usado pela aba "Follow-up" no drawer do
+      // Deal. Inclui: (a) followups cujo appointment pertence ao deal; (b)
+      // followups "avulsos" (sem appointment_id) cujo client_name bate com o
+      // cliente do deal (fluxo de "Novo follow-up" direto do DealEditor).
+      if (dealId) {
+        query += ` AND (
+          a.deal_id = $${paramCount}
+          OR (
+            f.appointment_id IS NULL
+            AND f.client_name = (SELECT client FROM deals WHERE id = $${paramCount} AND account_id = $1)
+          )
+        )`
+        params.push(dealId)
         paramCount++
       }
 

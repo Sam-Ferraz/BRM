@@ -1064,11 +1064,13 @@ export const api = {
       search?: string
       sortBy?: string
       sortOrder?: "asc" | "desc"
+      dealId?: number
     }): Promise<ApiResponse<FollowUpWithDetails>> => {
       const params = new URLSearchParams()
       if (filters?.search) params.append('search', filters.search)
       if (filters?.sortBy) params.append('sortBy', filters.sortBy)
       if (filters?.sortOrder) params.append('sortOrder', filters.sortOrder)
+      if (filters?.dealId != null) params.append('dealId', String(filters.dealId))
 
       const query = params.toString()
       return apiClient.get<ApiResponse<FollowUpWithDetails>>(`/follow-ups${query ? `?${query}` : ''}`)
