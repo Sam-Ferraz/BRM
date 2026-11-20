@@ -53,10 +53,6 @@ export default function DealsPage() {
   const LABEL_COLORS = ["#0c343d", "#dc2626", "#ea580c", "#facc15", "#16a34a", "#0ea5e9", "#8b5cf6", "#78716c"]
   const [formLoading, setFormLoading] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
-  // Filtro por qualificacao (temperatura extraida do status): cold/mild/warm.
-  // Aplicado client-side; substitui o antigo statusFilter que listava as
-  // 16 combinacoes status x temperatura.
-  const [qualificationFilter, setQualificationFilter] = useState<"all" | "cold" | "mild" | "warm">("all")
   const [sortBy, setSortBy] = useState("")
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc")
 
@@ -73,10 +69,6 @@ export default function DealsPage() {
   //               ok      = client_origin='online_lead' AND NOT overdue;
   //               na      = client_origin !== 'online_lead' (sem análise).
   const filteredDeals = deals.filter((d) => {
-    // Filtro por qualificacao (temperatura extraida do sufixo do status)
-    if (qualificationFilter !== "all") {
-      if (!d.status.endsWith(`_${qualificationFilter}`)) return false
-    }
     // Filtro por cadencia (client-side, usa o Set fetchado)
     if (cadenceFilter === "all") return true
     const isOverdue = cadenceOverdueSet.has(d.id)
@@ -374,30 +366,6 @@ export default function DealsPage() {
                   className="pl-9"
                 />
               </div>
-              <Select value={qualificationFilter} onValueChange={(v) => setQualificationFilter(v as typeof qualificationFilter)}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Qualificação" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Qualificação: Todas</SelectItem>
-                  <SelectItem value="cold">
-                    <span className="inline-flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-blue-500" /> Frio
-                    </span>
-                  </SelectItem>
-                  <SelectItem value="mild">
-                    <span className="inline-flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-amber-500" /> Morno
-                    </span>
-                  </SelectItem>
-                  <SelectItem value="warm">
-                    <span className="inline-flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-red-500" /> Quente
-                    </span>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-
               {/* Filtro por Cadência (client-side, usa o Set fetchado) */}
               <Select value={cadenceFilter} onValueChange={(v) => setCadenceFilter(v as typeof cadenceFilter)}>
                 <SelectTrigger className="w-[170px]">
@@ -423,24 +391,53 @@ export default function DealsPage() {
                 </SelectContent>
               </Select>
 
-              {/* Etiquetas (estilo Trello) — substitui o antigo "Ordenar por" */}
+              {/* Etiquetas (estilo Trello) — botao mostra preview das cores
+                  selecionadas (ate 4) pro usuario ver rapido o que esta filtrado. */}
               <Popover open={labelsOpen} onOpenChange={setLabelsOpen}>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" className="w-[220px] justify-between h-9">
-                    <span className="flex items-center gap-1.5 text-sm">
-                      <Tags className="w-3.5 h-3.5 text-muted-foreground" />
-                      {selectedLabelIds.size > 0
-                        ? `${selectedLabelIds.size} etiqueta(s)`
-                        : "Etiquetas"}
+                  <Button variant="outline" className="w-[240px] justify-between h-9">
+                    <span className="flex items-center gap-2 text-sm min-w-0">
+                      <Tags className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                      {selectedLabelIds.size === 0 ? (
+                        <span className="text-muted-foreground">Filtrar por etiqueta...</span>
+                      ) : (
+                        <span className="flex items-center gap-1 min-w-0">
+                          <span className="flex items-center gap-0.5 shrink-0">
+                            {labels
+                              .filter((lb) => selectedLabelIds.has(lb.id))
+                              .slice(0, 4)
+                              .map((lb) => (
+                                <span
+                                  key={lb.id}
+                                  className="w-3 h-3 rounded-sm border border-border/30"
+                                  style={{ backgroundColor: lb.color }}
+                                  title={lb.name}
+                                />
+                              ))}
+                          </span>
+                          <span className="truncate text-xs text-muted-foreground">
+                            {selectedLabelIds.size === 1
+                              ? labels.find((lb) => selectedLabelIds.has(lb.id))?.name
+                              : `${selectedLabelIds.size} selecionadas`}
+                          </span>
+                        </span>
+                      )}
                     </span>
-                    <span className="text-xs text-muted-foreground">▼</span>
+                    <span className="text-xs text-muted-foreground shrink-0">▼</span>
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent align="end" className="w-72 p-3 space-y-2">
-                  <div className="text-xs font-medium text-muted-foreground">Filtrar por etiqueta</div>
+                  <div>
+                    <div className="text-sm font-medium text-foreground">Etiquetas</div>
+                    <div className="text-xs text-muted-foreground">
+                      Clique nas etiquetas abaixo pra filtrar os negócios
+                    </div>
+                  </div>
                   {labels.length === 0 ? (
-                    <div className="text-xs text-muted-foreground text-center py-2">
-                      Nenhuma etiqueta ainda
+                    <div className="text-xs text-muted-foreground text-center py-4 border border-dashed rounded-md">
+                      Nenhuma etiqueta cadastrada ainda.
+                      <br />
+                      Crie a primeira abaixo.
                     </div>
                   ) : (
                     <div className="space-y-1 max-h-48 overflow-y-auto">
