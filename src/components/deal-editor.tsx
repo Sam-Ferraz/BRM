@@ -367,13 +367,13 @@ export function DealEditor({
         )}
 
         <div className="space-y-2">
-          <Label htmlFor="description">{t("description")}</Label>
-          <Textarea
+          <Label htmlFor="description">{t("dealTitle")}</Label>
+          <Input
             id="description"
-            rows={3}
             value={formData.description}
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            placeholder="Título ou observações do negócio"
+            maxLength={50}
+            placeholder="Ex: Apartamento 2 suítes frente mar"
           />
         </div>
       </div>

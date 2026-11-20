@@ -263,12 +263,13 @@ export function DealForm({ deal, open, onOpenChange, onSubmit, loading }: DealFo
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">{t('description')}</Label>
-            <Textarea
+            <Label htmlFor="description">{t('dealTitle')}</Label>
+            <Input
               id="description"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              rows={3}
+              maxLength={50}
+              placeholder="Ex: Apartamento 2 suítes frente mar"
             />
           </div>
 
