@@ -23,6 +23,7 @@ import {
 import { ArrowLeft, Plus, Pencil, Trash2, Search, Briefcase, List, LayoutGrid, ArrowUpDown, Tags, X, Check, Columns3 } from "lucide-react"
 import { api, type Deal, type LeadWithDetails, type DealLabel, type Pipeline } from "@/lib/api-client"
 import { NewPipelineWizard } from "@/components/new-pipeline-wizard"
+import { PipelineSwitcher } from "@/components/pipeline-switcher"
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
 import { DealForm } from "@/components/forms/deal-form"
 import { DealsKanbanView } from "@/components/deals-kanban-view"
@@ -350,24 +351,29 @@ export default function DealsPage() {
               </Link>
             </Button>
             <div className="flex items-center gap-2">
-              {/* Seletor de funil ativo — so aparece no modo kanban (e onde
-                  faz sentido alternar entre funis visualmente). */}
+              {/* Seletor de funil ativo com editar/excluir inline por item
+                  (mesmo padrao do Popover de etiquetas). So aparece no modo
+                  kanban — fora dele a selecao de funil nao tem efeito visual. */}
               {viewMode === 'kanban' && pipelines.length > 0 && (
-                <Select
-                  value={activePipelineId != null ? String(activePipelineId) : ''}
-                  onValueChange={(v) => setActivePipelineId(parseInt(v, 10))}
-                >
-                  <SelectTrigger className="w-[180px] h-9">
-                    <SelectValue placeholder="Funil" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {pipelines.map((p) => (
-                      <SelectItem key={p.id} value={String(p.id)}>
-                        {p.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <PipelineSwitcher
+                  pipelines={pipelines}
+                  activePipelineId={activePipelineId}
+                  onChange={setActivePipelineId}
+                  onUpdated={(updated) => {
+                    setPipelines((prev) => prev.map((p) => (p.id === updated.id ? updated : p)))
+                  }}
+                  onDeleted={(id) => {
+                    setPipelines((prev) => {
+                      const next = prev.filter((p) => p.id !== id)
+                      // Se excluiu o funil ativo, cai pro default (ou primeiro)
+                      if (activePipelineId === id) {
+                        const fallback = next.find((p) => p.is_default)?.id ?? next[0]?.id ?? null
+                        setActivePipelineId(fallback)
+                      }
+                      return next
+                    })
+                  }}
+                />
               )}
               <Button onClick={() => setIsFormOpen(true)}>
                 <Plus className="w-4 h-4 mr-2" />
@@ -400,8 +406,27 @@ export default function DealsPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Briefcase className="w-5 h-5" />
-              {viewMode === "kanban" ? t('dealsKanbanTitle') : t('dealsTitle')}
+              {viewMode === 'kanban' ? (
+                (() => {
+                  const active = pipelines.find((p) => p.id === activePipelineId)
+                  return (
+                    <>
+                      {active && (
+                        <span
+                          className="w-2.5 h-6 rounded-sm shrink-0"
+                          style={{ backgroundColor: active.color || '#0c343d' }}
+                        />
+                      )}
+                      <span>{active?.name || t('dealsKanbanTitle')}</span>
+                    </>
+                  )
+                })()
+              ) : (
+                <>
+                  <Briefcase className="w-5 h-5" />
+                  {t('dealsTitle')}
+                </>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
