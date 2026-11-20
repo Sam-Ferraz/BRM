@@ -89,17 +89,8 @@ export function PipelineSwitcher({ pipelines, activePipelineId, onChange, onUpda
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="outline" className="w-[160px] justify-between h-9">
-          <span className="flex items-center gap-2 text-sm min-w-0">
-            {active && (
-              <span
-                className="w-3 h-3 rounded-sm border border-border/30 shrink-0"
-                style={{ backgroundColor: active.color || "#0c343d" }}
-                title={active.name}
-              />
-            )}
-            <span className="truncate font-medium">Funis</span>
-          </span>
+        <Button variant="outline" className="w-[140px] justify-between h-9">
+          <span className="truncate font-medium text-sm">Funis</span>
           <ChevronDown className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
         </Button>
       </PopoverTrigger>
@@ -158,10 +149,6 @@ export function PipelineSwitcher({ pipelines, activePipelineId, onChange, onUpda
                   }}
                   className="flex-1 flex items-center gap-2 text-left text-sm px-1 py-0.5"
                 >
-                  <span
-                    className="inline-block w-5 h-3 rounded"
-                    style={{ backgroundColor: p.color || "#0c343d" }}
-                  />
                   <span className="flex-1 truncate">{p.name}</span>
                   {p.is_default && (
                     <span className="text-[10px] text-muted-foreground border px-1 rounded">padrão</span>

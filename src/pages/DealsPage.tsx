@@ -409,14 +409,14 @@ export default function DealsPage() {
               {viewMode === 'kanban' ? (
                 (() => {
                   const active = pipelines.find((p) => p.id === activePipelineId)
+                  // Barra vertical fina e discreta na cor da marca — padrao
+                  // usado em outros headers do sistema (ex: Analytics).
                   return (
                     <>
-                      {active && (
-                        <span
-                          className="w-2.5 h-6 rounded-sm shrink-0"
-                          style={{ backgroundColor: active.color || '#0c343d' }}
-                        />
-                      )}
+                      <span
+                        className="w-1 h-5 rounded-full shrink-0"
+                        style={{ backgroundColor: '#0c343d' }}
+                      />
                       <span>{active?.name || t('dealsKanbanTitle')}</span>
                     </>
                   )
