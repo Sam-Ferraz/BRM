@@ -44,10 +44,12 @@ export default function DealsPage() {
   const [labels, setLabels] = useState<DealLabel[]>([])
   const [selectedLabelIds, setSelectedLabelIds] = useState<Set<number>>(new Set())
   // Etiquetas de SISTEMA: Frio/Morno/Quente aparecem sempre no topo da lista
-  // de etiquetas, nao sao editaveis nem excluiveis. Ao selecionar, filtram
-  // os deals pelo sufixo da temperatura no status (service_cold, etc).
-  // IDs negativos (unicos) pra nao colidir com etiquetas custom do banco.
-  const SYSTEM_LABELS: DealLabel[] = [
+  // de etiquetas. Ao selecionar, filtram os deals pelo sufixo da temperatura
+  // no status (service_cold, etc). IDs negativos (unicos) pra nao colidir com
+  // etiquetas custom do banco. Nome/cor/oculto podem ser customizados pelo
+  // usuario — como nao ha coluna no banco pra isso, persiste em localStorage
+  // por account (chave inclui user.id) pra nao vazar entre contas.
+  const SYSTEM_LABELS_DEFAULTS: DealLabel[] = [
     { id: -1, name: 'Frio', color: '#3b82f6' } as DealLabel,
     { id: -2, name: 'Morno', color: '#f59e0b' } as DealLabel,
     { id: -3, name: 'Quente', color: '#ef4444' } as DealLabel,
@@ -58,6 +60,28 @@ export default function DealsPage() {
     [-2]: 'mild',
     [-3]: 'warm',
   }
+  type SystemLabelOverride = { name?: string; color?: string; hidden?: boolean }
+  const systemLabelsStorageKey = `deals:systemLabelOverrides:${user?.id ?? 'anon'}`
+  const [systemLabelOverrides, setSystemLabelOverrides] = useState<Record<number, SystemLabelOverride>>(() => {
+    try {
+      const stored = localStorage.getItem(`deals:systemLabelOverrides:${user?.id ?? 'anon'}`)
+      return stored ? JSON.parse(stored) : {}
+    } catch { return {} }
+  })
+  useEffect(() => {
+    try {
+      localStorage.setItem(systemLabelsStorageKey, JSON.stringify(systemLabelOverrides))
+    } catch { /* quota exceeded — ignora */ }
+  }, [systemLabelOverrides, systemLabelsStorageKey])
+  // Lista efetiva das system labels depois de aplicar overrides do usuario
+  // (nome / cor customizados) e esconder as que ele excluiu.
+  const SYSTEM_LABELS: DealLabel[] = SYSTEM_LABELS_DEFAULTS
+    .filter((lb) => !systemLabelOverrides[lb.id]?.hidden)
+    .map((lb) => ({
+      ...lb,
+      name: systemLabelOverrides[lb.id]?.name ?? lb.name,
+      color: systemLabelOverrides[lb.id]?.color ?? lb.color,
+    }))
   const [newLabelName, setNewLabelName] = useState("")
   const [newLabelColor, setNewLabelColor] = useState("#0c343d")
   const [labelsOpen, setLabelsOpen] = useState(false)
@@ -458,9 +482,63 @@ export default function DealsPage() {
                 <PopoverContent align="end" className="w-72 p-3 space-y-2">
                   <div className="text-sm font-medium text-foreground">Etiquetas</div>
                   <div className="space-y-1 max-h-48 overflow-y-auto">
-                    {/* Etiquetas de SISTEMA (Frio/Morno/Quente) — sem editar/excluir */}
+                    {/* Etiquetas de SISTEMA (Frio/Morno/Quente) — tem editar/excluir
+                        tambem. Save persiste em localStorage via setSystemLabelOverrides;
+                        delete marca hidden=true (nao apaga de verdade — permite
+                        restaurar depois via "Restaurar etiquetas de sistema" abaixo) */}
                     {SYSTEM_LABELS.map((lb) => {
                       const isSelected = selectedLabelIds.has(lb.id)
+                      const isEditing = editingLabelId === lb.id
+                      if (isEditing) {
+                        return (
+                          <div key={lb.id} className="rounded border p-2 space-y-2 bg-muted/40">
+                            <Input
+                              value={editingName}
+                              onChange={(e) => setEditingName(e.target.value)}
+                              className="h-7 text-sm"
+                              autoFocus
+                            />
+                            <div className="flex items-center gap-1.5">
+                              {LABEL_COLORS.map((c) => (
+                                <button
+                                  key={c}
+                                  type="button"
+                                  onClick={() => setEditingColor(c)}
+                                  className={`w-5 h-5 rounded-full border-2 transition-all ${
+                                    editingColor === c ? "border-foreground scale-110" : "border-transparent"
+                                  }`}
+                                  style={{ backgroundColor: c }}
+                                />
+                              ))}
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                size="sm"
+                                className="h-7 text-xs flex-1"
+                                onClick={() => {
+                                  const name = editingName.trim()
+                                  if (!name) return
+                                  setSystemLabelOverrides((prev) => ({
+                                    ...prev,
+                                    [lb.id]: { ...prev[lb.id], name, color: editingColor },
+                                  }))
+                                  setEditingLabelId(null)
+                                }}
+                              >
+                                Salvar
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 text-xs"
+                                onClick={() => setEditingLabelId(null)}
+                              >
+                                Cancelar
+                              </Button>
+                            </div>
+                          </div>
+                        )
+                      }
                       return (
                         <div
                           key={lb.id}
@@ -485,9 +563,52 @@ export default function DealsPage() {
                             <span className="flex-1 truncate">{lb.name}</span>
                             {isSelected && <Check className="w-3.5 h-3.5 text-primary" />}
                           </button>
+                          <button
+                            type="button"
+                            title="Editar etiqueta"
+                            onClick={() => {
+                              setEditingLabelId(lb.id)
+                              setEditingName(lb.name)
+                              setEditingColor(lb.color)
+                            }}
+                            className="p-1 rounded hover:bg-muted hover:text-foreground text-muted-foreground transition-colors"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            title="Ocultar etiqueta"
+                            onClick={() => {
+                              if (!confirm(`Ocultar etiqueta "${lb.name}"?`)) return
+                              setSystemLabelOverrides((prev) => ({
+                                ...prev,
+                                [lb.id]: { ...prev[lb.id], hidden: true },
+                              }))
+                              setSelectedLabelIds((prev) => {
+                                const next = new Set(prev)
+                                next.delete(lb.id)
+                                return next
+                              })
+                            }}
+                            className="p-1 rounded hover:bg-red-50 hover:text-red-600 text-muted-foreground transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       )
                     })}
+                    {/* Se o usuario ocultou alguma das 3 system labels, oferece
+                        um botao pra restaurar — nao fica preso sem conseguir
+                        voltar ao estado padrao. */}
+                    {SYSTEM_LABELS.length < SYSTEM_LABELS_DEFAULTS.length && (
+                      <button
+                        type="button"
+                        onClick={() => setSystemLabelOverrides({})}
+                        className="w-full text-xs text-muted-foreground hover:text-foreground py-1 underline underline-offset-2"
+                      >
+                        Restaurar etiquetas de sistema
+                      </button>
+                    )}
                     {labels.length > 0 && (
                       <div className="border-t my-1" />
                     )}
