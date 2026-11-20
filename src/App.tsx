@@ -19,6 +19,9 @@ import ChatPage from './pages/ChatPage'
 import LeadsPage from './pages/LeadsPage'
 import AgendaPage from './pages/AgendaPage'
 import ConfigPage from './pages/ConfigPage'
+import AppearanceSettingsPage from './pages/settings/AppearanceSettingsPage'
+import GoogleCalendarSettingsPage from './pages/settings/GoogleCalendarSettingsPage'
+import IntegrationsSettingsPage from './pages/settings/IntegrationsSettingsPage'
 import UsersPage from './pages/UsersPage'
 import LeadPipelinesPage from './pages/LeadPipelinesPage'
 import AdminAccountsPage from './pages/AdminAccountsPage'
@@ -109,6 +112,21 @@ function App() {
               <Route path="/settings" element={
                 <ProtectedRoute>
                   <ConfigPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/settings/appearance" element={
+                <ProtectedRoute>
+                  <AppearanceSettingsPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/settings/google-calendar" element={
+                <ProtectedRoute>
+                  <GoogleCalendarSettingsPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/settings/integrations" element={
+                <ProtectedRoute>
+                  <IntegrationsSettingsPage />
                 </ProtectedRoute>
               } />
               <Route path="/settings/users" element={

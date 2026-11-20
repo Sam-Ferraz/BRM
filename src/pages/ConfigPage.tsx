@@ -1,373 +1,186 @@
-import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
-import { Link, useSearchParams } from "react-router-dom"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Link } from "react-router-dom"
+import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Settings, CheckCircle2, XCircle, Users as UsersIcon, Shield, ChevronRight, Route as RouteIcon, Building2, Tag } from "lucide-react"
+import {
+  ArrowLeft,
+  Settings,
+  Palette,
+  Calendar,
+  Users as UsersIcon,
+  Shield,
+  Route as RouteIcon,
+  Building2,
+  Tag,
+  Link2,
+} from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
-import { useBottomNavPreference } from "@/hooks/use-bottom-nav-preference"
-import { Switch } from "@/components/ui/switch"
-import { ThemeToggle } from "@/components/theme-toggle"
-import { LanguageSelector } from "@/components/language-selector"
-import { TimezoneSelector } from "@/components/timezone-selector"
-import { api, type GoogleCalendarStatus } from "@/lib/api-client"
-import { useToast } from "@/hooks/use-toast"
-import { ImportLeadsCard } from "@/components/import-leads-card"
-import { SiteApiCard } from "@/components/site-api-card"
+
+/**
+ * ConfigPage — hub de Configuracoes.
+ *
+ * Layout clean: um unico grid de widgets. Cada widget tem icone + nome +
+ * descricao curta e navega pra sub-pagina com os detalhes daquele tema.
+ * Mantem tudo acessivel sem poluir a tela principal com forms longos.
+ *
+ * Widgets visiveis dependem da role:
+ *   - Todos: Aparencia, Google Calendar
+ *   - Admin: + Usuarios, Permissoes, Esteiras de Leads, Integracoes
+ *   - Super-admin (account 1): + Contas cliente, Cupons
+ */
+interface Widget {
+  key: string
+  label: string
+  description: string
+  icon: typeof Settings
+  to: string
+  iconBg: string
+  iconColor: string
+  visible: boolean
+}
 
 export default function ConfigPage() {
   const { t } = useTranslation()
-  const { toast } = useToast()
   const { user } = useAuth()
-  const isAdmin = user?.role === "admin"
-  const [searchParams, setSearchParams] = useSearchParams()
-  const [googleStatus, setGoogleStatus] = useState<GoogleCalendarStatus | null>(null)
-  const [googleLoading, setGoogleLoading] = useState(false)
+  const isAdmin = user?.role === 'admin'
+  const isSuperAdmin = isAdmin && user?.account_id === 1
 
-  // Query params vindos do callback backend (/callback → /settings?googleConnect=...)
-  useEffect(() => {
-    const flag = searchParams.get('googleConnect')
-    if (!flag) return
-    if (flag === 'success') {
-      toast({ title: 'Google Calendar conectado' })
-    } else if (flag === 'denied') {
-      toast({ title: 'Autorização cancelada', variant: 'destructive' })
-    } else if (flag === 'error') {
-      const msg = searchParams.get('msg') || 'Erro ao conectar'
-      toast({ title: 'Erro na conexão', description: msg, variant: 'destructive' })
-    }
-    // Limpa a query pra não repetir o toast em navegações internas
-    searchParams.delete('googleConnect')
-    searchParams.delete('msg')
-    setSearchParams(searchParams, { replace: true })
-  }, [searchParams, setSearchParams, toast])
+  const widgets: Widget[] = [
+    {
+      key: 'appearance',
+      label: 'Aparência',
+      description: 'Tema, idioma, fuso horário e navegação',
+      icon: Palette,
+      to: '/settings/appearance',
 
-  // Carrega status inicial
-  useEffect(() => {
-    api.googleCalendar
-      .getStatus()
-      .then(({ data }) => setGoogleStatus(data))
-      .catch((err) => console.error('Falha ao buscar status Google Calendar:', err))
-  }, [])
+      iconBg: 'bg-indigo-100 dark:bg-indigo-950/40',
+      iconColor: 'text-indigo-700 dark:text-indigo-300',
+      visible: true,
+    },
+    {
+      key: 'google-calendar',
+      label: 'Google Calendar',
+      description: 'Sincronize seus eventos pessoais na Agenda',
+      icon: Calendar,
+      to: '/settings/google-calendar',
+      iconBg: 'bg-blue-100 dark:bg-blue-950/40',
+      iconColor: 'text-blue-700 dark:text-blue-300',
+      visible: true,
+    },
+    {
+      key: 'users',
+      label: 'Usuários',
+      description: 'Criar, editar e desativar usuários da equipe',
+      icon: UsersIcon,
+      to: '/settings/users',
+      iconBg: 'bg-emerald-100 dark:bg-emerald-950/40',
+      iconColor: 'text-emerald-700 dark:text-emerald-300',
+      visible: isAdmin,
+    },
+    {
+      key: 'permissions',
+      label: 'Permissões',
+      description: 'Matriz de rotinas por tipo de usuário',
+      icon: Shield,
+      to: '/settings/permissions',
+      iconBg: 'bg-amber-100 dark:bg-amber-950/40',
+      iconColor: 'text-amber-700 dark:text-amber-300',
+      visible: isAdmin,
+    },
+    {
+      key: 'lead-pipelines',
+      label: 'Esteiras de Leads',
+      description: 'Horários, corretores e escalação por timeout',
+      icon: RouteIcon,
+      to: '/settings/lead-pipelines',
+      iconBg: 'bg-violet-100 dark:bg-violet-950/40',
+      iconColor: 'text-violet-700 dark:text-violet-300',
+      visible: isAdmin,
+    },
+    {
+      key: 'integrations',
+      label: 'Integrações',
+      description: 'Import de leads (CSV) e API do site institucional',
+      icon: Link2,
+      to: '/settings/integrations',
+      iconBg: 'bg-teal-100 dark:bg-teal-950/40',
+      iconColor: 'text-teal-700 dark:text-teal-300',
+      visible: isAdmin,
+    },
+    {
+      key: 'accounts',
+      label: 'Contas cliente',
+      description: 'Provisionar novas empresas + gerenciar planos',
+      icon: Building2,
+      to: '/admin/accounts',
+      iconBg: 'bg-orange-100 dark:bg-orange-950/40',
+      iconColor: 'text-orange-700 dark:text-orange-300',
+      visible: isSuperAdmin,
+    },
+    {
+      key: 'coupons',
+      label: 'Cupons de desconto',
+      description: 'Códigos que a LP aceita antes do checkout',
+      icon: Tag,
+      to: '/admin/coupons',
+      iconBg: 'bg-rose-100 dark:bg-rose-950/40',
+      iconColor: 'text-rose-700 dark:text-rose-300',
+      visible: isSuperAdmin,
+    },
+  ]
 
-  const handleGoogleConnect = async () => {
-    try {
-      setGoogleLoading(true)
-      const { data } = await api.googleCalendar.getAuthUrl()
-      window.location.href = data.url
-    } catch (err) {
-      toast({
-        title: 'Erro',
-        description: err instanceof Error ? err.message : 'Falha ao iniciar OAuth',
-        variant: 'destructive',
-      })
-      setGoogleLoading(false)
-    }
-  }
-
-  const handleGoogleDisconnect = async () => {
-    if (!confirm('Desconectar sua conta Google Calendar? Os eventos deixarão de aparecer na Agenda.')) return
-    try {
-      setGoogleLoading(true)
-      await api.googleCalendar.disconnect()
-      setGoogleStatus({ connected: false })
-      toast({ title: 'Google Calendar desconectado' })
-    } catch (err) {
-      toast({
-        title: 'Erro',
-        description: err instanceof Error ? err.message : 'Falha ao desconectar',
-        variant: 'destructive',
-      })
-    } finally {
-      setGoogleLoading(false)
-    }
-  }
+  const visibleWidgets = widgets.filter((w) => w.visible)
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header — mesmo padrão de Propostas: apenas o botão Voltar */}
       <header className="bg-card shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center">
-              <Button variant="outline" size="sm" asChild className="mr-4">
-                <Link to="/dashboard">
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  {t('backButton')}
-                </Link>
-              </Button>
-            </div>
+          <div className="flex items-center h-16">
+            <Button variant="outline" size="sm" asChild className="mr-4">
+              <Link to="/dashboard">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                {t('backButton')}
+              </Link>
+            </Button>
           </div>
         </div>
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="max-w-2xl mx-auto space-y-6">
-          {/* Título do módulo — sem borda, apenas ícone + texto */}
+        <div className="max-w-5xl mx-auto space-y-6">
           <h1 className="flex items-center gap-2 text-2xl font-semibold">
             <Settings className="w-6 h-6" />
             {t('settings')}
           </h1>
 
-          {/* Theme Settings */}
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('theme')}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">
-                    {t('selectTheme')}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {t('chooseAppearance')}
-                  </p>
-                </div>
-                <ThemeToggle />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Language Settings */}
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('language')}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">
-                    {t('selectLanguage')}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {t('chooseLanguage')}
-                  </p>
-                </div>
-                <LanguageSelector />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Importações (admin) — importar leads via CSV pro funil Sem atendimento */}
-          {isAdmin && <ImportLeadsCard />}
-
-          {/* API de integração com site institucional (admin) */}
-          {isAdmin && <SiteApiCard />}
-
-          {/* Administração — só admin */}
-          {isAdmin && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Administração</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-1">
-                <Link
-                  to="/settings/users"
-                  className="flex items-center justify-between rounded-md p-3 hover:bg-accent transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-primary/10 rounded-lg">
-                      <UsersIcon className="w-5 h-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Usuários</p>
-                      <p className="text-xs text-muted-foreground">
-                        Criar, editar e desativar usuários da equipe
-                      </p>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                </Link>
-                <Link
-                  to="/settings/permissions"
-                  className="flex items-center justify-between rounded-md p-3 hover:bg-accent transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-primary/10 rounded-lg">
-                      <Shield className="w-5 h-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Permissões</p>
-                      <p className="text-xs text-muted-foreground">
-                        Matriz de rotinas por tipo de usuário
-                      </p>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                </Link>
-                <Link
-                  to="/settings/lead-pipelines"
-                  className="flex items-center justify-between rounded-md p-3 hover:bg-accent transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-primary/10 rounded-lg">
-                      <RouteIcon className="w-5 h-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Esteiras de Leads</p>
-                      <p className="text-xs text-muted-foreground">
-                        Horários, corretores e escalação por timeout
-                      </p>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                </Link>
-
-                {/* Super-admin: contas cliente + cupons. Só admin da BRM Demo (account_id=1). */}
-                {user?.account_id === 1 && (
-                  <>
-                    <Link
-                      to="/admin/accounts"
-                      className="flex items-center justify-between rounded-md p-3 hover:bg-accent transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-amber-100 rounded-lg">
-                          <Building2 className="w-5 h-5 text-amber-700" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">Contas cliente (super-admin)</p>
-                          <p className="text-xs text-muted-foreground">
-                            Provisionar novas empresas + gerenciar planos
-                          </p>
-                        </div>
-                      </div>
-                      <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                    </Link>
-                    <Link
-                      to="/admin/coupons"
-                      className="flex items-center justify-between rounded-md p-3 hover:bg-accent transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-purple-100 rounded-lg">
-                          <Tag className="w-5 h-5 text-purple-700" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">Cupons de desconto</p>
-                          <p className="text-xs text-muted-foreground">
-                            Códigos que a LP aceita antes do checkout
-                          </p>
-                        </div>
-                      </div>
-                      <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                    </Link>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Navegação — bottom nav com widgets sobrevoando */}
-          <NavigationSettings />
-
-          {/* Timezone Settings */}
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('timezone')}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">
-                    {t('selectTimezone')}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {t('chooseTimezone')}
-                  </p>
-                </div>
-                <TimezoneSelector />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Integração Google Calendar */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2V6a2 2 0 0 0-2-2Zm0 16H5V10h14v10Zm0-12H5V6h14v2Z" fill="#4285F4"/>
-                </svg>
-                Google Calendar
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between flex-wrap gap-3">
-                <div className="flex-1 min-w-0">
-                  {googleStatus?.connected ? (
-                    <>
-                      <div className="flex items-center gap-2 text-sm">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                        <span className="font-medium truncate">{googleStatus.email}</span>
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Seus eventos do Google Calendar aparecem na Agenda do BRM em tempo real.
-                      </p>
-                    </>
-                  ) : (
-                    <>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <XCircle className="w-4 h-4 shrink-0" />
-                        <span>Nenhuma conta conectada</span>
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Conecte sua conta Google para ver seus compromissos pessoais na mesma agenda.
-                      </p>
-                    </>
-                  )}
-                </div>
-                {googleStatus?.connected ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleGoogleDisconnect}
-                    disabled={googleLoading}
+          <Card className="p-4 sm:p-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {visibleWidgets.map((w) => {
+                const Icon = w.icon
+                return (
+                  <Link
+                    key={w.key}
+                    to={w.to}
+                    className="group rounded-lg border border-border bg-card p-4 flex items-start gap-3 hover:border-primary/50 hover:shadow-sm transition-all"
                   >
-                    Desconectar
-                  </Button>
-                ) : (
-                  <Button
-                    size="sm"
-                    onClick={handleGoogleConnect}
-                    disabled={googleLoading}
-                  >
-                    Conectar Google Calendar
-                  </Button>
-                )}
-              </div>
-            </CardContent>
+                    <div className={`shrink-0 p-2.5 rounded-lg ${w.iconBg}`}>
+                      <Icon className={`w-5 h-5 ${w.iconColor}`} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
+                        {w.label}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                        {w.description}
+                      </p>
+                    </div>
+                  </Link>
+                )
+              })}
+            </div>
           </Card>
         </div>
       </div>
     </div>
-  )
-}
-
-/**
- * NavigationSettings — card na página de Configurações que deixa o usuário
- * ligar/desligar a bottom nav com widgets sobrevoando. Preferência salva
- * em localStorage e propagada em tempo real pra todas as ProtectedRoutes.
- */
-function NavigationSettings() {
-  const { enabled, setEnabled } = useBottomNavPreference()
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Navegação</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="flex items-center justify-between">
-          <div className="flex-1 pr-4">
-            <p className="text-sm font-medium mb-1">Rodapé com módulos sobrevoando</p>
-            <p className="text-xs text-muted-foreground">
-              Quando ligado, uma barra fixa aparece no rodapé de todas as telas
-              com atalhos pros módulos (Negócios, Atendimentos, Clientes, etc.).
-              Você pode deslizar horizontalmente ou usar as setas laterais pra
-              navegar. Desligue se preferir uma interface mais limpa.
-            </p>
-          </div>
-          <Switch checked={enabled} onCheckedChange={setEnabled} />
-        </div>
-      </CardContent>
-    </Card>
   )
 }
