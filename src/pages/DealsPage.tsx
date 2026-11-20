@@ -22,8 +22,7 @@ import {
 } from "@/components/ui/select"
 import { ArrowLeft, Plus, Pencil, Trash2, Search, Briefcase, List, LayoutGrid, ArrowUpDown, Tags, X, Check, Columns3 } from "lucide-react"
 import { api, type Deal, type LeadWithDetails, type DealLabel, type Pipeline } from "@/lib/api-client"
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
+import { NewPipelineWizard } from "@/components/new-pipeline-wizard"
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
 import { DealForm } from "@/components/forms/deal-form"
 import { DealsKanbanView } from "@/components/deals-kanban-view"
@@ -54,8 +53,6 @@ export default function DealsPage() {
     if (activePipelineId != null) localStorage.setItem('deals:activePipelineId', String(activePipelineId))
   }, [activePipelineId])
   const [newPipelineOpen, setNewPipelineOpen] = useState(false)
-  const [newPipelineName, setNewPipelineName] = useState("")
-  const [creatingPipeline, setCreatingPipeline] = useState(false)
   // Etiquetas (estilo Trello): CRUD + filtro por selecionadas
   const [labels, setLabels] = useState<DealLabel[]>([])
   const [selectedLabelIds, setSelectedLabelIds] = useState<Set<number>>(new Set())
@@ -388,64 +385,16 @@ export default function DealsPage() {
         </div>
       </header>
 
-      {/* Modal de criacao de funil novo */}
-      <Dialog open={newPipelineOpen} onOpenChange={setNewPipelineOpen}>
-        <DialogContent className="sm:max-w-[420px] max-h-[90vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle>Novo funil</DialogTitle>
-          </DialogHeader>
-          <form
-            onSubmit={async (e) => {
-              e.preventDefault()
-              const name = newPipelineName.trim()
-              if (!name) return
-              setCreatingPipeline(true)
-              try {
-                const { data } = await api.pipelines.create({ name })
-                setPipelines((prev) => [...prev, data].sort((a, b) => a.position - b.position || a.id - b.id))
-                setActivePipelineId(data.id)
-                setNewPipelineName("")
-                setNewPipelineOpen(false)
-                toast({ title: 'Funil criado' })
-              } catch (err) {
-                toast({
-                  title: 'Erro',
-                  description: err instanceof Error ? err.message : 'Falha ao criar funil',
-                  variant: 'destructive',
-                })
-              } finally {
-                setCreatingPipeline(false)
-              }
-            }}
-            className="flex-1 flex flex-col min-h-0 space-y-4"
-          >
-            <div className="flex-1 overflow-y-auto p-1 space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="pipeline-name">Nome do funil</Label>
-                <Input
-                  id="pipeline-name"
-                  autoFocus
-                  value={newPipelineName}
-                  onChange={(e) => setNewPipelineName(e.target.value)}
-                  placeholder="Ex: Locação, Lançamento, Carteira avulsa"
-                  maxLength={100}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Depois de criado, você pode arrastar deals entre funis pelo menu de ações do card.
-                </p>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setNewPipelineOpen(false)}>
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={creatingPipeline || !newPipelineName.trim()}>
-                {creatingPipeline ? 'Criando...' : 'Criar funil'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      {/* Wizard de criacao de funil (etapas: nome + modelo em branco/clone) */}
+      <NewPipelineWizard
+        open={newPipelineOpen}
+        onOpenChange={setNewPipelineOpen}
+        pipelines={pipelines}
+        onCreated={(p) => {
+          setPipelines((prev) => [...prev, p].sort((a, b) => a.position - b.position || a.id - b.id))
+          setActivePipelineId(p.id)
+        }}
+      />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Card>

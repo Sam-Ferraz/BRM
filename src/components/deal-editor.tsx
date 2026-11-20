@@ -87,6 +87,7 @@ export function DealEditor({
     gsv: string
     property_name: string
     status: DealStatusValue
+    pipeline_id: string
   }
 
   const [formData, setFormData] = useState<DealFormState>({
@@ -100,7 +101,15 @@ export function DealEditor({
     gsv: "",
     property_name: "",
     status: "service",
+    pipeline_id: "",
   })
+  const [pipelines, setPipelines] = useState<{ id: number; name: string }[]>([])
+  useEffect(() => {
+    api.pipelines
+      .list()
+      .then((r) => setPipelines((r.data || []).map((p) => ({ id: p.id, name: p.name }))))
+      .catch(() => setPipelines([]))
+  }, [])
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   useEffect(() => {
@@ -117,6 +126,7 @@ export function DealEditor({
         gsv: String(deal.gsv || ""),
         property_name: deal.property_name || "",
         status: deal.status,
+        pipeline_id: deal.pipeline_id != null ? String(deal.pipeline_id) : "",
       })
     } else {
       setFormData({
@@ -130,6 +140,7 @@ export function DealEditor({
         gsv: "",
         property_name: "",
         status: "service",
+        pipeline_id: "",
       })
     }
   }, [deal, currentDate])
@@ -156,7 +167,8 @@ export function DealEditor({
       gsv: formData.gsv,
       property_name: formData.property_name.trim() || undefined,
       status: formData.status,
-    })
+      pipeline_id: formData.pipeline_id ? parseInt(formData.pipeline_id, 10) : undefined,
+    } as any)
   }
 
   const handleCreateAppointmentFromTimeline = async (data: Omit<Appointment, "id"> | Partial<Appointment>) => {
@@ -341,6 +353,32 @@ export function DealEditor({
             </SelectContent>
           </Select>
         </div>
+
+        {/* Funil (pipeline) — permite transferir o deal entre funis. Se so
+            ha 1 funil, esconde pra nao confundir. */}
+        {pipelines.length > 1 && (
+          <div className="space-y-2">
+            <Label htmlFor="pipeline">Funil</Label>
+            <Select
+              value={formData.pipeline_id}
+              onValueChange={(v) => setFormData({ ...formData, pipeline_id: v })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o funil" />
+              </SelectTrigger>
+              <SelectContent>
+                {pipelines.map((p) => (
+                  <SelectItem key={p.id} value={String(p.id)}>
+                    {p.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Mudar o funil transfere este negócio pra outra lista. O histórico de atendimentos preserva.
+            </p>
+          </div>
+        )}
 
         {/* Se o negocio vem de Lead online, mostra o snapshot bruto do lead
             (readonly) ACIMA do campo Descricao. lead_data e persistido pelo

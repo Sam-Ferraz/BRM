@@ -170,6 +170,8 @@ export class DealRepository extends BaseRepository {
   async update(accountId: number, id: number, deal: Omit<Deal, 'id' | 'created_at' | 'updated_at'>): Promise<Deal | null> {
     const client = await this.getClient()
     try {
+      // Se pipeline_id nao foi passado, preserva o valor atual (COALESCE).
+      // Se foi passado (inclusive null explicito pra "sem funil"), atualiza.
       const result = await client.query(
         `UPDATE deals SET
           client = $1,
@@ -182,8 +184,9 @@ export class DealRepository extends BaseRepository {
           gsv = $8,
           property_name = $9,
           status = $10,
+          pipeline_id = COALESCE($11, pipeline_id),
           updated_at = CURRENT_TIMESTAMP
-        WHERE id = $11 AND account_id = $12 RETURNING *`,
+        WHERE id = $12 AND account_id = $13 RETURNING *`,
         [
           deal.client,
           deal.origin_date || null,
@@ -195,6 +198,7 @@ export class DealRepository extends BaseRepository {
           deal.gsv,
           deal.property_name || null,
           deal.status,
+          deal.pipeline_id ?? null,
           id,
           accountId,
         ]

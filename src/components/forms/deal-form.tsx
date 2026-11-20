@@ -65,6 +65,8 @@ export function DealForm({ deal, open, onOpenChange, onSubmit, loading }: DealFo
     gsv: string
     property_name: string
     status: DealStatusValue
+    /** Funil (pipeline) ao qual o deal pertence. '' = usa default da conta. */
+    pipeline_id: string
   }
 
   const [formData, setFormData] = useState<DealFormState>({
@@ -78,7 +80,18 @@ export function DealForm({ deal, open, onOpenChange, onSubmit, loading }: DealFo
     gsv: "",
     property_name: "",
     status: "service",
+    pipeline_id: "",
   })
+  // Lista de funis pra o seletor de "Funil" — carrega uma vez quando o form
+  // abre e mantem em memoria enquanto a sessao durar.
+  const [pipelines, setPipelines] = useState<{ id: number; name: string }[]>([])
+  useEffect(() => {
+    if (!open) return
+    api.pipelines
+      .list()
+      .then((r) => setPipelines((r.data || []).map((p) => ({ id: p.id, name: p.name }))))
+      .catch(() => setPipelines([]))
+  }, [open])
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   useEffect(() => {
@@ -107,6 +120,7 @@ export function DealForm({ deal, open, onOpenChange, onSubmit, loading }: DealFo
         gsv: deal.gsv || "",
         property_name: deal.property_name || "",
         status: (deal.status || 'service') as DealStatusValue,
+        pipeline_id: deal.pipeline_id != null ? String(deal.pipeline_id) : "",
       })
     } else {
       setFormData({
@@ -120,6 +134,7 @@ export function DealForm({ deal, open, onOpenChange, onSubmit, loading }: DealFo
         gsv: "",
         property_name: "",
         status: 'service',
+        pipeline_id: "",
       })
     }
   }, [deal, open, currentDate])
@@ -180,7 +195,15 @@ export function DealForm({ deal, open, onOpenChange, onSubmit, loading }: DealFo
       return
     }
 
-    onSubmit(formData)
+    // pipeline_id vem do Select como string ('' = usar default da conta).
+    // Converte pra number ou undefined antes de mandar pro backend — undefined
+    // deixa o backend/COALESCE preservar o pipeline atual (edit) ou cair
+    // no funil default (create).
+    const payload = {
+      ...formData,
+      pipeline_id: formData.pipeline_id ? parseInt(formData.pipeline_id, 10) : undefined,
+    }
+    onSubmit(payload as any)
   }
 
   const clientOriginOptions: { value: ClientOriginValue; label: string }[] = [
@@ -431,6 +454,32 @@ export function DealForm({ deal, open, onOpenChange, onSubmit, loading }: DealFo
               </SelectContent>
             </Select>
           </div>
+
+          {/* Funil (pipeline) — permite transferir o deal entre funis. Se so
+              ha 1 funil, esconde pra nao confundir. */}
+          {pipelines.length > 1 && (
+            <div className="space-y-2">
+              <Label htmlFor="pipeline">Funil</Label>
+              <Select
+                value={formData.pipeline_id}
+                onValueChange={(value) => setFormData({ ...formData, pipeline_id: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o funil" />
+                </SelectTrigger>
+                <SelectContent>
+                  {pipelines.map((p) => (
+                    <SelectItem key={p.id} value={String(p.id)}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Mudar o funil transfere este negócio pra outra lista. O histórico de atendimentos preserva.
+              </p>
+            </div>
+          )}
 
       </div>
       <DialogFooter className="pt-2 shrink-0">
