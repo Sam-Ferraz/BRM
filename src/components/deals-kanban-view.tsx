@@ -168,20 +168,25 @@ export function DealsKanbanView({ deals, leads = [], onEdit, onStatusChange }: D
    * Extras tem key='extra:<id>' pra nao colidir com phase.key de status.
    */
   const phasesToRender = useMemo(() => {
-    const overrides = account?.custom_config?.pipeline_columns
+    const overrides = account?.custom_config?.pipeline_columns as Record<string, { label?: string; color?: string; hidden?: boolean; deleted?: boolean; position?: number }> | undefined
     const base = overrides
-      ? PHASES.map((p, idx) => {
-          const ov = overrides[p.key] || {}
-          return {
-            ...p,
-            label: ov.label ?? p.label,
-            overrideColorHex: ov.color as string | undefined,
-            _hidden: ov.hidden ?? false,
-            _position: ov.position ?? idx,
-            _isExtra: false as boolean,
-            _extraId: null as string | null,
-          }
-        })
+      ? PHASES
+          // 'deleted' remove permanentemente a coluna padrao do funil. Nao
+          // volta pela UI (nao ha mais botao de restaurar). 'hidden' continua
+          // sendo o toggle de visibilidade via olho.
+          .filter((p) => !(overrides[p.key]?.deleted))
+          .map((p, idx) => {
+            const ov = overrides[p.key] || {}
+            return {
+              ...p,
+              label: ov.label ?? p.label,
+              overrideColorHex: ov.color as string | undefined,
+              _hidden: ov.hidden ?? false,
+              _position: ov.position ?? idx,
+              _isExtra: false as boolean,
+              _extraId: null as string | null,
+            }
+          })
       : PHASES.map((p, idx) => ({
           ...p,
           overrideColorHex: undefined as string | undefined,

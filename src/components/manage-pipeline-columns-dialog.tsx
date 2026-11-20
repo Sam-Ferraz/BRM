@@ -55,6 +55,11 @@ interface Draft {
   label: string
   color: string
   hidden: boolean
+  // Exclusao permanente — a coluna some do kanban e do dialog de edicao.
+  // Diferente de 'hidden' (ocultada mas ainda listada), 'deleted' remove
+  // a coluna padrao do funil pra sempre. So volta se o usuario mexer no
+  // banco (nao ha mais botao de Restaurar padrao).
+  deleted: boolean
   position: number
 }
 
@@ -97,10 +102,13 @@ export function ManagePipelineColumnsDialog({ open, onOpenChange, onSaved }: Pro
         label: ov.label ?? col.label,
         color: ov.color ?? col.headerHex,
         hidden: ov.hidden ?? false,
+        deleted: (ov as any).deleted ?? false,
         position: ov.position ?? idx,
       }
     })
     list.sort((a, b) => a.position - b.position)
+    // Mantem drafts com deleted=true no state (pra persistir no save), mas o
+    // render filtra pra nao mostrar essas colunas no dialog.
     setDrafts(list)
     const existingSubs = (account?.custom_config as any)?.pipeline_subcolumns as SubColumn[] | undefined
     setSubcolumns(Array.isArray(existingSubs) ? existingSubs : [])
@@ -198,12 +206,13 @@ export function ManagePipelineColumnsDialog({ open, onOpenChange, onSaved }: Pro
   const save = async () => {
     setSaving(true)
     try {
-      const overrides: Record<string, { label?: string; color?: string; hidden?: boolean; position?: number }> = {}
+      const overrides: Record<string, { label?: string; color?: string; hidden?: boolean; deleted?: boolean; position?: number }> = {}
       drafts.forEach((d, idx) => {
         overrides[d.key] = {
           label: d.label.trim(),
           color: d.color,
           hidden: d.hidden,
+          deleted: d.deleted,
           position: idx,
         }
       })
@@ -233,31 +242,6 @@ export function ManagePipelineColumnsDialog({ open, onOpenChange, onSaved }: Pro
     }
   }
 
-  const reset = async () => {
-    if (!confirm("Restaurar colunas padrao? Isso apaga suas personalizacoes.")) return
-    setSaving(true)
-    try {
-      const nextConfig = { ...(account?.custom_config || {}) }
-      delete (nextConfig as any).pipeline_columns
-      delete (nextConfig as any).pipeline_subcolumns
-      delete (nextConfig as any).pipeline_extra_columns
-      await updateConfig(nextConfig)
-      setSubcolumns([])
-      setExtraDrafts([])
-      toast({ title: "Colunas restauradas" })
-      onSaved?.()
-      onOpenChange(false)
-    } catch (err) {
-      toast({
-        title: "Erro",
-        description: err instanceof Error ? err.message : String(err),
-        variant: "destructive",
-      })
-    } finally {
-      setSaving(false)
-    }
-  }
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[640px] max-h-[90vh] flex flex-col">
@@ -269,30 +253,34 @@ export function ManagePipelineColumnsDialog({ open, onOpenChange, onSaved }: Pro
             Renomeie, mude a cor do cabecalho, oculte ou reordene as colunas do Kanban de Negocios.
             As mudancas valem so pra sua empresa.
           </p>
-          {drafts.map((d, index) => (
-            <ColumnCard
-              key={d.key}
-              label={d.label}
-              color={d.color}
-              hidden={d.hidden}
-              onLabelChange={(v) => patchDraft(index, { label: v })}
-              onColorChange={(v) => patchDraft(index, { color: v })}
-              onToggleHidden={() => patchDraft(index, { hidden: !d.hidden })}
-              // Colunas padrao nao podem ser removidas do codigo (as fases
-              // sao hardcoded pelo enum de status), mas o usuario pode
-              // 'excluir' no sentido de ocultar permanentemente — equivalente
-              // a hidden=true, com confirmacao.
-              onRemove={() => {
-                if (!confirm(`Excluir a coluna "${d.label}"? Ela deixa de aparecer no quadro. Voce pode restaurar via "Restaurar padrao".`)) return
-                patchDraft(index, { hidden: true })
-              }}
-              draggable
-              onDragStart={onDragStartItem("default", index)}
-              onDragOver={onDragOverItem}
-              onDrop={onDropItem("default", index)}
-              isDragging={dragSrc?.kind === "default" && dragSrc.index === index}
-            />
-          ))}
+          {drafts.map((d, index) => {
+            // Colunas deletadas somem do dialog (ja estao filtradas do kanban
+            // tambem). Mantemos no state pra persistir o flag no save.
+            if (d.deleted) return null
+            return (
+              <ColumnCard
+                key={d.key}
+                label={d.label}
+                color={d.color}
+                hidden={d.hidden}
+                onLabelChange={(v) => patchDraft(index, { label: v })}
+                onColorChange={(v) => patchDraft(index, { color: v })}
+                onToggleHidden={() => patchDraft(index, { hidden: !d.hidden })}
+                // Excluir = marca deleted=true. A coluna some do dialog e do
+                // kanban permanentemente. Nao ha botao de restaurar (exclusao
+                // definitiva via UI).
+                onRemove={() => {
+                  if (!confirm(`Excluir a coluna "${d.label}"? Esta acao e permanente — a coluna some do funil.`)) return
+                  patchDraft(index, { deleted: true })
+                }}
+                draggable
+                onDragStart={onDragStartItem("default", index)}
+                onDragOver={onDragOverItem}
+                onDrop={onDropItem("default", index)}
+                isDragging={dragSrc?.kind === "default" && dragSrc.index === index}
+              />
+            )
+          })}
 
           {/* Colunas extras: colunas totalmente novas (fora do enum de status
               padrao). Mesmo visual dos defaults. Persistidas em
@@ -405,9 +393,6 @@ export function ManagePipelineColumnsDialog({ open, onOpenChange, onSaved }: Pro
             Sub-coluna
           </Button>
           <div className="flex-1" />
-          <Button variant="outline" onClick={reset} disabled={saving}>
-            Restaurar padrao
-          </Button>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
             Cancelar
           </Button>
