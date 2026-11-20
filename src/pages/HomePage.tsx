@@ -80,23 +80,17 @@ const MODULES: ModuleItem[] = [
 ]
 
 const STATUS_LABEL: Record<string, string> = {
-  service_cold: "Atendimento", service_mild: "Atendimento", service_warm: "Atendimento",
-  visit_foreseen_cold: "Agendamento", visit_foreseen_mild: "Agendamento", visit_foreseen_warm: "Agendamento",
-  visit_done_cold: "Visita", visit_done_mild: "Visita", visit_done_warm: "Visita",
+  service: "Atendimento",
+  visit_foreseen: "Agendamento",
+  visit_done: "Visita",
   proposal: "Proposta", contract: "Contrato", sold: "Vendido",
   discarded_no_profile: "Descartado", discarded_no_interest: "Descartado",
   discarded_competitor: "Descartado", discarded_error: "Descartado",
 }
 const STATUS_COLOR: Record<string, string> = {
-  service_cold: "bg-blue-100 text-blue-800",
-  service_mild: "bg-yellow-100 text-yellow-800",
-  service_warm: "bg-orange-100 text-orange-800",
-  visit_foreseen_cold: "bg-blue-100 text-blue-800",
-  visit_foreseen_mild: "bg-yellow-100 text-yellow-800",
-  visit_foreseen_warm: "bg-orange-100 text-orange-800",
-  visit_done_cold: "bg-blue-100 text-blue-800",
-  visit_done_mild: "bg-yellow-100 text-yellow-800",
-  visit_done_warm: "bg-orange-100 text-orange-800",
+  service: "bg-blue-100 text-blue-800",
+  visit_foreseen: "bg-amber-100 text-amber-800",
+  visit_done: "bg-orange-100 text-orange-800",
   proposal: "bg-purple-100 text-purple-800",
   contract: "bg-cyan-100 text-cyan-800",
   sold: "bg-green-100 text-green-800",

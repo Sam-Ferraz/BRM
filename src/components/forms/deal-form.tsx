@@ -77,7 +77,7 @@ export function DealForm({ deal, open, onOpenChange, onSubmit, loading }: DealFo
     deal_type: "purchase",
     gsv: "",
     property_name: "",
-    status: "service_warm",
+    status: "service",
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -106,7 +106,7 @@ export function DealForm({ deal, open, onOpenChange, onSubmit, loading }: DealFo
         deal_type: (deal.deal_type || 'purchase') as DealTypeValue,
         gsv: deal.gsv || "",
         property_name: deal.property_name || "",
-        status: (deal.status || 'service_warm') as DealStatusValue,
+        status: (deal.status || 'service') as DealStatusValue,
       })
     } else {
       setFormData({
@@ -119,7 +119,7 @@ export function DealForm({ deal, open, onOpenChange, onSubmit, loading }: DealFo
         deal_type: 'purchase',
         gsv: "",
         property_name: "",
-        status: 'service_warm',
+        status: 'service',
       })
     }
   }, [deal, open, currentDate])
@@ -204,15 +204,9 @@ export function DealForm({ deal, open, onOpenChange, onSubmit, loading }: DealFo
   ]
 
   const statusOptions: { value: DealStatusValue; label: string }[] = [
-    { value: 'service_cold', label: t('dealStatusServiceCold') },
-    { value: 'service_mild', label: t('dealStatusServiceMild') },
-    { value: 'service_warm', label: t('dealStatusServiceWarm') },
-    { value: 'visit_foreseen_cold', label: t('dealStatusVisitForeseenCold') },
-    { value: 'visit_foreseen_mild', label: t('dealStatusVisitForeseenMild') },
-    { value: 'visit_foreseen_warm', label: t('dealStatusVisitForeseenWarm') },
-    { value: 'visit_done_cold', label: t('dealStatusVisitDoneCold') },
-    { value: 'visit_done_mild', label: t('dealStatusVisitDoneMild') },
-    { value: 'visit_done_warm', label: t('dealStatusVisitDoneWarm') },
+    { value: 'service', label: t('dealStatusService') },
+    { value: 'visit_foreseen', label: t('dealStatusVisitForeseen') },
+    { value: 'visit_done', label: t('dealStatusVisitDone') },
     { value: 'proposal', label: t('dealStatusProposal') },
     { value: 'sold', label: t('dealStatusSold') },
     { value: 'discarded_no_profile', label: t('dealStatusDiscardedNoProfile') },

@@ -17,13 +17,8 @@ import { useAccount } from "@/hooks/use-account"
 /**
  * DealsKanbanView — visualização em colunas dos Negócios agrupados por fase.
  *
- * 16 status → 6 colunas de fase:
- *   Atendimento (service_*) | Agendamento (visit_foreseen_*) |
- *   Visita (visit_done_*) | Proposta | Vendido | Descartado
- *
- * Fases com sub-temperatura (Atendimento, Agendamento, Visita)
- * mostram uma bolinha no card indicando frio/morno/quente. Ao arrastar entre
- * fases, tenta preservar a temperatura atual (ex: service_warm → visit_foreseen_warm).
+ * 10 status -> 8 colunas: Sem atendimento | Atendimento | Agendamento |
+ * Visita | Proposta | Contrato | Vendido | Descartado.
  *
  * Drag-and-drop: HTML5 nativo. Funciona no desktop; no mobile o usuário abre
  * o menu ⋯ do card e muda status por dropdown (fallback acessível).
@@ -33,18 +28,15 @@ import { useAccount } from "@/hooks/use-account"
 // Modelo das fases (colunas)
 // -----------------------------------------------------------------------------
 
-type Temperature = "cold" | "mild" | "warm"
-
 interface PhaseColumn {
   key: string
   label: string
-  statuses: Deal["status"][]              // status que caem nesta coluna
-  hasTemperature: boolean                 // se true, ao dropar mantém temp
+  status: Deal["status"] | null           // status unico que cai nesta coluna (null = coluna 'no_service' ou descartado)
   headerColor: string                     // classes tailwind pro topo da coluna
-  // Se hasTemperature=false: qual status usar ao dropar aqui
-  singleStatus?: Deal["status"]
   // Se dropou aqui e é descartado, precisa perguntar o motivo
   requiresReason?: boolean
+  // Statuses adicionais que caem nesta coluna (usado pra Descartado agrupar os 4 motivos)
+  additionalStatuses?: Deal["status"][]
 }
 
 const PHASES: PhaseColumn[] = [
@@ -53,104 +45,74 @@ const PHASES: PhaseColumn[] = [
     // leads com status 'novo' (nao aceitos ainda).
     key: "no_service",
     label: "Sem atendimento",
-    statuses: [],
-    hasTemperature: false,
+    status: null,
     headerColor: "bg-slate-100 text-slate-900 border-slate-300",
   },
   {
     key: "service",
     label: "Atendimento",
-    statuses: ["service_cold", "service_mild", "service_warm"],
-    hasTemperature: true,
+    status: "service",
     headerColor: "bg-blue-100 text-blue-900 border-blue-300",
   },
   {
     key: "visit_foreseen",
     label: "Agendamento",
-    statuses: ["visit_foreseen_cold", "visit_foreseen_mild", "visit_foreseen_warm"],
-    hasTemperature: true,
+    status: "visit_foreseen",
     headerColor: "bg-amber-100 text-amber-900 border-amber-300",
   },
   {
     key: "visit_done",
     label: "Visita",
-    statuses: ["visit_done_cold", "visit_done_mild", "visit_done_warm"],
-    hasTemperature: true,
+    status: "visit_done",
     headerColor: "bg-orange-100 text-orange-900 border-orange-300",
   },
   {
     key: "proposal",
     label: "Proposta",
-    statuses: ["proposal"],
-    hasTemperature: false,
-    singleStatus: "proposal",
+    status: "proposal",
     headerColor: "bg-purple-100 text-purple-900 border-purple-300",
   },
   {
     key: "contract",
     label: "Contrato",
-    statuses: ["contract"],
-    hasTemperature: false,
-    singleStatus: "contract",
+    status: "contract",
     headerColor: "bg-cyan-100 text-cyan-900 border-cyan-300",
   },
   {
     key: "sold",
     label: "Vendido",
-    statuses: ["sold"],
-    hasTemperature: false,
-    singleStatus: "sold",
+    status: "sold",
     headerColor: "bg-emerald-100 text-emerald-900 border-emerald-300",
   },
   {
     key: "discarded",
     label: "Descartado",
-    statuses: [
+    status: null,
+    additionalStatuses: [
       "discarded_no_profile",
       "discarded_no_interest",
       "discarded_competitor",
       "discarded_error",
     ],
-    hasTemperature: false,
     requiresReason: true,
     headerColor: "bg-slate-100 text-slate-900 border-slate-300",
   },
 ]
 
-// Mapa reverso: status → fase key
+// Mapa reverso: status → fase key. Inclui o status principal + additionalStatuses.
 const STATUS_TO_PHASE: Record<string, string> = PHASES.reduce((acc, phase) => {
-  for (const s of phase.statuses) acc[s] = phase.key
+  if (phase.status) acc[phase.status] = phase.key
+  for (const s of phase.additionalStatuses || []) acc[s] = phase.key
   return acc
 }, {} as Record<string, string>)
 
 /**
- * Extrai a temperatura de um status (se aplicável).
- * "service_warm" → "warm"; "proposal" → undefined
+ * Status a aplicar ao dropar numa coluna. Descartado retorna null (abre menu
+ * de motivo); No-service nao aceita drop; demais tem status fixo.
  */
-function getTemperature(status: Deal["status"]): Temperature | undefined {
-  if (status.endsWith("_cold")) return "cold"
-  if (status.endsWith("_mild")) return "mild"
-  if (status.endsWith("_warm")) return "warm"
-  return undefined
-}
-
-/**
- * Ao mover pra uma fase com temperatura, tenta preservar a atual.
- * Se veio de fase sem temperatura, assume "warm".
- */
-function resolveStatusOnDrop(
-  targetPhase: PhaseColumn,
-  currentStatus: Deal["status"]
-): Deal["status"] | null {
-  if (targetPhase.requiresReason) {
-    // Descartado precisa escolher motivo — retorna null pra abrir menu
-    return null
-  }
-  if (!targetPhase.hasTemperature) {
-    return targetPhase.singleStatus!
-  }
-  const temp = getTemperature(currentStatus) || "warm"
-  return `${targetPhase.key}_${temp}` as Deal["status"]
+function resolveStatusOnDrop(targetPhase: PhaseColumn): Deal["status"] | null {
+  if (targetPhase.requiresReason) return null
+  return targetPhase.status
 }
 
 const DISCARD_REASONS: { value: Deal["status"]; label: string }[] = [
@@ -175,13 +137,6 @@ function formatCurrency(value: string | number | null | undefined): string {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(n)
-}
-
-function tempIndicator(temp: Temperature | undefined): { color: string; label: string } {
-  if (temp === "cold") return { color: "bg-blue-400", label: "Frio" }
-  if (temp === "mild") return { color: "bg-amber-400", label: "Morno" }
-  if (temp === "warm") return { color: "bg-red-500", label: "Quente" }
-  return { color: "bg-slate-300", label: "" }
 }
 
 // -----------------------------------------------------------------------------
@@ -367,18 +322,9 @@ export function DealsKanbanView({ deals, leads = [], onEdit, onStatusChange }: D
         map[phaseKey].push(deal)
       }
     }
-    // Ordena dentro da coluna: quente > morno > frio, depois por data
+    // Ordena dentro da coluna por data de origem (mais recente primeiro).
     for (const key of Object.keys(map)) {
-      map[key].sort((a, b) => {
-        const tA = getTemperature(a.status)
-        const tB = getTemperature(b.status)
-        const rank = { warm: 0, mild: 1, cold: 2 }
-        const rA = tA ? rank[tA] : 3
-        const rB = tB ? rank[tB] : 3
-        if (rA !== rB) return rA - rB
-        // Mais recente primeiro
-        return (b.origin_date || "").localeCompare(a.origin_date || "")
-      })
+      map[key].sort((a, b) => (b.origin_date || "").localeCompare(a.origin_date || ""))
     }
     return map
   }, [deals, dealPlacements, account?.custom_config])
@@ -450,7 +396,7 @@ export function DealsKanbanView({ deals, leads = [], onEdit, onStatusChange }: D
     // Não faz nada se já está na mesma fase
     if (STATUS_TO_PHASE[deal.status] === phase.key) return
 
-    const newStatus = resolveStatusOnDrop(phase, deal.status)
+    const newStatus = resolveStatusOnDrop(phase)
     if (newStatus === null) {
       // Descartado — abrir menu de motivos
       setPendingDiscard({ dealId })
@@ -467,7 +413,7 @@ export function DealsKanbanView({ deals, leads = [], onEdit, onStatusChange }: D
 
   const handleManualStatusChange = async (deal: Deal, phase: PhaseColumn) => {
     if (STATUS_TO_PHASE[deal.status] === phase.key) return
-    const newStatus = resolveStatusOnDrop(phase, deal.status)
+    const newStatus = resolveStatusOnDrop(phase)
     if (newStatus === null) {
       setPendingDiscard({ dealId: deal.id })
       return
@@ -649,18 +595,9 @@ interface DealCardProps {
   labels?: DealLabel[]
 }
 
-// Cor de fundo da badge de temperatura no rodape do card
-const TEMP_BADGE: Record<"cold" | "mild" | "warm", { label: string; bg: string }> = {
-  cold: { label: "Frio", bg: "#3b82f6" },
-  mild: { label: "Morno", bg: "#f59e0b" },
-  warm: { label: "Quente", bg: "#ef4444" },
-}
-
 function DealCard({ deal, isDragging, onDragStart, onDragEnd, onEdit, onMoveTo, needsCadence, labels = [] }: DealCardProps) {
-  const temp = getTemperature(deal.status)
   // Origem: lead vs manual (heurística — se tem lead_id no futuro, usar aquilo)
   const fromLead = deal.client_origin === "online_lead"
-  const tempBadge = temp ? TEMP_BADGE[temp] : null
 
   return (
     <Card
@@ -736,7 +673,7 @@ function DealCard({ deal, isDragging, onDragStart, onDragEnd, onEdit, onMoveTo, 
       {/* Rodape do card: etiquetas + temperatura + Lead. Aparece em qualquer
           coluna exceto 'Sem atendimento' (leads nao classificados) — nesse
           caso o card e renderizado por outro componente e nao chega aqui. */}
-      {(labels.length > 0 || tempBadge || fromLead) && (
+      {(labels.length > 0 || fromLead) && (
         <div className="mt-2 pt-2 border-t flex flex-wrap items-center gap-1">
           {labels.map((lb) => (
             <span
@@ -748,14 +685,6 @@ function DealCard({ deal, isDragging, onDragStart, onDragEnd, onEdit, onMoveTo, 
               {lb.name}
             </span>
           ))}
-          {tempBadge && (
-            <span
-              className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium text-white"
-              style={{ backgroundColor: tempBadge.bg }}
-            >
-              {tempBadge.label}
-            </span>
-          )}
           {fromLead && (
             <Badge variant="outline" className="text-[9px] h-4 px-1 border-blue-400 text-blue-700">
               Lead

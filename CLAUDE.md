@@ -232,14 +232,19 @@ node dev-tools/puppeteer-mcp/server.js
 
 Campos: `id`, `client`, `value`, `status`, `date`, `description`.
 
-**Status (campo único — sem temperatura separada)**:
+**Status (campo único — sem dimensão de temperatura)**:
 
-- Atendimento: `service_cold`, `service_mild`, `service_warm`
-- Agendamento: `visit_foreseen_cold`, `visit_foreseen_mild`, `visit_foreseen_warm` (chaves internas ainda usam "visit_foreseen" — renomear exigiria migration; UI mostra "Agendamento")
-- Visita: `visit_done_cold`, `visit_done_mild`, `visit_done_warm` (chaves internas ainda usam "visit_done" — renomear exigiria migration; UI mostra "Visita")
+- Atendimento: `service`
+- Agendamento: `visit_foreseen` (chave interna mantém "visit_foreseen" por histórico; UI mostra "Agendamento")
+- Visita: `visit_done` (chave interna mantém "visit_done" por histórico; UI mostra "Visita")
 - Proposta: `proposal`
+- Contrato: `contract`
 - Vendido: `sold`
 - Descartado: `discarded_no_profile`, `discarded_no_interest`, `discarded_competitor`, `discarded_error`
+
+A dimensão de temperatura (frio/morno/quente) foi removida na migration
+`V2026_11_20_02__Remove_temperature_from_deal_status.sql` — os 9 status
+compostos foram mergeados nos 3 base.
 
 ### Product (Imóvel)
 

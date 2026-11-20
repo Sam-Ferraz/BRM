@@ -30,19 +30,19 @@ const FUNNEL_GROUPS: FunnelGroup[] = [
   {
     key: 'service',
     label: 'Atendimento',
-    statuses: ['service_warm', 'service_mild', 'service_cold'],
+    statuses: ['service'],
     color: '#0c343d',
   },
   {
     key: 'visit_foreseen',
     label: 'Agendamento',
-    statuses: ['visit_foreseen_warm', 'visit_foreseen_mild', 'visit_foreseen_cold'],
+    statuses: ['visit_foreseen'],
     color: '#2a5766',
   },
   {
     key: 'visit_done',
     label: 'Visita',
-    statuses: ['visit_done_warm', 'visit_done_mild', 'visit_done_cold'],
+    statuses: ['visit_done'],
     color: '#567b87',
   },
   {
@@ -82,7 +82,7 @@ export function DealFunnelChart({ data }: DealFunnelChartProps) {
     () => FUNNEL_GROUPS.map(group => ({
       status: group.key,
       // Soma os counts de todos os sub-status do grupo (ex: Atendimento
-      // soma service_warm + service_mild + service_cold).
+      // ja agregado pelo backend em um unico status).
       count: group.statuses.reduce((sum, s) => sum + (countByStatus.get(s) ?? 0), 0),
       label: group.label,
       color: group.color,

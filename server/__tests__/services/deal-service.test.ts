@@ -32,7 +32,7 @@ describe('DealService', () => {
         gsv: '1000.00',
         property_name: 'Property A',
         
-        status: 'service_warm',
+        status: 'service',
         user_id: 1
       },
       {
@@ -55,7 +55,7 @@ describe('DealService', () => {
     it('should return all deals with filters', async () => {
       // Arrange
       mockDealRepository.findAll.mockResolvedValue(mockDeals)
-      const filters = { search: 'test', status: 'service_warm' }
+      const filters = { search: 'test', status: 'service' }
       const userId = 1
 
       // Act

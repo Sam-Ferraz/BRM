@@ -269,24 +269,12 @@ export default function DealsPage() {
 
   const getStatusBadge = (status: Deal['status']) => {
     switch (status) {
-      case "service_cold":
-        return <Badge variant="secondary" className="bg-blue-100 text-blue-900">{t('dealStatusServiceCold')}</Badge>
-      case "service_mild":
-        return <Badge variant="secondary" className="bg-yellow-100 text-yellow-900">{t('dealStatusServiceMild')}</Badge>
-      case "service_warm":
-        return <Badge variant="secondary" className="bg-orange-100 text-orange-900">{t('dealStatusServiceWarm')}</Badge>
-      case "visit_foreseen_cold":
-        return <Badge variant="outline" className="bg-blue-100 text-blue-900">{t('dealStatusVisitForeseenCold')}</Badge>
-      case "visit_foreseen_mild":
-        return <Badge variant="outline" className="bg-yellow-100 text-yellow-900">{t('dealStatusVisitForeseenMild')}</Badge>
-      case "visit_foreseen_warm":
-        return <Badge variant="outline" className="bg-orange-100 text-orange-900">{t('dealStatusVisitForeseenWarm')}</Badge>
-      case "visit_done_cold":
-        return <Badge variant="outline" className="bg-blue-200 text-blue-900">{t('dealStatusVisitDoneCold')}</Badge>
-      case "visit_done_mild":
-        return <Badge variant="outline" className="bg-yellow-200 text-yellow-900">{t('dealStatusVisitDoneMild')}</Badge>
-      case "visit_done_warm":
-        return <Badge variant="outline" className="bg-orange-200 text-orange-900">{t('dealStatusVisitDoneWarm')}</Badge>
+      case "service":
+        return <Badge variant="secondary" className="bg-blue-100 text-blue-900">{t('dealStatusService')}</Badge>
+      case "visit_foreseen":
+        return <Badge variant="outline" className="bg-amber-100 text-amber-900">{t('dealStatusVisitForeseen')}</Badge>
+      case "visit_done":
+        return <Badge variant="outline" className="bg-orange-200 text-orange-900">{t('dealStatusVisitDone')}</Badge>
       case "proposal":
         return <Badge variant="default">{t('dealStatusProposal')}</Badge>
       case "contract":
@@ -308,15 +296,9 @@ export default function DealsPage() {
 
   const statusOptions = [
     { value: "Todos", label: t('allStatuses') },
-    { value: "service_cold", label: t('dealStatusServiceCold') },
-    { value: "service_mild", label: t('dealStatusServiceMild') },
-    { value: "service_warm", label: t('dealStatusServiceWarm') },
-    { value: "visit_foreseen_cold", label: t('dealStatusVisitForeseenCold') },
-    { value: "visit_foreseen_mild", label: t('dealStatusVisitForeseenMild') },
-    { value: "visit_foreseen_warm", label: t('dealStatusVisitForeseenWarm') },
-    { value: "visit_done_cold", label: t('dealStatusVisitDoneCold') },
-    { value: "visit_done_mild", label: t('dealStatusVisitDoneMild') },
-    { value: "visit_done_warm", label: t('dealStatusVisitDoneWarm') },
+    { value: "service", label: t('dealStatusService') },
+    { value: "visit_foreseen", label: t('dealStatusVisitForeseen') },
+    { value: "visit_done", label: t('dealStatusVisitDone') },
     { value: "proposal", label: t('dealStatusProposal') },
     { value: "contract", label: t('dealStatusContract') },
     { value: "sold", label: t('dealStatusSold') },

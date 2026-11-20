@@ -218,7 +218,7 @@ export default function AnalyticsPage() {
         setFunnelData(funnel.data)
         setLastProposals((proposals.data ?? []).slice(0, 15))
         setLastPresentations(
-          (deals.data ?? []).filter((d) => d.status?.startsWith('visit_done_')).slice(0, 15)
+          (deals.data ?? []).filter((d) => d.status === 'visit_done').slice(0, 15)
         )
       } catch (error) {
         console.error('Error fetching analytics data:', error)

@@ -391,8 +391,8 @@ export class DealRepository extends BaseRepository {
    * Performance dos Negócios agregados por origem do cliente (client_origin).
    *
    * Para cada origem devolve contagens em 4 estágios do funil:
-   *   - service_count  → status IN (service_cold, service_mild, service_warm)
-   *   - visit_count    → visit_done_* (Visita — visita já realizada)
+   *   - service_count  → status = 'service' (Atendimento)
+   *   - visit_count    → status = 'visit_done' (Visita realizada)
    *   - proposal_count → proposal
    *   - sale_count     → sold
    *
@@ -412,8 +412,8 @@ export class DealRepository extends BaseRepository {
       const query = `
         SELECT
           COALESCE(client_origin::text, 'unknown') AS origin,
-          COUNT(*) FILTER (WHERE status IN ('service_cold','service_mild','service_warm'))::int AS service_count,
-          COUNT(*) FILTER (WHERE status IN ('visit_done_cold','visit_done_mild','visit_done_warm'))::int AS visit_count,
+          COUNT(*) FILTER (WHERE status = 'service')::int AS service_count,
+          COUNT(*) FILTER (WHERE status = 'visit_done')::int AS visit_count,
           COUNT(*) FILTER (WHERE status = 'proposal')::int AS proposal_count,
           COUNT(*) FILTER (WHERE status = 'sold')::int AS sale_count
         FROM deals

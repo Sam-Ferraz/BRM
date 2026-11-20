@@ -175,7 +175,7 @@ export class LeadService {
       deal_type: null,
       gsv: '0',
       property_name: null,
-      status: 'service_warm',
+      status: 'service',
       user_id: userId,
     } as any)
 
