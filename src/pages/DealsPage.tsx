@@ -43,6 +43,21 @@ export default function DealsPage() {
   // Etiquetas (estilo Trello): CRUD + filtro por selecionadas
   const [labels, setLabels] = useState<DealLabel[]>([])
   const [selectedLabelIds, setSelectedLabelIds] = useState<Set<number>>(new Set())
+  // Etiquetas de SISTEMA: Frio/Morno/Quente aparecem sempre no topo da lista
+  // de etiquetas, nao sao editaveis nem excluiveis. Ao selecionar, filtram
+  // os deals pelo sufixo da temperatura no status (service_cold, etc).
+  // IDs negativos (unicos) pra nao colidir com etiquetas custom do banco.
+  const SYSTEM_LABELS: DealLabel[] = [
+    { id: -1, name: 'Frio', color: '#3b82f6' } as DealLabel,
+    { id: -2, name: 'Morno', color: '#f59e0b' } as DealLabel,
+    { id: -3, name: 'Quente', color: '#ef4444' } as DealLabel,
+  ]
+  const isSystemLabel = (id: number) => id < 0
+  const SYSTEM_LABEL_TO_SUFFIX: Record<number, 'cold' | 'mild' | 'warm'> = {
+    [-1]: 'cold',
+    [-2]: 'mild',
+    [-3]: 'warm',
+  }
   const [newLabelName, setNewLabelName] = useState("")
   const [newLabelColor, setNewLabelColor] = useState("#0c343d")
   const [labelsOpen, setLabelsOpen] = useState(false)
@@ -69,6 +84,18 @@ export default function DealsPage() {
   //               ok      = client_origin='online_lead' AND NOT overdue;
   //               na      = client_origin !== 'online_lead' (sem análise).
   const filteredDeals = deals.filter((d) => {
+    // Filtro por etiqueta de SISTEMA (Frio/Morno/Quente) — compara sufixo do
+    // status. Se o usuario selecionou pelo menos uma system label, o deal tem
+    // que bater com pelo menos uma delas (OR). Etiquetas custom (ids positivos)
+    // ainda nao filtram pq o campo label_ids nao vem no Deal — selecao fica
+    // visual mas nao aplica.
+    const selectedSystemSuffixes = Array.from(selectedLabelIds)
+      .filter(isSystemLabel)
+      .map((id) => SYSTEM_LABEL_TO_SUFFIX[id])
+      .filter(Boolean)
+    if (selectedSystemSuffixes.length > 0) {
+      if (!selectedSystemSuffixes.some((sfx) => d.status.endsWith(`_${sfx}`))) return false
+    }
     // Filtro por cadencia (client-side, usa o Set fetchado)
     if (cadenceFilter === "all") return true
     const isOverdue = cadenceOverdueSet.has(d.id)
@@ -392,18 +419,20 @@ export default function DealsPage() {
               </Select>
 
               {/* Etiquetas (estilo Trello) — botao mostra preview das cores
-                  selecionadas (ate 4) pro usuario ver rapido o que esta filtrado. */}
+                  selecionadas (ate 4) pro usuario ver rapido o que esta filtrado.
+                  Lista agora inclui Frio/Morno/Quente como etiquetas de sistema
+                  (nao editaveis, sempre no topo). */}
               <Popover open={labelsOpen} onOpenChange={setLabelsOpen}>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="w-[240px] justify-between h-9">
                     <span className="flex items-center gap-2 text-sm min-w-0">
                       <Tags className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                       {selectedLabelIds.size === 0 ? (
-                        <span className="text-muted-foreground">Filtrar por etiqueta...</span>
+                        <span className="text-muted-foreground">Etiquetas</span>
                       ) : (
                         <span className="flex items-center gap-1 min-w-0">
                           <span className="flex items-center gap-0.5 shrink-0">
-                            {labels
+                            {[...SYSTEM_LABELS, ...labels]
                               .filter((lb) => selectedLabelIds.has(lb.id))
                               .slice(0, 4)
                               .map((lb) => (
@@ -417,7 +446,7 @@ export default function DealsPage() {
                           </span>
                           <span className="truncate text-xs text-muted-foreground">
                             {selectedLabelIds.size === 1
-                              ? labels.find((lb) => selectedLabelIds.has(lb.id))?.name
+                              ? [...SYSTEM_LABELS, ...labels].find((lb) => selectedLabelIds.has(lb.id))?.name
                               : `${selectedLabelIds.size} selecionadas`}
                           </span>
                         </span>
@@ -427,23 +456,44 @@ export default function DealsPage() {
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent align="end" className="w-72 p-3 space-y-2">
-                  <div>
-                    <div className="text-sm font-medium text-foreground">Etiquetas</div>
-                    <div className="text-xs text-muted-foreground">
-                      Clique nas etiquetas abaixo pra filtrar os negócios
-                    </div>
-                  </div>
-                  {labels.length === 0 ? (
-                    <div className="text-xs text-muted-foreground text-center py-4 border border-dashed rounded-md">
-                      Nenhuma etiqueta cadastrada ainda.
-                      <br />
-                      Crie a primeira abaixo.
-                    </div>
-                  ) : (
-                    <div className="space-y-1 max-h-48 overflow-y-auto">
-                      {labels.map((lb) => {
-                        const isSelected = selectedLabelIds.has(lb.id)
-                        const isEditing = editingLabelId === lb.id
+                  <div className="text-sm font-medium text-foreground">Etiquetas</div>
+                  <div className="space-y-1 max-h-48 overflow-y-auto">
+                    {/* Etiquetas de SISTEMA (Frio/Morno/Quente) — sem editar/excluir */}
+                    {SYSTEM_LABELS.map((lb) => {
+                      const isSelected = selectedLabelIds.has(lb.id)
+                      return (
+                        <div
+                          key={lb.id}
+                          className="flex items-center gap-1 rounded px-1 py-1 hover:bg-accent"
+                        >
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedLabelIds((prev) => {
+                                const next = new Set(prev)
+                                if (next.has(lb.id)) next.delete(lb.id)
+                                else next.add(lb.id)
+                                return next
+                              })
+                            }}
+                            className="flex-1 flex items-center gap-2 text-left text-sm px-1 py-0.5"
+                          >
+                            <span
+                              className="inline-block w-5 h-3 rounded"
+                              style={{ backgroundColor: lb.color }}
+                            />
+                            <span className="flex-1 truncate">{lb.name}</span>
+                            {isSelected && <Check className="w-3.5 h-3.5 text-primary" />}
+                          </button>
+                        </div>
+                      )
+                    })}
+                    {labels.length > 0 && (
+                      <div className="border-t my-1" />
+                    )}
+                    {labels.map((lb) => {
+                      const isSelected = selectedLabelIds.has(lb.id)
+                      const isEditing = editingLabelId === lb.id
                         if (isEditing) {
                           return (
                             <div key={lb.id} className="rounded border p-2 space-y-2 bg-muted/40">
@@ -566,8 +616,7 @@ export default function DealsPage() {
                           </div>
                         )
                       })}
-                    </div>
-                  )}
+                  </div>
                   <div className="border-t pt-2 space-y-2">
                     <div className="text-xs font-medium text-muted-foreground">Nova etiqueta</div>
                     <Input
