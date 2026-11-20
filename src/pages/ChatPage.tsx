@@ -788,8 +788,10 @@ export default function ChatPage() {
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex items-center gap-2 mb-4">
+      <div className="max-w-7xl mx-auto md:px-4 md:py-8 lg:px-8">
+        {/* Header interno so em desktop — em mobile o header externo da pagina
+            + o header da propria conversa ja dao contexto suficiente. */}
+        <div className="hidden md:flex items-center gap-2 mb-4">
           <MessageCircle className="w-5 h-5" />
           <h2 className="text-xl font-semibold">{t("chat")}</h2>
           {isAdmin && (
@@ -799,10 +801,22 @@ export default function ChatPage() {
           )}
         </div>
 
-        <Card className="overflow-hidden">
-          <div className="grid grid-cols-1 md:grid-cols-[320px_1fr] h-[600px]">
-            {/* === Coluna esquerda: lista de conversas === */}
-            <div className="border-r flex flex-col min-h-0">
+        {/* Card sem borda/arredondamento em mobile (ocupa full-width) */}
+        <Card className="overflow-hidden rounded-none border-0 md:rounded-lg md:border">
+          {/*
+            Layout:
+            - Desktop (>=md): split lado a lado, 320px | flex-1, altura fixa 600px
+            - Mobile: UMA coluna por vez (WhatsApp-like) — mostra a lista
+              quando nao ha conversa aberta, mostra o chat quando ha.
+              Altura 100dvh menos o header externo da pagina (~64px) pra
+              aproveitar a tela toda.
+            Classes [&>...] alternam visibilidade dos filhos no mobile via
+            atributo data-chat-selected={bool} aplicado na raiz do grid.
+          */}
+          <div className="grid grid-cols-1 md:grid-cols-[320px_1fr] h-[calc(100dvh-64px)] md:h-[600px]">
+            {/* === Coluna esquerda: lista de conversas ===
+                Em mobile, escondida quando ha conversa aberta. */}
+            <div className={`border-r flex-col min-h-0 ${currentConversation ? "hidden md:flex" : "flex"}`}>
               {/* Filtro por corretor (so admin ve) */}
               {isAdmin && brokers.length > 0 && (
                 <div className="shrink-0 p-2 border-b bg-muted/30">
@@ -951,12 +965,23 @@ export default function ChatPage() {
                 min-h-0 e overflow-hidden garantem que o flex-1 do historico
                 de mensagens (abaixo) fique confinado — sem isso o scroll do
                 historico "empurra" o header pra fora e ele fica cortado
-                pelo header pai do BRM. */}
-            <div className="flex flex-col bg-gradient-to-br from-slate-50 to-white dark:from-slate-900/40 dark:to-slate-900/20 min-h-0 overflow-hidden">
+                pelo header pai do BRM.
+                Em mobile, escondida quando NAO ha conversa selecionada. */}
+            <div className={`flex-col bg-gradient-to-br from-slate-50 to-white dark:from-slate-900/40 dark:to-slate-900/20 min-h-0 overflow-hidden ${currentConversation ? "flex" : "hidden md:flex"}`}>
               {currentConversation ? (
                 <>
-                  {/* Header da conversa — shrink-0 pra nao ser espremido pelo historico */}
-                  <div className="shrink-0 p-3 border-b bg-card/80 backdrop-blur-sm flex items-center gap-3">
+                  {/* Header da conversa — shrink-0 pra nao ser espremido pelo historico.
+                      Em mobile, botao "voltar" a esquerda que fecha a conversa
+                      (seta estado pra null, o que faz a lista reaparecer). */}
+                  <div className="shrink-0 p-3 border-b bg-card/80 backdrop-blur-sm flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedId(null)}
+                      className="md:hidden shrink-0 p-1 -ml-1 rounded hover:bg-muted transition-colors"
+                      aria-label="Voltar para a lista de conversas"
+                    >
+                      <ArrowLeft className="w-5 h-5" />
+                    </button>
                     <Avatar className="w-9 h-9">
                       {currentConversation.contact_phone && contactPhotos[currentConversation.contact_phone] && (
                         <AvatarImage
