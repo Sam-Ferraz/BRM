@@ -22,7 +22,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { Plus, MessageCircle, Phone } from "lucide-react"
+import { Plus, MessageCircle, Phone, CalendarDays, Key, FileSignature } from "lucide-react"
 import { CurrencyInput } from "@/components/ui/currency-input"
 import { ClientSearch } from "@/components/client-search"
 import { ProductSearch } from "@/components/product-search"
@@ -31,6 +31,7 @@ import { DealAppointmentsTimeline } from "@/components/deal-appointments-timelin
 import { DealFollowUpsList } from "@/components/deal-followups-list"
 import { AppointmentForm } from "@/components/forms/appointment-form"
 import { FollowUpForm } from "@/components/forms/followup-form"
+import { ProposalForm } from "@/components/forms/proposal-form"
 import { useToast } from "@/hooks/use-toast"
 import type { Deal, Client, Appointment } from "@/lib/api-client"
 import { api } from "@/lib/api-client"
@@ -65,9 +66,16 @@ export function DealEditor({
   const currentTimezone = useTimezone()
   const { toast } = useToast()
   const [newAppointmentOpen, setNewAppointmentOpen] = useState(false)
+  // Pre-tipo do atendimento ao abrir o form via botoes '+ Agendamento' ou '+ Visita'
+  // da barra de acoes. undefined = usa o default do form (chat).
+  const [appointmentDefaultType, setAppointmentDefaultType] = useState<
+    "chat" | "call" | "in_person" | "visit" | "schedule" | undefined
+  >(undefined)
   const [newFollowUpOpen, setNewFollowUpOpen] = useState(false)
+  const [newProposalOpen, setNewProposalOpen] = useState(false)
   const [creatingFollowUp, setCreatingFollowUp] = useState(false)
   const [creatingAppointment, setCreatingAppointment] = useState(false)
+  const [creatingProposal, setCreatingProposal] = useState(false)
   const [timelineReloadKey, setTimelineReloadKey] = useState(0)
   const currentDate = useMemo(() => getCurrentDateForForm(currentTimezone), [currentTimezone])
 
@@ -215,6 +223,32 @@ export function DealEditor({
     } finally {
       setCreatingFollowUp(false)
     }
+  }
+
+  // Cria proposta vinculada ao negocio aberto (defaultDealId pre-seleciona no form).
+  const handleCreateProposalFromDeal = async (data: any) => {
+    setCreatingProposal(true)
+    try {
+      await api.proposals.create(data)
+      toast({ title: "Proposta registrada" })
+      setNewProposalOpen(false)
+      setTimelineReloadKey((k) => k + 1)
+    } catch (err) {
+      toast({
+        title: "Erro",
+        description: err instanceof Error ? err.message : "Falha ao criar proposta",
+        variant: "destructive",
+      })
+    } finally {
+      setCreatingProposal(false)
+    }
+  }
+
+  // Helpers para os botoes '+ Agendamento' e '+ Visita' da barra: setam o
+  // tipo pre-selecionado antes de abrir o form.
+  const openAppointmentWithType = (type: "schedule" | "visit") => {
+    setAppointmentDefaultType(type)
+    setNewAppointmentOpen(true)
   }
 
   const statusOptions: { value: DealStatusValue; label: string }[] = [
@@ -430,26 +464,11 @@ export function DealEditor({
     <>
       {deal ? (
         <Tabs defaultValue={defaultTab} className="flex-1 flex flex-col min-h-0">
-          {/* Barra acima das tabs: Novo atendimento + Chat WA + Ligacao */}
-          <div className="flex items-center gap-2 shrink-0 mb-2">
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => setNewAppointmentOpen(true)}
-            >
-              <Plus className="w-4 h-4 mr-1.5" />
-              Registrar atendimento
-            </Button>
-            {/* Novo follow-up — cria follow-up avulso vinculado ao cliente do deal */}
-            <Button
-              type="button"
-              size="sm"
-              variant="secondary"
-              onClick={() => setNewFollowUpOpen(true)}
-            >
-              <Plus className="w-4 h-4 mr-1.5" />
-              Novo follow-up
-            </Button>
+          {/* Barra acima das tabs:
+                Esquerda: icones de contato rapido (chat, ligacao)
+                Direita:  botoes de registro — Agendamento/Visita/Proposta (secundarios)
+                          + Follow-up (primario, cor escura) */}
+          <div className="flex items-center gap-2 shrink-0 mb-2 flex-wrap">
             {/* Chat — abre a conversa do cliente dentro do modulo /chat. Icone
                 MessageCircle alinhado ao icon usado na bottom-nav do modulo. */}
             <Button
@@ -484,6 +503,47 @@ export function DealEditor({
               }}
             >
               <Phone className="w-4 h-4" />
+            </Button>
+            {/* Spacer empurra o grupo de registros para a direita */}
+            <div className="flex-1" />
+            {/* + Agendamento — cria atendimento ja com tipo 'schedule' */}
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={() => openAppointmentWithType("schedule")}
+            >
+              <CalendarDays className="w-4 h-4 mr-1.5" />
+              Agendamento
+            </Button>
+            {/* + Visita — cria atendimento ja com tipo 'visit' */}
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={() => openAppointmentWithType("visit")}
+            >
+              <Key className="w-4 h-4 mr-1.5" />
+              Visita
+            </Button>
+            {/* + Proposta — abre ProposalForm com o Negocio ja selecionado */}
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={() => setNewProposalOpen(true)}
+            >
+              <FileSignature className="w-4 h-4 mr-1.5" />
+              Proposta
+            </Button>
+            {/* + Follow-up — cor primaria (escura), mesma do antigo 'Registrar atendimento' */}
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => setNewFollowUpOpen(true)}
+            >
+              <Plus className="w-4 h-4 mr-1.5" />
+              Follow-up
             </Button>
           </div>
           <TabsList className="w-full shrink-0">
@@ -526,10 +586,16 @@ export function DealEditor({
       {deal && (
         <AppointmentForm
           open={newAppointmentOpen}
-          onOpenChange={setNewAppointmentOpen}
+          onOpenChange={(open) => {
+            setNewAppointmentOpen(open)
+            // Limpa o tipo pre-selecionado quando o form fecha, pra proxima
+            // abertura (ex: pelo botao da timeline) comecar do default.
+            if (!open) setAppointmentDefaultType(undefined)
+          }}
           onSubmit={handleCreateAppointmentFromTimeline}
           loading={creatingAppointment}
           defaultDealId={deal.id}
+          defaultType={appointmentDefaultType}
         />
       )}
 
@@ -542,6 +608,16 @@ export function DealEditor({
           /* Passa um appointment sintetico so pra pre-preencher e travar o
              cliente (o form usa Boolean(appointment) pra lockar o campo). */
           appointment={{ client: deal.client } as any}
+        />
+      )}
+
+      {deal && (
+        <ProposalForm
+          open={newProposalOpen}
+          onOpenChange={setNewProposalOpen}
+          onSubmit={handleCreateProposalFromDeal}
+          loading={creatingProposal}
+          defaultDealId={deal.id}
         />
       )}
     </>

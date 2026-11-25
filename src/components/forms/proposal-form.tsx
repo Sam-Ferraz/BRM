@@ -34,6 +34,11 @@ interface ProposalFormProps {
   onOpenChange: (open: boolean) => void
   onSubmit: (data: Omit<Proposal, "id" | "user_id" | "created_at" | "updated_at"> | Partial<Proposal>) => void
   loading?: boolean
+  /**
+   * Pre-seleciona o Negocio ao abrir em modo criacao (vindo do DealEditor).
+   * Ignorado em modo edicao.
+   */
+  defaultDealId?: number
 }
 
 const STATUS_OPTIONS: ProposalStatus[] = [
@@ -52,7 +57,7 @@ const formatCurrencyBRL = (value: string | number | null | undefined): string =>
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(n)
 }
 
-export function ProposalForm({ proposal, open, onOpenChange, onSubmit, loading }: ProposalFormProps) {
+export function ProposalForm({ proposal, open, onOpenChange, onSubmit, loading, defaultDealId }: ProposalFormProps) {
   const { t } = useTranslation()
   const isMobile = useMobileDetection()
   const today = useMemo(() => format(new Date(), "yyyy-MM-dd"), [])
@@ -143,7 +148,7 @@ export function ProposalForm({ proposal, open, onOpenChange, onSubmit, loading }
       })
     } else {
       setFormData({
-        deal_id: "",
+        deal_id: defaultDealId ?? "",
         property_name: "",
         property_price: "",
         proposal_value: null,
@@ -157,7 +162,7 @@ export function ProposalForm({ proposal, open, onOpenChange, onSubmit, loading }
         intermediation_rate: "",
       })
     }
-  }, [proposal, open, today, defaultValidity])
+  }, [proposal, open, today, defaultValidity, defaultDealId])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
