@@ -109,12 +109,19 @@ export function createAppointmentRoutes(appointmentService: AppointmentService):
     }
   })
 
+  // Imovel e obrigatorio em: visita direta OU agendamento de visita presencial / apresentacao remota.
+  // Reuniao de acompanhamento nao usa imovel.
+  const needsProperty = (type?: string, scheduleAction?: string | null) =>
+    type === 'visit' ||
+    (type === 'schedule' && (scheduleAction === 'visit' || scheduleAction === 'remote_presentation'))
+
   router.post('/', authenticateToken, requireAccount, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const accountId = req.user!.accountId
       const userId = req.user!.userId
-      const { client, type, scheduled_datetime, description, answered, property_name, audio_url, deal_id } = req.body
-      const normalizedPropertyName = type === 'visit' ? property_name : null
+      const { client, type, scheduled_datetime, description, answered, property_name, audio_url, deal_id, schedule_action } = req.body
+      const normalizedScheduleAction = type === 'schedule' ? (schedule_action ?? null) : null
+      const normalizedPropertyName = needsProperty(type, normalizedScheduleAction) ? property_name : null
       const appointment = await appointmentService.createAppointment(accountId, {
         client,
         type,
@@ -124,7 +131,8 @@ export function createAppointmentRoutes(appointmentService: AppointmentService):
         property_name: normalizedPropertyName,
         user_id: userId,
         audio_url: audio_url ?? null,
-        deal_id: deal_id ?? null
+        deal_id: deal_id ?? null,
+        schedule_action: normalizedScheduleAction,
       })
       res.json(appointment)
     } catch (error) {
@@ -138,8 +146,9 @@ export function createAppointmentRoutes(appointmentService: AppointmentService):
       const accountId = req.user!.accountId
       const userId = req.user!.userId
       const id = parseInt(req.params.id)
-      const { client, type, scheduled_datetime, description, answered, property_name, audio_url, deal_id } = req.body
-      const normalizedPropertyName = type === 'visit' ? property_name : null
+      const { client, type, scheduled_datetime, description, answered, property_name, audio_url, deal_id, schedule_action } = req.body
+      const normalizedScheduleAction = type === 'schedule' ? (schedule_action ?? null) : null
+      const normalizedPropertyName = needsProperty(type, normalizedScheduleAction) ? property_name : null
       const appointment = await appointmentService.updateAppointment(accountId, id, {
         client,
         type,
@@ -149,7 +158,8 @@ export function createAppointmentRoutes(appointmentService: AppointmentService):
         property_name: normalizedPropertyName,
         user_id: userId,
         audio_url: audio_url ?? null,
-        deal_id: deal_id ?? null
+        deal_id: deal_id ?? null,
+        schedule_action: normalizedScheduleAction,
       })
       res.json(appointment)
     } catch (error) {
