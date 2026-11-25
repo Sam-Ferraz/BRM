@@ -506,6 +506,15 @@ export function DealEditor({
             </Button>
             {/* Spacer empurra o grupo de registros para a direita */}
             <div className="flex-1" />
+            {/* + Follow-up — cor primaria (escura), primeiro da sequencia de registros */}
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => setNewFollowUpOpen(true)}
+            >
+              <Plus className="w-4 h-4 mr-1.5" />
+              Follow-up
+            </Button>
             {/* + Agendamento — cria atendimento ja com tipo 'schedule' */}
             <Button
               type="button"
@@ -513,6 +522,7 @@ export function DealEditor({
               variant="secondary"
               onClick={() => openAppointmentWithType("schedule")}
             >
+              <Plus className="w-4 h-4 mr-1" />
               <CalendarDays className="w-4 h-4 mr-1.5" />
               Agendamento
             </Button>
@@ -523,6 +533,7 @@ export function DealEditor({
               variant="secondary"
               onClick={() => openAppointmentWithType("visit")}
             >
+              <Plus className="w-4 h-4 mr-1" />
               <Key className="w-4 h-4 mr-1.5" />
               Visita
             </Button>
@@ -533,17 +544,9 @@ export function DealEditor({
               variant="secondary"
               onClick={() => setNewProposalOpen(true)}
             >
+              <Plus className="w-4 h-4 mr-1" />
               <FileSignature className="w-4 h-4 mr-1.5" />
               Proposta
-            </Button>
-            {/* + Follow-up — cor primaria (escura), mesma do antigo 'Registrar atendimento' */}
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => setNewFollowUpOpen(true)}
-            >
-              <Plus className="w-4 h-4 mr-1.5" />
-              Follow-up
             </Button>
           </div>
           <TabsList className="w-full shrink-0">
