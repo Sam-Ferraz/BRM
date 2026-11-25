@@ -52,7 +52,7 @@ export class AppointmentService {
           const actionLabel =
             created.schedule_action === 'visit' ? 'Visita presencial' :
             created.schedule_action === 'remote_presentation' ? 'Apresentacao remota' :
-            'Reuniao de alinhamento'
+            'Reuniao de acompanhamento'
           const desc = (created.description ?? '').trim()
           const nextAction = desc ? `Agendamento (${actionLabel}): ${desc}` : `Agendamento: ${actionLabel}`
           const sd: any = created.scheduled_datetime
