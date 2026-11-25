@@ -281,8 +281,9 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
       audio_url: formData.type === 'schedule' ? null : (formData.audio_url ?? null),
       // schedule_action so e relevante pra agendamento; nos demais tipos limpa.
       schedule_action: formData.type === 'schedule' ? formData.schedule_action : null,
-      // Agendamento forcamos answered=true (equivale a "compromisso marcado com sucesso").
-      answered: formData.type === 'schedule' ? true : formData.answered,
+      // Agendamento nasce como NAO realizado ("Previsto"). So vira realizado
+      // quando o corretor concluir pela timeline (o que o converte em visita).
+      answered: formData.type === 'schedule' ? false : formData.answered,
     }
 
     // Pass follow-up data if enabled. Agendamento nao precisa passar followUpData —

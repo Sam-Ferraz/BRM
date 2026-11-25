@@ -79,6 +79,7 @@ export function DealAppointmentsTimeline({
   const [rows, setRows] = useState<TimelineRow[]>([])
   const [loading, setLoading] = useState(true)
   const [completingFollowUp, setCompletingFollowUp] = useState<number | null>(null)
+  const [completingSchedule, setCompletingSchedule] = useState<number | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -142,6 +143,32 @@ export function DealAppointmentsTimeline({
     }
   }
 
+  // Concluir um agendamento = converter o registro para visita realizada.
+  // Backend recebe PUT com type='visit' e answered=true; schedule_action
+  // volta a null (nao faz sentido em visita direta); property_name e
+  // preservado pq visita direta tambem exige imovel.
+  const handleCompleteSchedule = async (appointment: Appointment) => {
+    setCompletingSchedule(appointment.id)
+    try {
+      await api.appointments.update(appointment.id, {
+        client: appointment.client,
+        type: "visit",
+        scheduled_datetime: appointment.scheduled_datetime,
+        description: appointment.description ?? "",
+        answered: true,
+        property_name: appointment.property_name ?? null,
+        audio_url: appointment.audio_url ?? null,
+        deal_id: appointment.deal_id ?? null,
+        schedule_action: null,
+      } as any)
+      await load()
+    } catch (err) {
+      console.warn("[Timeline] falha ao concluir agendamento:", err)
+    } finally {
+      setCompletingSchedule(null)
+    }
+  }
+
   return (
     <div className="flex flex-col gap-3 h-full">
       <div className="shrink-0">
@@ -171,7 +198,12 @@ export function DealAppointmentsTimeline({
           <ol className="relative border-l-2 border-muted ml-4 space-y-4 pt-1">
             {rows.map((row) =>
               row.kind === "appointment" ? (
-                <AppointmentTimelineItem key={`a-${row.data.id}`} appointment={row.data} />
+                <AppointmentTimelineItem
+                  key={`a-${row.data.id}`}
+                  appointment={row.data}
+                  onCompleteSchedule={() => handleCompleteSchedule(row.data)}
+                  completingSchedule={completingSchedule === row.data.id}
+                />
               ) : (
                 <FollowUpTimelineItem
                   key={`f-${row.data.id}`}
@@ -188,7 +220,15 @@ export function DealAppointmentsTimeline({
   )
 }
 
-function AppointmentTimelineItem({ appointment }: { appointment: Appointment }) {
+function AppointmentTimelineItem({
+  appointment,
+  onCompleteSchedule,
+  completingSchedule,
+}: {
+  appointment: Appointment
+  onCompleteSchedule: () => void
+  completingSchedule: boolean
+}) {
   const meta = TYPE_META[appointment.type] ?? TYPE_META.chat
   const Icon = meta.icon
 
@@ -239,6 +279,13 @@ function AppointmentTimelineItem({ appointment }: { appointment: Appointment }) 
                 <CheckCircle2 className="w-3 h-3 mr-1" />
                 Realizado
               </Badge>
+            ) : isSchedule ? (
+              // Agendamento aberto (ainda nao concluido) exibe "Previsto" —
+              // estado de compromisso marcado mas nao consumado.
+              <Badge variant="outline" className="text-[10px] h-5 border-blue-400 text-blue-700 bg-blue-50">
+                <Clock className="w-3 h-3 mr-1" />
+                Previsto
+              </Badge>
             ) : (
               <Badge variant="outline" className="text-[10px] h-5 border-slate-300 text-slate-600 bg-slate-50">
                 <XCircle className="w-3 h-3 mr-1" />
@@ -275,6 +322,23 @@ function AppointmentTimelineItem({ appointment }: { appointment: Appointment }) 
 
         {appointment.audio_url && !isSchedule && (
           <audio controls src={appointment.audio_url} className="w-full h-8 mt-1" />
+        )}
+
+        {/* Agendamento previsto pode ser concluido pela timeline. Ao concluir
+            o registro vira type='visit' com answered=true — passa a contar
+            como visita realizada nos indicadores. */}
+        {isSchedule && !appointment.answered && (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-7 text-xs mt-1"
+            disabled={completingSchedule}
+            onClick={onCompleteSchedule}
+          >
+            <Check className="w-3 h-3 mr-1" />
+            {completingSchedule ? "Concluindo..." : "Marcar como concluído"}
+          </Button>
         )}
       </div>
     </li>

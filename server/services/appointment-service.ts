@@ -33,12 +33,12 @@ export class AppointmentService {
     appointmentData: Omit<Appointment, 'id' | 'created_at' | 'updated_at'>
   ): Promise<Appointment> {
     try {
-      // Agendamento (type='schedule') sempre nasce como "atendido" — o fato
-      // de ter conseguido marcar o compromisso ja' conta como contato bem
-      // sucedido com o cliente. Isso tambem alimenta os contadores de
-      // "Atendimentos realizados" no grafico sem precisar de logica extra.
+      // Agendamento (type='schedule') nasce como NAO realizado — representa
+      // o estado "Previsto". So vira "Realizado" quando o corretor confirmar
+      // que a visita/reuniao aconteceu (clica em "Marcar como concluido" na
+      // timeline, o que converte o registro para type='visit').
       if (appointmentData.type === 'schedule') {
-        appointmentData = { ...appointmentData, answered: true }
+        appointmentData = { ...appointmentData, answered: false }
       }
 
       const created = await this.appointmentRepository.create(accountId, appointmentData)
