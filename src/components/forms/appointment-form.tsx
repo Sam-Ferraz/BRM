@@ -55,7 +55,7 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
     property_name: "",
     deal_id: null as number | null,
     audio_url: null as string | null,
-    schedule_action: "meeting" as "meeting" | "visit",
+    schedule_action: "meeting" as "meeting" | "visit" | "remote_presentation",
   })
   const [selectedClientPhone, setSelectedClientPhone] = useState<string | null>(null)
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
@@ -91,7 +91,7 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
         property_name: appointment.property_name || "",
         deal_id: appointment.deal_id ?? null,
         audio_url: appointment.audio_url ?? null,
-        schedule_action: (appointment.schedule_action as "meeting" | "visit") || "meeting",
+        schedule_action: (appointment.schedule_action as "meeting" | "visit" | "remote_presentation") || "meeting",
       })
       setSelectedClientPhone(null)
       setIncludeFollowUp(false)
@@ -425,7 +425,7 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
               <Select
                 value={formData.schedule_action}
                 onValueChange={(value) =>
-                  setFormData(prev => ({ ...prev, schedule_action: value as "meeting" | "visit" }))
+                  setFormData(prev => ({ ...prev, schedule_action: value as "meeting" | "visit" | "remote_presentation" }))
                 }
               >
                 <SelectTrigger>
@@ -434,6 +434,7 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
                 <SelectContent>
                   <SelectItem value="meeting">{t('scheduleActionMeeting')}</SelectItem>
                   <SelectItem value="visit">{t('scheduleActionVisit')}</SelectItem>
+                  <SelectItem value="remote_presentation">{t('scheduleActionRemotePresentation')}</SelectItem>
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">

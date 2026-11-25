@@ -246,7 +246,7 @@ export interface ProductImage {
 export type AppointmentOrigin = 'manual' | 'whatsapp'
 
 export type AppointmentType = 'chat' | 'call' | 'in_person' | 'visit' | 'schedule'
-export type ScheduleAction = 'meeting' | 'visit'
+export type ScheduleAction = 'meeting' | 'visit' | 'remote_presentation'
 
 export interface Appointment {
   id: number

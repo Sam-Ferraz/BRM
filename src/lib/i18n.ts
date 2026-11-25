@@ -279,9 +279,10 @@ const resources = {
       inPersonType: 'Presencial',
       visitType: 'Visita',
       scheduleType: 'Agendamento',
-      scheduleAction: 'Ação prevista',
-      scheduleActionMeeting: 'Reunião',
-      scheduleActionVisit: 'Visita',
+      scheduleAction: 'Tipo de ação',
+      scheduleActionMeeting: 'Reunião de alinhamento',
+      scheduleActionVisit: 'Visita presencial',
+      scheduleActionRemotePresentation: 'Apresentação remota',
       scheduledDateTime: 'Data/hora prevista',
 
       // Messages
@@ -841,9 +842,10 @@ const resources = {
       inPersonType: 'In Person',
       visitType: 'Visit',
       scheduleType: 'Scheduling',
-      scheduleAction: 'Planned action',
-      scheduleActionMeeting: 'Meeting',
-      scheduleActionVisit: 'Visit',
+      scheduleAction: 'Action type',
+      scheduleActionMeeting: 'Alignment meeting',
+      scheduleActionVisit: 'In-person visit',
+      scheduleActionRemotePresentation: 'Remote presentation',
       scheduledDateTime: 'Planned date/time',
       
       // Messages
@@ -1402,9 +1404,10 @@ const resources = {
       inPersonType: 'Presencial',
       visitType: 'Visita',
       scheduleType: 'Agendamiento',
-      scheduleAction: 'Acción prevista',
-      scheduleActionMeeting: 'Reunión',
-      scheduleActionVisit: 'Visita',
+      scheduleAction: 'Tipo de acción',
+      scheduleActionMeeting: 'Reunión de alineación',
+      scheduleActionVisit: 'Visita presencial',
+      scheduleActionRemotePresentation: 'Presentación remota',
       scheduledDateTime: 'Fecha/hora prevista',
       
       // Messages

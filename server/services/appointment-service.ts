@@ -49,7 +49,10 @@ export class AppointmentService {
       // mostrando os agendamentos marcados.
       if (created.type === 'schedule' && this.followUpRepository) {
         try {
-          const actionLabel = created.schedule_action === 'visit' ? 'Visita' : 'Reuniao'
+          const actionLabel =
+            created.schedule_action === 'visit' ? 'Visita presencial' :
+            created.schedule_action === 'remote_presentation' ? 'Apresentacao remota' :
+            'Reuniao de alinhamento'
           const desc = (created.description ?? '').trim()
           const nextAction = desc ? `Agendamento (${actionLabel}): ${desc}` : `Agendamento: ${actionLabel}`
           const sd: any = created.scheduled_datetime
