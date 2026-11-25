@@ -264,16 +264,21 @@ export interface Client {
   origin?: 'online_lead' | 'own_portfolio' | 'duty_shift' | 'referral' | 'street_client'
 }
 
+export type AppointmentType = "chat" | "call" | "in_person" | "visit" | "schedule"
+export type ScheduleAction = "meeting" | "visit"
+
 export interface Appointment {
   id: number
   client: string
-  type: "chat" | "call" | "in_person" | "visit"
+  type: AppointmentType
   scheduled_datetime: string
   description?: string
   answered: boolean
   property_name?: string | null
   audio_url?: string | null
   deal_id?: number | null
+  // Preenchido quando type='schedule': acao prevista (reuniao ou visita).
+  schedule_action?: ScheduleAction | null
 }
 
 export interface ProductImage {

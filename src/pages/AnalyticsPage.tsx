@@ -47,11 +47,12 @@ const formatCombinedAnalytics = (
   const map = new Map<string, {
     atendResp: number; atendNao: number;
     apresResp: number; apresNao: number;
+    agendados: number;
   }>()
 
   for (const [type, series] of Object.entries(byType || {})) {
     for (const item of series || []) {
-      const cur = map.get(item.date) ?? { atendResp: 0, atendNao: 0, apresResp: 0, apresNao: 0 }
+      const cur = map.get(item.date) ?? { atendResp: 0, atendNao: 0, apresResp: 0, apresNao: 0, agendados: 0 }
       const answered = parseInt(item.answered) || 0
       const notAnswered = parseInt(item.not_answered) || 0
       if (type === 'visit') {
@@ -62,6 +63,14 @@ const formatCombinedAnalytics = (
         // avancado — nao ha como ter visita sem atendimento previo). "Nao
         // realizada" fica so na barra de Visitas, pq uma visita que nao
         // aconteceu nao implica atendimento feito.
+        cur.atendResp += answered
+      } else if (type === 'schedule') {
+        // Agendamento: compromisso futuro marcado. Backend persiste sempre
+        // com answered=true. Exibido na barra dedicada 'Agendamentos' e
+        // tambem contabilizado como atendimento realizado (pedido do usuario:
+        // marcar um agendamento ja' representa contato bem-sucedido com o
+        // cliente, assim como a visita).
+        cur.agendados += answered + notAnswered
         cur.atendResp += answered
       } else {
         cur.atendResp += answered
@@ -78,7 +87,7 @@ const formatCombinedAnalytics = (
     for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
       const iso = d.toISOString().slice(0, 10)
       if (!map.has(iso)) {
-        map.set(iso, { atendResp: 0, atendNao: 0, apresResp: 0, apresNao: 0 })
+        map.set(iso, { atendResp: 0, atendNao: 0, apresResp: 0, apresNao: 0, agendados: 0 })
       }
     }
   }
@@ -91,6 +100,7 @@ const formatCombinedAnalytics = (
       'Atendimentos não realizados': v.atendNao,
       'Visitas realizadas': v.apresResp,
       'Visitas não realizadas': v.apresNao,
+      'Agendamentos': v.agendados,
     }))
 }
 
@@ -132,6 +142,8 @@ const getAppointmentTypeTranslation = (type: string, t: any) => {
       return t('inPersonType')
     case 'visit':
       return t('visitType')
+    case 'schedule':
+      return t('scheduleType')
     default:
       return type
   }
@@ -420,6 +432,9 @@ export default function AnalyticsPage() {
                   'Atendimentos não realizados':  { label: 'Atendimentos não realizados',  color: '#5a8792' },
                   'Visitas realizadas':    { label: 'Visitas realizadas',    color: '#999999' },
                   'Visitas não realizadas': { label: 'Visitas não realizadas', color: '#d4d4d4' },
+                  // Agendamento: amarelo mostarda (hue ambar escurecido) — categoria
+                  // distinta de atendimento/visita, com peso visual proprio.
+                  'Agendamentos': { label: 'Agendamentos', color: '#c9a227' },
                 }}
                 className="h-[280px]"
               >
@@ -449,6 +464,10 @@ export default function AnalyticsPage() {
                         <stop offset="0%" stopColor="#d4d4d4" stopOpacity={1} />
                         <stop offset="100%" stopColor="#d4d4d4" stopOpacity={0.85} />
                       </linearGradient>
+                      <linearGradient id="agendamentoGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#c9a227" stopOpacity={1} />
+                        <stop offset="100%" stopColor="#c9a227" stopOpacity={0.85} />
+                      </linearGradient>
                     </defs>
                     {/* Legenda customizada via content: mostra so 2 categorias
                         (Atendimentos e Visitas). O payload prop nao surtiu
@@ -472,6 +491,13 @@ export default function AnalyticsPage() {
                               style={{ backgroundColor: '#999999' }}
                             />
                             <span className="font-medium text-foreground">Visitas</span>
+                          </span>
+                          <span className="flex items-center gap-2">
+                            <span
+                              className="w-3 h-3 rounded-full inline-block"
+                              style={{ backgroundColor: '#c9a227' }}
+                            />
+                            <span className="font-medium text-foreground">Agendamentos</span>
                           </span>
                         </div>
                       )}
@@ -615,6 +641,21 @@ export default function AnalyticsPage() {
                         dataKey="Visitas não realizadas"
                         position="top"
                         style={{ fontSize: 10, fill: '#525252', fontWeight: 600 }}
+                        formatter={(v: any) => (v && v > 0 ? v : '')}
+                      />
+                    </Bar>
+                    <Bar
+                      dataKey="Agendamentos"
+                      fill="url(#agendamentoGradient)"
+                      radius={[4, 4, 0, 0]}
+                      stroke="#c9a227"
+                      strokeWidth={1}
+                      maxBarSize={16}
+                    >
+                      <LabelList
+                        dataKey="Agendamentos"
+                        position="top"
+                        style={{ fontSize: 10, fill: '#8a6d14', fontWeight: 600 }}
                         formatter={(v: any) => (v && v > 0 ? v : '')}
                       />
                     </Bar>

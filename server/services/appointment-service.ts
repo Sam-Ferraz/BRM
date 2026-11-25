@@ -1,11 +1,18 @@
-import { AppointmentRepository } from '../repositories/index.js'
+import { AppointmentRepository, FollowUpRepository } from '../repositories/index.js'
 import { Appointment, AppointmentAnalytics, QueryFilters, ApiResponse } from '../types/index.js'
 
 export class AppointmentService {
   private appointmentRepository: AppointmentRepository
+  private followUpRepository: FollowUpRepository | null
 
-  constructor(appointmentRepository: AppointmentRepository) {
+  /**
+   * followUpRepository e opcional: injetado quando a service precisa
+   * auto-criar follow-up pra agendamentos (type='schedule'). Testes antigos
+   * que mocavam a service continuam funcionando sem passar o segundo arg.
+   */
+  constructor(appointmentRepository: AppointmentRepository, followUpRepository?: FollowUpRepository) {
     this.appointmentRepository = appointmentRepository
+    this.followUpRepository = followUpRepository ?? null
   }
 
   async getAllAppointments(accountId: number, filters: QueryFilters, userId: number): Promise<ApiResponse<Appointment[]>> {
@@ -26,7 +33,44 @@ export class AppointmentService {
     appointmentData: Omit<Appointment, 'id' | 'created_at' | 'updated_at'>
   ): Promise<Appointment> {
     try {
-      return await this.appointmentRepository.create(accountId, appointmentData)
+      // Agendamento (type='schedule') sempre nasce como "atendido" — o fato
+      // de ter conseguido marcar o compromisso ja' conta como contato bem
+      // sucedido com o cliente. Isso tambem alimenta os contadores de
+      // "Atendimentos realizados" no grafico sem precisar de logica extra.
+      if (appointmentData.type === 'schedule') {
+        appointmentData = { ...appointmentData, answered: true }
+      }
+
+      const created = await this.appointmentRepository.create(accountId, appointmentData)
+
+      // Agendamento gera follow-up automatico (mesmo workflow): a acao prevista
+      // (reuniao ou visita) + descricao vira o texto do follow-up, e a data
+      // agendada vira a data de execucao. Mantem a Secao de Follow-ups sempre
+      // mostrando os agendamentos marcados.
+      if (created.type === 'schedule' && this.followUpRepository) {
+        try {
+          const actionLabel = created.schedule_action === 'visit' ? 'Visita' : 'Reuniao'
+          const desc = (created.description ?? '').trim()
+          const nextAction = desc ? `Agendamento (${actionLabel}): ${desc}` : `Agendamento: ${actionLabel}`
+          const sd: any = created.scheduled_datetime
+          const scheduledDate = sd instanceof Date
+            ? sd.toISOString().slice(0, 10)
+            : String(sd).slice(0, 10)
+          await this.followUpRepository.create(accountId, {
+            appointment_id: created.id,
+            client_name: created.client,
+            next_action: nextAction,
+            next_action_date: scheduledDate,
+            completed: false,
+            user_id: created.user_id,
+          })
+        } catch (fuErr) {
+          // Nao quebra a criacao do appointment se o follow-up falhar — loga.
+          console.warn('[AppointmentService] auto-create follow-up for schedule failed:', fuErr)
+        }
+      }
+
+      return created
     } catch (error) {
       console.error('Error creating appointment:', error)
       throw new Error('Internal server error')

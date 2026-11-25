@@ -50,11 +50,12 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
     scheduled_datetime: currentDateTime,
     description: "",
     client: "",
-    type: "chat" as "chat" | "call" | "in_person" | "visit",
+    type: "chat" as "chat" | "call" | "in_person" | "visit" | "schedule",
     answered: undefined as boolean | undefined,
     property_name: "",
     deal_id: null as number | null,
     audio_url: null as string | null,
+    schedule_action: "meeting" as "meeting" | "visit",
   })
   const [selectedClientPhone, setSelectedClientPhone] = useState<string | null>(null)
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
@@ -85,11 +86,12 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
         scheduled_datetime: formattedDateTime,
         description: appointment.description || "",
         client: appointment.client || "",
-        type: (appointment.type || "chat") as "chat" | "call" | "in_person" | "visit",
+        type: (appointment.type || "chat") as "chat" | "call" | "in_person" | "visit" | "schedule",
         answered: appointment.answered,
         property_name: appointment.property_name || "",
         deal_id: appointment.deal_id ?? null,
         audio_url: appointment.audio_url ?? null,
+        schedule_action: (appointment.schedule_action as "meeting" | "visit") || "meeting",
       })
       setSelectedClientPhone(null)
       setIncludeFollowUp(false)
@@ -98,11 +100,12 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
         scheduled_datetime: currentDateTime,
         description: "",
         client: "",
-        type: "chat" as "chat" | "call" | "in_person" | "visit",
+        type: "chat" as "chat" | "call" | "in_person" | "visit" | "schedule",
         answered: undefined,
         property_name: "",
         deal_id: defaultDealId ?? null,
         audio_url: null,
+        schedule_action: "meeting",
       })
       setSelectedClientPhone(null)
       setIncludeFollowUp(false)
@@ -229,7 +232,9 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
       newErrors.client = t('clientRequired') || 'Client is required'
     }
 
-    if (formData.answered === undefined) {
+    // Agendamento nao tem "atendeu/nao atendeu" (e evento futuro). Os demais
+    // tipos continuam exigindo o status de resposta.
+    if (formData.type !== 'schedule' && formData.answered === undefined) {
       newErrors.answered = t('answeredStatusRequired') || 'Response status is required'
     }
 
@@ -259,9 +264,14 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
       scheduled_datetime: convertFromLocalToApp(formData.scheduled_datetime, currentTimezone),
       deal_id: formData.deal_id ?? null,
       audio_url: formData.audio_url ?? null,
+      // schedule_action so e relevante pra agendamento; nos demais tipos limpa.
+      schedule_action: formData.type === 'schedule' ? formData.schedule_action : null,
+      // Agendamento forcamos answered=true (equivale a "compromisso marcado com sucesso").
+      answered: formData.type === 'schedule' ? true : formData.answered,
     }
 
-    // Pass follow-up data if enabled
+    // Pass follow-up data if enabled. Agendamento nao precisa passar followUpData —
+    // o backend auto-cria o follow-up correspondente quando type='schedule'.
     onSubmit(dataToSubmit, includeFollowUp ? followUpData : undefined)
   }
 
@@ -301,7 +311,7 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
           )}
           <div className="space-y-2">
             <Label htmlFor="scheduled_datetime">
-              {t('dateTime')} <span className="text-red-500">*</span>
+              {formData.type === 'schedule' ? t('scheduledDateTime') : t('dateTime')} <span className="text-red-500">*</span>
             </Label>
             <Input
               id="scheduled_datetime"
@@ -402,10 +412,35 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
                 <SelectItem value="chat">{t('chatType')}</SelectItem>
                 <SelectItem value="call">{t('callType')}</SelectItem>
                 <SelectItem value="in_person">{t('inPersonType')}</SelectItem>
-              <SelectItem value="visit">{t('visitType')}</SelectItem>
+                <SelectItem value="visit">{t('visitType')}</SelectItem>
+                <SelectItem value="schedule">{t('scheduleType')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
+          {formData.type === 'schedule' && (
+            <div className="space-y-2">
+              <Label htmlFor="schedule_action">
+                {t('scheduleAction')} <span className="text-red-500">*</span>
+              </Label>
+              <Select
+                value={formData.schedule_action}
+                onValueChange={(value) =>
+                  setFormData(prev => ({ ...prev, schedule_action: value as "meeting" | "visit" }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="meeting">{t('scheduleActionMeeting')}</SelectItem>
+                  <SelectItem value="visit">{t('scheduleActionVisit')}</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                O agendamento gera um follow-up na data prevista.
+              </p>
+            </div>
+          )}
           {formData.type === 'visit' && (
             <div className="space-y-2">
               <Label htmlFor="property_name">
@@ -422,22 +457,26 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
               )}
             </div>
           )}
-          <div className="space-y-2">
-            <Label htmlFor="answered">
-              {t('answeredStatus')} <span className="text-red-500">*</span>
-            </Label>
-            <AnsweredStatusToggle
-              value={formData.answered}
-              onChange={(answered) => setFormData({ ...formData, answered })}
-              className="w-full"
-            />
-            {errors.answered && (
-              <p className="text-sm text-red-500">{errors.answered}</p>
-            )}
-          </div>
+          {formData.type !== 'schedule' && (
+            <div className="space-y-2">
+              <Label htmlFor="answered">
+                {t('answeredStatus')} <span className="text-red-500">*</span>
+              </Label>
+              <AnsweredStatusToggle
+                value={formData.answered}
+                onChange={(answered) => setFormData({ ...formData, answered })}
+                className="w-full"
+              />
+              {errors.answered && (
+                <p className="text-sm text-red-500">{errors.answered}</p>
+              )}
+            </div>
+          )}
 
-          {/* Follow-up section - only for new appointments */}
-          {!appointment && (
+          {/* Follow-up section - only for new appointments.
+              Agendamento (schedule) ja' auto-cria follow-up no backend,
+              entao esconde a opcao pra nao duplicar. */}
+          {!appointment && formData.type !== 'schedule' && (
             <>
               <div className="border-t pt-4">
                 <div className="flex items-center space-x-2">

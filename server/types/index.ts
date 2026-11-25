@@ -245,10 +245,13 @@ export interface ProductImage {
 
 export type AppointmentOrigin = 'manual' | 'whatsapp'
 
+export type AppointmentType = 'chat' | 'call' | 'in_person' | 'visit' | 'schedule'
+export type ScheduleAction = 'meeting' | 'visit'
+
 export interface Appointment {
   id: number
   client: string
-  type: 'chat' | 'call' | 'in_person' | 'visit'
+  type: AppointmentType
   scheduled_datetime: string
   description?: string | null
   answered: boolean
@@ -265,6 +268,9 @@ export interface Appointment {
   // Vínculo opcional com um Negócio (Deal). O código humano N-XXXX no front
   // é derivado do id do deal via lib/deal-code. Aqui persistimos só o id.
   deal_id?: number | null
+  // Preenchido quando type='schedule': acao prevista no agendamento.
+  // 'meeting' = reuniao, 'visit' = visita ao imovel.
+  schedule_action?: ScheduleAction | null
   created_at?: Date
   updated_at?: Date
 }

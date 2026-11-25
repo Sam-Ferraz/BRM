@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Plus, MessageCircle, Phone, User, Home, CheckCircle2, XCircle, Mic } from "lucide-react"
+import { Plus, MessageCircle, Phone, User, Home, CheckCircle2, XCircle, Mic, CalendarClock } from "lucide-react"
 import { api, type Appointment } from "@/lib/api-client"
 import { cn } from "@/lib/utils"
 import { format, parseISO } from "date-fns"
@@ -37,6 +37,7 @@ const TYPE_META: Record<Appointment["type"], { label: string; icon: React.Compon
   call: { label: "Ligação", icon: Phone, color: "text-blue-700", bg: "bg-blue-100" },
   in_person: { label: "Presencial", icon: User, color: "text-purple-700", bg: "bg-purple-100" },
   visit: { label: "Visita", icon: Home, color: "text-amber-700", bg: "bg-amber-100" },
+  schedule: { label: "Agendamento", icon: CalendarClock, color: "text-yellow-800", bg: "bg-yellow-100" },
 }
 
 export function DealAppointmentsTimeline({

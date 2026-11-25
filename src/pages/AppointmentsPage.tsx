@@ -183,6 +183,8 @@ export default function AppointmentsPage() {
         return "secondary"
       case "visit":
         return "outline"
+      case "schedule":
+        return "default"
       default:
         return "outline"
     }
@@ -199,6 +201,8 @@ export default function AppointmentsPage() {
         return t('inPersonType')
       case 'visit':
         return t('visitType')
+      case 'schedule':
+        return t('scheduleType')
       default:
         return type
     }
@@ -252,6 +256,7 @@ export default function AppointmentsPage() {
                   <SelectItem value="call">{t('callType')}</SelectItem>
                   <SelectItem value="in_person">{t('inPersonType')}</SelectItem>
                   <SelectItem value="visit">{t('visitType')}</SelectItem>
+                  <SelectItem value="schedule">{t('scheduleType')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>

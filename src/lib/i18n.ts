@@ -278,7 +278,12 @@ const resources = {
       callType: 'Ligação',
       inPersonType: 'Presencial',
       visitType: 'Visita',
-      
+      scheduleType: 'Agendamento',
+      scheduleAction: 'Ação prevista',
+      scheduleActionMeeting: 'Reunião',
+      scheduleActionVisit: 'Visita',
+      scheduledDateTime: 'Data/hora prevista',
+
       // Messages
       successMessages: {
         dealCreated: 'Negócio criado com sucesso',
@@ -835,6 +840,11 @@ const resources = {
       callType: 'Call',
       inPersonType: 'In Person',
       visitType: 'Visit',
+      scheduleType: 'Scheduling',
+      scheduleAction: 'Planned action',
+      scheduleActionMeeting: 'Meeting',
+      scheduleActionVisit: 'Visit',
+      scheduledDateTime: 'Planned date/time',
       
       // Messages
       successMessages: {
@@ -1391,6 +1401,11 @@ const resources = {
       callType: 'Llamada',
       inPersonType: 'Presencial',
       visitType: 'Visita',
+      scheduleType: 'Agendamiento',
+      scheduleAction: 'Acción prevista',
+      scheduleActionMeeting: 'Reunión',
+      scheduleActionVisit: 'Visita',
+      scheduledDateTime: 'Fecha/hora prevista',
       
       // Messages
       successMessages: {
