@@ -36,6 +36,10 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuPortal,
 } from "@/components/ui/dropdown-menu"
 import {
   Select,
@@ -635,10 +639,28 @@ function NewRecordMenu({ floating }: { floating?: boolean }) {
           <Users className="w-4 h-4 mr-2" />
           Novo cliente
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => navigate("/appointments?new=true")}>
-          <HeadphonesIcon className="w-4 h-4 mr-2" />
-          Registrar atendimento
-        </DropdownMenuItem>
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>
+            <HeadphonesIcon className="w-4 h-4 mr-2" />
+            Registrar
+          </DropdownMenuSubTrigger>
+          <DropdownMenuPortal>
+            <DropdownMenuSubContent className="w-44">
+              <DropdownMenuItem onClick={() => navigate("/appointments?new=true&type=schedule")}>
+                <CalendarDays className="w-4 h-4 mr-2" />
+                Agendamento
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate("/appointments?new=true&type=visit")}>
+                <Key className="w-4 h-4 mr-2" />
+                Visita
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate("/proposals?new=true")}>
+                <FileSignature className="w-4 h-4 mr-2" />
+                Proposta
+              </DropdownMenuItem>
+            </DropdownMenuSubContent>
+          </DropdownMenuPortal>
+        </DropdownMenuSub>
       </DropdownMenuContent>
     </DropdownMenu>
   )

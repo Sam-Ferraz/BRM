@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react"
-import { Link } from "react-router-dom"
+import { Link, useSearchParams } from "react-router-dom"
 import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -37,6 +37,7 @@ const STATUS_VARIANTS: Record<ProposalStatus, "default" | "secondary" | "destruc
 export default function ProposalsPage() {
   const { t } = useTranslation()
   const { toast } = useToast()
+  const [searchParams, setSearchParams] = useSearchParams()
 
   const [proposals, setProposals] = useState<ProposalWithDetails[]>([])
   const [loading, setLoading] = useState(true)
@@ -50,6 +51,18 @@ export default function ProposalsPage() {
 
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingProposal, setEditingProposal] = useState<ProposalWithDetails | undefined>()
+
+  // Auto-abre o form quando o usuario chega via submenu "Registrar > Proposta"
+  // da HomePage (?new=true).
+  useEffect(() => {
+    if (searchParams.get('new') === 'true') {
+      setIsFormOpen(true)
+      setEditingProposal(undefined)
+      const newParams = new URLSearchParams(searchParams)
+      newParams.delete('new')
+      setSearchParams(newParams, { replace: true })
+    }
+  }, [searchParams, setSearchParams])
 
   const formatCurrency = (value: string | number | undefined | null): string => {
     if (value === undefined || value === null || value === "") return "-"

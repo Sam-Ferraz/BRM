@@ -35,9 +35,14 @@ interface AppointmentFormProps {
    * Negócio (que dispara o auto-preenchimento de Cliente e Telefone).
    */
   defaultDealId?: number
+  /**
+   * Pre-seleciona o tipo de atendimento ao abrir em modo criação (vindo do
+   * submenu "Registrar" na HomePage, por exemplo). Ignorado em modo edição.
+   */
+  defaultType?: "chat" | "call" | "in_person" | "visit" | "schedule"
 }
 
-export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loading, defaultDealId }: AppointmentFormProps) {
+export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loading, defaultDealId, defaultType }: AppointmentFormProps) {
   const { t } = useTranslation()
   const isMobile = useMobileDetection()
   const currentTimezone = useTimezone()
@@ -100,7 +105,7 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
         scheduled_datetime: currentDateTime,
         description: "",
         client: "",
-        type: "chat" as "chat" | "call" | "in_person" | "visit" | "schedule",
+        type: (defaultType ?? "chat") as "chat" | "call" | "in_person" | "visit" | "schedule",
         answered: undefined,
         property_name: "",
         deal_id: defaultDealId ?? null,

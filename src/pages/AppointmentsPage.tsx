@@ -33,17 +33,25 @@ export default function AppointmentsPage() {
   
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingAppointment, setEditingAppointment] = useState<Appointment | undefined>()
+  // Pre-seleciona tipo do atendimento quando o usuario chega via
+  // submenu "Registrar" da HomePage (?new=true&type=schedule|visit).
+  const [defaultType, setDefaultType] = useState<"chat" | "call" | "in_person" | "visit" | "schedule" | undefined>(undefined)
 
   const { toast } = useToast()
 
   // Check for auto-open dialog from FAB
   useEffect(() => {
     if (searchParams.get('new') === 'true') {
+      const rawType = searchParams.get('type')
+      const validTypes = ['chat', 'call', 'in_person', 'visit', 'schedule'] as const
+      const dType = validTypes.includes(rawType as any) ? (rawType as typeof validTypes[number]) : undefined
+      setDefaultType(dType)
       setIsFormOpen(true)
       setEditingAppointment(undefined)
-      // Remove the query parameter after opening
+      // Remove the query parameters after opening
       const newParams = new URLSearchParams(searchParams)
       newParams.delete('new')
+      newParams.delete('type')
       setSearchParams(newParams, { replace: true })
     }
   }, [searchParams, setSearchParams])
@@ -389,10 +397,14 @@ export default function AppointmentsPage() {
         open={isFormOpen}
         onOpenChange={(open) => {
           setIsFormOpen(open)
-          if (!open) setEditingAppointment(undefined)
+          if (!open) {
+            setEditingAppointment(undefined)
+            setDefaultType(undefined)
+          }
         }}
         onSubmit={editingAppointment ? handleUpdate : handleCreate}
         loading={formLoading}
+        defaultType={defaultType}
       />
 
       {/* FAB de microfone: agora abre o mesmo AppointmentForm (que já tem o
