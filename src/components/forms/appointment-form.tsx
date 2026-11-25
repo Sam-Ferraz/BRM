@@ -124,11 +124,18 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
     }
   }, [currentTimezone, appointment?.scheduled_datetime])
 
+  // Precisa selecionar imovel: visita presencial direta OU agendamento
+  // cujo tipo de acao envolve um imovel (visita presencial ou apresentacao remota).
+  // Reuniao de acompanhamento nao exige imovel.
+  const needsProperty =
+    formData.type === 'visit' ||
+    (formData.type === 'schedule' && (formData.schedule_action === 'visit' || formData.schedule_action === 'remote_presentation'))
+
   useEffect(() => {
-    if (formData.type !== 'visit' && formData.property_name) {
+    if (!needsProperty && formData.property_name) {
       setFormData(prev => ({ ...prev, property_name: "" }))
     }
-  }, [formData.type])
+  }, [needsProperty])
 
   useEffect(() => {
     if (!formData.client) {
@@ -238,7 +245,7 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
       newErrors.answered = t('answeredStatusRequired') || 'Response status is required'
     }
 
-    if (formData.type === 'visit' && !formData.property_name.trim()) {
+    if (needsProperty && !formData.property_name.trim()) {
       newErrors.property_name = t('productRequired') || 'Property is required'
     }
 
@@ -260,10 +267,13 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
     // Convert datetime from user's configured timezone to app timezone before sending to server
     const dataToSubmit = {
       ...formData,
-      property_name: formData.type === 'visit' ? formData.property_name : null,
+      // Agendamento nao tem campo descricao visivel — mandamos string vazia pra nao
+      // persistir lixo do audio que nao faz sentido nesse contexto.
+      description: formData.type === 'schedule' ? '' : formData.description,
+      property_name: needsProperty ? formData.property_name : null,
       scheduled_datetime: convertFromLocalToApp(formData.scheduled_datetime, currentTimezone),
       deal_id: formData.deal_id ?? null,
-      audio_url: formData.audio_url ?? null,
+      audio_url: formData.type === 'schedule' ? null : (formData.audio_url ?? null),
       // schedule_action so e relevante pra agendamento; nos demais tipos limpa.
       schedule_action: formData.type === 'schedule' ? formData.schedule_action : null,
       // Agendamento forcamos answered=true (equivale a "compromisso marcado com sucesso").
@@ -288,9 +298,10 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
         </DialogHeader>
         <div className="flex-1 overflow-y-auto p-1">
         <form onSubmit={handleSubmit} className="space-y-4 pb-4">
-          {/* Rotina de gravação — só na criação. Na edição o áudio já existe
-              (mostrado como player se houver) e não faz sentido gravar de novo. */}
-          {!appointment && (
+          {/* Rotina de gravação — só na criação e em atendimentos de fato
+              (chat/call/in_person/visit). Agendamento e evento futuro, sem
+              audio pra transcrever, e sem descricao. */}
+          {!appointment && formData.type !== 'schedule' && (
             <div className="rounded-lg border bg-muted/30 p-3">
               <AudioRecorder onFinish={handleRecordingFinish} disabled={loading} />
               {uploadingAudio && (
@@ -301,7 +312,7 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
               )}
             </div>
           )}
-          {appointment?.audio_url && (
+          {appointment?.audio_url && formData.type !== 'schedule' && (
             <div className="rounded-lg border bg-muted/30 p-3">
               <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-1">
                 Áudio do atendimento
@@ -322,16 +333,20 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
               {...(!isMobile && { tabIndex: 1 })}
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="description">{t('description')}</Label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              rows={3}
-              {...(!isMobile && { tabIndex: 2 })}
-            />
-          </div>
+          {/* Descricao nao faz sentido em agendamento — o Tipo de acao ja
+              expressa o que vai ser feito, e a data/hora prevista fecha o contexto. */}
+          {formData.type !== 'schedule' && (
+            <div className="space-y-2">
+              <Label htmlFor="description">{t('description')}</Label>
+              <Textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                rows={3}
+                {...(!isMobile && { tabIndex: 2 })}
+              />
+            </div>
+          )}
           {/* Negócio — OBRIGATÓRIO. Selecionar o Negócio auto-preenche o
               Cliente e o Telefone (derivados, readonly), e o Imóvel quando o
               atendimento é visita. */}
@@ -349,14 +364,20 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
                   setSelectedClientPhone(null)
                   return
                 }
-                setFormData((prev) => ({
-                  ...prev,
-                  client: deal.client,
-                  // Se o Negócio tem imóvel amarrado e o atendimento é visita, aproveita.
-                  property_name: prev.type === "visit" && deal.property_name
-                    ? deal.property_name
-                    : prev.property_name,
-                }))
+                setFormData((prev) => {
+                  const prevNeedsProperty =
+                    prev.type === 'visit' ||
+                    (prev.type === 'schedule' && (prev.schedule_action === 'visit' || prev.schedule_action === 'remote_presentation'))
+                  return {
+                    ...prev,
+                    client: deal.client,
+                    // Se o Negocio tem imovel amarrado e o atendimento precisa
+                    // de imovel (visita direta ou agendamento de visita/apresentacao), aproveita.
+                    property_name: prevNeedsProperty && deal.property_name
+                      ? deal.property_name
+                      : prev.property_name,
+                  }
+                })
                 setSelectedClientPhone(deal.client_phone ?? "")
               }}
               invalid={!!errors.deal_id}
@@ -398,11 +419,18 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
             <Select
               value={formData.type}
               onValueChange={(value) =>
-                setFormData(prev => ({
-                  ...prev,
-                  type: value as any,
-                  property_name: value === 'visit' ? prev.property_name : ""
-                }))
+                setFormData(prev => {
+                  // Mantem o imovel se o novo contexto ainda precisar dele
+                  // (visita direta ou agendamento de visita/apresentacao).
+                  const newNeedsProperty =
+                    value === 'visit' ||
+                    (value === 'schedule' && (prev.schedule_action === 'visit' || prev.schedule_action === 'remote_presentation'))
+                  return {
+                    ...prev,
+                    type: value as any,
+                    property_name: newNeedsProperty ? prev.property_name : ""
+                  }
+                })
               }
             >
               <SelectTrigger {...(!isMobile && { tabIndex: 3 })}>
@@ -442,7 +470,7 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
               </p>
             </div>
           )}
-          {formData.type === 'visit' && (
+          {needsProperty && (
             <div className="space-y-2">
               <Label htmlFor="property_name">
                 {t('product')} <span className="text-red-500">*</span>
