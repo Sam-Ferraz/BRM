@@ -473,7 +473,7 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
           {needsProperty && (
             <div className="space-y-2">
               <Label htmlFor="property_name">
-                {t('selectProduct')} <span className="text-red-500">*</span>
+                {t('property')} <span className="text-red-500">*</span>
               </Label>
               <ProductSearch
                 value={formData.property_name}
