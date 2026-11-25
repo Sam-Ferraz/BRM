@@ -28,7 +28,6 @@ import { ClientSearch } from "@/components/client-search"
 import { ProductSearch } from "@/components/product-search"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { DealAppointmentsTimeline } from "@/components/deal-appointments-timeline"
-import { DealFollowUpsList } from "@/components/deal-followups-list"
 import { AppointmentForm } from "@/components/forms/appointment-form"
 import { FollowUpForm } from "@/components/forms/followup-form"
 import { ProposalForm } from "@/components/forms/proposal-form"
@@ -548,27 +547,19 @@ export function DealEditor({
           </div>
           <TabsList className="w-full shrink-0">
             <TabsTrigger value="history" className="flex-1">Histórico de atendimento</TabsTrigger>
-            <TabsTrigger value="followup" className="flex-1">Follow-up</TabsTrigger>
             <TabsTrigger value="info" className="flex-1">Informações</TabsTrigger>
           </TabsList>
           <TabsContent
             value="history"
             className="flex-1 min-h-0 mt-2 data-[state=inactive]:hidden overflow-hidden flex flex-col"
           >
+            {/* Linha do tempo unificada: atendimentos + follow-ups no mesmo feed.
+                A aba antiga "Follow-up" foi removida — os follow-ups agora aparecem
+                aqui como itens de outro tipo, ordenados por data junto com os atendimentos. */}
             <DealAppointmentsTimeline
               dealId={deal.id}
               clientName={deal.client}
               onAddAppointment={() => setNewAppointmentOpen(true)}
-              reloadKey={timelineReloadKey}
-            />
-          </TabsContent>
-          <TabsContent
-            value="followup"
-            className="flex-1 min-h-0 mt-2 data-[state=inactive]:hidden overflow-hidden flex flex-col"
-          >
-            <DealFollowUpsList
-              dealId={deal.id}
-              onAddFollowUp={() => setNewFollowUpOpen(true)}
               reloadKey={timelineReloadKey}
             />
           </TabsContent>
