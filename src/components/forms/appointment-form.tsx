@@ -478,7 +478,7 @@ export function AppointmentForm({ appointment, open, onOpenChange, onSubmit, loa
               <ProductSearch
                 value={formData.property_name}
                 onSelect={(productName) => setFormData({ ...formData, property_name: productName })}
-                placeholder={t('selectProduct')}
+                placeholder={t('selectPlaceholder')}
                 className={`w-full ${errors.property_name ? 'ring-2 ring-red-500' : ''}`}
               />
               {errors.property_name && (
