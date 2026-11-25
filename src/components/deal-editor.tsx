@@ -515,39 +515,34 @@ export function DealEditor({
               <Plus className="w-4 h-4 mr-1.5" />
               Follow-up
             </Button>
-            {/* + Agendamento — cria atendimento ja com tipo 'schedule'.
-                Layout: [simbolo tematico] [+] [palavra] — o '+' fica entre o
-                widget e o texto, imediatamente a esquerda da palavra. */}
+            {/* Agendamento — cria atendimento ja com tipo 'schedule' */}
             <Button
               type="button"
               size="sm"
               variant="secondary"
               onClick={() => openAppointmentWithType("schedule")}
             >
-              <CalendarDays className="w-4 h-4 mr-1" />
-              <Plus className="w-4 h-4 mr-1.5" />
+              <CalendarDays className="w-4 h-4 mr-1.5" />
               Agendamento
             </Button>
-            {/* + Visita — cria atendimento ja com tipo 'visit' */}
+            {/* Visita — cria atendimento ja com tipo 'visit' */}
             <Button
               type="button"
               size="sm"
               variant="secondary"
               onClick={() => openAppointmentWithType("visit")}
             >
-              <Key className="w-4 h-4 mr-1" />
-              <Plus className="w-4 h-4 mr-1.5" />
+              <Key className="w-4 h-4 mr-1.5" />
               Visita
             </Button>
-            {/* + Proposta — abre ProposalForm com o Negocio ja selecionado */}
+            {/* Proposta — abre ProposalForm com o Negocio ja selecionado */}
             <Button
               type="button"
               size="sm"
               variant="secondary"
               onClick={() => setNewProposalOpen(true)}
             >
-              <FileSignature className="w-4 h-4 mr-1" />
-              <Plus className="w-4 h-4 mr-1.5" />
+              <FileSignature className="w-4 h-4 mr-1.5" />
               Proposta
             </Button>
           </div>
