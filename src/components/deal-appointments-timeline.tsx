@@ -40,6 +40,12 @@ const TYPE_META: Record<Appointment["type"], { label: string; icon: React.Compon
   schedule: { label: "Agendamento", icon: CalendarClock, color: "text-yellow-800", bg: "bg-yellow-100" },
 }
 
+const SCHEDULE_ACTION_LABEL: Record<string, string> = {
+  meeting: "Reunião de acompanhamento",
+  visit: "Visita presencial",
+  remote_presentation: "Apresentação remota",
+}
+
 export function DealAppointmentsTimeline({
   dealId,
   clientName,
@@ -124,6 +130,17 @@ function TimelineItem({ appointment }: { appointment: Appointment }) {
     /* usa raw */
   }
 
+  const isSchedule = appointment.type === "schedule"
+  const scheduleActionLabel = isSchedule && appointment.schedule_action
+    ? SCHEDULE_ACTION_LABEL[appointment.schedule_action]
+    : null
+  // Agendamento mostra imovel quando a acao e visita presencial ou apresentacao remota.
+  // Visita direta tambem exibe.
+  const showProperty =
+    (appointment.type === "visit" ||
+      (isSchedule && (appointment.schedule_action === "visit" || appointment.schedule_action === "remote_presentation"))) &&
+    !!appointment.property_name
+
   return (
     <li className="ml-6">
       {/* Ícone na "bolha" fora da linha */}
@@ -138,10 +155,18 @@ function TimelineItem({ appointment }: { appointment: Appointment }) {
 
       <div className="rounded-lg border bg-card p-3 space-y-2 shadow-sm">
         <div className="flex items-start justify-between gap-2 flex-wrap">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Badge variant="secondary" className={cn("text-[10px] h-5", meta.bg, meta.color, "border-0")}>
               {meta.label}
             </Badge>
+            {/* Em agendamento, o tipo da acao (Reuniao de acompanhamento /
+                Visita presencial / Apresentacao remota) aparece como segundo
+                badge, imediatamente depois do badge Agendamento. */}
+            {scheduleActionLabel && (
+              <Badge variant="outline" className="text-[10px] h-5 border-yellow-400 text-yellow-900 bg-yellow-50">
+                {scheduleActionLabel}
+              </Badge>
+            )}
             {appointment.answered ? (
               <Badge variant="outline" className="text-[10px] h-5 border-green-500 text-green-700 bg-green-50">
                 <CheckCircle2 className="w-3 h-3 mr-1" />
@@ -153,7 +178,7 @@ function TimelineItem({ appointment }: { appointment: Appointment }) {
                 Não realizado
               </Badge>
             )}
-            {appointment.audio_url && (
+            {appointment.audio_url && !isSchedule && (
               <Badge variant="outline" className="text-[10px] h-5 border-red-300 text-red-700 bg-red-50">
                 <Mic className="w-3 h-3 mr-1" />
                 Áudio
@@ -163,25 +188,28 @@ function TimelineItem({ appointment }: { appointment: Appointment }) {
           <span className="text-xs text-muted-foreground shrink-0">{formattedDate}</span>
         </div>
 
-        {/* Em itens de visita, mostra qual imovel foi apresentado logo abaixo
-            dos badges — da contexto imediato antes de ler a descricao livre. */}
-        {appointment.type === "visit" && appointment.property_name && (
+        {/* Imovel vinculado — contexto imediato antes de qualquer descricao livre.
+            Agendamento usa "A apresentar" (futuro), visita direta "Apresentado" (passado). */}
+        {showProperty && (
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <Home className="w-3 h-3 shrink-0" />
             <span>
-              Imóvel apresentado:{" "}
+              {isSchedule ? "Imóvel a apresentar: " : "Imóvel apresentado: "}
               <span className="font-medium text-foreground">{appointment.property_name}</span>
             </span>
           </div>
         )}
 
-        {appointment.description ? (
-          <p className="text-sm text-foreground whitespace-pre-wrap">{appointment.description}</p>
-        ) : (
-          <p className="text-xs text-muted-foreground italic">Sem descrição</p>
+        {/* Agendamento nao tem descricao livre — nao renderiza bloco "Sem descricao". */}
+        {!isSchedule && (
+          appointment.description ? (
+            <p className="text-sm text-foreground whitespace-pre-wrap">{appointment.description}</p>
+          ) : (
+            <p className="text-xs text-muted-foreground italic">Sem descrição</p>
+          )
         )}
 
-        {appointment.audio_url && (
+        {appointment.audio_url && !isSchedule && (
           <audio controls src={appointment.audio_url} className="w-full h-8 mt-1" />
         )}
       </div>
