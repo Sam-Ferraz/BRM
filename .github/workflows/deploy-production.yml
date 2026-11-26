@@ -97,6 +97,40 @@ jobs:
           mkdir -p ~/.ssh
           ssh-keyscan -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts
 
+      - name: Sincroniza API keys no .env do servidor
+        # Injeta ANTHROPIC_API_KEY e OPENAI_API_KEY no .env de producao antes
+        # do deploy. Mesma logica do workflow de staging — paths comuns,
+        # backup, substituicao atomica. Secrets nao definidos sao ignorados.
+        run: |
+          ssh "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" bash <<EOF
+          set -e
+          ANTHROPIC_API_KEY='${{ secrets.ANTHROPIC_API_KEY }}'
+          OPENAI_API_KEY='${{ secrets.OPENAI_API_KEY }}'
+          ENV_FILE=""
+          for candidate in /opt/brm/prod/.env /opt/brm/production/.env /opt/brm/.env /opt/brm/current/.env /srv/brm/.env /home/brm/.env; do
+            if [ -f "\$candidate" ]; then
+              ENV_FILE="\$candidate"
+              break
+            fi
+          done
+          if [ -z "\$ENV_FILE" ]; then
+            echo "ERRO: .env nao encontrado em paths conhecidos" >&2
+            exit 1
+          fi
+          echo "Atualizando \$ENV_FILE"
+          cp "\$ENV_FILE" "\$ENV_FILE.bak.\$(date +%s)"
+          TMP="\$ENV_FILE.tmp.\$\$"
+          grep -vE '^(ANTHROPIC_API_KEY|OPENAI_API_KEY)=' "\$ENV_FILE" > "\$TMP" || true
+          if [ -n "\$ANTHROPIC_API_KEY" ]; then
+            echo "ANTHROPIC_API_KEY=\$ANTHROPIC_API_KEY" >> "\$TMP"
+          fi
+          if [ -n "\$OPENAI_API_KEY" ]; then
+            echo "OPENAI_API_KEY=\$OPENAI_API_KEY" >> "\$TMP"
+          fi
+          mv "\$TMP" "\$ENV_FILE"
+          echo "OK"
+          EOF
+
       - name: Roda deploy remoto (prod) pelo ref informado
         run: |
           ssh "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" \
