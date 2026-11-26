@@ -143,6 +143,42 @@ Para uso apenas em ambiente local. Variáveis também disponíveis no `.env` com
 
 ---
 
+## Resumo Automático de Conversas (Cron)
+
+Serviço que lê conversas de WhatsApp pausadas há mais de 15 minutos,
+transcreve áudios inbound (Whisper) e gera resumo curto via Claude Haiku,
+inserindo como atendimento (`type='chat'`) na linha do tempo do negócio
+vinculado pelo telefone do cliente.
+
+**Arquivos:**
+- `server/services/conversation-summary-service.ts` — serviço principal
+- Migration: `V2026_11_25_03__Add_last_summary_at_to_conversations.sql`
+- Cron registrado em `server/index.ts` (expressão default `*/5 * * * *`)
+
+**Env vars obrigatórias (`.env`):**
+```env
+ANTHROPIC_API_KEY=sk-ant-...
+OPENAI_API_KEY=sk-...           # opcional — sem ela, áudios são ignorados
+```
+
+**Env vars opcionais:**
+```env
+SUMMARY_PAUSE_MIN=15            # pausa pra disparar resumo (default 15)
+SUMMARY_MODEL=claude-haiku-5-5  # modelo Anthropic (default Haiku)
+SUMMARY_TIMEZONE=America/Sao_Paulo
+SUMMARY_CRON="*/5 * * * *"      # expressão node-cron
+DISABLE_SUMMARY_CRON=1           # desliga em dev
+PUBLIC_BASE_URL=https://test.brm.tec.br  # pra Whisper buscar mídia inbound
+```
+
+**Custo estimado:** ~R$ 4/corretor ativo/mês (Haiku + Whisper).
+
+**Idempotência:** `conversations.last_summary_at` impede duplicação. Mesmo
+que o cron rode 10x seguidas, só resume quando há mensagens novas após o
+último resumo.
+
+---
+
 ## Integração Google Calendar
 
 Sincronização **unidirecional** Google Calendar → BRM. Cada corretor conecta a

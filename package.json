@@ -25,6 +25,7 @@
     "schema:dump": "./scripts/dump-schema.sh"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.14.0",
     "@aws-sdk/client-s3": "^3.878.0",
     "@hookform/resolvers": "^3.9.1",
     "@radix-ui/react-accordion": "latest",
@@ -74,7 +75,9 @@
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.454.0",
     "multer": "^2.0.2",
+    "node-cron": "^4.6.0",
     "node-fetch": "^3.3.2",
+    "openai": "^7.64.0",
     "pg": "^8.13.1",
     "qrcode": "^1.5.4",
     "react": "^18.3.1",
@@ -103,6 +106,7 @@
     "@types/jsonwebtoken": "^9.0.7",
     "@types/multer": "^2.0.0",
     "@types/node": "^22",
+    "@types/node-cron": "^3.0.11",
     "@types/pg": "^8.11.10",
     "@types/puppeteer": "^5.4.7",
     "@types/qrcode": "^1.5.6",

@@ -5,6 +5,9 @@ import dotenv from 'dotenv'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { authLimiter, webhookLimiter } from './middleware/rate-limits.js'
+import cron from 'node-cron'
+import pool from './database.js'
+import { ConversationSummaryService } from './services/conversation-summary-service.js'
 
 // Import repositories
 import {
@@ -403,6 +406,24 @@ whatsappSessionRepository
     }
   })
   .catch((err) => console.error('Erro resetando sessoes WhatsApp orfas:', err))
+
+// Cron de resumo automatico de conversas — roda a cada 5 minutos.
+// Varre conversas com pausa de 15min desde a ultima mensagem, gera resumo
+// via Claude Haiku (transcreve audios inbound via Whisper se disponivel) e
+// insere como atendimento na linha do tempo do negocio. Evita duplicatas
+// via conversations.last_summary_at.
+// Pulado em dev se DISABLE_SUMMARY_CRON=1, pra nao consumir API key enquanto
+// trabalha-se em features sem relacao com chat.
+if (process.env.DISABLE_SUMMARY_CRON !== '1') {
+  const summaryService = new ConversationSummaryService(pool)
+  const summaryCronExpr = process.env.SUMMARY_CRON ?? '*/5 * * * *'
+  cron.schedule(summaryCronExpr, () => {
+    summaryService.runCycle().catch((err) => {
+      console.error('[summary] erro no ciclo:', err instanceof Error ? err.message : err)
+    })
+  })
+  console.log(`🧠 Cron de resumo de conversas ativo (${summaryCronExpr})`)
+}
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`)
